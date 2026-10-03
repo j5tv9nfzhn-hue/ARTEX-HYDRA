@@ -5,6 +5,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,29 +21,35 @@ import {
 import type { NavMainItem } from "@/navigation/sidebar/sidebar-items";
 import { sidebarItems } from "@/navigation/sidebar/sidebar-items";
 
+// 표시 문자열은 데이터에 담지 않고 nav 네임스페이스 키만 담아 둔다. 실제 라벨·헤딩은
+// 컴포넌트에서 useTranslations("nav") 로 렌더 시점에 번역한다(사이드바와 같은 메시지 원천).
 type SearchItem = {
   id: string;
-  group: string;
-  label: string;
+  headingKey: string; // nav 기준 상대 키 (그룹 헤딩). 예) "group.function"
+  labelKey: string; // nav 기준 상대 키 (항목 라벨). 예) "item.dashboard"
+  fallbackLabel: string; // 메시지에 키가 없을 때 쓸 원문
   url: string;
   icon?: NavMainItem["icon"];
   disabled?: boolean;
   newTab?: boolean;
 };
 
-const sidebarGroupLabels = new Set(sidebarItems.flatMap((group) => (group.label ? [group.label] : [])));
-
-function getSubItemGroup(groupLabel: string | undefined, itemTitle: string) {
-  return sidebarGroupLabels.has(itemTitle) ? (groupLabel ?? "Other") : itemTitle;
+// 그룹 번호 → nav.group.* 키. nav-main 과 같은 매핑을 쓴다.
+const GROUP_MESSAGE_KEY: Record<number, string> = { 1: "function", 2: "system" };
+function groupHeadingKey(groupId: number): string {
+  const k = GROUP_MESSAGE_KEY[groupId];
+  return k ? `group.${k}` : `group.${groupId}`;
 }
 
-const searchItems: SearchItem[] = sidebarItems.flatMap((group) =>
-  group.items.flatMap((item) => {
+const searchItems: SearchItem[] = sidebarItems.flatMap((group) => {
+  const headingKey = groupHeadingKey(group.id);
+  return group.items.flatMap((item) => {
     if (item.subItems) {
       return item.subItems.map((sub) => ({
         id: sub.id,
-        group: getSubItemGroup(group.label, item.title),
-        label: sub.title,
+        headingKey,
+        labelKey: `item.${sub.id}`,
+        fallbackLabel: sub.title,
         url: sub.url,
         icon: item.icon,
         disabled: sub.disabled,
@@ -52,16 +59,17 @@ const searchItems: SearchItem[] = sidebarItems.flatMap((group) =>
     return [
       {
         id: item.id,
-        group: group.label ?? "Other",
-        label: item.title,
+        headingKey,
+        labelKey: `item.${item.id}`,
+        fallbackLabel: item.title,
         url: item.url,
         icon: item.icon,
         disabled: item.disabled,
         newTab: item.newTab,
       },
     ];
-  }),
-);
+  });
+});
 
 function getAvailableItems(items: SearchItem[]) {
   return items.filter((item) => !item.disabled && !item.url.includes("coming-soon"));
@@ -70,10 +78,10 @@ function getAvailableItems(items: SearchItem[]) {
 const recommendations = getAvailableItems(searchItems);
 
 function groupBy(items: SearchItem[]) {
-  const groups = [...new Set(items.map((item) => item.group))];
-  return groups.map((group) => ({
-    group,
-    items: items.filter((item) => item.group === group),
+  const headings = [...new Set(items.map((item) => item.headingKey))];
+  return headings.map((headingKey) => ({
+    headingKey,
+    items: items.filter((item) => item.headingKey === headingKey),
   }));
 }
 
@@ -81,6 +89,9 @@ export function SearchDialog() {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const router = useRouter();
+  const t = useTranslations("search");
+  const tNav = useTranslations("nav");
+  const labelOf = (item: SearchItem) => (tNav.has(item.labelKey) ? tNav(item.labelKey) : item.fallbackLabel);
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -109,26 +120,29 @@ export function SearchDialog() {
   };
 
   const renderGroups = (items: SearchItem[]) =>
-    groupBy(items).map(({ group, items: groupItems }, index) => (
-      <React.Fragment key={group}>
-        {index > 0 && <CommandSeparator />}
-        <CommandGroup heading={group}>
-          {groupItems.map((item) => (
-            <CommandItem
-              disabled={item.disabled}
-              key={`${group}-${item.id}`}
-              value={`${item.group} ${item.label}`}
-              onSelect={() => handleSelect(item)}
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                {item.icon && <item.icon />}
-                <span className="truncate">{item.label}</span>
-              </span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </React.Fragment>
-    ));
+    groupBy(items).map(({ headingKey, items: groupItems }, index) => {
+      const heading = tNav(headingKey);
+      return (
+        <React.Fragment key={headingKey}>
+          {index > 0 && <CommandSeparator />}
+          <CommandGroup heading={heading}>
+            {groupItems.map((item) => (
+              <CommandItem
+                disabled={item.disabled}
+                key={`${headingKey}-${item.id}`}
+                value={`${heading} ${labelOf(item)}`}
+                onSelect={() => handleSelect(item)}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  {item.icon && <item.icon />}
+                  <span className="truncate">{labelOf(item)}</span>
+                </span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </React.Fragment>
+      );
+    });
 
   return (
     <>
@@ -138,16 +152,16 @@ export function SearchDialog() {
         className="px-0! font-normal text-muted-foreground hover:no-underline"
       >
         <Search data-icon="inline-start" />
-        Search
+        {t("button")}
         <kbd className="inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium text-[10px]">
           <span className="text-xs">⌘</span>J
         </kbd>
       </Button>
       <CommandDialog open={open} onOpenChange={handleOpenChange}>
         <Command>
-          <CommandInput placeholder="Search dashboards, users, and more…" value={query} onValueChange={setQuery} />
+          <CommandInput placeholder={t("placeholder")} value={query} onValueChange={setQuery} />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandEmpty>{t("empty")}</CommandEmpty>
             {query ? renderGroups(searchItems) : renderGroups(recommendations)}
           </CommandList>
         </Command>

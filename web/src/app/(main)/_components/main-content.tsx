@@ -4,6 +4,8 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import { usePathname } from "next/navigation";
 
+import { useTranslations } from "next-intl";
+
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -34,6 +36,7 @@ function isFullBleed(pathname: string) {
 export function MainContent({ children }: { children: ReactNode }) {
   const currentUser = useCurrentUser();
   const pathname = usePathname();
+  const t = useTranslations("header");
   const [version, setVersion] = useState("");
 
   useEffect(() => {
@@ -66,7 +69,9 @@ export function MainContent({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-2">
             {version && (
-              <span className="font-medium text-muted-foreground text-xs tabular-nums">版本 · {version}</span>
+              <span className="font-medium text-muted-foreground text-xs tabular-nums">
+                {t("version", { version })}
+              </span>
             )}
             <UpdateBadge />
             <LayoutControls />

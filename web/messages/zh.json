@@ -3191,6 +3191,12 @@
       "6179fdba": "ARTEX — 自主渗透测试控制台"
     }
   },
+  "header": {
+    "updateBadge": "新版本 {latest}",
+    "updateBadgeShort": "新版本",
+    "updateTitle": "发现新版本 {latest}，点击前往更新",
+    "version": "版本 · {version}"
+  },
   "hooks": {
     "use-side-questions": {
       "d9b60862": "旁路数据解析失败，请重新打开面板"
@@ -3719,6 +3725,35 @@
       "c4b19b3d": "系统关联"
     }
   },
+  "nav": {
+    "group": {
+      "function": "功能",
+      "system": "系统"
+    },
+    "item": {
+      "agents": "Agent",
+      "approvals": "审批记录",
+      "asset-intercept": "资产拦截",
+      "assets": "资产",
+      "chat": "对话",
+      "commands": "工具执行",
+      "dashboard": "仪表盘",
+      "findings": "发现",
+      "intercept": "拦截规则",
+      "llm": "LLM",
+      "llm-records": "LLM 录制",
+      "logs": "日志",
+      "mcp": "MCP",
+      "notify": "通知推送",
+      "settings": "系统配置",
+      "skills": "Skill",
+      "sync": "资产同步",
+      "tasks": "任务",
+      "tools": "工具",
+      "traffic": "流量",
+      "workspace": "工作空间"
+    }
+  },
   "navigation": {
     "sidebar": {
       "sidebar-items": {
@@ -3743,5 +3778,19 @@
         "e60ac9e8": "资产拦截"
       }
     }
+  },
+  "notFound": {
+    "back": "Go back home",
+    "description": "The page you are looking for could not be found.",
+    "title": "Page not found."
+  },
+  "search": {
+    "button": "Search",
+    "empty": "No results found.",
+    "placeholder": "Search dashboards, users, and more…"
+  },
+  "userMenu": {
+    "changePassword": "修改密码",
+    "logout": "退出登录"
   }
 }

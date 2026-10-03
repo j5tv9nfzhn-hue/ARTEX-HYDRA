@@ -16,6 +16,12 @@
  *   - ko.json          같은 뼈대, 값은 "" (B3 에서 한국어로 채움)
  *   - zh.sources.json  키별 출처(파일:줄)·종류·플레이스홀더 — B2 배선, B3 번역, 드리프트 추적용
  *
+ * 재추출은 비파괴적이다. 추출이 만들어 내는 최상위 네임스페이스(파일 경로 기반:
+ * app·components·lib 등)만 코드에서 새로 갱신하고, 그 밖의 "큐레이션 네임스페이스"
+ * (손으로 번역해 둔 nav·search·header 등)는 기존 파일에서 그대로 보존한다. 규칙:
+ * 추출 네임스페이스는 인벤토리라 손으로 고치지 않고, 런타임 번역은 큐레이션
+ * 네임스페이스에만 둔다. 그래야 재추출이 번역을 덮어쓰지 않는다.
+ *
  * 네임스페이스는 파일 경로에서 얻는다. 예) src/app/(main)/system/llm/page.tsx
  *   → app.main.system.llm.page  (라우트 그룹 괄호 제거, _폴더의 밑줄 제거)
  * 키는 원문의 sha1 앞 8자다. 순서·파일이 바뀌어도 같은 문구는 같은 키를 받아
@@ -207,8 +213,32 @@ fs.mkdirSync(MESSAGES_DIR, { recursive: true });
 const write = (name: string, data: unknown) =>
   fs.writeFileSync(path.join(MESSAGES_DIR, name), `${JSON.stringify(data, null, 2)}\n`, "utf8");
 
-write("zh.json", sortTree(zhTree));
-write("ko.json", sortTree(koTree));
+/** 기존 메시지 파일을 읽는다. 없거나 깨졌으면 빈 트리. */
+function readTree(name: string): Tree {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(MESSAGES_DIR, name), "utf8")) as Tree;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * 비파괴 병합. 추출이 새로 만든 트리(fresh)의 최상위 네임스페이스는 코드가 진실이므로
+ * 그대로 쓰고, 기존 파일(existing)에만 있는 최상위 네임스페이스(=손으로 번역한 큐레이션
+ * 네임스페이스)는 보존한다. 추출 네임스페이스 안의 오래된(상류에서 사라진) 키는 자연히
+ * 빠진다(상류 대조에 유리).
+ */
+function mergeCurated(fresh: Tree, existing: Tree): Tree {
+  const extractedTop = new Set(Object.keys(fresh));
+  const out: Tree = { ...fresh };
+  for (const [ns, subtree] of Object.entries(existing)) {
+    if (!extractedTop.has(ns)) out[ns] = subtree;
+  }
+  return out;
+}
+
+write("zh.json", sortTree(mergeCurated(zhTree, readTree("zh.json"))));
+write("ko.json", sortTree(mergeCurated(koTree, readTree("ko.json"))));
 write("zh.sources.json", sortedSources);
 
 // --- 요약 리포트 ------------------------------------------------------------
