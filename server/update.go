@@ -20,6 +20,19 @@ import (
 // 重启不由本进程完成：暂存好新版本后进程以 selfupdate.ExitRestart 退出，
 // 由守护脚本（start.sh / start.bat，Docker 下是 ENTRYPOINT）重新拉起。
 
+// 사용자에게 노출되는 업데이트 메시지(SSE 진행 메시지·검사 사유·에러 응답).
+// 프런트엔드(system/settings 의 update-card)가 progress.message·reason·writeErr
+// 본문을 그대로 렌더하므로 한국어로 둔다. 로그·중국어 주석은 Z2(로그 최하위)라 범위 밖.
+const (
+	updateMsgPreparing          = "준비 중…"
+	updateMsgFailed             = "업데이트 실패"
+	updateMsgStaged             = "새 버전이 준비되었습니다. 재시작 중…"
+	updateErrNotReleaseFmt      = "현재 버전 %q 은(는) 정식 릴리스 버전이 아니므로 원클릭 업데이트를 사용할 수 없습니다"
+	updateErrAlreadyLatestFmt   = "이미 최신 버전입니다 (%s)"
+	updateErrInProgress         = "이미 업데이트가 진행 중입니다"
+	updateErrRollbackInProgress = "업데이트가 진행 중이어서 롤백할 수 없습니다"
+)
+
 // restartCh 在升级就绪或回滚完成后关闭，main 收到后以 ExitRestart 退出。
 var (
 	restartOnce sync.Once
@@ -143,7 +156,7 @@ func (h *updateHub) begin(version string) bool {
 		return false
 	}
 	h.running = true
-	h.cur = updateProgress{Phase: selfupdate.PhaseDownload, Percent: 0, Message: "准备中…", Version: version}
+	h.cur = updateProgress{Phase: selfupdate.PhaseDownload, Percent: 0, Message: updateMsgPreparing, Version: version}
 	h.fanout(h.cur)
 	return true
 }
@@ -154,9 +167,9 @@ func (h *updateHub) finish(err error) {
 	defer h.mu.Unlock()
 	h.running = false
 	if err != nil {
-		h.cur = updateProgress{Phase: selfupdate.PhaseFailed, Percent: -1, Message: "更新失败", Error: err.Error(), Version: h.cur.Version}
+		h.cur = updateProgress{Phase: selfupdate.PhaseFailed, Percent: -1, Message: updateMsgFailed, Error: err.Error(), Version: h.cur.Version}
 	} else {
-		h.cur = updateProgress{Phase: selfupdate.PhaseStaged, Percent: 100, Message: "新版本已就绪，正在重启…", Version: h.cur.Version}
+		h.cur = updateProgress{Phase: selfupdate.PhaseStaged, Percent: 100, Message: updateMsgStaged, Version: h.cur.Version}
 	}
 	h.fanout(h.cur)
 }
@@ -258,7 +271,7 @@ func (s *Server) updateCheck(w http.ResponseWriter, r *http.Request) {
 	if !comparable {
 		// 开发构建（dev / git describe 带后缀）没有可比较的版本号。放行只会
 		// 用正式版覆盖掉本地正在调试的二进制，所以直接不给更新。
-		out["reason"] = fmt.Sprintf("当前版本 %q 不是正式发布版本，已禁用一键更新", current)
+		out["reason"] = fmt.Sprintf(updateErrNotReleaseFmt, current)
 	}
 	writeJSON(w, 200, out)
 }
@@ -279,15 +292,15 @@ func (s *Server) updateApply(w http.ResponseWriter, r *http.Request) {
 	}
 	cmp, comparable := selfupdate.CompareVersions(current, rel.TagName)
 	if !comparable {
-		writeErr(w, 400, fmt.Sprintf("当前版本 %q 不是正式发布版本，已禁用一键更新", current))
+		writeErr(w, 400, fmt.Sprintf(updateErrNotReleaseFmt, current))
 		return
 	}
 	if cmp >= 0 {
-		writeErr(w, 400, fmt.Sprintf("当前已是最新版本 %s", current))
+		writeErr(w, 400, fmt.Sprintf(updateErrAlreadyLatestFmt, current))
 		return
 	}
 	if !updHub.begin(rel.TagName) {
-		writeErr(w, 409, "已有一个更新正在进行中")
+		writeErr(w, 409, updateErrInProgress)
 		return
 	}
 
@@ -314,7 +327,7 @@ func (s *Server) updateApply(w http.ResponseWriter, r *http.Request) {
 // updateRollback 主动退回上一版本（换装前备份的 artex.old）。
 func (s *Server) updateRollback(w http.ResponseWriter, r *http.Request) {
 	if _, running := updHub.snapshot(); running {
-		writeErr(w, 409, "更新正在进行中，无法回滚")
+		writeErr(w, 409, updateErrRollbackInProgress)
 		return
 	}
 	if err := selfupdate.Rollback(); err != nil {
