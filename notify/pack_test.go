@@ -84,7 +84,7 @@ func TestTelegramPackingUsesRuneBudget(t *testing.T) {
 	if kept <= 0 || kept >= len(m.Items) {
 		t.Fatalf("应只装下一部分，得到 %d", kept)
 	}
-	if !strings.Contains(text, "下一条继续") {
+	if !strings.Contains(text, "다음 메시지") {
 		t.Fatalf("应说明还有余量未包含:\n%.300s", text)
 	}
 }

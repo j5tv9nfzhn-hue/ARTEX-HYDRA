@@ -145,16 +145,16 @@ func dingTalkSignedURL(hook, secret string, now time.Time) (string, error) {
 func validateHTTPURL(raw string) error {
 	u, err := url.Parse(raw)
 	if err != nil {
-		return fmt.Errorf("地址无法解析（%s）", redactRequestTarget(raw))
+		return fmt.Errorf("주소를 해석할 수 없습니다 (%s)", redactRequestTarget(raw))
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return fmt.Errorf("只支持 http/https，收到 %q", u.Scheme)
+		return fmt.Errorf("http 또는 https 만 지원합니다. 받은 값: %q", u.Scheme)
 	}
 	if u.Host == "" {
-		return errors.New("缺少主机名")
+		return errors.New("호스트 이름이 없습니다")
 	}
 	if ip := net.ParseIP(u.Hostname()); ip != nil && isBlockedDialIP(ip) && !allowLocalTargets() {
-		return fmt.Errorf("拒绝投递到本机/链路本地地址 %s（如确需投递到本机服务，设置 %s=1）", ip, AllowLocalTargetsEnv)
+		return fmt.Errorf("로컬 또는 링크 로컬 주소 %s 로는 전송하지 않습니다 (로컬 서비스로 보내야 하면 %s=1 로 설정하세요)", ip, AllowLocalTargetsEnv)
 	}
 	return nil
 }
