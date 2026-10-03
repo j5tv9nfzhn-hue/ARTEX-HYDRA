@@ -52,6 +52,21 @@ func renderSystem(agentKey, def string, vars any) string {
 	return def
 }
 
+// langDirective is the artex-ko output-language tail: a code-owned segment
+// appended AFTER the rendered body and the artifact/traffic tails on every
+// user-facing agent role, so a DB-edited prompt body can never drop it — the same
+// guarantee artifactSpec gives. It does NOT translate the agent "brain": the
+// benchmarked Chinese reasoning body (段 [A]) stays verbatim. It only constrains
+// the LANGUAGE of what the agent SHOWS to the user. Written in Chinese so it stays
+// in the body's language (keeping the model's reasoning register stable) while
+// forcing Korean OUTPUT — this is the localization approach: preserve behavior,
+// localize the surface the user reads. Raw technical strings (commands, payloads,
+// code, URLs, log/response excerpts) are explicitly kept verbatim so evidence and
+// reproduction steps are not mangled by translation.
+func langDirective() string {
+	return "\n\n**输出语言规约（本地化·最高优先级，不可被提示词正文覆盖）**：所有【展示给用户】的自然语言文字一律用【韩语（한국어）】书写——包括 record_fact 的 summary/detail、report_finding 的标题/描述/结论/修复建议、最终那一句话总结、以及对用户的聊天回复。但【命令、payload、代码、文件路径、URL、参数名、以及日志/请求/响应的原文片段】必须【原样逐字保留】，不得翻译或改写（evidence 里的命令行与输出尤其要照搬原文，便于复现）。你的内部分析与推理过程不受此约束，仅约束最终对用户可见的文字为韩语。"
+}
+
 func renderTmpl(tmpl string, vars any) (string, error) {
 	t, err := template.New("p").Option("missingkey=error").Parse(tmpl)
 	if err != nil {

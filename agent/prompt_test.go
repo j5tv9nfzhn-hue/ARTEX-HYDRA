@@ -80,3 +80,43 @@ func TestRenderSystemOverrideAndFallback(t *testing.T) {
 		t.Fatalf("worker without proxy must NOT inject trafficTool: %q", noProxy)
 	}
 }
+
+// TestLangDirectiveAppendedToUserFacingRoles pins the artex-ko localization tail:
+// every user-facing role's system prompt must end with the code-owned Korean
+// output-language directive, and a DB-edited body must NOT be able to drop it.
+func TestLangDirectiveAppendedToUserFacingRoles(t *testing.T) {
+	t.Cleanup(func() { PromptOverride = nil })
+
+	// The directive forces Korean OUTPUT and preserves raw technical strings; both
+	// signals must be present. 한국어 marker + verbatim-preservation clause.
+	dir := langDirective()
+	if !strings.Contains(dir, "한국어") {
+		t.Fatalf("langDirective must force Korean output, got %q", dir)
+	}
+	if !strings.Contains(dir, "payload") || !strings.Contains(dir, "原样逐字保留") {
+		t.Fatalf("langDirective must keep commands/payloads verbatim, got %q", dir)
+	}
+
+	// Even with a DB body that is pure non-directive text, the code-owned tail is
+	// still appended for each user-facing builder — identical guarantee to the
+	// artifact tail. A custom body can never translate away the Korean mandate.
+	PromptOverride = func(string) (string, bool) { return "BODY-ONLY", true }
+	cases := map[string]string{
+		"worker":    workerSystem("", "", "/data", "/data"),
+		"planner":   plannerSystem("g", "/data", "/data"),
+		"mainagent": mainAgentSystem("g", "/data", "/data"),
+		"chat":      chatSystem("chat", "/data", "/data"),
+	}
+	for role, sys := range cases {
+		if !strings.HasPrefix(sys, "BODY-ONLY") {
+			t.Fatalf("%s: DB body not honored: %q", role, sys)
+		}
+		if !strings.Contains(sys, "한국어") {
+			t.Fatalf("%s: missing Korean output-language tail: %q", role, sys)
+		}
+		// The directive is the tail — it must come AFTER the body (recency).
+		if strings.Index(sys, "한국어") <= strings.Index(sys, "BODY-ONLY") {
+			t.Fatalf("%s: langDirective must be appended after the body: %q", role, sys)
+		}
+	}
+}
