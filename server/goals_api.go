@@ -9,6 +9,19 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
+// goals_api.go 가 사용자에게 돌려주는 오류 응답 문구. 명령·요청 필드명(text·vulnclass·
+// gid)·enum 은 원문 그대로 두고, 사람이 읽는 메시지만 한국어로 둔다. 영어 writeErr
+// (task not found·invalid JSON·bad goal id)는 F3b 중국어 전용 범위라 보존한다.
+const (
+	errGoalTaskDeletingAdd    = "작업을 삭제하는 중이라 목표를 추가할 수 없습니다"
+	errGoalTaskDeletingEdit   = "작업을 삭제하는 중이라 목표를 수정할 수 없습니다"
+	errGoalTaskDeletingDelete = "작업을 삭제하는 중이라 목표를 삭제할 수 없습니다"
+	errGoalTextEmpty          = "목표 내용은 비워 둘 수 없습니다"
+	errGoalNotFound           = "목표를 찾을 수 없습니다"
+	errGoalReadAfterAdd       = "목표를 저장한 뒤 읽지 못했습니다"
+	errGoalReadAfterEdit      = "목표를 수정한 뒤 읽지 못했습니다"
+)
+
 // 总览「目标管理」的人工 CRUD 接口。与 agent 侧的 set_goals 工具写同一批 goal 节点,
 // 但入口是人类在 UI 上直接增删改;新增/修改后复用「复活任务」逻辑(admitTask resume:
 // 终态→running、解除暂停、必要时排队),删除不复活(按产品决策)。每个变更 handler 都走
@@ -38,7 +51,7 @@ func (s *Server) addGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.engine.beginTaskOperation(t.ID) {
-		writeErr(w, 409, "任务正在删除,无法新增目标")
+		writeErr(w, 409, errGoalTaskDeletingAdd)
 		return
 	}
 	defer s.engine.decInflight(t.ID)
@@ -53,7 +66,7 @@ func (s *Server) addGoal(w http.ResponseWriter, r *http.Request) {
 	}
 	text := strings.TrimSpace(body.Text)
 	if text == "" {
-		writeErr(w, 400, "目标内容不能为空")
+		writeErr(w, 400, errGoalTextEmpty)
 		return
 	}
 	payload := map[string]any{"text": text}
@@ -72,7 +85,7 @@ func (s *Server) addGoal(w http.ResponseWriter, r *http.Request) {
 	s.reviveTask(t)              // 把已完成/暂停的任务拉回运行态继续跑
 	node, _ := t.Store.GetNode(id)
 	if node == nil {
-		writeErr(w, 500, "目标写入后读取失败")
+		writeErr(w, 500, errGoalReadAfterAdd)
 		return
 	}
 	writeJSON(w, 200, goalDTO(node))
@@ -87,7 +100,7 @@ func (s *Server) editGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.engine.beginTaskOperation(t.ID) {
-		writeErr(w, 409, "任务正在删除,无法修改目标")
+		writeErr(w, 409, errGoalTaskDeletingEdit)
 		return
 	}
 	defer s.engine.decInflight(t.ID)
@@ -107,7 +120,7 @@ func (s *Server) editGoal(w http.ResponseWriter, r *http.Request) {
 	}
 	text := strings.TrimSpace(body.Text)
 	if text == "" {
-		writeErr(w, 400, "目标内容不能为空")
+		writeErr(w, 400, errGoalTextEmpty)
 		return
 	}
 	node, err := t.Store.GetNode(gid)
@@ -116,7 +129,7 @@ func (s *Server) editGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if node == nil || node.Kind != db.KindGoal {
-		writeErr(w, 404, "目标不存在")
+		writeErr(w, 404, errGoalNotFound)
 		return
 	}
 	oldText := goalDTO(node).Text
@@ -128,7 +141,7 @@ func (s *Server) editGoal(w http.ResponseWriter, r *http.Request) {
 	s.reviveTask(t)                   // 与新增一致:复活任务据新目标重判
 	updated, _ := t.Store.GetNode(gid)
 	if updated == nil {
-		writeErr(w, 500, "目标更新后读取失败")
+		writeErr(w, 500, errGoalReadAfterEdit)
 		return
 	}
 	writeJSON(w, 200, goalDTO(updated))
@@ -143,7 +156,7 @@ func (s *Server) deleteGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.engine.beginTaskOperation(t.ID) {
-		writeErr(w, 409, "任务正在删除,无法删除目标")
+		writeErr(w, 409, errGoalTaskDeletingDelete)
 		return
 	}
 	defer s.engine.decInflight(t.ID)
@@ -159,7 +172,7 @@ func (s *Server) deleteGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if node == nil || node.Kind != db.KindGoal {
-		writeErr(w, 404, "目标不存在")
+		writeErr(w, 404, errGoalNotFound)
 		return
 	}
 	text := goalDTO(node).Text
