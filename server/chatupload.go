@@ -15,6 +15,21 @@ import (
 // maxChatUpload caps a single chat-attachment upload request (memory + spill).
 const maxChatUpload = 128 << 20 // 128 MiB
 
+// chatUpload 의 사용자 노출 에러 응답(한국어). writeErr 로 그대로 UI 에 노출된다. 用語:
+// 附件→첨부 파일, scope/id/file 은 요청 필드명이라 원문 보존. scope 검증은 intercept.go 의
+// "값은 … 중 하나여야 합니다" 패턴, 作业 삭제 문구는 goals_api.go 와 같은 문형, "잘못된 id"
+// 는 workspace.go errWsIllegalPath("잘못된 경로입니다")와 같은 꼴이다. ...失败 세 종류는
+// task_archives.go:229 선례처럼 접두 상수 + err.Error() 로 이어 붙인다.
+const (
+	errChatUploadScopeInvalid = "scope 값은 task, session, staging 중 하나여야 합니다"
+	errChatUploadBadID        = "잘못된 id입니다"
+	errChatUploadTaskDeleting = "작업을 삭제하는 중이라 첨부 파일을 업로드할 수 없습니다"
+	errChatUploadMkdir        = "디렉터리를 만들지 못했습니다: "
+	errChatUploadParse        = "업로드를 해석하지 못했거나 크기 제한을 초과했습니다: "
+	errChatUploadNoFile       = "업로드할 파일이 없습니다(폼 필드 file)"
+	errChatUploadSaveFailed   = "저장하지 못했습니다: "
+)
+
 // safeChatID guards the {id} path segment against traversal — task ids are numeric,
 // session ids are alnum/_/- ; anything with "/" or ".." is rejected.
 var safeChatID = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
@@ -55,12 +70,12 @@ func (s *Server) chatUpload(w http.ResponseWriter, r *http.Request) {
 	case "staging":
 		sub = "drafts"
 	default:
-		writeErr(w, 400, "scope 必须是 task / session / staging")
+		writeErr(w, 400, errChatUploadScopeInvalid)
 		return
 	}
 	id := r.URL.Query().Get("id")
 	if !safeChatID.MatchString(id) {
-		writeErr(w, 400, "非法 id")
+		writeErr(w, 400, errChatUploadBadID)
 		return
 	}
 	if taskScoped {
@@ -69,24 +84,24 @@ func (s *Server) chatUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !s.engine.beginTaskOperation(id) {
-			writeErr(w, http.StatusConflict, "任务正在删除，无法上传附件")
+			writeErr(w, http.StatusConflict, errChatUploadTaskDeleting)
 			return
 		}
 		defer s.engine.decInflight(id)
 	}
 	dir := filepath.Join(s.m.dir, sub, id, "uploads")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		writeErr(w, 500, "建目录失败: "+err.Error())
+		writeErr(w, 500, errChatUploadMkdir+err.Error())
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxChatUpload)
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		writeErr(w, 400, "解析上传失败或超出大小限制: "+err.Error())
+		writeErr(w, 400, errChatUploadParse+err.Error())
 		return
 	}
 	files := r.MultipartForm.File["file"]
 	if len(files) == 0 {
-		writeErr(w, 400, "缺少上传文件(表单字段 file)")
+		writeErr(w, 400, errChatUploadNoFile)
 		return
 	}
 	out := make([]chatAttachment, 0, len(files))
@@ -97,7 +112,7 @@ func (s *Server) chatUpload(w http.ResponseWriter, r *http.Request) {
 		}
 		dest := uniqueUploadPath(dir, name)
 		if err := saveUpload(hdr, dest); err != nil {
-			writeErr(w, 500, "保存失败: "+err.Error())
+			writeErr(w, 500, errChatUploadSaveFailed+err.Error())
 			return
 		}
 		base := filepath.Base(dest)

@@ -20,6 +20,18 @@ const (
 	settingConstraintsInjectWorker  = "constraints_inject_worker"
 )
 
+// 约束 CRUD 핸들러의 사용자 노출 에러 응답(한국어). writeErr 로 그대로 UI 토스트에 노출된다.
+// 用語: 约束→제약(ko.json 의 약속/제약 표기와 정합), 任务→작업. 추가/수정/삭제 문구는
+// goals_api.go 의 errGoalTaskDeleting* 와 같은 문형이고, kind 검증은 intercept.go 의
+// "값은 … 중 하나여야 합니다" 패턴을 따른다.
+const (
+	errConstraintTaskDeletingAdd    = "작업을 삭제하는 중이라 제약을 추가할 수 없습니다"
+	errConstraintTaskDeletingEdit   = "작업을 삭제하는 중이라 제약을 수정할 수 없습니다"
+	errConstraintTaskDeletingDelete = "작업을 삭제하는 중이라 제약을 삭제할 수 없습니다"
+	errConstraintTextEmpty          = "제약 내용은 비워 둘 수 없습니다"
+	errConstraintKindInvalid        = "kind 값은 allow 또는 deny 중 하나여야 합니다"
+)
+
 // constraintInjectPlanner / constraintInjectWorker 报告是否把操作约束注入对应 agent 的
 // 系统提示(默认开)。作为 resolver 传给 planner/worker,每轮读 → 改开关即时生效。
 func (s *Server) constraintInjectPlanner() bool {
@@ -53,7 +65,7 @@ func (s *Server) addConstraint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.engine.beginTaskOperation(t.ID) {
-		writeErr(w, 409, "任务正在删除,无法新增约束")
+		writeErr(w, 409, errConstraintTaskDeletingAdd)
 		return
 	}
 	defer s.engine.decInflight(t.ID)
@@ -68,12 +80,12 @@ func (s *Server) addConstraint(w http.ResponseWriter, r *http.Request) {
 	}
 	text := strings.TrimSpace(body.Text)
 	if text == "" {
-		writeErr(w, 400, "约束内容不能为空")
+		writeErr(w, 400, errConstraintTextEmpty)
 		return
 	}
 	kind := normalizeConstraintKind(body.Kind)
 	if kind == "" {
-		writeErr(w, 400, "kind 必须是 allow 或 deny")
+		writeErr(w, 400, errConstraintKindInvalid)
 		return
 	}
 	id, err := t.Store.AddConstraint(kind, text, "human")
@@ -92,7 +104,7 @@ func (s *Server) editConstraint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.engine.beginTaskOperation(t.ID) {
-		writeErr(w, 409, "任务正在删除,无法修改约束")
+		writeErr(w, 409, errConstraintTaskDeletingEdit)
 		return
 	}
 	defer s.engine.decInflight(t.ID)
@@ -112,12 +124,12 @@ func (s *Server) editConstraint(w http.ResponseWriter, r *http.Request) {
 	}
 	text := strings.TrimSpace(body.Text)
 	if text == "" {
-		writeErr(w, 400, "约束内容不能为空")
+		writeErr(w, 400, errConstraintTextEmpty)
 		return
 	}
 	kind := normalizeConstraintKind(body.Kind)
 	if kind == "" {
-		writeErr(w, 400, "kind 必须是 allow 或 deny")
+		writeErr(w, 400, errConstraintKindInvalid)
 		return
 	}
 	if err := t.Store.UpdateConstraint(cid, kind, text); err != nil {
@@ -135,7 +147,7 @@ func (s *Server) deleteConstraint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.engine.beginTaskOperation(t.ID) {
-		writeErr(w, 409, "任务正在删除,无法删除约束")
+		writeErr(w, 409, errConstraintTaskDeletingDelete)
 		return
 	}
 	defer s.engine.decInflight(t.ID)
