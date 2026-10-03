@@ -88,7 +88,7 @@ func TestDingTalkFallsBackToMarkdownForBatch(t *testing.T) {
 			t.Fatalf("汇总消息应发 markdown，得到 %v", body["msgtype"])
 		}
 		md, _ := body["markdown"].(map[string]any)
-		if !strings.Contains(md["text"].(string), "近 30 分钟") {
+		if !strings.Contains(md["text"].(string), "최근 30분간") {
 			t.Errorf("汇总正文缺少时间窗: %v", md["text"])
 		}
 	})

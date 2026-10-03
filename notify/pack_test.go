@@ -28,7 +28,7 @@ func TestMarkdownBodyPacksWholeItemsWithinByteLimit(t *testing.T) {
 	}
 	// 头部必须如实说明本条只包含多少条、其余有多少条——否则读者会把头部
 	// 那个数字当成全部。
-	if !strings.Contains(body, "其余") || !strings.Contains(body, "下一条消息继续") {
+	if !strings.Contains(body, "나머지") || !strings.Contains(body, "다음 메시지에서") {
 		t.Fatalf("头部应说明还有多少条未包含在本条里:\n%s", body[:minInt(400, len(body))])
 	}
 	// 只应包含前 kept 条。
