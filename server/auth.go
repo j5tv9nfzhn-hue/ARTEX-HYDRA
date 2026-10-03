@@ -22,6 +22,25 @@ const (
 	keyChars       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 )
 
+// 인증 엔드포인트가 HTTP 응답으로 돌려주는 사용자 노출 문구다. 한국어 UI 에서 로그인·
+// 비밀번호 설정이 실패하면 이 문구가 그대로 토스트로 뜨므로 한국어로 둔다. 자격 증명
+// 오류 문구는 로그인 화면(web messages auth.login.errorCredential)과 표기를 맞췄다.
+// token 은 기술 용어라 원문 그대로 둔다(로그·주석은 BRIEF 방침상 최하위라 손대지 않음).
+const (
+	authErrUnauthorized         = "인증이 필요합니다"
+	authErrTokenInvalid         = "token 이 유효하지 않거나 만료되었습니다"
+	authErrPasswordAlreadySet   = "비밀번호가 이미 설정되어 있습니다"
+	authErrPasswordEmpty        = "비밀번호를 입력해 주세요"
+	authErrNewPasswordEmpty     = "새 비밀번호를 입력해 주세요"
+	authErrPasswordHash         = "비밀번호 암호화에 실패했습니다"
+	authErrSaveFailedPrefix     = "저장에 실패했습니다: "
+	authErrTokenGen             = "token 생성에 실패했습니다"
+	authErrBadRequest           = "요청 형식이 올바르지 않습니다"
+	authErrPasswordNotInit      = "비밀번호가 초기화되지 않았습니다. 먼저 비밀번호를 설정해 주세요"
+	authErrCurrentPasswordWrong = "현재 비밀번호가 올바르지 않습니다"
+	authErrBadCredential        = "사용자 이름 또는 비밀번호가 올바르지 않습니다"
+)
+
 // loadOrCreateJWTKey reads the 32-byte signing key from keyDir/jwt.key. keyDir is
 // the project base dir (next to the executable), NOT the browsable workspace root
 // (dataDir) — the signing key must never be listable/downloadable via the file
@@ -103,11 +122,11 @@ func (s *Server) requireAuth(h http.Handler) http.Handler {
 		}
 		tok := extractToken(r)
 		if tok == "" {
-			writeErr(w, 401, "未授权")
+			writeErr(w, 401, authErrUnauthorized)
 			return
 		}
 		if !verifyJWT(tok, s.jwtKey) {
-			writeErr(w, 401, "token 无效或已过期")
+			writeErr(w, 401, authErrTokenInvalid)
 			return
 		}
 		h.ServeHTTP(w, r)
@@ -132,28 +151,28 @@ func (s *Server) authInit(w http.ResponseWriter, r *http.Request) {
 	}
 	existing, _, _ := pg.GetSetting(authPassKey)
 	if existing != "" {
-		writeErr(w, 403, "密码已设置")
+		writeErr(w, 403, authErrPasswordAlreadySet)
 		return
 	}
 	var req struct {
 		Password string `json:"password"`
 	}
 	if err := decode(r, &req); err != nil || req.Password == "" {
-		writeErr(w, 400, "密码不能为空")
+		writeErr(w, 400, authErrPasswordEmpty)
 		return
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		writeErr(w, 500, "密码加密失败")
+		writeErr(w, 500, authErrPasswordHash)
 		return
 	}
 	if err := pg.SetSetting(authPassKey, string(hash)); err != nil {
-		writeErr(w, 500, "保存失败: "+err.Error())
+		writeErr(w, 500, authErrSaveFailedPrefix+err.Error())
 		return
 	}
 	tok, err := signJWT(s.jwtKey)
 	if err != nil {
-		writeErr(w, 500, "token 生成失败")
+		writeErr(w, 500, authErrTokenGen)
 		return
 	}
 	writeJSON(w, 200, map[string]any{"token": tok})
@@ -168,7 +187,7 @@ func (s *Server) authChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !verifyJWT(extractToken(r), s.jwtKey) {
-		writeErr(w, 401, "未授权")
+		writeErr(w, 401, authErrUnauthorized)
 		return
 	}
 	var req struct {
@@ -176,29 +195,29 @@ func (s *Server) authChangePassword(w http.ResponseWriter, r *http.Request) {
 		NewPassword string `json:"new_password"`
 	}
 	if err := decode(r, &req); err != nil {
-		writeErr(w, 400, "请求格式错误")
+		writeErr(w, 400, authErrBadRequest)
 		return
 	}
 	if req.NewPassword == "" {
-		writeErr(w, 400, "新密码不能为空")
+		writeErr(w, 400, authErrNewPasswordEmpty)
 		return
 	}
 	hash, ok, _ := pg.GetSetting(authPassKey)
 	if !ok || hash == "" {
-		writeErr(w, 403, "密码未初始化，请先设置密码")
+		writeErr(w, 403, authErrPasswordNotInit)
 		return
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.OldPassword)); err != nil {
-		writeErr(w, 401, "当前密码错误")
+		writeErr(w, 401, authErrCurrentPasswordWrong)
 		return
 	}
 	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
-		writeErr(w, 500, "密码加密失败")
+		writeErr(w, 500, authErrPasswordHash)
 		return
 	}
 	if err := pg.SetSetting(authPassKey, string(newHash)); err != nil {
-		writeErr(w, 500, "保存失败: "+err.Error())
+		writeErr(w, 500, authErrSaveFailedPrefix+err.Error())
 		return
 	}
 	writeJSON(w, 200, map[string]any{"ok": true})
@@ -215,25 +234,25 @@ func (s *Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	if err := decode(r, &req); err != nil {
-		writeErr(w, 400, "请求格式错误")
+		writeErr(w, 400, authErrBadRequest)
 		return
 	}
 	if req.Username != "ARTEX" {
-		writeErr(w, 401, "用户名或密码错误")
+		writeErr(w, 401, authErrBadCredential)
 		return
 	}
 	hash, ok, _ := pg.GetSetting(authPassKey)
 	if !ok || hash == "" {
-		writeErr(w, 403, "密码未初始化，请先设置密码")
+		writeErr(w, 403, authErrPasswordNotInit)
 		return
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.Password)); err != nil {
-		writeErr(w, 401, "用户名或密码错误")
+		writeErr(w, 401, authErrBadCredential)
 		return
 	}
 	tok, err := signJWT(s.jwtKey)
 	if err != nil {
-		writeErr(w, 500, "token 生成失败")
+		writeErr(w, 500, authErrTokenGen)
 		return
 	}
 	writeJSON(w, 200, map[string]any{"token": tok})
