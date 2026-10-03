@@ -18,12 +18,19 @@ type companyScopeInputs []db.ScopeInput
 
 const maxCompanyMutationBodyBytes = 2 << 20
 
+// 회사·자산 API 가 사용자에게 돌려주는 오류 응답 문구. 용어집 기준으로 company 는
+// "회사"로 둔다. 사람이 읽는 메시지만 한국어로 두고 식별자·필드명은 원문 보존.
+const (
+	errCompanyRequestTooLarge = "요청 본문이 너무 큽니다"
+	errCompanyNameConflict    = "이미 존재하는 회사 이름입니다"
+)
+
 func decodeCompanyMutationRequest(w http.ResponseWriter, r *http.Request, value any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, maxCompanyMutationBodyBytes)
 	if err := json.NewDecoder(r.Body).Decode(value); err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			writeErr(w, http.StatusRequestEntityTooLarge, "请求正文过大")
+			writeErr(w, http.StatusRequestEntityTooLarge, errCompanyRequestTooLarge)
 		} else {
 			writeErr(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		}
@@ -118,7 +125,7 @@ func (s *Server) createCompany(w http.ResponseWriter, r *http.Request) {
 	id, added, skipped, invalid, scopeErrs, err := cs.CreateCompanyWithScope(req.Name, req.Logo, req.Scope, "api")
 	if err != nil {
 		if errors.Is(err, db.ErrCompanyNameConflict) {
-			writeErr(w, http.StatusConflict, "企业名称已存在")
+			writeErr(w, http.StatusConflict, errCompanyNameConflict)
 			return
 		}
 		var validationErr *db.CompanyScopeValidationError
