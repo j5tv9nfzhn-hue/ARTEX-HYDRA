@@ -414,8 +414,8 @@ func TestChannelValidateReportsMissingFields(t *testing.T) {
 		{KindTelegram, map[string]any{}, "Bot Token"},
 		{KindTelegram, map[string]any{"bot_token": "t"}, "Chat ID"},
 		{KindEmail, map[string]any{}, "SMTP"},
-		{KindEmail, map[string]any{"host": "h"}, "端口"},
-		{KindEmail, map[string]any{"host": "h", "port": 587, "from": "f"}, "收件人"},
+		{KindEmail, map[string]any{"host": "h"}, "포트"},
+		{KindEmail, map[string]any{"host": "h", "port": 587, "from": "f"}, "수신자"},
 	}
 	for _, tc := range cases {
 		ch, ok := Get(tc.kind)
