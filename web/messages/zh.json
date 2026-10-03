@@ -3178,6 +3178,86 @@
       "6179fdba": "ARTEX — 自主渗透测试控制台"
     }
   },
+  "dashboard": {
+    "activeModel": "激活模型",
+    "activeTasks": "活跃任务",
+    "activityStream": "活动流",
+    "ago": "{value} 前",
+    "all": "全部",
+    "assetDistribution": "资产分布",
+    "assetNodes": "资产节点",
+    "assetType": {
+      "app": "应用",
+      "endpoint": "端点",
+      "ip": "IP",
+      "root_domain": "根域名",
+      "service": "服务",
+      "subdomain": "子域名"
+    },
+    "byType": "按类型",
+    "cacheHit": "缓存命中",
+    "cacheHitRate": "缓存命中率",
+    "captureOff": "捕获未开启",
+    "chartCacheRead": "缓存读",
+    "chartInput": "输入",
+    "chartOutput": "输出",
+    "colEngine": "引擎",
+    "colGoalProgress": "目标进度",
+    "colInFlight": "在途",
+    "colLastActivity": "最近活动",
+    "colStatus": "状态",
+    "colTask": "任务",
+    "confirmedFindings": "确认发现",
+    "configured": "已配置",
+    "crossTaskShared": "跨任务共享",
+    "default": "默认",
+    "eventCount": "{count} 条事件",
+    "findings": "发现",
+    "inputUncached": "输入(未命中)",
+    "llmConfig": "LLM 配置",
+    "morePending": "还有 {count} 条…",
+    "noActivity": "暂无活动记录",
+    "noAssetData": "暂无资产数据",
+    "noData": "暂无数据",
+    "noFindings": "暂无发现",
+    "noPendingIntercepts": "无待审批拦截",
+    "noTasks": "暂无任务",
+    "noTrafficData": "暂无流量数据",
+    "notConfigured": "未配置",
+    "off": "关闭",
+    "on": "开启",
+    "output": "输出",
+    "pendingApprovals": "待审批 ({count})",
+    "range7": "7天",
+    "range30": "30天",
+    "range90": "3月",
+    "range180": "6月",
+    "range365": "一年",
+    "recentRequests": "最近请求",
+    "recording": "录制中",
+    "requestCount": "{count} 次请求",
+    "statDone": "完成",
+    "statExplore": "探索",
+    "statPaused": "暂停",
+    "statTokenDetail": "入 {input}（含缓存 {cache}）· 出 {output}",
+    "subtitle": "系统全局状态 · 实时刷新",
+    "systemStatus": "系统状态",
+    "taskCount": "{count} 个任务",
+    "tasks": "任务",
+    "title": "总览",
+    "tokenConsumption": "LLM Token 消耗",
+    "tokenUsage": "Token 用量",
+    "tooltipNew": "新版：来自 llm_usage 计量账本，逐次调用精确、含中断消耗；仅覆盖启用后的数据",
+    "tooltipOld": "旧版：来自 activity 统计（含历史任务），中断消耗不计、无法精确到模型",
+    "totalInOut": "合计 (输入+输出)",
+    "totalNodes": "共 {count} 节点",
+    "trafficCapture": "流量捕获",
+    "trafficExchanges": "流量交互",
+    "trafficStatusCodes": "流量状态码",
+    "verNew": "新版",
+    "verOld": "旧版",
+    "viewTasks": "查看任务"
+  },
   "header": {
     "updateBadge": "新版本 {latest}",
     "updateBadgeShort": "新版本",
@@ -3775,6 +3855,71 @@
     "button": "Search",
     "empty": "No results found.",
     "placeholder": "Search dashboards, users, and more…"
+  },
+  "status": {
+    "audit": {
+      "allow": "放行",
+      "block": "拦截"
+    },
+    "delivery": {
+      "failed": "失败",
+      "pending": "待发送",
+      "sending": "发送中",
+      "sent": "已送达",
+      "skipped": "已跳过"
+    },
+    "engine": {
+      "exploring": "探索中",
+      "idle": "空闲",
+      "paused": "已暂停",
+      "stalled": "停滞"
+    },
+    "finding": {
+      "confirmed": "已确认",
+      "duplicate": "重复",
+      "false_positive": "误报",
+      "fixed": "已修复",
+      "ignored": "忽略",
+      "in_progress": "处理中",
+      "pending": "待处理",
+      "resolved": "已处理",
+      "risk_accepted": "风险接受"
+    },
+    "goal": {
+      "abandoned": "已放弃",
+      "met": "已达成",
+      "open": "进行中"
+    },
+    "intent": {
+      "blocked": "执行出错",
+      "deleted": "已删除",
+      "done": "已完成",
+      "exhausted": "预算耗尽",
+      "open": "待领",
+      "paused": "已暂停",
+      "running": "执行中",
+      "stopped": "已停止"
+    },
+    "node": {
+      "confirmed": "确认",
+      "observed": "观测",
+      "tombstoned": "废弃"
+    },
+    "severity": {
+      "critical": "严重",
+      "high": "高危",
+      "low": "低危",
+      "medium": "中危"
+    },
+    "task": {
+      "created": "已创建",
+      "done": "已完成",
+      "failed": "失败",
+      "paused": "已暂停",
+      "queued": "排队中",
+      "running": "运行中",
+      "timeout": "已超时"
+    }
   },
   "userMenu": {
     "changePassword": "修改密码",

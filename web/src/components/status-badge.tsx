@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 import { cn } from "@/lib/utils";
 import {
   statusMeta,
@@ -19,6 +23,11 @@ export function StatusBadge({
   className?: string;
 }) {
   const meta = statusMeta(domain, value);
+  // Shared status labels live in the "status" message namespace (ko/zh). The
+  // Chinese label in lib/status.ts stays as an upstream-parity dead fallback.
+  const t = useTranslations("status");
+  const key = `${domain}.${value}`;
+  const label = t.has(key) ? t(key) : meta.label;
   return (
     <span
       className={cn(
@@ -30,7 +39,7 @@ export function StatusBadge({
       {dot && (
         <span className={cn("size-1.5 rounded-full", toneDot[meta.tone])} />
       )}
-      {meta.label}
+      {label}
     </span>
   );
 }

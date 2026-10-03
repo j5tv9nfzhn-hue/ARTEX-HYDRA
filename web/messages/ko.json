@@ -3178,6 +3178,86 @@
       "6179fdba": ""
     }
   },
+  "dashboard": {
+    "activeModel": "활성 모델",
+    "activeTasks": "활성 작업",
+    "activityStream": "활동 흐름",
+    "ago": "{value} 전",
+    "all": "전체",
+    "assetDistribution": "자산 분포",
+    "assetNodes": "자산 노드",
+    "assetType": {
+      "app": "앱",
+      "endpoint": "엔드포인트",
+      "ip": "IP",
+      "root_domain": "루트 도메인",
+      "service": "서비스",
+      "subdomain": "서브도메인"
+    },
+    "byType": "유형별",
+    "cacheHit": "캐시 적중",
+    "cacheHitRate": "캐시 적중률",
+    "captureOff": "캡처 꺼짐",
+    "chartCacheRead": "캐시 읽기",
+    "chartInput": "입력",
+    "chartOutput": "출력",
+    "colEngine": "엔진",
+    "colGoalProgress": "목표 진행도",
+    "colInFlight": "처리 중",
+    "colLastActivity": "최근 활동",
+    "colStatus": "상태",
+    "colTask": "작업",
+    "confirmedFindings": "확인된 취약점",
+    "configured": "설정됨",
+    "crossTaskShared": "작업 간 공유",
+    "default": "기본",
+    "eventCount": "{count}건 이벤트",
+    "findings": "취약점",
+    "inputUncached": "입력(미적중)",
+    "llmConfig": "LLM 설정",
+    "morePending": "외 {count}건…",
+    "noActivity": "활동 기록 없음",
+    "noAssetData": "자산 데이터 없음",
+    "noData": "데이터 없음",
+    "noFindings": "취약점 없음",
+    "noPendingIntercepts": "승인 대기 중인 가로채기 없음",
+    "noTasks": "작업 없음",
+    "noTrafficData": "트래픽 데이터 없음",
+    "notConfigured": "미설정",
+    "off": "꺼짐",
+    "on": "켜짐",
+    "output": "출력",
+    "pendingApprovals": "승인 대기 ({count})",
+    "range7": "7일",
+    "range30": "30일",
+    "range90": "3개월",
+    "range180": "6개월",
+    "range365": "1년",
+    "recentRequests": "최근 요청",
+    "recording": "기록 중",
+    "requestCount": "{count}회 요청",
+    "statDone": "완료",
+    "statExplore": "탐색",
+    "statPaused": "일시정지",
+    "statTokenDetail": "입력 {input}(캐시 {cache} 포함) · 출력 {output}",
+    "subtitle": "시스템 전역 상태 · 실시간 갱신",
+    "systemStatus": "시스템 상태",
+    "taskCount": "{count}개 작업",
+    "tasks": "작업",
+    "title": "전체 개요",
+    "tokenConsumption": "LLM Token 소비",
+    "tokenUsage": "Token 사용량",
+    "tooltipNew": "신버전: llm_usage 계량 원장에서 가져와 호출마다 정확하고 중단된 소비까지 포함합니다. 기능을 켠 이후의 데이터만 집계합니다.",
+    "tooltipOld": "구버전: activity 통계에서 가져와 과거 작업까지 포함하지만, 중단된 소비는 빠지고 모델 단위까지 정확하지는 않습니다.",
+    "totalInOut": "합계 (입력+출력)",
+    "totalNodes": "총 {count}개 노드",
+    "trafficCapture": "트래픽 캡처",
+    "trafficExchanges": "트래픽 교환",
+    "trafficStatusCodes": "트래픽 상태 코드",
+    "verNew": "신버전",
+    "verOld": "구버전",
+    "viewTasks": "작업 보기"
+  },
   "header": {
     "updateBadge": "새 버전 {latest}",
     "updateBadgeShort": "새 버전",
@@ -3775,6 +3855,71 @@
     "button": "검색",
     "empty": "검색 결과가 없습니다.",
     "placeholder": "대시보드, 사용자 등 검색…"
+  },
+  "status": {
+    "audit": {
+      "allow": "허용",
+      "block": "차단"
+    },
+    "delivery": {
+      "failed": "실패",
+      "pending": "발송 대기",
+      "sending": "발송 중",
+      "sent": "전달됨",
+      "skipped": "건너뜀"
+    },
+    "engine": {
+      "exploring": "탐색 중",
+      "idle": "유휴",
+      "paused": "일시정지",
+      "stalled": "정체"
+    },
+    "finding": {
+      "confirmed": "확인됨",
+      "duplicate": "중복",
+      "false_positive": "오탐",
+      "fixed": "수정됨",
+      "ignored": "무시",
+      "in_progress": "처리 중",
+      "pending": "처리 대기",
+      "resolved": "처리됨",
+      "risk_accepted": "위험 수용"
+    },
+    "goal": {
+      "abandoned": "포기",
+      "met": "달성",
+      "open": "진행 중"
+    },
+    "intent": {
+      "blocked": "실행 오류",
+      "deleted": "삭제됨",
+      "done": "완료",
+      "exhausted": "예산 소진",
+      "open": "대기 중",
+      "paused": "일시정지",
+      "running": "실행 중",
+      "stopped": "중지됨"
+    },
+    "node": {
+      "confirmed": "확인",
+      "observed": "관측",
+      "tombstoned": "폐기"
+    },
+    "severity": {
+      "critical": "심각",
+      "high": "높음",
+      "low": "낮음",
+      "medium": "중간"
+    },
+    "task": {
+      "created": "생성됨",
+      "done": "완료",
+      "failed": "실패",
+      "paused": "일시정지",
+      "queued": "대기 중",
+      "running": "실행 중",
+      "timeout": "시간 초과"
+    }
   },
   "userMenu": {
     "changePassword": "비밀번호 변경",
