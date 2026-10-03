@@ -23,6 +23,21 @@ const (
 	maxWorkspaceUpload = 512 << 20 // 512 MiB per upload request
 )
 
+// 사용자에게 노출되는 오류 문구(한국어). 경로·페이로드·err.Error() 원문은 그대로 둔다.
+// workspace → "작업 공간"(용어집 정본).
+const (
+	errWsIllegalPath      = "잘못된 경로입니다"
+	errWsPathNotFound     = "경로가 존재하지 않습니다"
+	errWsNotDir           = "디렉터리가 아닙니다"
+	errWsFileNotFound     = "파일이 존재하지 않습니다"
+	errWsIsDir            = "디렉터리이므로 파일로 읽을 수 없습니다"
+	errWsTargetIsDir      = "대상 경로가 디렉터리입니다"
+	errWsCannotDeleteRoot = "작업 공간 루트 디렉터리는 삭제할 수 없습니다"
+	errWsUploadDirMissing = "대상 디렉터리가 존재하지 않습니다"
+	errWsUploadParse      = "업로드 처리에 실패했거나 크기 제한을 초과했습니다: " // 뒤에 err.Error() 를 이어 붙인다
+	errWsNoUploadFile     = "업로드할 파일이 없습니다(폼 필드 file)"
+)
+
 // wsResolve maps a user-supplied relative path to an absolute path INSIDE the work
 // dir. It returns ok=false if the path would escape the root. filepath.Clean on a
 // rooted copy collapses any ".." so nothing can climb above the root.
@@ -59,16 +74,16 @@ type wsEntry struct {
 func (s *Server) wsList(w http.ResponseWriter, r *http.Request) {
 	abs, ok := s.wsResolve(r.URL.Query().Get("path"))
 	if !ok {
-		writeErr(w, 400, "非法路径")
+		writeErr(w, 400, errWsIllegalPath)
 		return
 	}
 	fi, err := os.Stat(abs)
 	if err != nil {
-		writeErr(w, 404, "路径不存在")
+		writeErr(w, 404, errWsPathNotFound)
 		return
 	}
 	if !fi.IsDir() {
-		writeErr(w, 400, "不是目录")
+		writeErr(w, 400, errWsNotDir)
 		return
 	}
 	ents, err := os.ReadDir(abs)
@@ -90,7 +105,7 @@ func (s *Server) wsList(w http.ResponseWriter, r *http.Request) {
 			MTime: info.ModTime().UnixMilli(),
 		})
 	}
-	// 目录在前，各自按名称排序。
+	// 디렉터리를 먼저 두고, 각각 이름순으로 정렬한다.
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Dir != out[j].Dir {
 			return out[i].Dir
@@ -105,16 +120,16 @@ func (s *Server) wsList(w http.ResponseWriter, r *http.Request) {
 func (s *Server) wsRead(w http.ResponseWriter, r *http.Request) {
 	abs, ok := s.wsResolve(r.URL.Query().Get("path"))
 	if !ok {
-		writeErr(w, 400, "非法路径")
+		writeErr(w, 400, errWsIllegalPath)
 		return
 	}
 	fi, err := os.Stat(abs)
 	if err != nil {
-		writeErr(w, 404, "文件不存在")
+		writeErr(w, 404, errWsFileNotFound)
 		return
 	}
 	if fi.IsDir() {
-		writeErr(w, 400, "是目录，不能作为文件读取")
+		writeErr(w, 400, errWsIsDir)
 		return
 	}
 	if fi.Size() > maxWorkspaceRead {
@@ -145,11 +160,11 @@ func (s *Server) wsWrite(w http.ResponseWriter, r *http.Request) {
 	}
 	abs, ok := s.wsResolve(req.Path)
 	if !ok || abs == filepath.Clean(s.m.dir) {
-		writeErr(w, 400, "非法路径")
+		writeErr(w, 400, errWsIllegalPath)
 		return
 	}
 	if fi, err := os.Stat(abs); err == nil && fi.IsDir() {
-		writeErr(w, 400, "目标是目录")
+		writeErr(w, 400, errWsTargetIsDir)
 		return
 	}
 	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
@@ -174,7 +189,7 @@ func (s *Server) wsMkdir(w http.ResponseWriter, r *http.Request) {
 	}
 	abs, ok := s.wsResolve(req.Path)
 	if !ok || abs == filepath.Clean(s.m.dir) {
-		writeErr(w, 400, "非法路径")
+		writeErr(w, 400, errWsIllegalPath)
 		return
 	}
 	if err := os.MkdirAll(abs, 0o755); err != nil {
@@ -189,15 +204,15 @@ func (s *Server) wsMkdir(w http.ResponseWriter, r *http.Request) {
 func (s *Server) wsDelete(w http.ResponseWriter, r *http.Request) {
 	abs, ok := s.wsResolve(r.URL.Query().Get("path"))
 	if !ok {
-		writeErr(w, 400, "非法路径")
+		writeErr(w, 400, errWsIllegalPath)
 		return
 	}
 	if abs == filepath.Clean(s.m.dir) {
-		writeErr(w, 400, "不能删除工作区根目录")
+		writeErr(w, 400, errWsCannotDeleteRoot)
 		return
 	}
 	if _, err := os.Stat(abs); err != nil {
-		writeErr(w, 404, "路径不存在")
+		writeErr(w, 404, errWsPathNotFound)
 		return
 	}
 	if err := os.RemoveAll(abs); err != nil {
@@ -211,12 +226,12 @@ func (s *Server) wsDelete(w http.ResponseWriter, r *http.Request) {
 func (s *Server) wsDownload(w http.ResponseWriter, r *http.Request) {
 	abs, ok := s.wsResolve(r.URL.Query().Get("path"))
 	if !ok {
-		writeErr(w, 400, "非法路径")
+		writeErr(w, 400, errWsIllegalPath)
 		return
 	}
 	fi, err := os.Stat(abs)
 	if err != nil || fi.IsDir() {
-		writeErr(w, 404, "文件不存在")
+		writeErr(w, 404, errWsFileNotFound)
 		return
 	}
 	name := filepath.Base(abs)
@@ -229,21 +244,21 @@ func (s *Server) wsDownload(w http.ResponseWriter, r *http.Request) {
 func (s *Server) wsUpload(w http.ResponseWriter, r *http.Request) {
 	dirAbs, ok := s.wsResolve(r.URL.Query().Get("path"))
 	if !ok {
-		writeErr(w, 400, "非法路径")
+		writeErr(w, 400, errWsIllegalPath)
 		return
 	}
 	if fi, err := os.Stat(dirAbs); err != nil || !fi.IsDir() {
-		writeErr(w, 400, "目标目录不存在")
+		writeErr(w, 400, errWsUploadDirMissing)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxWorkspaceUpload)
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		writeErr(w, 400, "解析上传失败或超出大小限制："+err.Error())
+		writeErr(w, 400, errWsUploadParse+err.Error())
 		return
 	}
 	files := r.MultipartForm.File["file"]
 	if len(files) == 0 {
-		writeErr(w, 400, "缺少上传文件(表单字段 file)")
+		writeErr(w, 400, errWsNoUploadFile)
 		return
 	}
 	saved := 0
