@@ -3805,7 +3805,7 @@
       "chat": "대화",
       "commands": "도구 실행",
       "dashboard": "대시보드",
-      "findings": "발견",
+      "findings": "취약점",
       "intercept": "차단 규칙",
       "llm": "LLM",
       "llm-records": "LLM 기록",
@@ -3924,5 +3924,85 @@
   "userMenu": {
     "changePassword": "비밀번호 변경",
     "logout": "로그아웃"
+  },
+  "taskDetail": {
+    "report": {
+      "title": "침투 테스트 보고서 (Markdown)",
+      "copy": "복사",
+      "loading": "불러오는 중…",
+      "empty": "보고서가 없습니다",
+      "copySuccess": "Markdown 을 복사했습니다",
+      "copyError": "복사에 실패했습니다. 텍스트를 직접 선택해 복사하세요"
+    },
+    "findings": {
+      "columnFinding": "취약점",
+      "sortTime": "발견 시각",
+      "orderAsc": "오름차순",
+      "orderDesc": "내림차순",
+      "sortAria": "발견 시각 현재 {order}, 클릭하면 정렬 방향을 바꿉니다",
+      "unclassified": "미분류",
+      "sourceReadonly": "출처 #{id} · 읽기 전용",
+      "trafficEvidence": "트래픽 증거 {count}건",
+      "viewDetail": "취약점 상세 보기",
+      "detail": "상세",
+      "evidencePoc": "증거 / PoC",
+      "markedAs": "「{label}」 상태로 변경했습니다",
+      "updateFailed": "업데이트 실패: {message}",
+      "empty": "이 작업과 직접 연관된 작업에 확인된 취약점이 없습니다."
+    },
+    "retests": {
+      "loadError": "작업 취약점을 불러오지 못했습니다: {error}",
+      "retry": "다시 시도",
+      "selectTitle": "취약점 선택",
+      "selectDesc": "이 작업 취약점의 재검증 기록을 보거나 새 재검증을 시작합니다.",
+      "selectAria": "취약점 선택: {name}",
+      "emptyTitle": "재검증할 취약점이 없습니다",
+      "emptyDesc": "이 작업에서 취약점을 발견하면 여기서 직접 재검증을 시작할 수 있습니다.",
+      "prevPage": "이전 취약점 페이지",
+      "nextPage": "다음 취약점 페이지",
+      "pageIndicator": "{page} / {total} 페이지",
+      "findingDetail": "취약점 상세"
+    }
+  },
+  "retest": {
+    "panel": {
+      "title": "취약점 재검증",
+      "desc": "독립 세션에서 현재 상태를 검증하고, 재검증마다 결론과 증거를 보존합니다.",
+      "viewRunning": "진행 중인 재검증 세션 보기",
+      "start": "재검증 시작",
+      "loadError": "재검증 기록을 불러오지 못했습니다: {error}",
+      "retry": "다시 시도",
+      "emptyTitle": "재검증 기록이 없습니다",
+      "emptyDesc": "수정 배포가 끝난 뒤 재검증을 시작해 이전·이후 증거를 비교할 수 있습니다.",
+      "viewSession": "세션 보기",
+      "sessionDeleted": "세션이 삭제됨",
+      "notes": "추가 설명: {notes}",
+      "evidence": "재검증 증거",
+      "status": {
+        "pending": "시작 대기",
+        "running": "재검증 중",
+        "completed": "완료",
+        "failed": "재검증 실패",
+        "stopped": "중지됨"
+      },
+      "verdict": {
+        "reproduced": "재현됨",
+        "fixed": "수정됨",
+        "inconclusive": "확인 불가"
+      }
+    },
+    "dialog": {
+      "startedNew": "재검증을 시작했습니다. 「재검증 중」을 눌러 세션을 볼 수 있습니다",
+      "alreadyRunning": "이 취약점은 이미 재검증 중입니다. 기존 세션을 확인하세요",
+      "startFailed": "재검증을 시작하지 못했습니다: {message}",
+      "title": "취약점 재검증 #{id}",
+      "desc": "재검증 에이전트가 원래 증거와 테스트 제약을 읽어, 독립 세션에서 표적 검증을 수행합니다. 재검증이 성공적으로 끝나고 수정이 확인되면 취약점 상태가 자동으로 「수정됨」으로 바뀌고, 그 밖의 결론은 기존 상태를 유지합니다.",
+      "notesLabel": "추가 설명 (선택)",
+      "notesPlaceholder": "예: 원래 테스트 계정으로 원래 엔드포인트를 검증하세요. 수정 버전은 v2 입니다.",
+      "notesDesc": "수정 버전, 테스트 조건 또는 이번 제약을 덧붙일 수 있습니다.",
+      "cancel": "취소",
+      "submit": "재검증 시작",
+      "submitting": "생성 중…"
+    }
   }
 }

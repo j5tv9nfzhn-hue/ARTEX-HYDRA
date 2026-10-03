@@ -3924,5 +3924,85 @@
   "userMenu": {
     "changePassword": "修改密码",
     "logout": "退出登录"
+  },
+  "taskDetail": {
+    "report": {
+      "title": "渗透测试报告（Markdown）",
+      "copy": "复制",
+      "loading": "加载中…",
+      "empty": "暂无报告",
+      "copySuccess": "已复制 Markdown",
+      "copyError": "复制失败，请手动选择文本复制"
+    },
+    "findings": {
+      "columnFinding": "漏洞",
+      "sortTime": "发现时间",
+      "orderAsc": "正序",
+      "orderDesc": "倒序",
+      "sortAria": "发现时间当前{order}，点击切换排序方向",
+      "unclassified": "未分类",
+      "sourceReadonly": "来源 #{id} · 只读",
+      "trafficEvidence": "流量证据 {count} 条",
+      "viewDetail": "查看漏洞详情",
+      "detail": "详情",
+      "evidencePoc": "证据 / PoC",
+      "markedAs": "已标记为「{label}」",
+      "updateFailed": "更新失败：{message}",
+      "empty": "本任务及直接关联任务暂无确认发现。"
+    },
+    "retests": {
+      "loadError": "加载任务漏洞失败：{error}",
+      "retry": "重试",
+      "selectTitle": "选择漏洞",
+      "selectDesc": "查看本任务漏洞的复测记录，或发起新的复测。",
+      "selectAria": "选择漏洞：{name}",
+      "emptyTitle": "暂无可复测漏洞",
+      "emptyDesc": "本任务发现漏洞后，可在这里手动发起复测。",
+      "prevPage": "上一页漏洞",
+      "nextPage": "下一页漏洞",
+      "pageIndicator": "第 {page} / {total} 页",
+      "findingDetail": "漏洞详情"
+    }
+  },
+  "retest": {
+    "panel": {
+      "title": "漏洞复测",
+      "desc": "在独立会话中验证当前状态，保留每次复测的结论与证据。",
+      "viewRunning": "查看正在进行的复测会话",
+      "start": "发起复测",
+      "loadError": "加载复测记录失败：{error}",
+      "retry": "重试",
+      "emptyTitle": "暂无复测记录",
+      "emptyDesc": "修复部署完成后，可发起复测并比较新旧证据。",
+      "viewSession": "查看会话",
+      "sessionDeleted": "会话已删除",
+      "notes": "补充说明：{notes}",
+      "evidence": "复测证据",
+      "status": {
+        "pending": "等待启动",
+        "running": "复测中",
+        "completed": "已完成",
+        "failed": "复测失败",
+        "stopped": "已停止"
+      },
+      "verdict": {
+        "reproduced": "仍可复现",
+        "fixed": "已修复",
+        "inconclusive": "无法确认"
+      }
+    },
+    "dialog": {
+      "startedNew": "复测已启动，可点击「复测中」查看会话",
+      "alreadyRunning": "该漏洞正在复测，可查看已有会话",
+      "startFailed": "发起复测失败：{message}",
+      "title": "复测漏洞 #{id}",
+      "desc": "复测 Agent 将读取原证据和测试约束，在独立会话中执行针对性验证。复测成功完成且确认修复后，漏洞状态自动改为「已修复」，其他结论保留原状态。",
+      "notesLabel": "补充说明（可选）",
+      "notesPlaceholder": "例如：使用原测试账号验证原接口；修复版本为 v2。",
+      "notesDesc": "可补充修复版本、测试条件或本次限制。",
+      "cancel": "取消",
+      "submit": "开始复测",
+      "submitting": "正在创建…"
+    }
   }
 }
