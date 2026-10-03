@@ -251,7 +251,7 @@ func TestWebhookDefaultTemplateProducesValidJSON(t *testing.T) {
 	// 这条是默认模板存在的意义：标题里带引号与换行时，任何朴素的
 	// `"title": "{{.Title}}"` 写法都会产出非法 JSON。{{json .}} 才不会。
 	srv := capturePost(t, `{"ok":true}`, func(t *testing.T, body map[string]any, _ *http.Request) {
-		if body["title"] != `[🟠 高危] 登录处 "SQL注入" 风险` {
+		if body["title"] != `[🟠 높음] 登录处 "SQL注入" 风险` {
 			t.Errorf("标题未正确还原: %v", body["title"])
 		}
 		items, _ := body["items"].([]any)
