@@ -106,6 +106,11 @@ func TestLangDirectiveAppendedToUserFacingRoles(t *testing.T) {
 		"planner":   plannerSystem("g", "/data", "/data"),
 		"mainagent": mainAgentSystem("g", "/data", "/data"),
 		"chat":      chatSystem("chat", "/data", "/data"),
+		// goals is user-facing too: set_goals/set_constraints persist goal and
+		// constraint nodes shown in the UI graph/plan tab. withScope=true exercises
+		// the longer assembly (body + scope tail), so the Korean tail must still land
+		// last — after both the body and the code-owned scope tail.
+		"goals": goalsSystem("/data", true),
 	}
 	for role, sys := range cases {
 		if !strings.HasPrefix(sys, "BODY-ONLY") {

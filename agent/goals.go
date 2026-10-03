@@ -66,6 +66,22 @@ const goalsScopeTail = `
 - 若目标/描述中没有任何明确资产范围，则**不要**调用 add_task_scope。
 先用 add_task_scope 登记范围（如有），再调用 set_goals 提交目标。`
 
+// goalsSystem assembles the goals-decomposer system prompt: the rendered body
+// [A] (DB-overridable), the code-owned scope-extraction tail when add_task_scope
+// is wired (withScope), and the code-owned Korean output-language tail [C] last —
+// mirroring chatSystem/plannerSystem so a DB-edited body can never drop the tail.
+// DecomposeGoalsWithProvider and the localization test share this one assembly, so
+// the langDirective tail can't drift between runtime and test. EngagementDescription
+// is intentionally left empty: the task description rides in the user message, not
+// the {{.EngagementDescription}} var (see DecomposeGoalsWithProvider).
+func goalsSystem(dataDir string, withScope bool) string {
+	sys := renderSystem("goals", goalsDefaultTmpl, GoalsVars{DataDir: dataDir, Now: nowStr()})
+	if withScope {
+		sys += goalsScopeTail
+	}
+	return sys + langDirective()
+}
+
 // GoalSpec is one decomposed objective.
 type GoalSpec struct {
 	Text      string `json:"text"`
@@ -124,23 +140,19 @@ func DecomposeGoalsWithProvider(ctx context.Context, prov llm.Provider, dataDir,
 	// each goal under the task root. This is the catalog's real set_goals tool, so a
 	// web-edited description/schema on it applies here too.
 	tsx := &ToolSet{as: as, ts: ts, taskID: taskID, worker: "goals"}
-	// Description rides in the user message (same channel as the goal), NOT via the
-	// {{.EngagementDescription}} template var — else a prompt that references the var
-	// would inject the description twice. System prompt stays pure static instructions.
-	sys := renderSystem("goals", goalsDefaultTmpl, GoalsVars{DataDir: dataDir, Now: nowStr()})
+	// Wire add_task_scope only when we have a real asset store + task to write to.
+	// goalsSystem appends the scope-extraction tail in lockstep (withScope) so the
+	// prompt never asks for a tool that isn't present, and it owns the output-language
+	// tail last so a DB-edited body can't drop it. Description rides in the user
+	// message, NOT the {{.EngagementDescription}} var, so a prompt can't inject it twice.
+	withScope := as != nil && taskID > 0
+	sys := goalsSystem(dataDir, withScope)
 	// set_constraints 始终可用(不依赖 asset store):正文已含「先抽操作约束再拆目标」这步
 	// (可在 agent 编辑页改措辞),这里只需接上工具。
 	tools := []actool.CoreTool{tsx.setGoals(), tsx.setConstraints()}
-	// Wire add_task_scope only when we have a real asset store + task to write to.
-	// The scope-extraction tail is appended in lockstep so the prompt never asks for
-	// a tool that isn't present.
-	if as != nil && taskID > 0 {
+	if withScope {
 		tools = append(tools, tsx.addTaskScope())
-		sys += goalsScopeTail
 	}
-	// Code-owned output-language tail (localization): appended last so a DB-edited
-	// body can't drop it, and so it's the most recent instruction the model sees.
-	sys += langDirective()
 	userMsg := "任务目标：\n" + goalText
 	if d := strings.TrimSpace(desc); d != "" {
 		userMsg += "\n\n任务描述（背景信息，可能含靶标范围/flag 数量/交战说明；仅供参考，不要臆造其中未提及的内容）：\n" + d
