@@ -4,7 +4,7 @@
 
 **LLM 멀티 에이전트가 자율적으로 침투 테스트를 수행하는 시스템** (Go 백엔드 + Next.js 프런트엔드)
 
-한국어 · [中文](README.zh.md) · English(준비 중)
+한국어 · [中文](README.zh.md) · [English](README.en.md)
 
 </div>
 
