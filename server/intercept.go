@@ -23,6 +23,15 @@ func (s *Server) chatGuard() *guard.Guard {
 	return guard.NewWithInterceptor(s.m.interceptor)
 }
 
+// 사용자에게 노출되는 판정(judge) 모델 오류 메시지(한국어). 이 오류는
+// intercept.Judge 가 msgModelApprovalFailed 로 감싸 Decision.Message 로 노출하므로,
+// 래퍼(intercept 패키지)와 언어가 어긋나지 않게 함께 한국어로 둔다.
+const (
+	errNoJudgeModel          = "사용할 수 있는 판정 모델이 설정되지 않았습니다"
+	errJudgeModelUnavailable = "%d번 판정 모델 프로필을 사용할 수 없습니다"
+	errJudgeVerdictMalformed = "모델 판정 형식이 올바르지 않습니다. 판정·실제 동작·성공 후 결과·적중 규칙을 모두 포함해야 합니다"
+)
+
 // wireInterceptReviewer installs the LLM fallback judge into the interceptor. The
 // judge runs only on tool calls that matched no rule (see intercept.Judge). It
 // resolves the configured judge profile (0 → active/default), builds a provider,
@@ -35,11 +44,11 @@ func (s *Server) wireInterceptReviewer() {
 			}
 		}
 		if profileID == 0 {
-			return intercept.Decision{}, fmt.Errorf("未配置可用的裁判模型")
+			return intercept.Decision{}, errors.New(errNoJudgeModel)
 		}
 		prov, _, ok := s.providerForProfile(profileID)
 		if !ok {
-			return intercept.Decision{ProfileID: profileID}, fmt.Errorf("裁判模型 profile %d 不可用", profileID)
+			return intercept.Decision{ProfileID: profileID}, fmt.Errorf(errJudgeModelUnavailable, profileID)
 		}
 		text, err := reviewCompletion(ctx, prov, prompt, input)
 		if err != nil {
@@ -47,7 +56,7 @@ func (s *Server) wireInterceptReviewer() {
 		}
 		v := intercept.ParseVerdict(text)
 		if v.Action == "" {
-			return intercept.Decision{ProfileID: profileID}, fmt.Errorf("模型裁决格式无效，必须包含裁决、实际操作、成功后的后果和命中规则")
+			return intercept.Decision{ProfileID: profileID}, errors.New(errJudgeVerdictMalformed)
 		}
 		return intercept.Decision{Action: v.Action, Message: v.Reason, ProfileID: profileID}, nil
 	})
