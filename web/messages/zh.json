@@ -3962,6 +3962,63 @@
       "nextPage": "下一页漏洞",
       "pageIndicator": "第 {page} / {total} 页",
       "findingDetail": "漏洞详情"
+    },
+    "tabs": {
+      "sessions": "会话",
+      "overview": "总览",
+      "graph": "探索链路",
+      "broadcast": "播报板",
+      "findings": "发现",
+      "retests": "复测",
+      "assets": "测试资产",
+      "coverage": "资产覆盖图",
+      "intercept": "拦截审批",
+      "report": "报告"
+    },
+    "header": {
+      "notFound": "任务 {id} 已被删除、归档或不存在",
+      "loading": "加载中…",
+      "backToList": "返回任务列表"
+    },
+    "control": {
+      "pause": "暂停",
+      "resume": "恢复",
+      "completed": "已完成",
+      "ended": "已结束",
+      "paused": "已暂停探索",
+      "resumed": "已恢复探索",
+      "failed": "操作失败：{message}"
+    },
+    "archive": {
+      "queued": "任务已加入归档队列",
+      "failed": "归档失败：{message}",
+      "disabledQueued": "排队中的任务必须先暂停",
+      "disabledRunning": "运行中的任务必须先暂停",
+      "disabledInherited": "任务被未归档任务 #{id} 直接继承，请先归档依赖任务",
+      "triggerAria": "归档任务",
+      "dialogTitle": "归档任务 #{id}？",
+      "dialogDesc": "任务图谱、关联记录、独占资产与流量、工作文件和 LLM 历史将压缩到冷存储。归档完成后可在任务列表的“已归档”页还原。",
+      "cancel": "取消",
+      "confirm": "确认归档"
+    },
+    "llm": {
+      "controlAria": "查看或切换任务 LLM 配置",
+      "exhausted": "配置链已耗尽",
+      "profileRef": "配置 #{id}",
+      "followDefault": "跟随默认配置",
+      "backupCount": "{count} 个备用",
+      "editorDescription": "调整顺序或当前配置后，将从下一次 LLM 调用开始生效。",
+      "editorDescriptionTerminal": "任务已结束，改动只影响后续的主 Agent 对话。",
+      "save": "保存",
+      "saveReset": "保存并重置",
+      "saving": "保存中",
+      "chainTitle": "任务 LLM 配置链",
+      "exhaustedTitle": "配置链额度已耗尽",
+      "exhaustedDesc": "所有已选配置均被判定为额度不足。保存配置链可重置故障状态。",
+      "close": "关闭",
+      "updated": "LLM 配置已更新",
+      "updatedWithReopened": "LLM 配置已更新，并恢复 {count} 条额度阻塞意图",
+      "updateFailed": "更新失败：{message}"
     }
   },
   "retest": {
@@ -4004,5 +4061,22 @@
       "submit": "开始复测",
       "submitting": "正在创建…"
     }
+  },
+  "llmChain": {
+    "current": "当前",
+    "skippedTitle": "当前游标之前的配置不会被自动故障转移选中",
+    "skipped": "已跳过",
+    "backup": "备用 {n}",
+    "profileRef": "配置 #{id}",
+    "searchPlaceholder": "搜索并添加 LLM 配置",
+    "noProfiles": "暂无可用 LLM 配置",
+    "noMatch": "没有匹配的 LLM 配置",
+    "activeSuffix": "（激活）",
+    "emptyHint": "未指定配置时，任务跟随 Agent 或全局激活配置。",
+    "unavailable": "配置已不可用",
+    "moveUp": "上移配置",
+    "moveDown": "下移配置",
+    "remove": "移除配置",
+    "currentProfile": "当前配置"
   }
 }
