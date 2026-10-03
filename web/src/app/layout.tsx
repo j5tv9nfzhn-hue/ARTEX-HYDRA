@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 
 import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { APP_CONFIG } from "@/config/app-config";
+import { resolveLocale } from "@/i18n/config";
 import { fontVars } from "@/lib/fonts/registry";
 import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
 import { ThemeBootScript } from "@/scripts/theme-boot";
@@ -20,9 +22,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const { theme_mode, theme_preset, content_layout, navbar_style, sidebar_variant, sidebar_collapsible, font } =
     PREFERENCE_DEFAULTS;
+  const locale = resolveLocale();
   return (
     <html
-      lang="en"
+      lang={locale}
       data-theme-mode={theme_mode}
       data-theme-preset={theme_preset}
       data-content-layout={content_layout}
@@ -37,18 +40,20 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <ThemeBootScript />
       </head>
       <body className={`${fontVars} min-h-screen antialiased`}>
-        <TooltipProvider>
-          <PreferencesStoreProvider
-            themeMode={theme_mode}
-            themePreset={theme_preset}
-            contentLayout={content_layout}
-            navbarStyle={navbar_style}
-            font={font}
-          >
-            {children}
-            <Toaster />
-          </PreferencesStoreProvider>
-        </TooltipProvider>
+        <NextIntlClientProvider>
+          <TooltipProvider>
+            <PreferencesStoreProvider
+              themeMode={theme_mode}
+              themePreset={theme_preset}
+              contentLayout={content_layout}
+              navbarStyle={navbar_style}
+              font={font}
+            >
+              {children}
+              <Toaster />
+            </PreferencesStoreProvider>
+          </TooltipProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );
