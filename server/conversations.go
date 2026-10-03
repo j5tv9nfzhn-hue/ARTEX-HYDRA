@@ -25,12 +25,33 @@ const (
 	maxConversationTitleRunes    = 200
 )
 
+// 대화(채팅) 엔드포인트가 HTTP 응답으로 돌려주는 사용자 노출 문구다. 한국어 UI 에서
+// 요청이 실패하면 이 문구가 그대로 토스트로 뜨므로 한국어로 둔다. 요청 필드명
+// (agent_key·title·pinned·ids·id)·식별자(LLM·API Key·token)는 사용자가 요청을 고치는 데
+// 쓰는 값이라 원문 그대로 둔다. 用語: 配置→설정(B4c-5), agent→에이전트. %d 가 든 상수는
+// fmt.Sprintf 형식 문자열이다. 기본 대화 제목 "新对话"(센티넬)·재검증 사유·트랜스크립트
+// 문구·트리거 메시지 골격은 이 묶음 밖이다(저널 참조). 로그·주석은 BRIEF 방침상 최하위.
+const (
+	convErrRequestTooLarge = "요청 본문이 너무 큽니다"
+	convErrAgentKeyEmpty   = "agent_key 는 비어 있을 수 없습니다"
+	convErrAgentKeyTooLong = "agent_key 는 최대 %d자까지 입력할 수 있습니다"
+	convErrAgentNotFound   = "에이전트를 찾을 수 없습니다"
+	convErrLLMProfile      = "지정한 LLM 설정이 존재하지 않거나 API Key 가 설정되지 않았습니다"
+	convErrTitleTooLong    = "제목은 최대 %d자까지 입력할 수 있습니다"
+	convErrTitleOrPinned   = "title 또는 pinned 중 하나 이상을 제공해야 합니다"
+	convErrTitleEmpty      = "제목은 비어 있을 수 없습니다"
+	convErrBadConvID       = "대화 id 가 올바르지 않습니다"
+	convErrIDsCount        = "ids 개수는 1에서 %d 사이여야 합니다"
+	convErrMessageEmpty    = "메시지는 비어 있을 수 없습니다"
+	convErrBusy            = "이 대화가 이전 메시지를 처리하고 있습니다. 잠시 기다려 주세요"
+)
+
 func decodeConversationRequest(w http.ResponseWriter, r *http.Request, value any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, maxConversationRequestBytes)
 	if err := decode(r, value); err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			writeErr(w, http.StatusRequestEntityTooLarge, "请求正文过大")
+			writeErr(w, http.StatusRequestEntityTooLarge, convErrRequestTooLarge)
 		} else {
 			writeErr(w, http.StatusBadRequest, err.Error())
 		}
@@ -85,11 +106,11 @@ func (s *Server) pgCreateConversation(w http.ResponseWriter, r *http.Request) {
 	}
 	req.AgentKey = strings.TrimSpace(req.AgentKey)
 	if req.AgentKey == "" {
-		writeErr(w, 400, "agent_key 不能为空")
+		writeErr(w, 400, convErrAgentKeyEmpty)
 		return
 	}
 	if utf8.RuneCountInString(req.AgentKey) > maxConversationAgentKeyRunes {
-		writeErr(w, 400, fmt.Sprintf("agent_key 最多 %d 个字符", maxConversationAgentKeyRunes))
+		writeErr(w, 400, fmt.Sprintf(convErrAgentKeyTooLong, maxConversationAgentKeyRunes))
 		return
 	}
 	a, err := pg.GetAgentByKey(req.AgentKey)
@@ -98,12 +119,12 @@ func (s *Server) pgCreateConversation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if a == nil {
-		writeErr(w, 404, "agent 不存在")
+		writeErr(w, 404, convErrAgentNotFound)
 		return
 	}
 	if req.LLMProfileID != nil {
 		if _, ok := s.loadProfileConfig(*req.LLMProfileID); !ok {
-			writeErr(w, 400, "指定的 LLM 配置不存在或未设置 API Key")
+			writeErr(w, 400, convErrLLMProfile)
 			return
 		}
 	}
@@ -112,7 +133,7 @@ func (s *Server) pgCreateConversation(w http.ResponseWriter, r *http.Request) {
 		title = "新对话"
 	}
 	if utf8.RuneCountInString(title) > maxConversationTitleRunes {
-		writeErr(w, 400, fmt.Sprintf("标题最多 %d 个字符", maxConversationTitleRunes))
+		writeErr(w, 400, fmt.Sprintf(convErrTitleTooLong, maxConversationTitleRunes))
 		return
 	}
 	c, err := pg.CreateConversation(req.AgentKey, title, req.LLMProfileID)
@@ -136,7 +157,7 @@ func (s *Server) pgUpdateConversation(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.LLMProfileID != nil {
 		if _, ok := s.loadProfileConfig(*req.LLMProfileID); !ok {
-			writeErr(w, 400, "指定的 LLM 配置不存在或未设置 API Key")
+			writeErr(w, 400, convErrLLMProfile)
 			return
 		}
 	}
@@ -183,17 +204,17 @@ func (s *Server) pgRenameConversation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Title == nil && req.Pinned == nil {
-		writeErr(w, 400, "至少需要提供 title 或 pinned")
+		writeErr(w, 400, convErrTitleOrPinned)
 		return
 	}
 	if req.Title != nil {
 		title := strings.TrimSpace(*req.Title)
 		if title == "" {
-			writeErr(w, 400, "标题不能为空")
+			writeErr(w, 400, convErrTitleEmpty)
 			return
 		}
 		if utf8.RuneCountInString(title) > maxConversationTitleRunes {
-			writeErr(w, 400, fmt.Sprintf("标题最多 %d 个字符", maxConversationTitleRunes))
+			writeErr(w, 400, fmt.Sprintf(convErrTitleTooLong, maxConversationTitleRunes))
 			return
 		}
 		req.Title = &title
@@ -260,7 +281,7 @@ func (s *Server) pgDeleteConversationsBatch(w http.ResponseWriter, r *http.Reque
 	seen := make(map[int64]struct{}, len(request.IDs))
 	for _, id := range request.IDs {
 		if id <= 0 {
-			writeErr(w, http.StatusBadRequest, "对话 id 无效")
+			writeErr(w, http.StatusBadRequest, convErrBadConvID)
 			return
 		}
 		if _, exists := seen[id]; exists {
@@ -270,7 +291,7 @@ func (s *Server) pgDeleteConversationsBatch(w http.ResponseWriter, r *http.Reque
 		ids = append(ids, id)
 	}
 	if len(ids) == 0 || len(ids) > maxConversationDeleteBatch {
-		writeErr(w, http.StatusBadRequest, fmt.Sprintf("ids 数量必须为 1-%d", maxConversationDeleteBatch))
+		writeErr(w, http.StatusBadRequest, fmt.Sprintf(convErrIDsCount, maxConversationDeleteBatch))
 		return
 	}
 	for _, id := range ids {
@@ -400,7 +421,7 @@ func (s *Server) pgSendConversationMessage(w http.ResponseWriter, r *http.Reques
 	}
 	msg := strings.TrimSpace(req.Message)
 	if msg == "" && len(req.Attachments) == 0 {
-		writeErr(w, 400, "消息不能为空")
+		writeErr(w, 400, convErrMessageEmpty)
 		return
 	}
 	agentMessage, ok := s.prepareChatMentionMessage(w, msg)
@@ -420,7 +441,7 @@ func (s *Server) pgSendConversationMessage(w http.ResponseWriter, r *http.Reques
 	s.chatMu.Lock()
 	if s.chatBusy[busyKey] {
 		s.chatMu.Unlock()
-		writeErr(w, 409, "该会话正在处理上一条消息，请稍候")
+		writeErr(w, 409, convErrBusy)
 		return
 	}
 	s.chatBusy[busyKey] = true
