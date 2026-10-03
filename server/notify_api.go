@@ -15,6 +15,33 @@ import (
 // 本文件是推送功能的 HTTP 接口。全部路由挂在 requireAuth 之后（见 Handler()），
 // 与其它管理接口一致。
 
+// notify_api.go 가 HTTP 응답으로 돌려주는 사용자 노출 오류 문구다. 한국어 UI 에서 알림
+// 설정 요청이 실패하면 이 문구가 그대로 토스트로 뜨므로 한국어로 둔다. 식별자(id)·JSON
+// 필드명·enum 값(realtime·digest)·채널 종류 키는 사용자가 설정을 고치는 데 쓰는 값이라
+// 원문 그대로 둔다. %s·%q 가 든 상수는 fmt.Sprintf 형식 문자열이다. 用語: 渠道→채널,
+// 通知推送→알림(크롬 nav "알림 발송"), 投递→전송, 推送模式→발송 모드. 로그·주석은 BRIEF
+// 방침상 최하위라 이 묶음 밖이다.
+const (
+	notifyErrBadJSON         = "요청 본문이 올바른 JSON 형식이 아닙니다: "
+	notifyErrKindInvalidFmt  = "채널 유형이 올바르지 않습니다. 가능한 값: %s"
+	notifyErrNameMissing     = "채널 이름을 입력하세요"
+	notifyErrNameEmpty       = "채널 이름은 비워 둘 수 없습니다"
+	notifyErrModeInvalid     = "발송 모드가 올바르지 않습니다. 가능한 값: realtime / digest"
+	notifyErrRateNegative    = "전송 제한 값은 음수일 수 없습니다"
+	notifyErrChannelID       = "채널 id 가 올바르지 않습니다"
+	notifyErrKindUnregFmt    = "채널 유형 %q 는 등록되어 있지 않습니다"
+	notifyErrDeliveryID      = "전송 id 가 올바르지 않습니다"
+	notifyErrChannelNotFound = "알림 채널을 찾을 수 없습니다"
+)
+
+// 채널 연결을 점검할 때 보내는 테스트 메시지 본문이다. 사용자가 등록한 채널로 실제 발송되므로
+// 한국어로 두되, 받는 사람이 실제 취약점으로 오해하지 않도록 한눈에 테스트임이 드러나게 한다.
+const (
+	notifyTestName    = "테스트 메시지 · 채널 설정 정상"
+	notifyTestClass   = "연결 테스트"
+	notifyTestSummary = "ARTEX 알림 채널 테스트 메시지입니다. 이 메시지를 받으셨다면 채널 설정이 정상입니다."
+)
+
 // notifyChannelDTO 是渠道的对外表述。
 //
 // Config 是**掩码后**的配置：凭据字段被替换成 notify.MaskedPrefix 开头的值。
@@ -182,11 +209,11 @@ func (s *Server) notifyCreateChannel(w http.ResponseWriter, r *http.Request) {
 	}
 	var req notifyChannelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeErr(w, 400, "请求体不是合法 JSON: "+err.Error())
+		writeErr(w, 400, notifyErrBadJSON+err.Error())
 		return
 	}
 	if req.Kind == nil || !notify.ValidKind(*req.Kind) {
-		writeErr(w, 400, fmt.Sprintf("渠道类型无效，可选：%s", strings.Join(notify.Kinds(), " / ")))
+		writeErr(w, 400, fmt.Sprintf(notifyErrKindInvalidFmt, strings.Join(notify.Kinds(), " / ")))
 		return
 	}
 	name := ""
@@ -194,7 +221,7 @@ func (s *Server) notifyCreateChannel(w http.ResponseWriter, r *http.Request) {
 		name = strings.TrimSpace(*req.Name)
 	}
 	if name == "" {
-		writeErr(w, 400, "缺少渠道名称")
+		writeErr(w, 400, notifyErrNameMissing)
 		return
 	}
 	channel, _ := notify.Get(*req.Kind)
@@ -211,7 +238,7 @@ func (s *Server) notifyCreateChannel(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Mode != nil {
 		if !db.ValidNotifyMode(*req.Mode) {
-			writeErr(w, 400, "推送模式无效，可选：realtime / digest")
+			writeErr(w, 400, notifyErrModeInvalid)
 			return
 		}
 		ch.Mode = *req.Mode
@@ -219,7 +246,7 @@ func (s *Server) notifyCreateChannel(w http.ResponseWriter, r *http.Request) {
 	if req.RatePerMin != nil {
 		// 显式给值就照用——包括 0，它表示「不限流」，是合法配置。
 		if *req.RatePerMin < 0 {
-			writeErr(w, 400, "限流值不能为负")
+			writeErr(w, 400, notifyErrRateNegative)
 			return
 		}
 		ch.RatePerMin = *req.RatePerMin
@@ -258,7 +285,7 @@ func (s *Server) notifyUpdateChannel(w http.ResponseWriter, r *http.Request) {
 	}
 	id, ok := pathInt(r, "id")
 	if !ok {
-		writeErr(w, 400, "渠道 id 无效")
+		writeErr(w, 400, notifyErrChannelID)
 		return
 	}
 	current, err := pg.NotificationChannelByID(r.Context(), id)
@@ -268,7 +295,7 @@ func (s *Server) notifyUpdateChannel(w http.ResponseWriter, r *http.Request) {
 	}
 	var req notifyChannelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeErr(w, 400, "请求体不是合法 JSON: "+err.Error())
+		writeErr(w, 400, notifyErrBadJSON+err.Error())
 		return
 	}
 
@@ -276,7 +303,7 @@ func (s *Server) notifyUpdateChannel(w http.ResponseWriter, r *http.Request) {
 	kind := current.Kind
 	if req.Kind != nil {
 		if !notify.ValidKind(*req.Kind) {
-			writeErr(w, 400, fmt.Sprintf("渠道类型无效，可选：%s", strings.Join(notify.Kinds(), " / ")))
+			writeErr(w, 400, fmt.Sprintf(notifyErrKindInvalidFmt, strings.Join(notify.Kinds(), " / ")))
 			return
 		}
 		kind = *req.Kind
@@ -317,7 +344,7 @@ func (s *Server) notifyUpdateChannel(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Name != nil {
 		if ch.Name = strings.TrimSpace(*req.Name); ch.Name == "" {
-			writeErr(w, 400, "渠道名称不能为空")
+			writeErr(w, 400, notifyErrNameEmpty)
 			return
 		}
 	}
@@ -326,14 +353,14 @@ func (s *Server) notifyUpdateChannel(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Mode != nil {
 		if !db.ValidNotifyMode(*req.Mode) {
-			writeErr(w, 400, "推送模式无效，可选：realtime / digest")
+			writeErr(w, 400, notifyErrModeInvalid)
 			return
 		}
 		ch.Mode = *req.Mode
 	}
 	if req.RatePerMin != nil {
 		if *req.RatePerMin < 0 {
-			writeErr(w, 400, "限流值不能为负")
+			writeErr(w, 400, notifyErrRateNegative)
 			return
 		}
 		ch.RatePerMin = *req.RatePerMin
@@ -381,7 +408,7 @@ func (s *Server) notifyDeleteChannel(w http.ResponseWriter, r *http.Request) {
 	}
 	id, ok := pathInt(r, "id")
 	if !ok {
-		writeErr(w, 400, "渠道 id 无效")
+		writeErr(w, 400, notifyErrChannelID)
 		return
 	}
 	if err := pg.DeleteNotificationChannel(r.Context(), id); err != nil {
@@ -403,7 +430,7 @@ func (s *Server) notifyTestChannel(w http.ResponseWriter, r *http.Request) {
 	}
 	id, ok := pathInt(r, "id")
 	if !ok {
-		writeErr(w, 400, "渠道 id 无效")
+		writeErr(w, 400, notifyErrChannelID)
 		return
 	}
 	ch, err := pg.NotificationChannelByID(r.Context(), id)
@@ -413,7 +440,7 @@ func (s *Server) notifyTestChannel(w http.ResponseWriter, r *http.Request) {
 	}
 	channel, ok := notify.Get(ch.Kind)
 	if !ok {
-		writeErr(w, 400, fmt.Sprintf("渠道类型 %q 未注册", ch.Kind))
+		writeErr(w, 400, fmt.Sprintf(notifyErrKindUnregFmt, ch.Kind))
 		return
 	}
 	var cfg map[string]any
@@ -445,10 +472,10 @@ func notifyTestMessage(baseURL string) notify.Message {
 	return notify.Message{
 		Items: []notify.Item{{
 			FindingID: 0,
-			Name:      "测试消息 · 渠道配置正常",
-			VulnClass: "连通性测试",
+			Name:      notifyTestName,
+			VulnClass: notifyTestClass,
 			Severity:  "low",
-			Summary:   "这是 ARTEX 推送渠道的测试消息，收到即表示该渠道配置可用。",
+			Summary:   notifyTestSummary,
 			Assets:    []string{"artex.example.com"},
 			DetailURL: baseURL,
 		}},
@@ -495,7 +522,7 @@ func (s *Server) notifyRetryDelivery(w http.ResponseWriter, r *http.Request) {
 	}
 	id, ok := pathInt(r, "id")
 	if !ok {
-		writeErr(w, 400, "投递 id 无效")
+		writeErr(w, 400, notifyErrDeliveryID)
 		return
 	}
 	if err := pg.RetryNotificationDelivery(r.Context(), id); err != nil {
@@ -508,7 +535,7 @@ func (s *Server) notifyRetryDelivery(w http.ResponseWriter, r *http.Request) {
 // notifyChannelLookupErr 把「渠道不存在」翻译成 404，其余错误 500。
 func notifyChannelLookupErr(w http.ResponseWriter, err error) {
 	if errors.Is(err, db.ErrNotificationChannelNotFound) {
-		writeErr(w, 404, "通知渠道不存在")
+		writeErr(w, 404, notifyErrChannelNotFound)
 		return
 	}
 	writeErr(w, 500, err.Error())
