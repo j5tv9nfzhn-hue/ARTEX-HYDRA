@@ -4009,11 +4009,18 @@ export function nodeAssetsFor(nodeId: string): FindingAsset[] {
 export function assetRefsFor(_assetId: number) {
   return {
     intents: [
-      { id: 12, kind: "intent", state: "done", summary: "对 www.acme.com 搜索接口做 SQL 注入探测" },
-      { id: 18, kind: "intent", state: "running", summary: "枚举 api.acme.com 的对象越权 (IDOR)" },
+      { id: 12, kind: "intent", state: "done", summary: "www.acme.com 검색 엔드포인트 대상 SQL 인젝션 탐지" },
+      { id: 18, kind: "intent", state: "running", summary: "api.acme.com 객체 권한 우회(IDOR) 열거" },
     ],
-    facts: [{ id: 34, kind: "fact", state: "confirmed", summary: "search?q= 参数可注入，报错回显 MySQL 语法错误" }],
-    findings: [{ id: 41, kind: "finding", state: "confirmed", summary: "[高] SQL 注入 www.acme.com/search?q=" }],
+    facts: [
+      {
+        id: 34,
+        kind: "fact",
+        state: "confirmed",
+        summary: "search?q= 파라미터 인젝션 가능, 오류 회신에 MySQL 문법 오류 노출",
+      },
+    ],
+    findings: [{ id: 41, kind: "finding", state: "confirmed", summary: "[높음] SQL 인젝션 www.acme.com/search?q=" }],
   };
 }
 
