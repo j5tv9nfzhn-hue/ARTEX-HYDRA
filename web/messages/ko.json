@@ -3669,6 +3669,131 @@
         "live": "자동 새로 고침",
         "paused": "일시정지됨"
       }
+    },
+    "overviewTab": {
+      "add": "추가",
+      "addFailed": "추가 실패",
+      "saveFailed": "저장 실패",
+      "desc": {
+        "title": "작업 설명과 목표",
+        "descLabel": "설명",
+        "goalLabel": "목표"
+      },
+      "goals": {
+        "title": "목표 관리",
+        "hint": "(최종 검증 가능한 목표, 총 {count}개 · 추가·수정 시 플래너에 알리고 작업을 재개합니다)",
+        "addPlaceholder": "목표 추가, 예: 『관리자 계정의 권한 우회 접근 확보』",
+        "vulnPlaceholder": "취약점 유형(선택)",
+        "empty": "목표가 없습니다. 추가하면 플래너가 이를 바탕으로 탐색 의도를 배정하고 달성 여부를 판정합니다."
+      },
+      "constraints": {
+        "title": "동작 제약",
+        "hint": "(planner/worker 의 탐색 경계를 설정합니다. 총 {count}개 · 변경은 다음 계획 회차부터 적용됩니다)",
+        "deny": "금지",
+        "allow": "허용",
+        "addPlaceholder": "동작 제약 한 건, 예: 『현재 포트만 테스트하고 다른 포트는 스캔하지 않음』",
+        "empty": "동작 제약이 없습니다. 작업을 생성할 때 설명·목표에서 자동으로 추출하며, 여기서 직접 추가·수정·삭제해 「허용/금지할 동작」을 설정할 수도 있습니다."
+      },
+      "coverage": {
+        "title": "자산 테스트 커버리지",
+        "rough": "(대략적인 추정치이며 참고용입니다)",
+        "testedOf": "테스트됨 {tested} / 범위 내 {total}"
+      },
+      "tokens": {
+        "title": "LLM 토큰 사용량",
+        "hint": "(모델별 집계{calls, plural, =0 {} other { · 총 #회 호출}})",
+        "input": "입력",
+        "output": "출력",
+        "cacheRead": "캐시 읽기",
+        "cacheHitRate": "캐시 적중률",
+        "colModel": "모델",
+        "colCalls": "호출",
+        "colHitRate": "적중률",
+        "empty": "LLM 사용량이 없습니다(작업이 아직 호출을 생성하지 않았거나, 기록을 쓰는 중입니다)."
+      },
+      "scope": {
+        "title": "테스트 범위",
+        "hint": "(커버리지 분모 + 허가 경계, 총 {count}개)",
+        "kind": {
+          "company": "회사",
+          "root_domain": "루트 도메인",
+          "subdomain": "서브도메인",
+          "ip": "IP",
+          "cidr": "대역",
+          "icp": "ICP",
+          "keyword": "키워드"
+        },
+        "source": {
+          "auto": "자동",
+          "agent": "에이전트",
+          "manual": "수동"
+        },
+        "placeholder": {
+          "company": "회사명 또는 id",
+          "ipCidr": "예: 10.0.0.1 또는 10.0.0.0/24",
+          "icp": "예: ICP 등록번호",
+          "keyword": "예: 기업명 키워드",
+          "domain": "예: example.com"
+        },
+        "companyFallback": "기업 #{id}",
+        "inherited": "상속",
+        "empty": "테스트 범위가 없습니다. 추가하면 자산 커버리지의 분모로 쓸 수 있습니다."
+      },
+      "heartbeat": {
+        "title": "하트비트",
+        "engineState": "엔진 상태",
+        "runningWorker": "실행 중 Worker",
+        "lastActivity": "최근 활동",
+        "goals": "목표 {met}/{total}",
+        "completedAt": "완료 시각"
+      },
+      "running": {
+        "title": "진행 중 의도",
+        "empty": "진행 중 의도가 없습니다"
+      },
+      "attention": {
+        "title": "주의 필요",
+        "confirmedVuln": "확인된 취약점",
+        "executing": "실행 중",
+        "frontierPending": "frontier 대기",
+        "blockedIntent": "차단된 의도"
+      },
+      "recent": {
+        "title": "최근 취약점",
+        "empty": "취약점이 없습니다"
+      },
+      "blocked": {
+        "title": "차단·오류 의도",
+        "hint": "(총 {count}개 · 재실행 가능)",
+        "rerunAll": "전체 재실행",
+        "rerun": "재실행",
+        "truncated": "앞 20개만 표시합니다. 「전체 재실행」을 누르면 나머지 {rest}개를 처리합니다."
+      },
+      "stat": {
+        "pending": "대기 의도",
+        "pendingSub": "frontier 열림",
+        "confirmed": "확인된 취약점",
+        "confirmedSub": "현재 작업",
+        "total": "의도 총수",
+        "totalSub": "현재 작업의 전체 의도"
+      },
+      "rule": {
+        "title": "작업 단위 자산 가로채기 / 허용",
+        "hint": "(현재 작업에만 적용되고 전역에는 들어가지 않습니다. 가로채기를 먼저, 허용을 다음에 적용 · 총 {count}개)",
+        "block": "가로채기",
+        "allow": "허용",
+        "notePlaceholder": "비고(선택)",
+        "empty": "작업 단위 규칙이 없습니다. 「가로채기」에 걸리면 테스트를 금지하고, 「허용」은 화이트리스트입니다. 설정하면 현재 작업은 허용 규칙에 걸리는 자산만 테스트합니다(설정하지 않으면 화이트리스트를 적용하지 않습니다).",
+        "kind": {
+          "exact_domain": "도메인(완전 일치)",
+          "exact_ip": "IP(완전 일치)",
+          "exact_url": "URL(완전 일치)",
+          "fuzzy_domain": "도메인(부분 일치)",
+          "fuzzy_ip": "IP(부분 일치)",
+          "fuzzy_url": "URL(부분 일치)",
+          "cidr": "CIDR 대역"
+        }
+      }
     }
   },
   "retest": {

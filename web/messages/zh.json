@@ -3669,6 +3669,131 @@
         "live": "自动刷新",
         "paused": "已暂停"
       }
+    },
+    "overviewTab": {
+      "add": "添加",
+      "addFailed": "添加失败",
+      "saveFailed": "保存失败",
+      "desc": {
+        "title": "任务描述与目标",
+        "descLabel": "描述",
+        "goalLabel": "目标"
+      },
+      "goals": {
+        "title": "目标管理",
+        "hint": "（最终可核验的目标，共 {count} 条；新增/修改会通知规划者并复活任务）",
+        "addPlaceholder": "新增目标，如『拿到管理员账号的越权访问』",
+        "vulnPlaceholder": "漏洞类(可选)",
+        "empty": "暂无目标，添加后规划者会据此派发探索意图并判定达成。"
+      },
+      "constraints": {
+        "title": "操作约束",
+        "hint": "（框定 planner/worker 的探索边界，共 {count} 条；改动下一轮规划生效）",
+        "deny": "禁止",
+        "allow": "允许",
+        "addPlaceholder": "一条操作约束，如『仅测当前端口，不扫其他端口』",
+        "empty": "暂无操作约束。建任务时会自动从描述/目标抽取；也可在此手动增删改，用来框定「允许/禁止做哪些操作」。"
+      },
+      "coverage": {
+        "title": "资产测试覆盖度",
+        "rough": "（粗估，仅供参考）",
+        "testedOf": "已测 {tested} / 范围内 {total}"
+      },
+      "tokens": {
+        "title": "LLM Token 用量",
+        "hint": "（按模型统计{calls, plural, =0 {} other {，共 #次调用}}）",
+        "input": "输入",
+        "output": "输出",
+        "cacheRead": "缓存读",
+        "cacheHitRate": "缓存命中率",
+        "colModel": "模型",
+        "colCalls": "调用",
+        "colHitRate": "命中率",
+        "empty": "暂无 LLM 用量（任务尚未产生调用，或记录仍在写入）。"
+      },
+      "scope": {
+        "title": "测试范围",
+        "hint": "（覆盖度分母 + 授权边界，共 {count} 条）",
+        "kind": {
+          "company": "公司",
+          "root_domain": "根域名",
+          "subdomain": "子域名",
+          "ip": "IP",
+          "cidr": "网段",
+          "icp": "ICP",
+          "keyword": "关键词"
+        },
+        "source": {
+          "auto": "自动",
+          "agent": "Agent",
+          "manual": "手动"
+        },
+        "placeholder": {
+          "company": "公司名或 id",
+          "ipCidr": "如 10.0.0.1 或 10.0.0.0/24",
+          "icp": "如 京ICP备12345678号-1",
+          "keyword": "如 企业名称关键词",
+          "domain": "如 example.com"
+        },
+        "companyFallback": "企业 #{id}",
+        "inherited": "继承",
+        "empty": "暂无测试范围，添加后可作为资产覆盖度的分母。"
+      },
+      "heartbeat": {
+        "title": "心跳",
+        "engineState": "引擎态",
+        "runningWorker": "运行中 Worker",
+        "lastActivity": "最近活动",
+        "goals": "目标 {met}/{total}",
+        "completedAt": "完成时间"
+      },
+      "running": {
+        "title": "进行中意图",
+        "empty": "暂无进行中意图"
+      },
+      "attention": {
+        "title": "需要关注",
+        "confirmedVuln": "确认漏洞",
+        "executing": "执行中",
+        "frontierPending": "frontier 待领",
+        "blockedIntent": "被拦意图"
+      },
+      "recent": {
+        "title": "最近发现",
+        "empty": "暂无发现"
+      },
+      "blocked": {
+        "title": "被拦/出错意图",
+        "hint": "（共 {count} 条，可重跑）",
+        "rerunAll": "全部重跑",
+        "rerun": "重跑",
+        "truncated": "仅显示前 20 条，点「全部重跑」处理剩余 {rest} 条。"
+      },
+      "stat": {
+        "pending": "待领意图",
+        "pendingSub": "frontier 开放",
+        "confirmed": "确认发现",
+        "confirmedSub": "本任务",
+        "total": "意图总数",
+        "totalSub": "本任务全部意图"
+      },
+      "rule": {
+        "title": "任务级资产拦截 / 允许",
+        "hint": "（仅本任务生效，不进全局；先拦截后允许，共 {count} 条）",
+        "block": "拦截",
+        "allow": "允许",
+        "notePlaceholder": "备注(可选)",
+        "empty": "暂无任务级规则。「拦截」命中即禁止测试；「允许」为白名单——配置后本任务只允许命中允许规则的资产（未配置则不启用白名单）。",
+        "kind": {
+          "exact_domain": "域名(全等)",
+          "exact_ip": "IP(全等)",
+          "exact_url": "URL(全等)",
+          "fuzzy_domain": "域名(模糊)",
+          "fuzzy_ip": "IP(模糊)",
+          "fuzzy_url": "URL(模糊)",
+          "cidr": "CIDR 网段"
+        }
+      }
     }
   },
   "retest": {
