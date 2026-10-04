@@ -5967,5 +5967,151 @@
       "starting": "开启中…",
       "start": "开启新会话"
     }
+  },
+  "settingsPage": {
+    "title": "系统配置",
+    "subtitle": "全局运行时开关",
+    "save": "保存",
+    "configured": "已配置",
+    "onSuffix": " · 已开启",
+    "offSuffix": " · 已关闭",
+    "toast": {
+      "saveFailed": "保存失败：{error}",
+      "workersInvalid": "并发数必须是大于 0 的整数",
+      "workersSaved": "已保存并发工作 agent 数（对之后启动的任务生效）",
+      "pythonSaved": "已保存 Python 解释器配置",
+      "bindingOn": "已开启 Agent 自动绑定流量",
+      "bindingOff": "已关闭 Agent 自动绑定流量",
+      "noaOn": "已开启 noa 上下文压缩（对之后启动的运行生效）",
+      "noaOff": "已关闭 noa 上下文压缩（恢复内置压缩）",
+      "webSearchSaved": "已保存网络搜索配置",
+      "braveKeySaved": "已保存 Brave API Key",
+      "tavilyKeySaved": "已保存 Tavily API Key",
+      "proxySaved": "已保存出口代理",
+      "proxyCleared": "已清除出口代理（改为直连）",
+      "globalProxySaved": "已保存全局代理",
+      "globalProxyCleared": "已清除全局代理（改为直连）",
+      "testSuccess": "搜索测试成功 · {backend} 返回 {count} 条结果",
+      "testFailed": "搜索测试失败：{error}",
+      "testUnknownError": "未知错误"
+    },
+    "trafficCapture": {
+      "title": "流量捕获",
+      "desc": "开启后，所有 Agent 的 HTTP 流量经记录代理全量落库，并向 Agent 注入 traffic_search / traffic_get 工具与代理配置（提示词含代理说明）。<br></br>关闭（默认）时不记录任何流量：Agent<b>不会</b>拿到代理配置与流量工具，提示词也<b>不含</b>代理相关内容。切换后会即时重建 Agent 生效。",
+      "on": "已开启 · 正在记录流量并注入代理",
+      "off": "已关闭 · 不记录、不注入代理"
+    },
+    "agentBinding": {
+      "title": "Agent 自动绑定流量",
+      "desc": "默认关闭。开启后，漏洞入库时触发的报告 Agent 会核对已有 HTTP 请求/响应，关联对应流量后再编写报告。<b>查阅数据包及额外的工具调用会增加 Token 消耗。</b><br></br>TCP、未抓包或没有匹配流量时仍可正常上报。此开关不影响流量捕获、人工绑定及已保存证据的查看。 对下一轮 Agent 生效；关闭后会立即拒绝新的自动绑定。",
+      "on": "已开启 · 会增加 Token 消耗",
+      "off": "已关闭 · 可继续人工绑定"
+    },
+    "globalProxy": {
+      "title": "全局代理",
+      "desc": "所有 Agent 的<b>目标流量</b>经此代理出网（隐藏源 IP / 走跳板）。支持 <b>http / https / socks5</b>，可带 <code>user:pass</code> 认证。留空=直连。<br></br>开启<b>流量捕获</b>时，它作为记录代理的<b>上游</b>（流量仍全量落库，再经此代理出网）；关闭捕获时，直接注入 Agent 的 bash / WebFetch 出网。与网络搜索代理、LLM 代理相互独立。<br></br><b>提示</b>：socks5 在<b>关闭捕获</b>时依赖各命令行工具对 <code>ALL_PROXY</code> 的支持（curl 可用，部分工具可能忽略）； 若主要用 socks5，建议开启流量捕获——此路径由 MITM 亲自拨号，工具无感知、稳定生效。",
+      "addrLabel": "代理地址",
+      "placeholder": "socks5://user:pass@host:1080 或 http://host:port（留空=直连）",
+      "configured": "已配置 · 所有目标流量经此代理出网",
+      "notConfigured": "未配置 · 目标流量直连出网"
+    },
+    "constraints": {
+      "title": "操作约束注入",
+      "desc": "开启后，把每个任务的<b>操作约束</b>（在任务总览「操作约束」里维护的 allow/deny 条目）拼进对应 Agent 的系统提示，用来框定探索边界（如「仅测当前端口」「禁止爆破」）。<br></br>可分别控制注入到 <b>规划者（planner）</b>与 <b>执行者（worker）</b> ；默认都开。切换即时生效（下一轮读取），无需重建 Agent。关闭后该 Agent 不再看到约束。",
+      "injectPlanner": "注入规划者（planner）",
+      "injectWorker": "注入执行者（worker）"
+    },
+    "experimental": {
+      "title": "实验功能",
+      "desc": "尚在验证中的机制，默认关闭。可能改变 Agent 行为或影响稳定性，请在了解影响后启用。<br></br><b>noa 上下文压缩</b>：由模型主动压缩长对话历史（norma v0.4.0）。开启后平台接入的四类 Agent（<b>规划者 / 执行者 / 主 Agent / 对话</b>）改用 noa 接管上下文，取代内置压缩，压缩原文会归档到任务工作目录下便于回溯。切换即时生效（对之后启动的运行生效），无需重建 Agent；关闭后立即恢复内置压缩。",
+      "noaLabel": "noa 上下文压缩"
+    },
+    "webSearch": {
+      "title": "网络搜索",
+      "desc": "这是网络搜索的<b>总开关 + 来源配置</b>。开启后，才能在<b>每个 Agent 的配置</b>里单独选择是否启用 <b>web_search</b>（仅返回标题/链接/摘要，不抓取正文；抓取由 WebFetch 负责）。网络搜索<b>不走</b>记录代理，独立于流量捕获。<br></br>来源可选 <b>DuckDuckGo（ddgs）</b>（无需 Key）、<b>Brave（免费版）</b>（需填写 Brave API Key）、 <b>Tavily</b>（需填写 Tavily API Key）或 <b>DeepSeek</b>（复用当前 LLM 配置）。总开关关闭时，各 Agent 的网络搜索开关不可用。",
+      "on": "总开关已开启 · 可在各 Agent 配置里单独启用",
+      "off": "已关闭 · 各 Agent 无法启用网络搜索",
+      "sourceLabel": "搜索来源",
+      "sourcePlaceholder": "选择来源",
+      "sourceDdgs": "DuckDuckGo（ddgs · 免费无 Key）",
+      "sourceBrave": "Brave（免费版 · 需 Key）",
+      "sourceTavily": "Tavily（需 Key）",
+      "sourceDeepseek": "DeepSeek（官方）",
+      "deepseekTitle": "DeepSeek 官方联网搜索",
+      "deepseekDesc1": "该来源直接复用<b>当前激活的 LLM 配置</b>。因此它<b>仅支持 DeepSeek 官方模型</b>，且该配置<b>必须使用 anthropic 协议</b>——DeepSeek 的 OpenAI 协议端点不支持服务端搜索。切换 LLM 配置后此来源可能失效。",
+      "deepseekDesc2": "与其它来源不同，搜索由 <b>DeepSeek 服务端执行</b>：每次搜索会额外消耗一次模型调用（产生 Token 费用），搜索请求<b>不经过上面的出口代理</b>，也<b>不计入流量留痕</b>；返回结果<b>只有标题和链接</b>（无摘要），需要正文时由 WebFetch 抓取。",
+      "deepseekDesc3": "是否满足上述条件由你自行确认，系统不做拦截；可用下方「测试搜索」按钮实际跑一次来验证。",
+      "braveKeyLabel": "Brave Search API Key",
+      "braveKeyPlaceholderSet": "已配置（留空则不变）",
+      "braveKeyPlaceholderUnset": "输入 Brave API Key",
+      "braveNeedsKey": "已选择 Brave 但尚未配置 Key —— 在保存 Key 之前，搜索工具不会启用。",
+      "braveQuota": "免费版额度约 2,000 次/月。前往 https://brave.com/search/api/ 获取 Key。",
+      "tavilyKeyLabel": "Tavily Search API Key",
+      "tavilyKeyPlaceholderSet": "已配置（留空则不变）",
+      "tavilyKeyPlaceholderUnset": "输入 Tavily API Key（tvly-…）",
+      "tavilyNeedsKey": "已选择 Tavily 但尚未配置 Key —— 在保存 Key 之前，搜索工具不会启用。",
+      "tavilyGetKey": "前往 https://tavily.com 注册并获取 API Key。",
+      "proxyLabel": "出口代理（可选）",
+      "proxyPlaceholder": "http://host:port 或 socks5://host:port（留空=直连）",
+      "proxyHint": "独立出口代理，仅用于访问搜索端点（VPN/SOCKS 等）。与记录流量的 MITM 代理无关；网络不通时经此代理访问。",
+      "testHint": "用当前配置（来源 + 代理 + Key）实际搜索一次「test」，验证是否可用。",
+      "testRunning": "测试中…",
+      "testButton": "测试搜索"
+    },
+    "python": {
+      "title": "自定义脚本 · Python 解释器",
+      "desc": "自定义 <b>script</b> 类型工具用它跑 Python。开机会自动检测（python3 优先）；此处可手填 venv / 特定版本的绝对路径，留空则运行时自动检测。",
+      "placeholder": "/usr/bin/python3（留空=自动检测）",
+      "detect": "重新检测"
+    },
+    "workers": {
+      "title": "工作并发 · Work Agent 数",
+      "desc": "每个任务并发运行的工作 agent 数量（默认 3）。数值越大并发探测越多、消耗也越高。修改后<b>对之后启动的任务生效</b>，正在运行的任务不受影响。"
+    },
+    "sendKey": {
+      "title": "会话输入框发送键位",
+      "desc": "对话页与任务详情的主 Agent 会话输入框共用此设置，选择后立即生效、无需保存。<br></br>该偏好<b>只存在本浏览器</b>，不随账号同步，换浏览器或清理站点数据后需重新设置。",
+      "label": "发送方式"
+    },
+    "update": {
+      "title": "版本与更新",
+      "desc": "从 GitHub 检查并安装新版本。更新会重启程序，正在运行的任务会被中断。",
+      "currentVersion": "当前版本",
+      "latestVersion": "最新版本",
+      "modeDocker": "Docker",
+      "modeStandalone": "独立程序",
+      "changelog": "更新日志",
+      "connectError": "无法连接 GitHub：{error}　可在上方配置全局代理后重试。",
+      "noAsset": "{latest} 没有提供 {os}/{arch} 的发布包（缺少 {asset}），无法自动更新。",
+      "willDownloadPrefix": "将下载 ",
+      "willDownloadSize": "（{size}）",
+      "willDownloadSuffix": "，校验 SHA256 并冒烟测试后才会替换，失败自动保留当前版本。",
+      "upToDate": "当前已是最新版本。",
+      "dockerNote": "Docker 下的更新只替换程序本身，不更新镜像里的 playwright / nmap 等工具链，且<code>docker compose up -d</code>重建容器后会退回镜像自带的版本。需要连镜像一起升级请执行<code>docker compose pull artex && docker compose up -d artex</code>。",
+      "restarting": "正在重启并应用新版本，请稍候（页面会自动刷新）…",
+      "check": "检查更新",
+      "updateToVersion": "更新到 {latest}",
+      "updateNow": "立即更新",
+      "rollback": "回滚到上一版本",
+      "footer": "一键更新依赖守护脚本重启程序。请通过 <code>start.sh</code>（Windows 为 <code>start.bat</code>）启动 ARTEX；直接运行 artex 本体时，程序退出后不会被自动拉起。",
+      "toast": {
+        "checkFailed": "检查更新失败：{error}",
+        "found": "发现新版本 {latest}",
+        "upToDate": "当前已是最新版本",
+        "updated": "已更新到 {version}，正在重新加载页面",
+        "restartTimeout": "等待服务重启超时。请检查后端日志，或确认 artex 是通过 start.sh / start.bat 启动的。",
+        "updateFailed": "更新失败：{error}",
+        "startFailed": "启动更新失败：{error}",
+        "rollbackSwitched": "已切换到上一版本，正在重启…",
+        "rollbackFailed": "回滚失败：{error}",
+        "preparing": "准备中…"
+      },
+      "confirm": {
+        "title": "确定更新到 {latest}？",
+        "restart": "更新会重启程序，正在运行的任务会被中断。",
+        "docker": "注意：容器内更新只替换程序本身，不会更新镜像里的 playwright / nmap 等工具链；若新版本依赖新工具，请改用 docker compose pull。",
+        "rollback": "回滚到上一版本？\n\n程序会重启，正在运行的任务会被中断。\n注意：数据库结构不会回退，旧版本可能无法识别新版写入的数据。"
+      }
+    }
   }
 }
