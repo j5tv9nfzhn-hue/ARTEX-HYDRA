@@ -3735,7 +3735,7 @@
       "commands": "도구 실행",
       "dashboard": "대시보드",
       "findings": "취약점",
-      "intercept": "차단 규칙",
+      "intercept": "가로채기 규칙",
       "llm": "LLM",
       "llm-records": "LLM 기록",
       "logs": "로그",
