@@ -3618,13 +3618,20 @@ export const conversations: Conversation[] = [
 
 export const conversationMessages: Record<number, Activity[]> = {
   1: [
-    { seq: 1, worker: "user", ts: T("2026-07-25T10:00:00Z"), kind: "user", summary: "后台在哪，先从哪切入？" },
+    {
+      seq: 1,
+      worker: "user",
+      ts: T("2026-07-25T10:00:00Z"),
+      kind: "user",
+      summary: "백오피스는 어디 있고, 먼저 어디부터 공략할까?",
+    },
     {
       seq: 2,
       worker: "mainagent",
       ts: T("2026-07-25T10:00:04Z"),
       kind: "thinking",
-      summary: "先确认 admin.acme.com 的登录页技术栈和防护（验证码/速率限制），再决定用默认口令还是字典。",
+      summary:
+        "먼저 admin.acme.com 로그인 페이지의 기술 스택과 방어 수단(캡차/속도 제한)을 확인한 뒤, 기본 비밀번호를 쓸지 사전 대입을 쓸지 결정한다.",
     },
     {
       seq: 3,
@@ -3643,7 +3650,7 @@ export const conversationMessages: Record<number, Activity[]> = {
       tool: "bash",
       tool_use_id: "c11",
       summary: "element-ui\ncsrf",
-      detail: "Element-UI 后台，有 CSRF token 但无验证码。",
+      detail: "Element-UI 백오피스이고, CSRF 토큰은 있으나 캡차는 없다.",
     },
     {
       seq: 5,
@@ -3663,7 +3670,7 @@ export const conversationMessages: Record<number, Activity[]> = {
       tool: "bash",
       tool_use_id: "c12",
       summary: "401\\n401\\n401\\n401\\n401",
-      detail: "连续 5 次无锁定/无验证码 → 无速率限制，可爆破。",
+      detail: "연속 5회 시도에도 잠금·캡차가 없다 → 속도 제한이 없어 무차별 대입이 가능하다.",
     },
     {
       seq: 7,
@@ -3671,16 +3678,16 @@ export const conversationMessages: Record<number, Activity[]> = {
       ts: T("2026-07-25T10:00:30Z"),
       kind: "text",
       summary:
-        "结论：Element-UI 后台、无验证码、无速率限制。切入顺序：① 先跑默认口令表（admin/admin、admin/admin123、admin/123456）② 不中再上 top1000 字典。我已把「后台默认口令测试」作为高优意图注入给 work agent。",
+        "결론을 말씀드리면, Element-UI 백오피스이고 캡차도 속도 제한도 없습니다. 공략 순서는 ① 먼저 기본 비밀번호 목록(admin/admin, admin/admin123, admin/123456)을 돌리고 ② 맞지 않으면 top1000 사전으로 넘어갑니다. 「백오피스 기본 비밀번호 테스트」를 높은 우선순위 의도로 worker 에이전트에 주입해 두었습니다.",
     },
-    { seq: 8, worker: "user", ts: T("2026-07-26T03:40:00Z"), kind: "user", summary: "成了吗？" },
+    { seq: 8, worker: "user", ts: T("2026-07-26T03:40:00Z"), kind: "user", summary: "됐어?" },
     {
       seq: 9,
       worker: "mainagent",
       ts: T("2026-07-26T03:40:05Z"),
       kind: "text",
       summary:
-        "成了 —— admin/admin123 直接登进控制台，已记为高危发现并证明「获取后台管理权限」目标达成。下一步转向读用户数据（目标②）。",
+        "성공했습니다. admin/admin123 으로 콘솔에 바로 로그인했고, 고위험 취약점으로 기록하면서 「백오피스 관리 권한 획득」 목표 달성을 입증했습니다. 다음은 사용자 데이터 읽기(목표②)로 전환합니다.",
     },
   ],
   2: [
@@ -3689,14 +3696,14 @@ export const conversationMessages: Record<number, Activity[]> = {
       worker: "user",
       ts: T("2026-07-24T16:00:00Z"),
       kind: "user",
-      summary: "帮我梳理下 api.acme.com 的越权面。",
+      summary: "api.acme.com 의 권한 우회 공격면 좀 정리해 줘.",
     },
     {
       seq: 2,
       worker: "mainagent",
       ts: T("2026-07-24T16:00:05Z"),
       kind: "thinking",
-      summary: "先摸 API 的鉴权方式和几个关键端点的行为，再判断 IDOR / JWT 风险。",
+      summary: "먼저 API 의 인증 방식과 주요 엔드포인트 몇 개의 동작을 파악한 뒤, IDOR / JWT 위험을 판단한다.",
     },
     {
       seq: 3,
@@ -3715,7 +3722,7 @@ export const conversationMessages: Record<number, Activity[]> = {
       tool: "bash",
       tool_use_id: "c21",
       summary: '{ "id": 42, "role": "user" }',
-      detail: "普通用户 token 可用。",
+      detail: "일반 사용자 토큰이 유효하다.",
     },
     {
       seq: 5,
@@ -3724,7 +3731,7 @@ export const conversationMessages: Record<number, Activity[]> = {
       kind: "tool_use",
       tool: "bash",
       tool_use_id: "c22",
-      summary: "echo '<jwt>' | cut -d. -f1 | base64 -d; # 看算法",
+      summary: "echo '<jwt>' | cut -d. -f1 | base64 -d; # 알고리즘 확인",
     },
     {
       seq: 6,
@@ -3734,7 +3741,7 @@ export const conversationMessages: Record<number, Activity[]> = {
       tool: "bash",
       tool_use_id: "c22",
       summary: '{"alg":"HS256","typ":"JWT"}',
-      detail: "HS256 对称签名，若密钥弱可离线爆破伪造。",
+      detail: "HS256 대칭 서명이라, 키가 약하면 오프라인 무차별 대입으로 위조할 수 있다.",
     },
     {
       seq: 7,
@@ -3742,7 +3749,7 @@ export const conversationMessages: Record<number, Activity[]> = {
       ts: T("2026-07-24T16:01:00Z"),
       kind: "text",
       summary:
-        "越权面有两条：① /v1/orders?id= 是自增数字 id → 典型 IDOR，改 id 试读他人订单；② JWT 用 HS256，试 john/hashcat 爆密钥→可伪造任意 sub 越权。我把这两条各派生成一个意图。建议先做 IDOR（成本低、影响直接）。",
+        "권한 우회 공격면은 두 가지입니다. ① /v1/orders?id= 가 자동 증가 숫자 id 라서 → 전형적인 IDOR 이고, id 를 바꿔 타인의 주문을 읽어 봅니다. ② JWT 가 HS256 을 쓰므로 john/hashcat 으로 키를 무차별 대입하면 → 임의의 sub 로 위조해 권한을 우회할 수 있습니다. 이 두 가지를 각각 의도 하나씩으로 파생했습니다. 비용이 낮고 영향이 직접적인 IDOR 를 먼저 하기를 권합니다.",
     },
   ],
   3: [
@@ -3751,14 +3758,15 @@ export const conversationMessages: Record<number, Activity[]> = {
       worker: "user",
       ts: T("2026-07-25T15:45:00Z"),
       kind: "user",
-      summary: "shell 拿到了，接下来怎么打内网？",
+      summary: "shell 은 잡았어. 다음은 내부망을 어떻게 공략할까?",
     },
     {
       seq: 2,
       worker: "mainagent",
       ts: T("2026-07-25T15:45:05Z"),
       kind: "thinking",
-      summary: "www-data 权限不够做内网横向，先看本地提权；拿 root 后以 DMZ 为 pivot 做存活发现。",
+      summary:
+        "www-data 권한으로는 내부망 횡적 이동이 어려우니, 먼저 로컬 권한 상승을 본다. root 를 잡은 뒤 DMZ 를 pivot 으로 삼아 호스트 생존 탐지를 한다.",
     },
     {
       seq: 3,
@@ -3766,14 +3774,14 @@ export const conversationMessages: Record<number, Activity[]> = {
       ts: T("2026-07-25T15:45:10Z"),
       kind: "text",
       summary:
-        "第一步先提权：sudo -l 有 python3 免密，直接提 root。然后以 DMZ 为跳板做内网存活扫描（fscan），重点找域控和 CI/CD 服务器。",
+        "첫 단계는 권한 상승입니다. sudo -l 에 python3 가 비밀번호 없이 있어 바로 root 로 올립니다. 그다음 DMZ 를 경유지로 삼아 내부망 생존 스캔(fscan)을 돌리고, 도메인 컨트롤러와 CI/CD 서버를 집중적으로 찾습니다.",
     },
     {
       seq: 4,
       worker: "user",
       ts: T("2026-07-25T21:05:00Z"),
       kind: "user",
-      summary: "内网扫到了 3 台，Jenkins 8080 开着，有戏吗？",
+      summary: "내부망에서 3대 스캔됐고 Jenkins 8080 이 열려 있던데, 승산 있어?",
     },
     {
       seq: 5,
@@ -3792,7 +3800,7 @@ export const conversationMessages: Record<number, Activity[]> = {
       tool: "bash",
       tool_use_id: "c31",
       summary: "200",
-      detail: "/script 可直接访问，无需认证。",
+      detail: "/script 에 바로 접근할 수 있고, 인증이 필요 없다.",
     },
     {
       seq: 7,
@@ -3800,14 +3808,14 @@ export const conversationMessages: Record<number, Activity[]> = {
       ts: T("2026-07-25T21:05:20Z"),
       kind: "text",
       summary:
-        "有戏 —— Script Console 无鉴权，直接 Groovy RCE。我已注入提示让 worker 优先打这台。拿下后关注凭据库，里面可能有域账号。",
+        "승산이 있습니다. Script Console 에 인증이 없어 바로 Groovy RCE 가 됩니다. worker 가 이 호스트를 우선 공략하도록 힌트를 주입해 두었습니다. 장악한 뒤에는 자격 증명 저장소를 주시해야 하고, 그 안에 도메인 계정이 있을 수 있습니다.",
     },
     {
       seq: 8,
       worker: "user",
       ts: T("2026-07-25T23:25:00Z"),
       kind: "user",
-      summary: "域账号拿到了，svc_deploy 是 Domain Admins，直接上域控？",
+      summary: "도메인 계정은 잡았어. svc_deploy 가 Domain Admins 던데, 바로 도메인 컨트롤러로 갈까?",
     },
     {
       seq: 9,
@@ -3815,16 +3823,22 @@ export const conversationMessages: Record<number, Activity[]> = {
       ts: T("2026-07-25T23:25:10Z"),
       kind: "text",
       summary:
-        "是的。svc_deploy + Domain Admins = 可以 psexec 直取 DC01。拿到后做 secretsdump 导全域哈希，收官。注意 secretsdump 会触发拦截规则，我提前帮你放行了。",
+        "맞습니다. svc_deploy + Domain Admins 이면 psexec 로 DC01 을 바로 장악할 수 있습니다. 확보한 뒤 secretsdump 로 전체 도메인 해시를 덤프하면 마무리됩니다. secretsdump 는 가로채기 규칙에 걸리니, 미리 허용해 두었습니다.",
     },
-    { seq: 10, worker: "user", ts: T("2026-07-26T00:22:00Z"), kind: "user", summary: "靶标拿下了，攻击链总结一下。" },
+    {
+      seq: 10,
+      worker: "user",
+      ts: T("2026-07-26T00:22:00Z"),
+      kind: "user",
+      summary: "목표는 장악했어. 공격 체인 좀 정리해 줘.",
+    },
     {
       seq: 11,
       worker: "mainagent",
       ts: T("2026-07-26T00:22:12Z"),
       kind: "text",
       summary:
-        "完整杀伤链：\n1. .git 泄露→源码白盒+硬编码凭据\n2. shop Fastjson RCE→DMZ 反弹 shell\n3. sudo 提权→root 立足\n4. 内网发现→DC01/FS01/Jenkins\n5. Jenkins 未授权→导出域凭据 svc_deploy\n6. Kerberoasting→破解 svc_sql\n7. svc_deploy∈Domain Admins→psexec DC01→secretsdump 全域哈希\n\n四个目标全部达成，17 个发现（7 高/4 中/2 低 + 8 内网链路）。",
+        "전체 킬체인은 다음과 같습니다.\n1. .git 유출→소스 코드 화이트박스+하드코딩 자격 증명\n2. shop Fastjson RCE→DMZ 리버스 셸\n3. sudo 권한 상승→root 거점 확보\n4. 내부망 발견→DC01/FS01/Jenkins\n5. Jenkins 미인증→svc_deploy 도메인 자격 증명 덤프\n6. Kerberoasting→svc_sql 크랙\n7. svc_deploy∈Domain Admins→psexec DC01→secretsdump 전체 도메인 해시\n\n네 개 목표를 모두 달성했고, 취약점 17건(높음 7/중간 4/낮음 2 + 내부망 경로 8)을 확보했습니다.",
     },
   ],
 };
