@@ -5607,5 +5607,88 @@
       "purging": "清空中…",
       "deleting": "删除中…"
     }
+  },
+  "chat": {
+    "live": "实时",
+    "custom": "自定义",
+    "emptyStart": "开始和「{agent}」对话",
+    "turnsTooltip": "agent 循环轮次（模型调用次数）",
+    "turnsCount": "{turns} 轮",
+    "loadEarlierHint": "向上滚动加载更早的消息…",
+    "running": "运行中",
+    "untitledConversation": "新对话",
+    "newConversation": "新建对话",
+    "filterByAgentAria": "按 Agent 筛选对话",
+    "allAgents": "全部 Agent",
+    "agentOption": "{name}（{count}）",
+    "selectAllAria": "选择当前筛选的全部对话",
+    "selectedCount": "已选 {count} 个",
+    "done": "完成",
+    "multiSelect": "多选",
+    "emptyAll": "暂无对话",
+    "emptyForAgent": "该 Agent 暂无对话",
+    "loadMore": "加载更多",
+    "deletedConversation": "对话已被删除",
+    "loadingConversation": "正在加载对应对话…",
+    "totalCount": "共 {count} 个",
+    "filteredCount": "{shown} / {total} 个",
+    "conversationNotFound": "对话不存在",
+    "bulkDeleted": "已删除 {count} 个对话",
+    "bulkDeleteFailDetail": "#{id}（{error}）",
+    "bulkDeleteFailed": "{count} 个对话删除失败：{details}",
+    "andMore": " 等",
+    "bulkDeleteError": "批量删除失败：{msg}",
+    "bulkDeleteTitle": "删除选中的 {count} 个对话？",
+    "bulkDeleteDesc": "对话消息和执行记录将一并删除，此操作不可撤销。",
+    "deleting": "删除中",
+    "confirmDelete": "确认删除",
+    "composer": {
+      "removeAttachment": "移除",
+      "uploadFile": "上传文件",
+      "sendSideQuestion": "发送旁路问题",
+      "stopRun": "停止本次运行",
+      "sendMessage": "发送消息",
+      "placeholder": "输入消息，@ 引用记录，Enter 发送",
+      "placeholderRunning": "Agent 正在回复，可输入 /btw 提问…"
+    },
+    "llmProfile": {
+      "default": "默认",
+      "defaultNamed": "默认（{name}）",
+      "change": "更换",
+      "select": "选择 LLM 配置"
+    },
+    "agentPicker": {
+      "placeholder": "选择 Agent…"
+    },
+    "item": {
+      "selectAria": "选择对话「{title}」",
+      "renameHint": "双击重命名",
+      "pinnedAria": "已置顶",
+      "runningTooltip": "Agent 正在运行",
+      "manageAria": "管理对话「{title}」",
+      "rename": "重命名",
+      "pin": "置顶",
+      "unpin": "取消置顶",
+      "delete": "删除",
+      "deleteTitle": "删除对话「{title}」？",
+      "deleteDesc": "此操作不可撤销。",
+      "cancel": "取消"
+    },
+    "group": {
+      "expand": "展开「{name}」",
+      "collapse": "收起「{name}」",
+      "activeInside": "当前对话在此分组内",
+      "runningAria": "{count} 个对话运行中"
+    },
+    "toast": {
+      "sendFailed": "发送失败：{msg}",
+      "uploadFailed": "上传失败：{msg}",
+      "switchLlmFailed": "切换 LLM 失败：{msg}",
+      "stopFailed": "停止失败：{msg}",
+      "deleteFailed": "删除失败：{msg}",
+      "renameFailed": "重命名失败：{msg}",
+      "pinFailed": "置顶失败：{msg}",
+      "unpinFailed": "取消置顶失败：{msg}"
+    }
   }
 }

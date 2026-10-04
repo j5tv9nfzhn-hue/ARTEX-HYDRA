@@ -5607,5 +5607,88 @@
       "purging": "비우는 중…",
       "deleting": "삭제하는 중…"
     }
+  },
+  "chat": {
+    "live": "실시간",
+    "custom": "사용자 지정",
+    "emptyStart": "「{agent}」와(과) 대화를 시작하세요",
+    "turnsTooltip": "에이전트 반복 횟수(모델 호출 횟수)",
+    "turnsCount": "{turns}회",
+    "loadEarlierHint": "위로 스크롤하면 이전 메시지를 불러옵니다…",
+    "running": "실행 중",
+    "untitledConversation": "새 대화",
+    "newConversation": "새 대화",
+    "filterByAgentAria": "에이전트별 대화 필터",
+    "allAgents": "전체 에이전트",
+    "agentOption": "{name}({count})",
+    "selectAllAria": "현재 필터의 모든 대화 선택",
+    "selectedCount": "{count}개 선택",
+    "done": "완료",
+    "multiSelect": "다중 선택",
+    "emptyAll": "대화가 없습니다",
+    "emptyForAgent": "이 에이전트의 대화가 없습니다",
+    "loadMore": "더 보기",
+    "deletedConversation": "대화가 삭제되었습니다",
+    "loadingConversation": "해당 대화를 불러오는 중…",
+    "totalCount": "총 {count}개",
+    "filteredCount": "{shown} / {total}개",
+    "conversationNotFound": "대화를 찾을 수 없습니다",
+    "bulkDeleted": "{count}개 대화를 삭제했습니다",
+    "bulkDeleteFailDetail": "#{id}({error})",
+    "bulkDeleteFailed": "{count}개 대화 삭제 실패: {details}",
+    "andMore": " 등",
+    "bulkDeleteError": "일괄 삭제 실패: {msg}",
+    "bulkDeleteTitle": "선택한 대화 {count}개를 삭제할까요?",
+    "bulkDeleteDesc": "대화 메시지와 실행 기록이 함께 삭제되며, 이 작업은 되돌릴 수 없습니다.",
+    "deleting": "삭제 중",
+    "confirmDelete": "삭제 확인",
+    "composer": {
+      "removeAttachment": "제거",
+      "uploadFile": "파일 업로드",
+      "sendSideQuestion": "곁질문 보내기",
+      "stopRun": "이번 실행 중지",
+      "sendMessage": "메시지 보내기",
+      "placeholder": "메시지를 입력하세요. @로 기록 인용, Enter로 전송",
+      "placeholderRunning": "에이전트가 응답 중입니다. /btw로 질문할 수 있습니다…"
+    },
+    "llmProfile": {
+      "default": "기본값",
+      "defaultNamed": "기본값({name})",
+      "change": "변경",
+      "select": "LLM 설정 선택"
+    },
+    "agentPicker": {
+      "placeholder": "에이전트 선택…"
+    },
+    "item": {
+      "selectAria": "대화 「{title}」 선택",
+      "renameHint": "더블클릭하여 이름 변경",
+      "pinnedAria": "고정됨",
+      "runningTooltip": "에이전트 실행 중",
+      "manageAria": "대화 「{title}」 관리",
+      "rename": "이름 변경",
+      "pin": "고정",
+      "unpin": "고정 해제",
+      "delete": "삭제",
+      "deleteTitle": "대화 「{title}」을(를) 삭제할까요?",
+      "deleteDesc": "이 작업은 되돌릴 수 없습니다.",
+      "cancel": "취소"
+    },
+    "group": {
+      "expand": "「{name}」 펼치기",
+      "collapse": "「{name}」 접기",
+      "activeInside": "현재 대화가 이 그룹에 있습니다",
+      "runningAria": "{count}개 대화 실행 중"
+    },
+    "toast": {
+      "sendFailed": "보내기 실패: {msg}",
+      "uploadFailed": "업로드 실패: {msg}",
+      "switchLlmFailed": "LLM 전환 실패: {msg}",
+      "stopFailed": "중지 실패: {msg}",
+      "deleteFailed": "삭제 실패: {msg}",
+      "renameFailed": "이름 변경 실패: {msg}",
+      "pinFailed": "고정 실패: {msg}",
+      "unpinFailed": "고정 해제 실패: {msg}"
+    }
   }
 }
