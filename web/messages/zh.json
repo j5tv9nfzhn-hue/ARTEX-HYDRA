@@ -3667,6 +3667,82 @@
         "foldHint": "已测优先展示。点「展示更多」把下一批拉进图里。",
         "showMore": "展示更多（+{step}）"
       }
+    },
+    "assetsTab": {
+      "title": "测试资产",
+      "totalAll": "当前任务共关联 {count} 项资产",
+      "add": "新增测试资产",
+      "empty": "当前分类暂无测试资产",
+      "loadError": "加载任务资产失败：{message}",
+      "kind": {
+        "root_domain": "根域名",
+        "ip": "IP",
+        "subdomain": "子域名",
+        "app": "应用",
+        "service": "服务",
+        "endpoint": "接口"
+      },
+      "col": {
+        "domain": "域名",
+        "icp": "ICP 备案",
+        "source": "来源",
+        "action": "操作",
+        "cSegment": "C段",
+        "boundDomains": "绑定域名",
+        "openPorts": "开放端口",
+        "rootDomain": "根域名",
+        "recordType": "解析类型",
+        "recordValue": "解析值",
+        "app": "应用",
+        "address": "地址",
+        "category": "分类",
+        "title": "标题",
+        "fingerprint": "指纹",
+        "addressService": "地址 / 服务",
+        "statusCode": "状态码",
+        "responseLength": "响应长度",
+        "auth": "认证",
+        "method": "方法",
+        "fullAddress": "完整地址",
+        "params": "参数"
+      },
+      "source": {
+        "label": {
+          "agent": "Agent 发现",
+          "anchor": "黑板锚点",
+          "api": "资产 API",
+          "company": "企业关联",
+          "legacy": "历史关联",
+          "manual": "人工加入",
+          "system": "系统关联",
+          "task": "任务初始化"
+        },
+        "node": "来源节点 #{id}",
+        "legacySummary": "由历史任务资产关联迁移，暂无更详细来源说明"
+      },
+      "remove": {
+        "aria": "将资产 {label} 移出任务",
+        "title": "移出任务",
+        "confirmTitle": "移出当前任务？",
+        "confirmBody": "将“{label}”从当前任务的测试资产中移出。",
+        "keep": "全局资产、关联流量和历史黑板锚点会继续保留。",
+        "cancel": "取消",
+        "removing": "移出中",
+        "confirm": "确认移出",
+        "success": "已将 {label} 移出当前任务",
+        "error": "移出失败：{message}"
+      },
+      "addSheet": {
+        "title": "新增测试资产",
+        "description": "直接填写测试范围。域名和 IP 会创建或复用全局资产；CIDR、ICP 和关键词作为 Agent 范围上下文。",
+        "editorLabel": "测试资产与范围",
+        "editorDescription": "每行一条，自动识别域名、IP、CIDR、ICP 备案和关键词。",
+        "cancel": "取消",
+        "submitN": "登记 {count} 条",
+        "submit": "登记",
+        "success": "已登记 {requested} 条范围，关联 {assetSummary} 项域名/IP 资产",
+        "error": "新增失败：{message}"
+      }
     }
   },
   "retest": {

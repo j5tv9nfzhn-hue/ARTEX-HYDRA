@@ -3667,6 +3667,82 @@
         "foldHint": "테스트된 항목을 먼저 표시합니다. 「더 보기」를 누르면 다음 묶음을 그래프에 불러옵니다.",
         "showMore": "더 보기 (+{step})"
       }
+    },
+    "assetsTab": {
+      "title": "테스트 자산",
+      "totalAll": "현재 작업에 총 {count}개 자산 연결됨",
+      "add": "테스트 자산 추가",
+      "empty": "현재 분류에 테스트 자산이 없습니다",
+      "loadError": "작업 자산을 불러오지 못했습니다: {message}",
+      "kind": {
+        "root_domain": "루트 도메인",
+        "ip": "IP",
+        "subdomain": "서브도메인",
+        "app": "앱",
+        "service": "서비스",
+        "endpoint": "엔드포인트"
+      },
+      "col": {
+        "domain": "도메인",
+        "icp": "ICP 등록",
+        "source": "출처",
+        "action": "동작",
+        "cSegment": "C 대역",
+        "boundDomains": "연결된 도메인",
+        "openPorts": "열린 포트",
+        "rootDomain": "루트 도메인",
+        "recordType": "레코드 유형",
+        "recordValue": "레코드 값",
+        "app": "앱",
+        "address": "주소",
+        "category": "분류",
+        "title": "제목",
+        "fingerprint": "핑거프린트",
+        "addressService": "주소 / 서비스",
+        "statusCode": "상태 코드",
+        "responseLength": "응답 길이",
+        "auth": "인증",
+        "method": "메서드",
+        "fullAddress": "전체 주소",
+        "params": "파라미터"
+      },
+      "source": {
+        "label": {
+          "agent": "에이전트 발견",
+          "anchor": "블랙보드 앵커",
+          "api": "자산 API",
+          "company": "기업 연관",
+          "legacy": "과거 연관",
+          "manual": "수동 추가",
+          "system": "시스템 연관",
+          "task": "작업 초기화"
+        },
+        "node": "출처 노드 #{id}",
+        "legacySummary": "과거 작업 자산 연결에서 이관되어 자세한 출처 설명이 없습니다"
+      },
+      "remove": {
+        "aria": "자산 {label} 작업에서 제외",
+        "title": "작업에서 제외",
+        "confirmTitle": "현재 작업에서 제외할까요?",
+        "confirmBody": "「{label}」을(를) 현재 작업의 테스트 자산에서 제외합니다.",
+        "keep": "전역 자산·연결된 트래픽·과거 블랙보드 앵커는 그대로 유지됩니다.",
+        "cancel": "취소",
+        "removing": "제외 중",
+        "confirm": "제외 확인",
+        "success": "{label}을(를) 현재 작업에서 제외했습니다",
+        "error": "제외 실패: {message}"
+      },
+      "addSheet": {
+        "title": "테스트 자산 추가",
+        "description": "테스트 범위를 직접 입력합니다. 도메인과 IP 는 전역 자산을 생성하거나 재사용하고, CIDR·ICP·키워드는 에이전트 범위 컨텍스트로 쓰입니다.",
+        "editorLabel": "테스트 자산과 범위",
+        "editorDescription": "한 줄에 하나씩 입력하면 도메인·IP·CIDR·ICP 등록·키워드를 자동으로 인식합니다.",
+        "cancel": "취소",
+        "submitN": "{count}건 등록",
+        "submit": "등록",
+        "success": "범위 {requested}건 등록, 도메인/IP 자산 {assetSummary}개 연결",
+        "error": "추가 실패: {message}"
+      }
     }
   },
   "retest": {
