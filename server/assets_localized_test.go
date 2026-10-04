@@ -22,6 +22,20 @@ func TestAssetErrorConstantsLocalized(t *testing.T) {
 	}
 }
 
+// TestTaskAssetProvenanceLocalized pins the asset-provenance summary labels that
+// get stored in task_asset_links.source_summary and rendered verbatim on the task
+// detail sessions/assets tabs. Reverting either to Chinese fails here. The manual
+// variant lives in the db package (db.manualTaskScopeSummary) and is pinned there.
+func TestTaskAssetProvenanceLocalized(t *testing.T) {
+	cases := map[string]string{
+		"taskAssetSourceAPISummary":  taskAssetSourceAPISummary,
+		"taskAssetSourceTaskSummary": taskAssetSourceTaskSummary,
+	}
+	for label, msg := range cases {
+		assertKoreanError(t, label, msg)
+	}
+}
+
 // TestAssetResponsesLocalized drives the request validators that return before
 // any database access and confirms the Korean message actually lands in the HTTP
 // body. The scope/asset_ids conflict guard returns before s.m.Assets() is read,

@@ -25,6 +25,15 @@ const (
 	errCompanyNameConflict    = "이미 존재하는 회사 이름입니다"
 )
 
+// 자산 출처(provenance) summary 라벨. task_asset_links.source_summary 에 저장돼 작업
+// 상세 화면(sessions·assets 탭)에 그대로 표시되는 사용자 노출 문구다. 한곳에 모아
+// 두어 같은 패널에서 출처 라벨이 언어별로 어긋나지 않게 한다(db.manualTaskScopeSummary
+// 도 같은 성격의 수동 추가 라벨). 비교·분기에 쓰이지 않는 표시 전용 값이다.
+const (
+	taskAssetSourceAPISummary  = "자산 API 로 등록"
+	taskAssetSourceTaskSummary = "작업 설명 또는 목표로 초기화"
+)
+
 func decodeCompanyMutationRequest(w http.ResponseWriter, r *http.Request, value any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, maxCompanyMutationBodyBytes)
 	if err := json.NewDecoder(r.Body).Decode(value); err != nil {
@@ -549,7 +558,7 @@ func (s *Server) insertAssets(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if req.TaskID > 0 {
-			_ = as.SetTaskAssetSource(req.TaskID, id, "api", "通过资产 API 登记", nil)
+			_ = as.SetTaskAssetSource(req.TaskID, id, "api", taskAssetSourceAPISummary, nil)
 		}
 		results = append(results, result{Index: i, ID: id, Type: a.Type})
 	}

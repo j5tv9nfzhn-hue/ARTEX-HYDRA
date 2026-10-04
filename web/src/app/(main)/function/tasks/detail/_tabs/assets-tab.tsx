@@ -133,7 +133,7 @@ function Chips({ items, mono }: { items: string[]; mono?: boolean }) {
 
 function SourceCell({ asset }: { asset: Asset }) {
   const source = firstText([asset.task_source], "legacy");
-  const summary = firstText([asset.task_source_summary], "由历史任务资产关联迁移，暂无更详细来源说明");
+  const summary = firstText([asset.task_source_summary], "과거 작업 자산 연결에서 이관되어 자세한 출처 설명이 없습니다");
   return (
     <Tooltip>
       <TooltipTrigger asChild>
