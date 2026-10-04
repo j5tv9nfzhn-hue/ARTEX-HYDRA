@@ -5054,5 +5054,19 @@
     "visSheetHint": "선택한 에이전트는 생성 직후 이 스킬을 볼 수 있습니다.",
     "creating": "생성 중…",
     "create": "생성"
+  },
+  "changePasswordDialog": {
+    "title": "비밀번호 변경",
+    "description": "사용자 이름은 <b>ARTEX</b> 로 고정되어 있습니다. 먼저 현재 비밀번호를 입력해 인증해야 하며, 비밀번호를 변경한 뒤에도 이미 발급된 로그인 Token 은 만료될 때까지 유효합니다.",
+    "currentPassword": "현재 비밀번호",
+    "newPassword": "새 비밀번호",
+    "confirmPassword": "새 비밀번호 확인",
+    "cancel": "취소",
+    "submit": "변경",
+    "submitting": "변경 중…",
+    "errorRequired": "현재 비밀번호와 새 비밀번호를 입력해 주세요",
+    "errorMismatch": "두 번 입력한 새 비밀번호가 일치하지 않습니다",
+    "success": "비밀번호를 변경했습니다",
+    "failed": "비밀번호 변경에 실패했습니다: {msg}"
   }
 }
