@@ -93,3 +93,44 @@ func TestIsDefaultConversationTitle(t *testing.T) {
 		t.Fatal("사용자가 지은 제목은 자동 제목 대상이 아니어야 한다")
 	}
 }
+
+// TestConversationRetestReasonsLocalized 는 재검증 종결 사유 세 상수(F9)가 한국어임을
+// 단언한다. 이 값들은 finding_retests.error 컬럼에 저장돼 재검증 패널 item.error 로
+// 노출되므로, 중국어로 되돌아가면 사용자가 패널에서 중국어 사유를 보게 된다.
+func TestConversationRetestReasonsLocalized(t *testing.T) {
+	assertKoreanError(t, "retest_failed_to_start", convRetestFailedToStart)
+	assertKoreanError(t, "retest_status_read_failed", convRetestStatusReadFailed)
+	assertKoreanError(t, "retest_stopped_or_closed", convRetestStoppedOrClosed)
+}
+
+// TestTranscriptErrorSummaryLocalized 는 활동 전사 오류 래퍼(F9)를 핀 고정한다. 채팅 턴
+// (라벨 없음)과 작업 메인 에이전트("메인 에이전트") 두 호출이 같은 "(…오류: …)" 형태로
+// 나오고, 안쪽 err 원문은 그대로 보존되며 래퍼에 중국어 한자·전각 부호가 없어야 한다.
+func TestTranscriptErrorSummaryLocalized(t *testing.T) {
+	cases := []struct {
+		name  string
+		label string
+		errm  string
+		want  string
+	}{
+		{"chat_turn", "", "connection reset", "(오류: connection reset)"},
+		{"main_agent", "메인 에이전트", "connection reset", "(메인 에이전트 오류: connection reset)"},
+	}
+	for _, c := range cases {
+		got := transcriptErrorSummary(c.label, c.errm)
+		if got != c.want {
+			t.Fatalf("%s: transcriptErrorSummary = %q, 기대 = %q", c.name, got, c.want)
+		}
+		if !strings.Contains(got, c.errm) {
+			t.Fatalf("%s: err 원문이 보존되지 않았습니다: %q", c.name, got)
+		}
+		// 전각 괄호·콜론이 ASCII 로 치환됐는지 확인한다(F1·fluent-korean 방침).
+		if strings.ContainsAny(got, "（）：") {
+			t.Fatalf("%s: 전각 부호가 남아 있습니다: %q", c.name, got)
+		}
+		// 래퍼 라벨에 한글이 있고 중국어 한자가 없어야 한다(err 원문은 검사 대상이 아니라
+		// ASCII 로 고정). 라벨이 없는 채팅 턴도 "오류" 한글을 포함한다.
+		wrapper := strings.ReplaceAll(got, c.errm, "")
+		assertKoreanError(t, c.name+".wrapper", wrapper)
+	}
+}

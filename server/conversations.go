@@ -30,8 +30,9 @@ const (
 // (agent_key·title·pinned·ids·id)·식별자(LLM·API Key·token)는 사용자가 요청을 고치는 데
 // 쓰는 값이라 원문 그대로 둔다. 用語: 配置→설정(B4c-5), agent→에이전트. %d 가 든 상수는
 // fmt.Sprintf 형식 문자열이다. 기본 대화 제목·센티넬은 아래 convDefaultTitle·
-// convAttachmentTitle 로 분리했고(F8), 재검증 사유·트랜스크립트 문구·트리거 메시지
-// 골격은 이 묶음 밖이다(저널 참조). 로그·주석은 BRIEF 방침상 최하위.
+// convAttachmentTitle 로 분리했고(F8), 재검증 사유·트랜스크립트 오류 문구는 아래
+// convRetest* 상수·transcriptErrorSummary 로 분리했다(F9). 트리거 메시지 골격은 아직
+// 이 묶음 밖이다(F10·저널 참조). 로그·주석은 BRIEF 방침상 최하위.
 const (
 	convErrRequestTooLarge = "요청 본문이 너무 큽니다"
 	convErrAgentKeyEmpty   = "agent_key 는 비어 있을 수 없습니다"
@@ -54,6 +55,17 @@ const (
 const (
 	convDefaultTitle    = "새 대화"
 	convAttachmentTitle = "첨부 메시지"
+)
+
+// 재검증(finding_retest) 종결 사유. runConversationTurn 이 재검증 대화를 봉인할 때 쓰고,
+// finding_retests.error 컬럼에 저장돼 재검증 패널(finding-retest-panel) 의 item.error 로
+// 그대로 노출된다(사용자 노출). db/finding_retests.go 의 형제 사유(결론 미저장·서비스 재시작)도
+// 같은 컬럼·패널이라 그 파일에서 함께 한국어로 둔다. 종결 상태 값("failed"/"stopped"/
+// "completed")은 StatusLabel 로 한국어 라벨에 매핑되는 센티넬이라 ASCII 로 유지한다(F9).
+const (
+	convRetestFailedToStart    = "재검증을 시작하지 못했습니다"
+	convRetestStatusReadFailed = "재검증 상태를 읽지 못했습니다. 다시 시작해 주세요"
+	convRetestStoppedOrClosed  = "재검증이 중지되었거나 서비스가 종료되었습니다"
 )
 
 // isDefaultConversationTitle 은 대화가 아직 자동 생성된 기본 제목(빈 값 또는
@@ -531,6 +543,17 @@ func (s *Server) conversationRunContext(id int64, busyKey string) (context.Conte
 	return ctx, cancel
 }
 
+// transcriptErrorSummary 는 실행이 실패했을 때 활동 전사(transcript)에 남기는 오류 요약을
+// 만든다. label 은 실패한 주체를 가리키며, 채팅 턴은 빈 문자열, 작업 메인 에이전트는
+// "메인 에이전트"를 넣는다. 두 전사 모두 "(…오류: …)" 형태로 같게 렌더되도록 한 곳에 모은다.
+// err 원문은 그대로 보존하고 바깥 라벨만 한국어로 둔다(F9).
+func transcriptErrorSummary(label, errMsg string) string {
+	if label != "" {
+		label += " "
+	}
+	return "(" + label + "오류: " + errMsg + ")"
+}
+
 func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelCauseFunc, c *db.Conversation, msg, busyKey string) {
 	defer func() {
 		cancel(agent.AbortChatTurnFinished)
@@ -541,7 +564,7 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 	}()
 	// Only the first turn executes a historical retest. Follow-up conversation
 	// turns may explain the sealed result; the result tool refuses to overwrite it.
-	finishStatus, finishReason := "failed", "复测未能启动"
+	finishStatus, finishReason := "failed", convRetestFailedToStart
 	if c.AgentKey == db.FindingRetestAgentKey {
 		// Read without the run cancellation so an immediate stop still seals pending.
 		r, err := s.m.pg.FindingRetestForConversation(context.Background(), c.ID)
@@ -549,7 +572,7 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 			// The sealing defer below needs r.ID, which we do not have here. Seal by
 			// conversation instead, otherwise the row stays 'pending' forever.
 			log.Printf("[conv %d] load retest: %v", c.ID, err)
-			if err := s.m.pg.FailPendingRetestForConversation(c.ID, "复测状态读取失败，请重新发起"); err != nil {
+			if err := s.m.pg.FailPendingRetestForConversation(c.ID, convRetestStatusReadFailed); err != nil {
 				log.Printf("[conv %d] seal retest: %v", c.ID, err)
 			}
 			return
@@ -557,7 +580,7 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 		if r != nil && r.Status == "pending" {
 			defer func() {
 				if ctx.Err() != nil {
-					finishStatus, finishReason = "stopped", "复测已停止或服务已关闭"
+					finishStatus, finishReason = "stopped", convRetestStoppedOrClosed
 				}
 				s.finishRetest(r.ID, finishStatus, finishReason)
 			}()
@@ -602,7 +625,7 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 		finishReason = err.Error()
 		if ctx.Err() == nil {
 			_, _ = pg.AppendConvActivity(c.ID, db.Activity{Worker: c.AgentKey, Kind: "text", IsError: true,
-				Summary: "（出错：" + err.Error() + "）", Detail: err.Error()})
+				Summary: transcriptErrorSummary("", err.Error()), Detail: err.Error()})
 		}
 	} else {
 		finishStatus, finishReason = "completed", ""
