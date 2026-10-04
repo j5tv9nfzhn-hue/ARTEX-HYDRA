@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   RadioIcon,
   SearchIcon,
@@ -49,7 +50,7 @@ import { api } from "@/lib/api";
 import type { LLMRecordItem, LLMRecordDetail, LLMTask } from "@/lib/types";
 
 function fmtTime(ts: string) {
-  return new Date(ts).toLocaleString("zh-CN", {
+  return new Date(ts).toLocaleString("ko-KR", {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
@@ -76,8 +77,9 @@ function tryFormatJSON(s: string): string {
   }
 }
 
-// 复制当前框内文本的小按钮。复制成功后短暂显示对勾。text 为空/仅占位符时禁用。
+// 현재 상자 안의 텍스트를 복사하는 작은 버튼. 복사에 성공하면 잠시 체크 표시를 보여 준다. text 가 비어 있거나 자리표시자뿐이면 비활성화한다.
 function CopyButton({ text }: { text: string }) {
+  const t = useTranslations("llmRecords");
   const [copied, setCopied] = React.useState(false);
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -88,14 +90,14 @@ function CopyButton({ text }: { text: string }) {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      // navigator.clipboard 在非安全上下文(如 http 局域网)不可用，回退到 execCommand。
+      // navigator.clipboard 는 안전하지 않은 컨텍스트(예: http 사설망)에서는 쓸 수 없어 execCommand 로 폴백한다.
       const ta = document.createElement("textarea");
       ta.value = text;
       ta.style.position = "fixed";
       ta.style.opacity = "0";
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand("copy"); } catch { /* 忽略：不支持则静默 */ }
+      try { document.execCommand("copy"); } catch { /* 무시: 지원하지 않으면 조용히 넘어간다 */ }
       document.body.removeChild(ta);
     }
     setCopied(true);
@@ -109,7 +111,7 @@ function CopyButton({ text }: { text: string }) {
       size="icon"
       className="size-5 shrink-0"
       disabled={disabled}
-      title={copied ? "已复制" : "复制内容"}
+      title={copied ? t("copyCopied") : t("copyTooltip")}
       onClick={copy}
     >
       {copied ? <CheckIcon className="size-3 text-emerald-600" /> : <CopyIcon className="size-3" />}
@@ -120,6 +122,8 @@ function CopyButton({ text }: { text: string }) {
 const PAGE_SIZES = [25, 50, 100];
 
 export default function LLMRecordsPage() {
+  const t = useTranslations("llmRecords");
+  const tp = useTranslations("pagination");
   const [page, setPage] = React.useState(0);
   const [size, setSize] = React.useState(50);
   const [session, setSession] = React.useState("");
@@ -139,15 +143,15 @@ export default function LLMRecordsPage() {
   const [selected, setSelected] = React.useState<LLMRecordItem | null>(null);
   const [detail, setDetail] = React.useState<LLMRecordDetail | null>(null);
   const [detailLoading, setDetailLoading] = React.useState(false);
-  // 归一化视图 / HTTP 原文视图。原文是排查 provider 侧问题的唯一依据：归一化视图
-  // 不含工具 schema，响应里也没有 tool_use 块。
+  // 정규화 뷰 / HTTP 원문 뷰. 원문은 provider 쪽 문제를 진단하는 유일한 근거다: 정규화 뷰는
+  // 도구 schema 를 담지 않고, 응답에도 tool_use 블록이 없다.
   const [rawView, setRawView] = React.useState(false);
 
   const hasRaw = !!(detail?.raw_request || detail?.raw_response);
-  // 开关保持用户选择，但切到一条无原文的旧记录时自动落回解析视图，而不是显示空白。
+  // 토글은 사용자 선택을 유지하되, 원문이 없는 옛 기록으로 전환하면 빈 화면 대신 자동으로 파싱 뷰로 되돌린다.
   const showRaw = rawView && hasRaw;
-  // 原文请求体是 JSON，pretty-print 只改排版不改语义，便于阅读；原文响应是 SSE
-  // 帧，tryFormatJSON 解析失败会原样返回，故两边共用一个函数即可。
+  // 원문 요청 본문은 JSON 이라 pretty-print 는 배치만 바꾸고 의미는 바꾸지 않아 읽기 편하다. 원문 응답은 SSE
+  // 프레임이고, tryFormatJSON 은 파싱에 실패하면 원본을 그대로 돌려주므로 양쪽이 한 함수를 함께 쓰면 된다.
   const reqText = showRaw
     ? detail?.raw_request && tryFormatJSON(detail.raw_request)
     : detail?.request_body && tryFormatJSON(detail.request_body);
@@ -187,8 +191,8 @@ export default function LLMRecordsPage() {
 
   // Debounce session filter.
   React.useEffect(() => {
-    const t = setTimeout(() => setSessionQ(session.trim()), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setSessionQ(session.trim()), 300);
+    return () => clearTimeout(timer);
   }, [session]);
 
   // Reset page on filter change.
@@ -227,7 +231,7 @@ export default function LLMRecordsPage() {
         setDetail(null);
         setPickedTask("");
         setPage(0);
-        setReloadTick((t) => t + 1);
+        setReloadTick((n) => n + 1);
       })
       .catch(() => {})
       .finally(() => setDeleting(false));
@@ -260,7 +264,7 @@ export default function LLMRecordsPage() {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <RadioIcon className="h-5 w-5 text-muted-foreground" />
-          <h1 className="text-xl font-semibold tracking-tight">LLM 录制</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
           <Badge variant="secondary">{total}</Badge>
         </div>
       </div>
@@ -270,7 +274,7 @@ export default function LLMRecordsPage() {
         <div className="relative max-w-sm flex-1">
           <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="搜索 Session ID..."
+            placeholder={t("searchPlaceholder")}
             value={session}
             onChange={(e) => setSession(e.target.value)}
             className="h-8 pl-8"
@@ -284,18 +288,18 @@ export default function LLMRecordsPage() {
         />
         <Select value={pickedTask} onValueChange={setPickedTask}>
           <SelectTrigger size="sm" className="w-56">
-            <SelectValue placeholder="选择任务…" />
+            <SelectValue placeholder={t("taskPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {tasks.length === 0 ? (
               <SelectItem value="__none__" disabled>
-                暂无任务记录
+                {t("taskEmpty")}
               </SelectItem>
             ) : (
-              tasks.map((t) => (
-                <SelectItem key={t.task_id} value={t.task_id}>
-                  <span className="font-mono">#{t.task_id}</span>
-                  <span className="ml-2 text-muted-foreground">（{t.count}）</span>
+              tasks.map((task) => (
+                <SelectItem key={task.task_id} value={task.task_id}>
+                  <span className="font-mono">#{task.task_id}</span>
+                  <span className="ml-2 text-muted-foreground">({task.count})</span>
                 </SelectItem>
               ))
             )}
@@ -306,11 +310,11 @@ export default function LLMRecordsPage() {
           size="sm"
           className="h-8"
           disabled={!pickedTask || deleting}
-          title={pickedTask ? undefined : "先在上方选择任务"}
+          title={pickedTask ? undefined : t("selectTaskFirst")}
           onClick={() => setDeleteOpen(true)}
         >
           <Trash2Icon className="size-3.5" />
-          删除任务对话
+          {t("deleteTaskConversations")}
         </Button>
         <Select value={String(size)} onValueChange={(v) => setSize(Number(v))}>
           <SelectTrigger size="sm" className="w-28">
@@ -319,7 +323,7 @@ export default function LLMRecordsPage() {
           <SelectContent>
             {PAGE_SIZES.map((n) => (
               <SelectItem key={n} value={String(n)}>
-                {n} / 页
+                {n}{tp("perPage")}
               </SelectItem>
             ))}
           </SelectContent>
@@ -341,7 +345,7 @@ export default function LLMRecordsPage() {
               recEnabled ? "text-foreground" : "text-muted-foreground",
             )}
           >
-            {recEnabled ? "录制中" : "已关闭"}
+            {recEnabled ? t("recording") : t("recordingOff")}
           </label>
         </div>
 
@@ -380,14 +384,14 @@ export default function LLMRecordsPage() {
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow>
-                  <TableHead className="w-[130px]">时间</TableHead>
-                  <TableHead className="w-[60px]">任务</TableHead>
+                  <TableHead className="w-[130px]">{t("colTime")}</TableHead>
+                  <TableHead className="w-[60px]">{t("colTask")}</TableHead>
                   <TableHead className="w-[90px]">Worker</TableHead>
                   <TableHead className="w-[100px]">Profile</TableHead>
                   <TableHead className="w-[140px]">Model</TableHead>
-                  <TableHead className="w-[70px]">延迟</TableHead>
+                  <TableHead className="w-[70px]">{t("colLatency")}</TableHead>
                   <TableHead className="w-[90px]">Tokens</TableHead>
-                  <TableHead className="w-[60px]">状态</TableHead>
+                  <TableHead className="w-[60px]">{t("colStatus")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -400,7 +404,7 @@ export default function LLMRecordsPage() {
                 ) : records.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
-                      暂无 LLM 调用记录
+                      {t("empty")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -471,7 +475,7 @@ export default function LLMRecordsPage() {
               </Badge>
               {selected.task_id && (
                 <Badge variant="outline" className="text-xs font-mono">
-                  任务 #{selected.task_id}
+                  {t("taskBadge", { id: selected.task_id })}
                 </Badge>
               )}
               <span className="text-xs text-muted-foreground">
@@ -485,17 +489,17 @@ export default function LLMRecordsPage() {
               ) : (
                 <Badge variant="destructive" className="text-xs">Error</Badge>
               )}
-              {/* 原文视图开关。旧记录没有原文，此时禁用而非静默回退，避免看着像
-                  「原文与解析一致」。 */}
+              {/* 원문 뷰 토글. 옛 기록은 원문이 없어 이때는 조용히 폴백하지 않고 비활성화해, 「원문과 파싱이 같다」처럼
+                  보이는 것을 막는다. */}
               <Button
                 variant={showRaw ? "secondary" : "ghost"}
                 size="sm"
                 className="ml-auto h-7 shrink-0 text-xs"
                 disabled={!hasRaw}
-                title={hasRaw ? "查看与 provider 实际收发的 HTTP 原文" : "该记录录制于此功能上线前，无原文"}
+                title={hasRaw ? t("rawTooltipHas") : t("rawTooltipNone")}
                 onClick={() => setRawView((v) => !v)}
               >
-                原文
+                {t("raw")}
               </Button>
               <Button
                 variant="ghost"
@@ -510,39 +514,39 @@ export default function LLMRecordsPage() {
             <div className="grid min-h-0 flex-1 grid-cols-2 divide-x">
               <div className="flex min-h-0 min-w-0 flex-col">
                 <div className="flex items-center gap-2 border-b py-0.5 pr-1.5 pl-3 text-[11px] font-medium text-muted-foreground">
-                  <span>Request{showRaw && " · 原文"}</span>
+                  <span>Request{showRaw && ` · ${t("raw")}`}</span>
                   <CopyButton text={reqText || ""} />
                 </div>
                 <div className="min-h-0 flex-1 overflow-auto">
                   {detailLoading ? (
                     <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
                       <Loader2Icon className="size-3.5 animate-spin" />
-                      加载…
+                      {t("loading")}
                     </div>
                   ) : (
                     <pre className="p-3 font-mono text-xs break-all whitespace-pre-wrap">
-                      {reqText || "（空）"}
+                      {reqText || t("emptyContent")}
                     </pre>
                   )}
                 </div>
               </div>
               <div className="flex min-h-0 min-w-0 flex-col">
                 <div className="flex items-center gap-2 border-b py-0.5 pr-1.5 pl-3 text-[11px] font-medium text-muted-foreground">
-                  <span>Response{showRaw && " · 原文（SSE）"}</span>
+                  <span>Response{showRaw && ` · ${t("raw")}(SSE)`}</span>
                   <CopyButton text={respText || ""} />
                 </div>
                 <div className="min-h-0 flex-1 overflow-auto">
                   {detailLoading ? (
                     <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
                       <Loader2Icon className="size-3.5 animate-spin" />
-                      加载…
+                      {t("loading")}
                     </div>
                   ) : (
                     <pre className={cn(
                       "p-3 font-mono text-xs break-all whitespace-pre-wrap",
                       selected.status !== "ok" && "text-red-600 dark:text-red-400",
                     )}>
-                      {respText || "（空）"}
+                      {respText || t("emptyContent")}
                     </pre>
                   )}
                 </div>
@@ -555,13 +559,13 @@ export default function LLMRecordsPage() {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>删除任务「{pickedTask}」的全部 LLM 对话？</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle", { taskId: pickedTask })}</AlertDialogTitle>
             <AlertDialogDescription>
-              将永久删除该任务的所有 LLM 调用记录（含请求/响应原文），此操作不可撤销。
+              {t("deleteDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>取消</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
@@ -570,7 +574,7 @@ export default function LLMRecordsPage() {
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? "删除中…" : "确认删除"}
+              {deleting ? t("deleting") : t("confirmDelete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -5128,5 +5128,33 @@
     "folderCreated": "已创建目录",
     "createFailed": "创建失败：{msg}",
     "downloadFailed": "下载失败：{msg}"
+  },
+  "llmRecords": {
+    "title": "LLM 录制",
+    "searchPlaceholder": "搜索 Session ID...",
+    "taskPlaceholder": "选择任务…",
+    "taskEmpty": "暂无任务记录",
+    "deleteTaskConversations": "删除任务对话",
+    "selectTaskFirst": "先在上方选择任务",
+    "recording": "录制中",
+    "recordingOff": "已关闭",
+    "colTime": "时间",
+    "colTask": "任务",
+    "colLatency": "延迟",
+    "colStatus": "状态",
+    "empty": "暂无 LLM 调用记录",
+    "taskBadge": "任务 #{id}",
+    "rawTooltipHas": "查看与 provider 实际收发的 HTTP 原文",
+    "rawTooltipNone": "该记录录制于此功能上线前，无原文",
+    "raw": "原文",
+    "loading": "加载…",
+    "emptyContent": "（空）",
+    "copyCopied": "已复制",
+    "copyTooltip": "复制内容",
+    "deleteTitle": "删除任务「{taskId}」的全部 LLM 对话？",
+    "deleteDesc": "将永久删除该任务的所有 LLM 调用记录（含请求/响应原文），此操作不可撤销。",
+    "cancel": "取消",
+    "deleting": "删除中…",
+    "confirmDelete": "确认删除"
   }
 }
