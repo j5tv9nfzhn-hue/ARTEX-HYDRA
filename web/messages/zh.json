@@ -5816,5 +5816,43 @@
   "sortableHead": {
     "sortBy": "按{label}倒序排序",
     "active": "{label}当前{direction, select, asc {正序} other {倒序}}，点击切换排序方向"
+  },
+  "sessions": {
+    "token": {
+      "inShort": "入",
+      "cacheShort": "缓",
+      "outShort": "出",
+      "inLong": "input",
+      "cacheLong": "cache",
+      "outLong": "output"
+    },
+    "item": {
+      "sourceTask": "来源 #{id}",
+      "deleted": "已删除",
+      "live": "实时",
+      "deleteTitle": "删除该意图（需填写原因，可选假删除/真删除）"
+    },
+    "asset": {
+      "current": "当前资产：{label}",
+      "sourceTask": "来源任务 #{id}",
+      "type": {
+        "app": "应用",
+        "endpoint": "接口",
+        "ip": "IP",
+        "root_domain": "根域名",
+        "service": "服务",
+        "subdomain": "子域名"
+      },
+      "source": {
+        "agent": "Agent 发现",
+        "anchor": "黑板锚点",
+        "api": "资产 API",
+        "company": "企业关联",
+        "legacy": "历史关联",
+        "manual": "人工加入",
+        "system": "系统关联",
+        "task": "任务初始化"
+      }
+    }
   }
 }

@@ -5816,5 +5816,43 @@
   "sortableHead": {
     "sortBy": "{label} 기준 내림차순 정렬",
     "active": "{label} 현재 {direction, select, asc {오름차순} other {내림차순}} 정렬, 클릭하면 정렬 방향 전환"
+  },
+  "sessions": {
+    "token": {
+      "inShort": "입",
+      "cacheShort": "캐",
+      "outShort": "출",
+      "inLong": "입력",
+      "cacheLong": "캐시",
+      "outLong": "출력"
+    },
+    "item": {
+      "sourceTask": "출처 #{id}",
+      "deleted": "삭제됨",
+      "live": "실시간",
+      "deleteTitle": "이 의도 삭제 (사유 입력 필요, 가삭제/완전 삭제 선택 가능)"
+    },
+    "asset": {
+      "current": "현재 자산: {label}",
+      "sourceTask": "출처 작업 #{id}",
+      "type": {
+        "app": "앱",
+        "endpoint": "엔드포인트",
+        "ip": "IP",
+        "root_domain": "루트 도메인",
+        "service": "서비스",
+        "subdomain": "서브도메인"
+      },
+      "source": {
+        "agent": "에이전트 발견",
+        "anchor": "블랙보드 앵커",
+        "api": "자산 API",
+        "company": "기업 연관",
+        "legacy": "과거 연관",
+        "manual": "수동 추가",
+        "system": "시스템 연관",
+        "task": "작업 초기화"
+      }
+    }
   }
 }

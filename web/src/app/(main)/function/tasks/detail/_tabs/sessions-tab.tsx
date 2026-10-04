@@ -25,6 +25,7 @@ import {
   XIcon,
   ZapOffIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { ApprovalExecutionFocus, useApprovalFocus, useApprovalHistory } from "@/components/approval-execution-focus";
@@ -54,7 +55,6 @@ import { api, sseUrl } from "@/lib/api";
 import { shouldSubmitOnKey, useChatSendMode } from "@/lib/chat-send-mode";
 import { MOCK } from "@/lib/mock/enabled";
 import { isBtwCommand } from "@/lib/side-questions";
-import { taskAssetSourceLabel, taskAssetTypeLabel } from "@/lib/task-assets";
 import type {
   Activity,
   ChatAttachment,
@@ -202,7 +202,11 @@ const TokenMetrics = React.forwardRef<
     labels?: "short" | "long";
   }
 >(({ input, cache, output, labels = "short", className, ...props }, ref) => {
-  const names = labels === "short" ? ["入", "缓", "出"] : ["input", "cache", "output"];
+  const t = useTranslations("sessions");
+  const names =
+    labels === "short"
+      ? [t("token.inShort"), t("token.cacheShort"), t("token.outShort")]
+      : [t("token.inLong"), t("token.cacheLong"), t("token.outLong")];
   const values = [input, cache, output];
   return (
     <span
@@ -357,6 +361,7 @@ function SessionItem({
   controlling?: boolean;
   deleted?: boolean;
 }) {
+  const t = useTranslations("sessions");
   const icon = deleted ? (
     <Trash2Icon className="size-3.5 text-destructive" />
   ) : s.role === "worker" ? (
@@ -391,7 +396,7 @@ function SessionItem({
         )}
         {s.inherited && s.source_task_id && (
           <Badge variant="outline" className="shrink-0">
-            来源 #{s.source_task_id}
+            {t("item.sourceTask", { id: s.source_task_id })}
           </Badge>
         )}
         <span
@@ -401,7 +406,7 @@ function SessionItem({
         </span>
         {deleted && (
           <Badge variant="outline" className="shrink-0 border-destructive/40 text-destructive">
-            已删除
+            {t("item.deleted")}
           </Badge>
         )}
         {hasPending && <ShieldAlertIcon className="size-3.5 shrink-0 text-amber-500" />}
@@ -413,7 +418,7 @@ function SessionItem({
         {s.live && (
           <span className="inline-flex items-center gap-1 rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
             <span className="size-1 animate-pulse rounded-full bg-blue-500" />
-            实时
+            {t("item.live")}
           </span>
         )}
       </button>
@@ -425,8 +430,8 @@ function SessionItem({
             size="icon-xs"
             onClick={onCancel}
             disabled={controlling}
-            title="删除该意图（需填写原因，可选假删除/真删除）"
-            aria-label="删除该意图（需填写原因，可选假删除/真删除）"
+            title={t("item.deleteTitle")}
+            aria-label={t("item.deleteTitle")}
             className="text-destructive hover:text-destructive"
           >
             <Trash2Icon />
@@ -444,6 +449,7 @@ function truncateWorkerAssetLabel(value: string, maxChars = 30): string {
 }
 
 function WorkerAssetBadge({ assets }: { assets: IntentAsset[] }) {
+  const t = useTranslations("sessions");
   const displayAssets = assets.filter(
     (asset) => asset.type === "root_domain" || asset.type === "subdomain" || asset.type === "ip",
   );
@@ -456,7 +462,7 @@ function WorkerAssetBadge({ assets }: { assets: IntentAsset[] }) {
     <Tooltip>
       <TooltipTrigger asChild>
         <Badge variant="outline" className="max-w-60 shrink-0 font-normal" title={firstRawLabel}>
-          <span className="truncate">当前资产：{firstLabel}</span>
+          <span className="truncate">{t("asset.current", { label: firstLabel })}</span>
           {displayAssets.length > 1 && <span className="shrink-0 tabular-nums">+{displayAssets.length - 1}</span>}
         </Badge>
       </TooltipTrigger>
@@ -466,8 +472,9 @@ function WorkerAssetBadge({ assets }: { assets: IntentAsset[] }) {
             <div key={`${asset.intent_id}-${asset.asset_id}`} className="min-w-0">
               <div className="break-all font-mono text-xs">{asset.label.trim() || `#${asset.asset_id}`}</div>
               <div className="mt-0.5 text-xs text-muted-foreground">
-                {taskAssetTypeLabel(asset.type)} · {taskAssetSourceLabel(asset.source)}
-                {asset.inherited ? ` · 来源任务 #${asset.source_task_id}` : ""}
+                {t(`asset.type.${asset.type}`)} ·{" "}
+                {t.has(`asset.source.${asset.source}`) ? t(`asset.source.${asset.source}`) : asset.source}
+                {asset.inherited ? ` · ${t("asset.sourceTask", { id: asset.source_task_id })}` : ""}
               </div>
               <div className="mt-0.5 [overflow-wrap:anywhere] text-xs">{asset.source_summary}</div>
             </div>
