@@ -5068,5 +5068,29 @@
     "errorMismatch": "两次输入的新密码不一致",
     "success": "密码已修改",
     "failed": "修改失败：{msg}"
+  },
+  "commands": {
+    "title": "工具执行",
+    "searchPlaceholder": "搜索工具 / 参数...",
+    "taskIdPlaceholder": "任务 ID",
+    "stats": "统计",
+    "colTime": "时间",
+    "colTask": "任务",
+    "colTool": "工具",
+    "colInput": "输入",
+    "colStatus": "状态",
+    "empty": "暂无工具执行记录",
+    "failed": "失败",
+    "success": "成功",
+    "statsTitle": "工具调用统计",
+    "statsDescFiltered": "当前筛选条件下的全部记录",
+    "statsDescAll": "全部工具执行记录",
+    "unitTools": "个工具",
+    "unitCalls": "次调用",
+    "statsEmpty": "暂无统计数据",
+    "detailTitle": "工具执行详情",
+    "inputLabel": "输入 Input",
+    "outputLabel": "输出 Output",
+    "emptyOutput": "（空）"
   }
 }

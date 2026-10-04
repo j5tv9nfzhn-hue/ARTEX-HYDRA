@@ -5068,5 +5068,29 @@
     "errorMismatch": "두 번 입력한 새 비밀번호가 일치하지 않습니다",
     "success": "비밀번호를 변경했습니다",
     "failed": "비밀번호 변경에 실패했습니다: {msg}"
+  },
+  "commands": {
+    "title": "도구 실행",
+    "searchPlaceholder": "도구 / 인자 검색…",
+    "taskIdPlaceholder": "작업 ID",
+    "stats": "통계",
+    "colTime": "시간",
+    "colTask": "작업",
+    "colTool": "도구",
+    "colInput": "입력",
+    "colStatus": "상태",
+    "empty": "도구 실행 기록이 없습니다",
+    "failed": "실패",
+    "success": "성공",
+    "statsTitle": "도구 호출 통계",
+    "statsDescFiltered": "현재 필터 조건의 전체 기록",
+    "statsDescAll": "전체 도구 실행 기록",
+    "unitTools": "개 도구",
+    "unitCalls": "회 호출",
+    "statsEmpty": "통계 데이터가 없습니다",
+    "detailTitle": "도구 실행 상세",
+    "inputLabel": "입력 Input",
+    "outputLabel": "출력 Output",
+    "emptyOutput": "(비어 있음)"
   }
 }
