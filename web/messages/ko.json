@@ -4465,5 +4465,60 @@
       "and": "그리고 (두 조건 모두 충족)",
       "or": "또는 (둘 중 하나 충족)"
     }
+  },
+  "taskTemplate": {
+    "picker": {
+      "label": "작업 템플릿",
+      "manage": "템플릿 관리",
+      "saveAs": "템플릿으로 저장",
+      "loading": "템플릿 불러오는 중",
+      "empty": "작업 템플릿 없음",
+      "search": "작업 템플릿 검색·선택",
+      "noMatch": "일치하는 템플릿이 없습니다",
+      "hint": "선택하면 템플릿의 설명·목표·분류·작업 수준 규칙을 복사하며, 템플릿과 연결을 유지하지 않습니다.",
+      "loadError": "템플릿을 불러오지 못했습니다: {error}"
+    },
+    "apply": {
+      "title": "「{name}」 템플릿을 사용할까요?",
+      "description": "현재 입력한 설명과 목표가 템플릿 내용으로 덮어써집니다.",
+      "cancel": "취소",
+      "confirm": "덮어쓰고 사용"
+    },
+    "manager": {
+      "title": "작업 템플릿 관리",
+      "description": "템플릿은 설명·목표·분류와 작업 수준 가로채기/허용 규칙을 저장합니다. 템플릿을 수정해도 이미 생성한 작업에는 영향을 주지 않습니다.",
+      "new": "새 템플릿",
+      "noTemplates": "템플릿 없음",
+      "nameLabel": "템플릿 이름",
+      "namePlaceholder": "예: 외부 웹 침투",
+      "descriptionLabel": "설명",
+      "descriptionPlaceholder": "테스트 대상과 배경",
+      "goalLabel": "목표",
+      "goalPlaceholder": "작업이 달성해야 할 목표",
+      "categoryLabel": "작업 분류",
+      "categoryUnclassified": "미분류",
+      "categoryHint": "템플릿을 적용할 때 이 분류를 미리 채웁니다(다시 바꿀 수 있습니다).",
+      "rulesLabel": "작업 수준 가로채기 / 허용 규칙",
+      "rulesHint": "템플릿을 적용할 때 이 작업 수준 규칙을 미리 채웁니다(가로채기·허용, 새 작업에만 적용되고 전역에는 반영되지 않습니다).",
+      "delete": "템플릿 삭제",
+      "close": "닫기",
+      "create": "템플릿 만들기",
+      "saveChanges": "수정 저장",
+      "saving": "저장 중",
+      "validation": "템플릿 이름·설명·목표를 입력해 주세요",
+      "created": "템플릿을 만들었습니다",
+      "updated": "템플릿을 수정했습니다",
+      "deleted": "템플릿을 삭제했습니다",
+      "saveError": "저장하지 못했습니다: {error}",
+      "deleteError": "삭제하지 못했습니다: {error}"
+    },
+    "deleteDialog": {
+      "title": "「{name}」 템플릿을 삭제할까요?",
+      "untitled": "이름 없는 템플릿",
+      "description": "이 템플릿으로 생성한 작업은 영향을 받지 않습니다.",
+      "cancel": "취소",
+      "deleting": "삭제 중",
+      "delete": "삭제"
+    }
   }
 }

@@ -4465,5 +4465,60 @@
       "and": "且（两个条件都满足）",
       "or": "或（满足其中之一）"
     }
+  },
+  "taskTemplate": {
+    "picker": {
+      "label": "任务模板",
+      "manage": "管理模板",
+      "saveAs": "另存为模板",
+      "loading": "正在加载模板",
+      "empty": "暂无任务模板",
+      "search": "搜索并选择任务模板",
+      "noMatch": "没有匹配的模板",
+      "hint": "选择后会复制模板的描述、目标、分类与任务级规则，不与模板保持关联。",
+      "loadError": "加载模板失败：{error}"
+    },
+    "apply": {
+      "title": "使用模板「{name}」？",
+      "description": "当前已填写的描述和目标将被模板内容覆盖。",
+      "cancel": "取消",
+      "confirm": "覆盖并使用"
+    },
+    "manager": {
+      "title": "任务模板管理",
+      "description": "模板保存描述、目标、分类与任务级拦截/允许规则；修改不会影响已经创建的任务。",
+      "new": "新建模板",
+      "noTemplates": "暂无模板",
+      "nameLabel": "模板名称",
+      "namePlaceholder": "例如：外部 Web 渗透",
+      "descriptionLabel": "描述",
+      "descriptionPlaceholder": "测试对象与背景",
+      "goalLabel": "目标",
+      "goalPlaceholder": "任务需要达成的目标",
+      "categoryLabel": "任务分类",
+      "categoryUnclassified": "未分类",
+      "categoryHint": "应用模板时预填此分类（可再改）。",
+      "rulesLabel": "任务级拦截 / 允许规则",
+      "rulesHint": "应用模板时预填这些任务级规则（拦截/允许，仅对新任务生效，不进全局）。",
+      "delete": "删除模板",
+      "close": "关闭",
+      "create": "创建模板",
+      "saveChanges": "保存修改",
+      "saving": "保存中",
+      "validation": "请填写模板名称、描述和目标",
+      "created": "模板已创建",
+      "updated": "模板已更新",
+      "deleted": "模板已删除",
+      "saveError": "保存失败：{error}",
+      "deleteError": "删除失败：{error}"
+    },
+    "deleteDialog": {
+      "title": "删除模板「{name}」？",
+      "untitled": "未命名模板",
+      "description": "已由该模板创建的任务不会受到影响。",
+      "cancel": "取消",
+      "deleting": "删除中",
+      "delete": "删除"
+    }
   }
 }
