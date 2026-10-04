@@ -177,17 +177,17 @@ export const taskCategories: TaskCategory[] = [
 export const taskTemplates: TaskTemplate[] = [
   {
     id: 1,
-    name: "外部 Web 渗透",
-    description: "对目标互联网暴露面开展黑盒渗透测试，覆盖站点、接口和常见管理入口。",
-    goal: "识别并验证可造成未授权访问、敏感数据泄露或服务器失陷的安全问题。",
+    name: "외부 웹 침투",
+    description: "대상의 인터넷 노출면에 블랙박스 침투 테스트를 수행하고, 사이트·엔드포인트·흔한 관리자 진입점을 포괄한다.",
+    goal: "미인증 접근, 민감 데이터 유출, 서버 장악으로 이어질 수 있는 보안 문제를 식별하고 검증한다.",
     created_at: T("2026-07-20T08:00:00Z"),
     updated_at: T("2026-07-25T08:00:00Z"),
   },
   {
     id: 2,
-    name: "API 越权专项",
-    description: "围绕目标 API 的身份认证、对象级授权和角色边界开展专项测试。",
-    goal: "确认是否存在 IDOR、水平越权、垂直越权及批量数据访问风险。",
+    name: "API 권한 우회 특화",
+    description: "대상 API 의 인증, 객체 수준 인가, 역할 경계를 중심으로 특화 테스트를 수행한다.",
+    goal: "IDOR, 수평적 권한 우회, 수직적 권한 우회, 대량 데이터 접근 위험이 존재하는지 확인한다.",
     created_at: T("2026-07-19T08:00:00Z"),
     updated_at: T("2026-07-24T08:00:00Z"),
   },
