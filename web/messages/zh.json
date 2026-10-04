@@ -5255,6 +5255,62 @@
       "created": "创建时间",
       "duration": "运行时长",
       "actions": "操作"
+    },
+    "delete": {
+      "detailAssets": "删除资产 {n} 条",
+      "detailAssetsDetached": "解除共享资产关联 {n} 条",
+      "detailTraffic": "删除流量 {n} 条",
+      "detailFiles": "删除任务文件",
+      "detailFindings": "删除漏洞 {n} 条",
+      "detailLlm": "删除 LLM 请求/响应记录 {n} 条",
+      "summary": "任务已删除（{details}）",
+      "summaryBare": "任务已删除"
+    },
+    "toast": {
+      "deleteWarn": "{summary}；部分外部数据清理未完成：{warning}",
+      "deleteFailed": "删除失败：{msg}",
+      "paused": "任务 #{id} 已暂停",
+      "resumed": "{queued, select, yes {任务 #{id} 已继续，已进入队列} other {任务 #{id} 已继续}}",
+      "controlFailed": "{action, select, pause {暂停失败：{msg}} other {继续失败：{msg}}}",
+      "renamed": "任务 #{id} 已重命名",
+      "renameFailed": "重命名失败：{msg}",
+      "pinned": "任务 #{id} 已置顶",
+      "unpinned": "任务 #{id} 已取消置顶",
+      "pinFailed": "{pinned, select, yes {取消置顶失败：{msg}} other {置顶失败：{msg}}}",
+      "archiveQueued": "任务 #{id} 已进入归档队列",
+      "archiveFailed": "归档失败：{msg}"
+    },
+    "row": {
+      "selectAria": "选择任务 {id}",
+      "pinnedBadge": "已置顶",
+      "unnamed": "未命名",
+      "viewDetail": "查看任务详情",
+      "tokenTitle": "输入 {input} · 缓存 {cache} · 输出 {output}",
+      "tokenIn": "入",
+      "tokenCache": "缓",
+      "tokenOut": "出",
+      "nameAria": "任务 #{id} 名称",
+      "renameAria": "重命名任务 #{id}",
+      "renameTitle": "重命名",
+      "pinAria": "置顶任务 #{id}",
+      "unpinAria": "取消置顶任务 #{id}",
+      "pinTitle": "置顶",
+      "unpinTitle": "取消置顶",
+      "resumeTask": "继续任务",
+      "pauseTask": "暂停任务",
+      "controlDisabled": "该状态不可暂停或继续",
+      "archiveAria": "归档任务 #{id}"
+    },
+    "archiveBlock": {
+      "queued": "排队中的任务必须先暂停",
+      "running": "运行中或尚未结束的任务必须先暂停",
+      "inherited": "任务被未归档任务 #{id} 直接继承，请先归档依赖任务"
+    },
+    "archiveDialog": {
+      "title": "{count, plural, =1 {归档任务} other {归档 #个任务}}",
+      "description": "归档会停止任务调度，将图谱、LLM 历史、文件以及独占资产和流量压缩到本地冷存储。归档完成后可从「已归档」中还原。",
+      "cancel": "取消",
+      "confirm": "确认归档"
     }
   }
 }

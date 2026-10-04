@@ -5255,6 +5255,62 @@
       "created": "생성 시각",
       "duration": "실행 시간",
       "actions": "동작"
+    },
+    "delete": {
+      "detailAssets": "자산 {n}건 삭제",
+      "detailAssetsDetached": "공유 자산 연결 {n}건 해제",
+      "detailTraffic": "트래픽 {n}건 삭제",
+      "detailFiles": "작업 파일 삭제",
+      "detailFindings": "취약점 {n}건 삭제",
+      "detailLlm": "LLM 요청/응답 기록 {n}건 삭제",
+      "summary": "작업을 삭제했습니다 ({details})",
+      "summaryBare": "작업을 삭제했습니다"
+    },
+    "toast": {
+      "deleteWarn": "{summary}. 외부 데이터 일부를 정리하지 못했습니다: {warning}",
+      "deleteFailed": "삭제 실패: {msg}",
+      "paused": "작업 #{id}을(를) 일시정지했습니다",
+      "resumed": "{queued, select, yes {작업 #{id}을(를) 재개했습니다 (대기열에 추가됨)} other {작업 #{id}을(를) 재개했습니다}}",
+      "controlFailed": "{action, select, pause {일시정지 실패: {msg}} other {재개 실패: {msg}}}",
+      "renamed": "작업 #{id}의 이름을 변경했습니다",
+      "renameFailed": "이름 변경 실패: {msg}",
+      "pinned": "작업 #{id}을(를) 고정했습니다",
+      "unpinned": "작업 #{id}의 고정을 해제했습니다",
+      "pinFailed": "{pinned, select, yes {고정 해제 실패: {msg}} other {고정 실패: {msg}}}",
+      "archiveQueued": "작업 #{id}을(를) 보관 대기열에 추가했습니다",
+      "archiveFailed": "보관 실패: {msg}"
+    },
+    "row": {
+      "selectAria": "작업 {id} 선택",
+      "pinnedBadge": "고정됨",
+      "unnamed": "이름 없음",
+      "viewDetail": "작업 상세 보기",
+      "tokenTitle": "입력 {input} · 캐시 {cache} · 출력 {output}",
+      "tokenIn": "입",
+      "tokenCache": "캐",
+      "tokenOut": "출",
+      "nameAria": "작업 #{id} 이름",
+      "renameAria": "작업 #{id} 이름 변경",
+      "renameTitle": "이름 변경",
+      "pinAria": "작업 #{id} 고정",
+      "unpinAria": "작업 #{id} 고정 해제",
+      "pinTitle": "고정",
+      "unpinTitle": "고정 해제",
+      "resumeTask": "작업 재개",
+      "pauseTask": "작업 일시정지",
+      "controlDisabled": "이 상태에서는 일시정지하거나 재개할 수 없습니다",
+      "archiveAria": "작업 #{id} 보관"
+    },
+    "archiveBlock": {
+      "queued": "대기 중인 작업은 먼저 일시정지해야 합니다",
+      "running": "실행 중이거나 아직 끝나지 않은 작업은 먼저 일시정지해야 합니다",
+      "inherited": "보관되지 않은 작업 #{id}이(가) 이 작업을 직접 상속하므로, 의존하는 작업을 먼저 보관하세요"
+    },
+    "archiveDialog": {
+      "title": "{count, plural, =1 {작업을 보관할까요?} other {작업 #개를 보관할까요?}}",
+      "description": "보관하면 작업 스케줄링이 중단되고, 그래프·LLM 기록·파일과 전용 자산·트래픽이 로컬 콜드 스토리지로 압축됩니다. 보관이 끝나면 「보관됨」에서 다시 복원할 수 있습니다.",
+      "cancel": "취소",
+      "confirm": "보관 확인"
     }
   }
 }

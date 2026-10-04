@@ -204,20 +204,24 @@ function taskDuration(task: Task, nowSec: number): number {
 // aggregate accumulated over a bulk delete.
 type DeleteCounts = Omit<DeleteTaskResult, "deleted" | "cleanup_warning">;
 
-function deleteDetails(result: DeleteCounts): string[] {
+// 모듈 레벨 함수는 hook 을 호출할 수 없으므로, 번역 함수를 인자로 받아 사용자 노출
+// 문자열을 한국어로 만든다(approval-records 선례).
+type Translator = ReturnType<typeof useTranslations>;
+
+function deleteDetails(t: Translator, result: DeleteCounts): string[] {
   const details: string[] = [];
-  if (result.assets_deleted > 0) details.push(`删除资产 ${result.assets_deleted} 条`);
-  if (result.assets_detached > 0) details.push(`解除共享资产关联 ${result.assets_detached} 条`);
-  if (result.traffic_deleted > 0) details.push(`删除流量 ${result.traffic_deleted} 条`);
-  if (result.files_deleted) details.push("删除任务文件");
-  if (result.findings_deleted > 0) details.push(`删除漏洞 ${result.findings_deleted} 条`);
-  if (result.llm_records_deleted > 0) details.push(`删除 LLM 请求/响应记录 ${result.llm_records_deleted} 条`);
+  if (result.assets_deleted > 0) details.push(t("delete.detailAssets", { n: result.assets_deleted }));
+  if (result.assets_detached > 0) details.push(t("delete.detailAssetsDetached", { n: result.assets_detached }));
+  if (result.traffic_deleted > 0) details.push(t("delete.detailTraffic", { n: result.traffic_deleted }));
+  if (result.files_deleted) details.push(t("delete.detailFiles"));
+  if (result.findings_deleted > 0) details.push(t("delete.detailFindings", { n: result.findings_deleted }));
+  if (result.llm_records_deleted > 0) details.push(t("delete.detailLlm", { n: result.llm_records_deleted }));
   return details;
 }
 
-function deleteSummary(result: DeleteTaskResult): string {
-  const details = deleteDetails(result);
-  return details.length > 0 ? `任务已删除（${details.join("，")}）` : "任务已删除";
+function deleteSummary(t: Translator, result: DeleteTaskResult): string {
+  const details = deleteDetails(t, result);
+  return details.length > 0 ? t("delete.summary", { details: details.join(", ") }) : t("delete.summaryBare");
 }
 
 // fmtDateTime renders a unix-seconds timestamp as a compact local date-time
@@ -527,17 +531,17 @@ export default function TasksPage() {
       try {
         const result = await api.deleteTask(id, options);
         if (result.cleanup_warning) {
-          toast.warning(`${deleteSummary(result)}；部分外部数据清理未完成：${result.cleanup_warning}`);
+          toast.warning(t("toast.deleteWarn", { summary: deleteSummary(t, result), warning: result.cleanup_warning }));
         } else {
-          toast.success(deleteSummary(result));
+          toast.success(deleteSummary(t, result));
         }
         load();
       } catch (e) {
-        toast.error("删除失败：" + (e as Error).message);
+        toast.error(t("toast.deleteFailed", { msg: (e as Error).message }));
         throw e;
       }
     },
-    [load],
+    [load, t],
   );
 
   // controlTask 是行内暂停/继续:批量走 controlTasksBatch,单行走单任务接口,省去
@@ -548,32 +552,34 @@ export default function TasksPage() {
       try {
         const result = await api.controlTask(id, action);
         toast.success(
-          action === "pause" ? `任务 #${id} 已暂停` : `任务 #${id} 已继续${result.queued ? "，已进入队列" : ""}`,
+          action === "pause"
+            ? t("toast.paused", { id })
+            : t("toast.resumed", { id, queued: result.queued ? "yes" : "no" }),
         );
       } catch (e) {
-        toast.error(`${action === "pause" ? "暂停" : "继续"}失败：${(e as Error).message}`);
+        toast.error(t("toast.controlFailed", { action, msg: (e as Error).message }));
       } finally {
         // 无论成败都刷新:失败多半是状态已变化,重新拉取才能让按钮回到正确形态。
         lastRef.current = "";
         load();
       }
     },
-    [load],
+    [load, t],
   );
 
   const renameTask = React.useCallback(
     async (task: Task, name: string) => {
       try {
         await api.renameTask(task.id, name);
-        toast.success(`任务 #${task.id} 已重命名`);
+        toast.success(t("toast.renamed", { id: task.id }));
         lastRef.current = "";
         load();
       } catch (error) {
-        toast.error(`重命名失败：${(error as Error).message}`);
+        toast.error(t("toast.renameFailed", { msg: (error as Error).message }));
         throw error;
       }
     },
-    [load],
+    [load, t],
   );
 
   const toggleTaskPinned = React.useCallback(
@@ -581,31 +587,31 @@ export default function TasksPage() {
       const pinned = taskIsPinned(task);
       try {
         await api.pinTask(task.id, !pinned);
-        toast.success(pinned ? `任务 #${task.id} 已取消置顶` : `任务 #${task.id} 已置顶`);
+        toast.success(pinned ? t("toast.unpinned", { id: task.id }) : t("toast.pinned", { id: task.id }));
         lastRef.current = "";
         load();
       } catch (error) {
-        toast.error(`${pinned ? "取消置顶" : "置顶"}失败：${(error as Error).message}`);
+        toast.error(t("toast.pinFailed", { pinned: pinned ? "yes" : "no", msg: (error as Error).message }));
         throw error;
       }
     },
-    [load],
+    [load, t],
   );
 
   const queueTaskArchive = React.useCallback(
     async (task: Task) => {
       try {
         await api.archiveTask(task.id);
-        toast.success(`任务 #${task.id} 已进入归档队列`);
+        toast.success(t("toast.archiveQueued", { id: task.id }));
         setActiveTab("archived");
         lastRef.current = "";
         load();
       } catch (error) {
-        toast.error(`归档失败：${(error as Error).message}`);
+        toast.error(t("toast.archiveFailed", { msg: (error as Error).message }));
         throw error;
       }
     },
-    [load],
+    [load, t],
   );
 
   // deleteTasks 逐个删除所选任务:后端没有批量接口,且单次删除会连带清理资产/流量/文件,
@@ -647,7 +653,7 @@ export default function TasksPage() {
           for (const id of deleted) next.delete(id);
           return next;
         });
-        const details = deleteDetails(total);
+        const details = deleteDetails(t, total);
         const summary = `已删除 ${deleted.length} 个任务` + (details.length > 0 ? `（${details.join("，")}）` : "");
         if (warnings.length > 0) {
           toast.warning(`${summary}；部分外部数据清理未完成：${warnings.join("；")}`);
@@ -664,7 +670,7 @@ export default function TasksPage() {
       }
       load();
     },
-    [load],
+    [load, t],
   );
 
   const selectedTasks = React.useMemo(() => tasks.filter((task) => selectedIds.has(task.id)), [tasks, selectedIds]);
@@ -1175,13 +1181,14 @@ const TaskRow = React.memo(function TaskRow({
   selected: boolean;
   onSelectedChange: (id: string, checked: boolean) => void;
 }) {
+  const t = useTranslations("tasksPage");
   return (
     <TableRow className="group border-border/60" data-state={selected ? "selected" : undefined}>
       <TableCell>
         <Checkbox
           checked={selected}
           onCheckedChange={(checked) => onSelectedChange(task.id, checked === true)}
-          aria-label={`选择任务 ${task.id}`}
+          aria-label={t("row.selectAria", { id: task.id })}
         />
       </TableCell>
       <TableCell>
@@ -1191,7 +1198,7 @@ const TaskRow = React.memo(function TaskRow({
         <div className="flex max-w-xs items-center gap-2">
           <TaskNameEditor task={task} onRename={onRename} />
           {task.active && <StarIcon className="size-4 shrink-0 fill-amber-400 text-amber-400" />}
-          {taskIsPinned(task) && <PinIcon className="text-primary size-4 shrink-0" aria-label="已置顶" />}
+          {taskIsPinned(task) && <PinIcon className="text-primary size-4 shrink-0" aria-label={t("row.pinnedBadge")} />}
         </div>
       </TableCell>
       <TableCell className="text-muted-foreground max-w-40">
@@ -1225,7 +1232,7 @@ const TaskRow = React.memo(function TaskRow({
             <span className={n > 0 ? cls : "text-muted-foreground"}>{n}</span>
           );
           return (
-            <span className="font-medium whitespace-nowrap" title="严重 / 高 / 中 / 低">
+            <span className="font-medium whitespace-nowrap" title={t("table.findingsTitle")}>
               {seg(f.critical, "text-rose-600 dark:text-rose-400")}
               <span className="text-muted-foreground">/</span>
               {seg(f.high, "text-red-600 dark:text-red-400")}
@@ -1262,16 +1269,20 @@ const TaskRow = React.memo(function TaskRow({
         className="text-right text-xs whitespace-nowrap tabular-nums"
         title={
           task.tokens
-            ? `输入 ${task.tokens.input_tokens} · 缓存 ${task.tokens.cache_read_tokens} · 输出 ${task.tokens.output_tokens}`
+            ? t("row.tokenTitle", {
+                input: task.tokens.input_tokens,
+                cache: task.tokens.cache_read_tokens,
+                output: task.tokens.output_tokens,
+              })
             : undefined
         }
       >
         {task.tokens ? (
           <span className="text-muted-foreground">
-            入 <span className="text-foreground">{fmtTokens(task.tokens.input_tokens)}</span>
-            {" · 缓 "}
+            {t("row.tokenIn")} <span className="text-foreground">{fmtTokens(task.tokens.input_tokens)}</span>
+            {` · ${t("row.tokenCache")} `}
             <span className="text-foreground">{fmtTokens(task.tokens.cache_read_tokens)}</span>
-            {" · 出 "}
+            {` · ${t("row.tokenOut")} `}
             <span className="text-foreground">{fmtTokens(task.tokens.output_tokens)}</span>
           </span>
         ) : (
@@ -1280,7 +1291,7 @@ const TaskRow = React.memo(function TaskRow({
       </TableCell>
       <TableCell className="sticky right-0 z-10 bg-card text-right shadow-[-1px_0_0_0_hsl(var(--border))] group-hover:bg-muted/50">
         <div className="flex items-center justify-end gap-0.5">
-          <Button size="icon" variant="ghost" asChild aria-label="查看任务详情" title="查看任务详情">
+          <Button size="icon" variant="ghost" asChild aria-label={t("row.viewDetail")} title={t("row.viewDetail")}>
             <Link href={`/function/tasks/detail?id=${encodeURIComponent(task.id)}`}>
               <EyeIcon />
             </Link>
@@ -1296,6 +1307,7 @@ const TaskRow = React.memo(function TaskRow({
 });
 
 function TaskNameEditor({ task, onRename }: { task: Task; onRename: (task: Task, name: string) => Promise<void> }) {
+  const t = useTranslations("tasksPage");
   const [editing, setEditing] = React.useState(false);
   const [name, setName] = React.useState(task.name ?? "");
   const [saving, setSaving] = React.useState(false);
@@ -1341,7 +1353,7 @@ function TaskNameEditor({ task, onRename }: { task: Task; onRename: (task: Task,
           maxLength={200}
           autoFocus
           disabled={saving}
-          aria-label={`任务 #${task.id} 名称`}
+          aria-label={t("row.nameAria", { id: task.id })}
           className="h-7 min-w-28 max-w-48 px-2 font-medium"
           onFocus={(event) => event.currentTarget.select()}
           onChange={(event) => setName(event.target.value)}
@@ -1369,15 +1381,15 @@ function TaskNameEditor({ task, onRename }: { task: Task; onRename: (task: Task,
         className="min-w-0 truncate rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         title={task.name?.trim() ? task.name : task.description}
       >
-        {task.name?.trim() ? task.name : <span className="text-muted-foreground">未命名</span>}
+        {task.name?.trim() ? task.name : <span className="text-muted-foreground">{t("row.unnamed")}</span>}
       </Link>
       <Button
         type="button"
         variant="ghost"
         size="icon-xs"
         className="shrink-0 opacity-100 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
-        aria-label={`重命名任务 #${task.id}`}
-        title="重命名"
+        aria-label={t("row.renameAria", { id: task.id })}
+        title={t("row.renameTitle")}
         onClick={() => {
           setName(task.name ?? "");
           setEditing(true);
@@ -1396,6 +1408,7 @@ function taskPinIcon(pinning: boolean, pinned: boolean) {
 }
 
 function TaskPinAction({ task, onTogglePinned }: { task: Task; onTogglePinned: (task: Task) => Promise<void> }) {
+  const t = useTranslations("tasksPage");
   const [pinning, setPinning] = React.useState(false);
   const pinned = taskIsPinned(task);
 
@@ -1405,8 +1418,8 @@ function TaskPinAction({ task, onTogglePinned }: { task: Task; onTogglePinned: (
       variant="ghost"
       size="icon"
       disabled={pinning}
-      aria-label={pinned ? `取消置顶任务 #${task.id}` : `置顶任务 #${task.id}`}
-      title={pinned ? "取消置顶" : "置顶"}
+      aria-label={pinned ? t("row.unpinAria", { id: task.id }) : t("row.pinAria", { id: task.id })}
+      title={pinned ? t("row.unpinTitle") : t("row.pinTitle")}
       onClick={async () => {
         setPinning(true);
         try {
@@ -1437,15 +1450,16 @@ function TaskControlButton({
   task: Task;
   onControl: (id: string, action: "pause" | "resume") => Promise<void>;
 }) {
+  const t = useTranslations("tasksPage");
   const [pending, setPending] = React.useState(false);
   const action = taskControlAction(task.status);
-  const label = action === "resume" ? "继续任务" : "暂停任务";
+  const label = action === "resume" ? t("row.resumeTask") : t("row.pauseTask");
   return (
     <Button
       size="icon"
       variant="ghost"
       aria-label={label}
-      title={action ? label : "该状态不可暂停或继续"}
+      title={action ? label : t("row.controlDisabled")}
       disabled={!action || pending}
       onClick={async () => {
         if (!action) return;
@@ -1462,11 +1476,11 @@ function TaskControlButton({
   );
 }
 
-function archiveBlockReason(task: Task): string {
-  if (task.queued) return "排队中的任务必须先暂停";
-  if (!ARCHIVABLE_STATUSES.has(task.status)) return "运行中或尚未结束的任务必须先暂停";
+function archiveBlockReason(t: Translator, task: Task): string {
+  if (task.queued) return t("archiveBlock.queued");
+  if (!ARCHIVABLE_STATUSES.has(task.status)) return t("archiveBlock.running");
   if (task.archive_blocked_by_task_id) {
-    return `任务被未归档任务 #${task.archive_blocked_by_task_id} 直接继承，请先归档依赖任务`;
+    return t("archiveBlock.inherited", { id: task.archive_blocked_by_task_id });
   }
   return "";
 }
@@ -1480,6 +1494,7 @@ function ArchiveConfirmDialog({
   trigger: React.ReactNode;
   onConfirm: () => Promise<void>;
 }) {
+  const t = useTranslations("tasksPage");
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   return (
@@ -1487,13 +1502,13 @@ function ArchiveConfirmDialog({
       <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{count === 1 ? "归档任务" : `归档 ${count} 个任务`}</AlertDialogTitle>
+          <AlertDialogTitle>{t("archiveDialog.title", { count })}</AlertDialogTitle>
           <AlertDialogDescription className="[overflow-wrap:anywhere]">
-            归档会停止任务调度，将图谱、LLM 历史、文件以及独占资产和流量压缩到本地冷存储。归档完成后可从“已归档”中还原。
+            {t("archiveDialog.description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>取消</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>{t("archiveDialog.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             disabled={pending}
             onClick={async (event) => {
@@ -1508,7 +1523,7 @@ function ArchiveConfirmDialog({
             }}
           >
             {pending && <Spinner data-icon="inline-start" />}
-            确认归档
+            {t("archiveDialog.confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -1517,9 +1532,10 @@ function ArchiveConfirmDialog({
 }
 
 function TaskArchiveAction({ task, onArchive }: { task: Task; onArchive: (task: Task) => Promise<void> }) {
-  const reason = archiveBlockReason(task);
+  const t = useTranslations("tasksPage");
+  const reason = archiveBlockReason(t, task);
   const trigger = (
-    <Button size="icon" variant="ghost" disabled={Boolean(reason)} aria-label={`归档任务 #${task.id}`}>
+    <Button size="icon" variant="ghost" disabled={Boolean(reason)} aria-label={t("row.archiveAria", { id: task.id })}>
       <ArchiveIcon />
     </Button>
   );
