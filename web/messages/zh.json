@@ -5880,6 +5880,92 @@
       "main": "主 Agent · 会话 #{n}",
       "planner": "规划 Planner · 态势研判",
       "system": "系统事件 · LLM 故障转移"
+    },
+    "resolution": {
+      "unnamed": "未命名配置",
+      "current": "当前配置：{label}",
+      "unavailable": "模型不可用",
+      "noConfig": "没有可用的 LLM 配置"
+    },
+    "list": {
+      "title": "会话列表"
+    },
+    "sse": {
+      "live": "实时",
+      "reconnecting": "重连中",
+      "titleLive": "实时连接正常",
+      "titleDown": "实时连接中断，正在自动重连（历史仍可见）"
+    },
+    "taskTotal": "任务总计",
+    "tokens": {
+      "full": "输入 {input} · 输出 {output} · 缓存读取 {cacheRead} · 缓存写入 {cacheWrite}"
+    },
+    "newMain": {
+      "title": "新建主 Agent 会话（清空上下文，任务状态保留）",
+      "aria": "新建主 Agent 会话",
+      "label": "新建"
+    },
+    "worker": {
+      "loadOlder": "加载更早的 Worker",
+      "noRunning": "暂无运行中的 Worker 会话。",
+      "execSession": "Worker 执行会话"
+    },
+    "header": {
+      "sourceTask": "来源任务 #{id} · 只读历史",
+      "interactive": "可交互",
+      "runDurationTitle": "运行时长（首步 → 末步）",
+      "olderHistoryTitle": "向上滚动加载更早历史",
+      "olderHistoryLabel": "↑ 更早历史"
+    },
+    "deletedNotice": {
+      "heading": "此意图已被用户删除",
+      "detail": "（已停止执行，规划者已收到通知；意图与产出保留，可在下方查看历史）",
+      "reason": "删除原因："
+    },
+    "transcript": {
+      "loadingMore": "加载更早历史…",
+      "loadingActivity": "加载活动流…",
+      "loadError": "加载失败：{error}",
+      "retry": "重试",
+      "emptyMain": "还没有对话。在下方给主 Agent 发消息，引导探索方向或介入流程。",
+      "emptyWorker": "暂无活动记录。"
+    },
+    "composer": {
+      "attachmentRemove": "移除",
+      "mainAria": "给主 Agent 发消息",
+      "mainBusyPlaceholder": "主 Agent 正在运行，可输入 /btw 提问…",
+      "mainPlaceholder": "给主 Agent 发消息，@ 引用漏洞、资产等…",
+      "uploadTitle": "上传文件",
+      "sideQuestion": "发送旁路问题",
+      "stopTitle": "停止当前执行",
+      "sendTitle": "发送消息",
+      "workerAria": "给 Worker #{id} 发消息",
+      "workerPlaceholder": "给 Worker #{id} 发消息，@ 引用记录，调整执行方向…",
+      "pauseTitle": "暂停当前 Worker",
+      "resumeTitle": "不发消息，直接继续执行",
+      "resumeAria": "直接继续执行",
+      "resumeLabel": "直接继续"
+    },
+    "deleteDialog": {
+      "title": "删除 Worker #{id}？",
+      "hardDesc": "<s>真删除</s>会物理移除该意图，以及<s>仅由它支撑</s>的下游节点（级联到叶子，避免留下孤立数据）；共享节点、目标和任务根事实会保留。<s>此操作不可恢复。</s>规划者会收到删除通知并据此重新规划。",
+      "softDesc": "<s>假删除</s>会把该意图置为「已删除」并记录删除原因，意图节点、执行记录、已登记的事实和漏洞<s>都会保留</s>。规划者会收到「该意图由用户删除 + 原因」并据此重新规划。",
+      "softLabel": "假删除",
+      "softHint": "保留数据，可追溯",
+      "hardLabel": "真删除",
+      "hardHint": "级联移除，不可恢复",
+      "reasonLabel": "删除原因（必填）",
+      "reasonPlaceholder": "说明为什么删除这条意图，例如：方向判断错误 / 目标已失效 / 与其他意图重复…",
+      "back": "返回",
+      "confirmHard": "彻底删除",
+      "confirmSoft": "确认删除"
+    },
+    "newSession": {
+      "title": "开启新会话？",
+      "desc": "当前会话会被归档（可随时切回），主 Agent 将以干净的上下文继续。任务的图谱、资产、目标不受影响。",
+      "cancel": "取消",
+      "starting": "开启中…",
+      "start": "开启新会话"
     }
   }
 }
