@@ -5812,5 +5812,9 @@
     "saving": "저장 중…",
     "confirm": "연결 확인",
     "boundToast": "트래픽 {count}건을 취약점 #{id}에 연결했습니다"
+  },
+  "sortableHead": {
+    "sortBy": "{label} 기준 내림차순 정렬",
+    "active": "{label} 현재 {direction, select, asc {오름차순} other {내림차순}} 정렬, 클릭하면 정렬 방향 전환"
   }
 }

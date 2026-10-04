@@ -5812,5 +5812,9 @@
     "saving": "保存中…",
     "confirm": "确认关联",
     "boundToast": "已关联 {count} 条流量到漏洞 #{id}"
+  },
+  "sortableHead": {
+    "sortBy": "按{label}倒序排序",
+    "active": "{label}当前{direction, select, asc {正序} other {倒序}}，点击切换排序方向"
   }
 }
