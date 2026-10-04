@@ -4686,7 +4686,18 @@
     "showingAll": "전체 {count}건 표시됨",
     "searchHint": "이름·주소·ID 를 입력해 기록을 검색하세요",
     "removeAria": "인용 제거 {label}",
-    "selectedHint": "전송 시 최신 상세 정보를 읽습니다 · 최대 10건"
+    "selectedHint": "전송 시 최신 상세 정보를 읽습니다 · 최대 10건",
+    "kind": {
+      "finding": "취약점",
+      "asset": "자산",
+      "company": "기업",
+      "endpoint": "엔드포인트",
+      "ip": "IP",
+      "app": "앱",
+      "root_domain": "도메인",
+      "subdomain": "서브도메인",
+      "service": "서비스"
+    }
   },
   "assetInterceptRules": {
     "action": {

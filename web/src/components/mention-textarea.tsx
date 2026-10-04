@@ -10,14 +10,7 @@ import { InputGroupTextarea } from "@/components/ui/input-group";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import {
-  activeMention,
-  type ChatMention,
-  mentionKinds,
-  mentionSearch,
-  mentionToken,
-  selectedMentions,
-} from "@/lib/chat-mentions";
+import { activeMention, type ChatMention, mentionSearch, mentionToken, selectedMentions } from "@/lib/chat-mentions";
 import { cn } from "@/lib/utils";
 
 type Props = Omit<React.ComponentProps<"textarea">, "value" | "onChange" | "ref"> & {
@@ -239,7 +232,7 @@ export function MentionTextarea({ value, onValueChange, onKeyDown, className, in
               {categories.length
                 ? t("pickKind")
                 : t("searchKind", {
-                    kind: mentionKinds.find((kind) => kind.kind === search.kind)?.label ?? t("allRecords"),
+                    kind: search.kind ? t(`kind.${search.kind}`) : t("allRecords"),
                   })}
             </span>
             <span>{t("hintKeys")}</span>
@@ -269,7 +262,7 @@ export function MentionTextarea({ value, onValueChange, onKeyDown, className, in
                 onClick={() => choose(index)}
               >
                 <AtSignIcon className="size-4 text-muted-foreground" />
-                <span>{kind.label}</span>
+                <span>{t(`kind.${kind.kind}`)}</span>
                 <ChevronRightIcon className="ml-auto size-4 text-muted-foreground" />
               </button>
             ))}
@@ -304,7 +297,7 @@ export function MentionTextarea({ value, onValueChange, onKeyDown, className, in
                 onClick={() => choose(index)}
               >
                 <span className="flex w-full items-center gap-2">
-                  <Badge variant="outline">{mentionKinds.find((kind) => kind.kind === item.kind)?.label}</Badge>
+                  <Badge variant="outline">{t(`kind.${item.kind}`)}</Badge>
                   <span className="truncate text-sm">{item.label}</span>
                   <span className="ml-auto shrink-0 text-muted-foreground text-xs">#{item.id}</span>
                 </span>
@@ -333,24 +326,27 @@ export function MentionTextarea({ value, onValueChange, onKeyDown, className, in
       </Popover>
       {selected.length > 0 && (
         <div className="flex flex-wrap items-center gap-1 px-1 pt-1">
-          {selected.map((item) => (
-            <Badge key={item.start} variant="secondary" className="max-w-full gap-1">
-              <span className="max-w-64 truncate" title={item.label}>
-                {item.label}
-              </span>
-              <button
-                type="button"
-                disabled={disabled}
-                aria-label={t("removeAria", { label: item.label })}
-                onClick={() => {
-                  onValueChange(value.slice(0, item.start) + value.slice(item.start + item.token.length));
-                  setCursor(null);
-                }}
-              >
-                <XIcon className="size-3" />
-              </button>
-            </Badge>
-          ))}
+          {selected.map((item) => {
+            const label = `${t(`kind.${item.kind}`)} #${item.id}${item.text ? ` · ${item.text}` : ""}`;
+            return (
+              <Badge key={item.start} variant="secondary" className="max-w-full gap-1">
+                <span className="max-w-64 truncate" title={label}>
+                  {label}
+                </span>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  aria-label={t("removeAria", { label })}
+                  onClick={() => {
+                    onValueChange(value.slice(0, item.start) + value.slice(item.start + item.token.length));
+                    setCursor(null);
+                  }}
+                >
+                  <XIcon className="size-3" />
+                </button>
+              </Badge>
+            );
+          })}
           <span className="text-muted-foreground text-xs">{t("selectedHint")}</span>
         </div>
       )}

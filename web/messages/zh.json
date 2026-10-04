@@ -4686,7 +4686,18 @@
     "showingAll": "已显示全部 {count} 条",
     "searchHint": "输入名称、地址或 ID 搜索记录",
     "removeAria": "移除引用 {label}",
-    "selectedHint": "发送时读取最新详情 · 最多 10 条"
+    "selectedHint": "发送时读取最新详情 · 最多 10 条",
+    "kind": {
+      "finding": "漏洞",
+      "asset": "资产",
+      "company": "企业",
+      "endpoint": "接口",
+      "ip": "IP",
+      "app": "应用",
+      "root_domain": "域名",
+      "subdomain": "子域名",
+      "service": "服务"
+    }
   },
   "assetInterceptRules": {
     "action": {
