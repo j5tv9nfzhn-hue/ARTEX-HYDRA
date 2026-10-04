@@ -5573,5 +5573,11 @@
       "createdToast": "작업을 만들었습니다",
       "createFailed": "생성 실패: {msg}"
     }
+  },
+  "chatSendMode": {
+    "option": {
+      "enter": "Enter 전송, Shift+Enter 줄바꿈",
+      "ctrlEnter": "Ctrl+Enter 전송, Enter 줄바꿈"
+    }
   }
 }

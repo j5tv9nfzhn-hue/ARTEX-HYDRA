@@ -5573,5 +5573,11 @@
       "createdToast": "任务已创建",
       "createFailed": "创建失败：{msg}"
     }
+  },
+  "chatSendMode": {
+    "option": {
+      "enter": "Enter 发送，Shift+Enter 换行",
+      "ctrlEnter": "Ctrl+Enter 发送，Enter 换行"
+    }
   }
 }
