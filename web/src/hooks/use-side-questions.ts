@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { sseUrl } from "@/lib/api";
@@ -23,6 +24,7 @@ function merge(old: SideExchange[], incoming: SideExchange[]) {
 }
 
 export function useSideQuestions(parent: string | null) {
+  const t = useTranslations("sideQuestion");
   const [stateParent, setStateParent] = useState(parent);
   const current = stateParent === parent;
   const [open, setOpen] = useState(false);
@@ -138,7 +140,7 @@ export function useSideQuestions(parent: string | null) {
         restoreFailedDraft([item]);
         if (item.status !== "running") stream.close();
       } catch {
-        setError("旁路数据解析失败，请重新打开面板");
+        setError(t("parseError"));
       }
     });
     stream.addEventListener("cleared", () => {
