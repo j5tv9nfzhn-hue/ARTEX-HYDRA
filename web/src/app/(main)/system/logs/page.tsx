@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { sseUrl } from "@/lib/api";
@@ -37,6 +38,7 @@ function fmtTime(ts: string) {
 }
 
 export default function LogsPage() {
+  const t = useTranslations("logsPage");
   const [lines, setLines] = React.useState<LogLine[]>([]);
   const [q, setQ] = React.useState("");
   const [level, setLevel] = React.useState<"all" | LogLine["level"]>("all");
@@ -142,13 +144,13 @@ export default function LogsPage() {
   return (
     <div className="flex flex-1 flex-col gap-3">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">系统日志</h1>
-        <p className="text-muted-foreground text-sm">后端实时日志流(planner / worker / 数据库 / 流量 …)</p>
+        <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
       </div>
       <div className="flex flex-1 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Input
-            placeholder="过滤(文本 / tag)…"
+            placeholder={t("filterPlaceholder")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="h-8 max-w-xs"
@@ -162,7 +164,7 @@ export default function LogsPage() {
                 className="h-8"
                 onClick={() => setLevel(lv)}
               >
-                {lv === "all" ? "全部" : lv}
+                {lv === "all" ? t("all") : lv}
               </Button>
             ))}
           </div>
@@ -172,15 +174,15 @@ export default function LogsPage() {
             className="h-8"
             onClick={() => setPaused((p) => !p)}
           >
-            {paused ? "已暂停" : "暂停"}
+            {paused ? t("paused") : t("pause")}
           </Button>
           <Button size="sm" variant="outline" className="h-8" onClick={() => setLines([])}>
-            清空
+            {t("clear")}
           </Button>
           <span className="ml-auto text-xs text-muted-foreground">
-            {counts.total} 行 ·{" "}
-            <span className="text-amber-600 dark:text-amber-400">{counts.warn} 警告</span> ·{" "}
-            <span className="text-red-600 dark:text-red-400">{counts.error} 错误</span>
+            {t("totalLines", { count: counts.total })} ·{" "}
+            <span className="text-amber-600 dark:text-amber-400">{t("warnCount", { count: counts.warn })}</span> ·{" "}
+            <span className="text-red-600 dark:text-red-400">{t("errorCount", { count: counts.error })}</span>
           </span>
         </div>
 
@@ -200,12 +202,12 @@ export default function LogsPage() {
                 disabled={loadingHistory}
                 onClick={loadOlderHistory}
               >
-                {loadingHistory ? "加载中…" : "加载更早日志"}
+                {loadingHistory ? t("loading") : t("loadOlder")}
               </Button>
             </div>
           )}
           {filtered.length === 0 ? (
-            <p className="py-10 text-center text-muted-foreground">暂无日志。</p>
+            <p className="py-10 text-center text-muted-foreground">{t("empty")}</p>
           ) : (
             filtered.map((l) => {
               const body =
