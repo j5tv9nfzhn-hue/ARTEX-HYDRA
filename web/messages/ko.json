@@ -4529,5 +4529,12 @@
       "emptyHint": "경로 없음",
       "loading": "불러오는 중…"
     }
+  },
+  "pagination": {
+    "perPage": "건/페이지",
+    "range": "{from}–{to} / 총 {total}건",
+    "empty": "총 0건",
+    "prev": "이전 페이지",
+    "next": "다음 페이지"
   }
 }
