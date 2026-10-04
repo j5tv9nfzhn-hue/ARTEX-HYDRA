@@ -2710,30 +2710,42 @@ export const activity: Activity[] = [
   },
 
   // 主 agent（人在环路对话）
-  { seq: 70, worker: "mainagent", ts: T("2026-07-26T03:18:00Z"), kind: "user", summary: "后台先从哪切入？" },
+  {
+    seq: 70,
+    worker: "mainagent",
+    ts: T("2026-07-26T03:18:00Z"),
+    kind: "user",
+    summary: "백오피스는 먼저 어디부터 공략할까?",
+  },
   {
     seq: 71,
     worker: "mainagent",
     ts: T("2026-07-26T03:18:06Z"),
     kind: "text",
     summary:
-      "admin.acme.com 是 Element-UI 后台，无验证码、无速率限制。建议先默认口令表(admin/admin123)再上字典。我已注入一条高优意图给 work agent。",
+      "admin.acme.com 은 Element-UI 백오피스이고, 캡차도 속도 제한도 없습니다. 먼저 기본 비밀번호 목록(admin/admin123)을 쓰고 그다음 사전 공격으로 넘어가길 권합니다. worker 에이전트에 높은 우선순위 의도 하나를 이미 주입해 뒀습니다.",
   },
-  { seq: 72, worker: "mainagent", ts: T("2026-07-26T03:52:00Z"), kind: "user", summary: "拿到后台了，接下来重点？" },
+  {
+    seq: 72,
+    worker: "mainagent",
+    ts: T("2026-07-26T03:52:00Z"),
+    kind: "user",
+    summary: "백오피스는 확보했어. 다음은 어디에 집중할까?",
+  },
   {
     seq: 73,
     worker: "mainagent",
     ts: T("2026-07-26T03:52:08Z"),
     kind: "text",
     summary:
-      "目标②是读用户敏感数据：并行推进「后台用户接口枚举」与「API IDOR」。注意批量导出会触发拦截规则，需要你审批放行。",
+      "목표 ②는 사용자 민감 데이터 읽기입니다. 「백오피스 사용자 엔드포인트 열거」와 「API IDOR」를 병렬로 진행합니다. 대량 내보내기는 가로채기 규칙을 건드리니, 당신이 승인해 허용해 주셔야 합니다.",
   },
   {
     seq: 400,
     worker: "mainagent",
     ts: T("2026-07-25T15:42:00Z"),
     kind: "user",
-    summary: "shell 拿到了，下一步怎么打？",
+    summary: "shell 은 잡았어. 다음은 어떻게 공략할까?",
   },
   {
     seq: 401,
@@ -2741,14 +2753,14 @@ export const activity: Activity[] = [
     ts: T("2026-07-25T15:42:10Z"),
     kind: "text",
     summary:
-      "www-data 权限不够，先提权（sudo -l 看起来有戏）。拿到 root 后以 DMZ 为跳板做内网发现，优先域控和 Jenkins。",
+      "www-data 권한으로는 부족하니 먼저 권한을 상승시킵니다(sudo -l 이 가능성 있어 보입니다). root 를 잡은 뒤 DMZ 를 경유지로 삼아 내부망을 발견하고, 도메인 컨트롤러와 Jenkins 를 우선합니다.",
   },
   {
     seq: 402,
     worker: "mainagent",
     ts: T("2026-07-25T21:22:00Z"),
     kind: "user",
-    summary: "内网扫完了，Jenkins 那台看起来有未授权？",
+    summary: "내부망 스캔은 끝났어. Jenkins 그 호스트는 미인증인 것 같던데?",
   },
   {
     seq: 403,
@@ -2756,16 +2768,22 @@ export const activity: Activity[] = [
     ts: T("2026-07-25T21:22:08Z"),
     kind: "text",
     summary:
-      "对，/script 无鉴权直接 Groovy RCE。我已注入一条提示让 worker 优先打 Jenkins —— 拿下后可以导出域凭据，再配合 Kerberoasting 打域控。",
+      "맞습니다. /script 가 인증 없이 바로 Groovy RCE 로 이어집니다. worker 가 Jenkins 를 우선 공략하도록 힌트 하나를 이미 주입해 뒀습니다. 장악한 뒤에는 도메인 자격 증명을 덤프할 수 있고, 이어서 Kerberoasting 으로 도메인 컨트롤러를 공략합니다.",
   },
-  { seq: 404, worker: "mainagent", ts: T("2026-07-26T00:22:00Z"), kind: "user", summary: "DC01 拿下了？给个总结。" },
+  {
+    seq: 404,
+    worker: "mainagent",
+    ts: T("2026-07-26T00:22:00Z"),
+    kind: "user",
+    summary: "DC01 은 장악했어? 요약 좀 해줘.",
+  },
   {
     seq: 405,
     worker: "mainagent",
     ts: T("2026-07-26T00:22:12Z"),
     kind: "text",
     summary:
-      "确认拿下。攻击路径：shop Fastjson RCE → DMZ 提权 → 内网 Jenkins 导出域凭据 → svc_deploy 属 Domain Admins → psexec DC01 SYSTEM → secretsdump 全域哈希。四个目标全部达成或推进中。",
+      "장악을 확인했습니다. 공격 경로는 다음과 같습니다. shop Fastjson RCE → DMZ 권한 상승 → 내부망 Jenkins 도메인 자격 증명 덤프 → svc_deploy 가 Domain Admins 소속 → psexec DC01 SYSTEM → secretsdump 전체 도메인 해시. 네 개 목표가 전부 달성됐거나 진행 중입니다.",
   },
 ];
 
