@@ -2718,26 +2718,6 @@
       "eaa96d40": "页 · 共",
       "ff792716": "已关联 {var0} 条流量到漏洞 #{var1}"
     },
-    "mention-textarea": {
-      "10663349": "。请重新输入重试。",
-      "079f7fc3": "选择引用记录",
-      "0a5a24d0": "没有匹配记录，请更换名称、地址或 ID",
-      "1a0aece8": "选择引用类型",
-      "23534c2a": "引用候选",
-      "560c03c3": "加载失败，点击重试",
-      "5c1d60ae": "搜索失败：",
-      "66a5229a": "已显示全部 {var0} 条",
-      "8a88cdc4": "搜索中…",
-      "ab40458d": "消息，输入 @ 引用记录",
-      "b0c2e318": "搜索{var0}",
-      "c457ff35": "已显示 {var0} 条，向下滚动加载更多",
-      "c5d9aeda": "全部记录",
-      "c819dbf3": "输入名称、地址或 ID 搜索记录",
-      "daaf2a2c": "↑↓ 选择 · Enter 确认 · Esc 关闭",
-      "e04bb564": "正在加载更多…",
-      "e0daaca2": "移除引用 {var0}",
-      "f394d31f": "发送时读取最新详情 · 最多 10 条"
-    },
     "scope-text-editor": {
       "60849240": "资产范围",
       "129cece6": "已识别",
@@ -4580,5 +4560,24 @@
       "allowedToast": "已允许执行",
       "deniedToast": "已拒绝执行"
     }
+  },
+  "mentionTextarea": {
+    "inputAria": "消息，输入 @ 引用记录",
+    "listboxAria": "选择引用记录",
+    "pickKind": "选择引用类型",
+    "searchKind": "搜索{kind}",
+    "allRecords": "全部记录",
+    "hintKeys": "↑↓ 选择 · Enter 确认 · Esc 关闭",
+    "candidatesAria": "引用候选",
+    "searching": "搜索中…",
+    "searchError": "搜索失败：{error}。请重新输入重试。",
+    "noMatch": "没有匹配记录，请更换名称、地址或 ID",
+    "loadingMore": "正在加载更多…",
+    "pageError": "加载失败，点击重试",
+    "showingMore": "已显示 {count} 条，向下滚动加载更多",
+    "showingAll": "已显示全部 {count} 条",
+    "searchHint": "输入名称、地址或 ID 搜索记录",
+    "removeAria": "移除引用 {label}",
+    "selectedHint": "发送时读取最新详情 · 最多 10 条"
   }
 }

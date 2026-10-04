@@ -2718,26 +2718,6 @@
       "eaa96d40": "",
       "ff792716": ""
     },
-    "mention-textarea": {
-      "10663349": "",
-      "079f7fc3": "",
-      "0a5a24d0": "",
-      "1a0aece8": "",
-      "23534c2a": "",
-      "560c03c3": "",
-      "5c1d60ae": "",
-      "66a5229a": "",
-      "8a88cdc4": "",
-      "ab40458d": "",
-      "b0c2e318": "",
-      "c457ff35": "",
-      "c5d9aeda": "",
-      "c819dbf3": "",
-      "daaf2a2c": "",
-      "e04bb564": "",
-      "e0daaca2": "",
-      "f394d31f": ""
-    },
     "scope-text-editor": {
       "60849240": "",
       "129cece6": "",
@@ -4580,5 +4560,24 @@
       "allowedToast": "실행을 허용했습니다",
       "deniedToast": "실행을 거부했습니다"
     }
+  },
+  "mentionTextarea": {
+    "inputAria": "메시지. @ 를 입력해 기록을 인용하세요",
+    "listboxAria": "인용할 기록 선택",
+    "pickKind": "인용 유형 선택",
+    "searchKind": "{kind} 검색",
+    "allRecords": "전체 기록",
+    "hintKeys": "↑↓ 이동 · Enter 선택 · Esc 닫기",
+    "candidatesAria": "인용 후보",
+    "searching": "검색 중…",
+    "searchError": "검색 실패: {error}. 다시 입력해 시도해 주세요.",
+    "noMatch": "일치하는 기록이 없습니다. 이름·주소·ID 를 바꿔 보세요.",
+    "loadingMore": "더 불러오는 중…",
+    "pageError": "불러오기 실패. 눌러서 다시 시도",
+    "showingMore": "{count}건 표시됨 · 아래로 스크롤해 더 불러오기",
+    "showingAll": "전체 {count}건 표시됨",
+    "searchHint": "이름·주소·ID 를 입력해 기록을 검색하세요",
+    "removeAria": "인용 제거 {label}",
+    "selectedHint": "전송 시 최신 상세 정보를 읽습니다 · 최대 10건"
   }
 }
