@@ -1298,14 +1298,14 @@ export const frontier: TaskNode[] = explorationGraph.nodes.filter(
 export const activity: Activity[] = [
   // planner —— 每轮完整决策链：读态势 → 拉 worker 产出对照 → 判目标 → add_intent 派方向
   // ── 第 0 轮 · 目标拆解与首批意图（2026-07-24 09:12）──
-  { seq: 1000, worker: "planner", ts: T("2026-07-24T09:12:10Z"), kind: "round", summary: "第 0 轮 · 目标拆解" },
+  { seq: 1000, worker: "planner", ts: T("2026-07-24T09:12:10Z"), kind: "round", summary: "라운드 0 · 목표 분해" },
   {
     seq: 1001,
     worker: "planner",
     ts: T("2026-07-24T09:12:25Z"),
     kind: "thinking",
     summary:
-      "graph_overview：goals 已由目标层拆好——g1「获取 acme.com 后台管理权限」、g2「读取用户敏感数据」，均 open；facts=0、recent_facts 为空（图基本空白，还没有任何 worker 产出）。范围内资产只有根域 acme.com + 一个 C 段。攻击面初判：www / admin / api / shop / vpn 五个入口。图里没有 fact，我只能做【极轻量只读探测】把初始意图说具体，绝不在 plan 里把活干了。",
+      "graph_overview: goals 는 목표층에서 이미 분해되어 있다. g1「acme.com 백오피스 관리 권한 획득」, g2「사용자 민감 데이터 열람」이며 둘 다 open 이고, facts=0, recent_facts 는 비어 있다(그래프가 거의 백지라 아직 어떤 worker 산출물도 없다). 범위 내 자산은 루트 도메인 acme.com 과 C 클래스 대역 하나뿐이다. 공격면 초기 판단은 www / admin / api / shop / vpn 다섯 개 입구다. 그래프에 fact 가 없으니 나는 【아주 가벼운 읽기 전용 탐지】만으로 초기 의도를 구체화할 수 있을 뿐, plan 단계에서 실제 작업을 수행하지는 않는다.",
   },
   {
     seq: 1002,
@@ -1315,7 +1315,8 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "p0-probe",
     summary: "curl -sI https://acme.com; curl -sI https://admin.acme.com",
-    detail: "开局态势几乎空白，做 ≤3 次只读探测校准初始意图方向（不做枚举/验证，那是 worker 的活）。",
+    detail:
+      "초기 상황이 거의 백지라, 읽기 전용 탐지를 3회 이하로 수행해 초기 의도 방향을 보정한다(열거·검증은 하지 않는다. 그건 worker 의 몫이다).",
   },
   {
     seq: 1003,
@@ -1325,8 +1326,9 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "p0-probe",
     summary:
-      "acme.com → 302 → www；Server: nginx/1.24.0\nadmin.acme.com → 200，X-Powered-By 缺省，body 命中 element-ui/vue 特征",
-    detail: "admin 是独立后台登录页；确认五入口有效，可把初始意图描述写精准。",
+      "acme.com → 302 → www; Server: nginx/1.24.0\nadmin.acme.com → 200, X-Powered-By 없음, body 에서 element-ui/vue 특징 탐지",
+    detail:
+      "admin 은 독립된 백오피스 로그인 페이지다. 다섯 입구가 유효함을 확인했고, 초기 의도 설명을 정밀하게 작성할 수 있다.",
   },
   {
     seq: 1004,
@@ -1335,9 +1337,9 @@ export const activity: Activity[] = [
     kind: "tool_use",
     tool: "add_intent",
     tool_use_id: "p0-ai",
-    summary: "add_intent × 4（批量派首批探索方向）",
+    summary: "add_intent × 4 (첫 탐색 방향 묶음을 일괄 파견)",
     detail:
-      "intents=[\n  { summary: 'acme.com 全量子域枚举 + 存活主机端口/服务识别，摸清攻击面', asset_ids: [acme.com], priority: 6 },\n  { summary: 'admin.acme.com 后台默认口令/弱口令测试（Element-UI 登录，无验证码）', asset_ids: [admin], priority: 9 },\n  { summary: 'www.acme.com/search q 参数 SQL 注入探测', asset_ids: [www], priority: 8 },\n  { summary: 'api.acme.com 订单接口越权(IDOR)测试', asset_ids: [api], priority: 8 },\n]\nparent_ids 均空（顶层全新方向，兜底连 origin fact）。",
+      "intents=[\n  { summary: 'acme.com 전수 서브도메인 열거 + 활성 호스트 포트/서비스 식별로 공격면 파악', asset_ids: [acme.com], priority: 6 },\n  { summary: 'admin.acme.com 백오피스 기본 비밀번호/취약 비밀번호 테스트(Element-UI 로그인, 캡차 없음)', asset_ids: [admin], priority: 9 },\n  { summary: 'www.acme.com/search q 파라미터 SQL 인젝션 탐지', asset_ids: [www], priority: 8 },\n  { summary: 'api.acme.com 주문 엔드포인트 권한 우회(IDOR) 테스트', asset_ids: [api], priority: 8 },\n]\nparent_ids 는 모두 비어 있다(최상위 신규 방향이라 origin fact 에 fallback 으로 연결).",
   },
   {
     seq: 1005,
@@ -1346,8 +1348,9 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "add_intent",
     tool_use_id: "p0-ai",
-    summary: "4 intents created → ids=[i1, i2, i4, i5]，已连入 frontier",
-    detail: "刻意保持路线多样：i1 侦察 + i2（g1 认证路线）+ i4/i5（g2 数据路线），2 条独立机理并行，不过早收敛。",
+    summary: "4 intents created → ids=[i1, i2, i4, i5], frontier 에 연결됨",
+    detail:
+      "경로의 다양성을 의도적으로 유지한다. i1 정찰 + i2(g1 인증 경로) + i4/i5(g2 데이터 경로)로 독립된 두 공격 기법을 병행하며, 성급하게 수렴하지 않는다.",
   },
   {
     seq: 1006,
@@ -1355,18 +1358,18 @@ export const activity: Activity[] = [
     ts: T("2026-07-24T09:13:05Z"),
     kind: "text",
     summary:
-      "本轮派生首批 4 条意图：i1 资产侦察、i2 后台口令、i4 注入、i5 API 越权。g1 走 i2、g2 走 i4/i5，双目标各有独立入口在推进。等 worker 产出事实后再据血缘加码。",
+      "이번 라운드에서 첫 의도 4건을 파생했다. i1 자산 정찰, i2 백오피스 비밀번호, i4 인젝션, i5 API 권한 우회이며, g1 은 i2 로 g2 는 i4/i5 로 가면서 두 목표 모두 독립된 입구를 두고 진행 중이다. worker 가 사실을 산출하면 그 계통에 따라 증원한다.",
   },
 
   // ── 第 1 轮 · 攻击面加码（2026-07-25 14:12）──
-  { seq: 1100, worker: "planner", ts: T("2026-07-25T14:12:00Z"), kind: "round", summary: "第 1 轮 · 攻击面加码" },
+  { seq: 1100, worker: "planner", ts: T("2026-07-25T14:12:00Z"), kind: "round", summary: "라운드 1 · 공격면 증원" },
   {
     seq: 1101,
     worker: "planner",
     ts: T("2026-07-25T14:12:15Z"),
     kind: "thinking",
     summary:
-      "对照 recent_facts：workG 交回 faGit「.git 可下载，git-dumper 还原出后端源码」与 faCreds「config.php 硬编码 sa/Acme@2021（疑似内网通用）」；work#6 指纹交回 fa3「shop 命中 Fastjson 1.2.24（存在已知反序列化 RCE）」。两条【材料性新机理】：① 硬编码 DB 口令可能横跨内网复用；② Fastjson 有成熟 RCE 打法。这打开一条与现有认证/注入路线【本质不同】的入口——从 shop 直接 RCE 突破进 DMZ。先拉 faGit 详情核实产物。",
+      "recent_facts 대조: workG 가 faGit「.git 다운로드 가능, git-dumper 로 백엔드 소스 코드 복원」과 faCreds「config.php 에 sa/Acme@2021 하드코딩(내부망 공용으로 추정)」을 회신했고, work#6 지문 식별이 fa3「shop 에서 Fastjson 1.2.24 탐지(알려진 역직렬화 RCE 존재)」을 회신했다. 【재료가 되는 새 기법】 두 가지다. ① 하드코딩된 DB 비밀번호가 내부망 전반에서 재사용될 수 있다. ② Fastjson 에는 성숙한 RCE 수법이 있다. 이는 기존 인증/인젝션 경로와 【본질적으로 다른】 입구를 연다. shop 에서 바로 RCE 로 DMZ 를 돌파하는 길이다. 먼저 faGit 상세를 가져와 산출물을 확인한다.",
   },
   {
     seq: 1102,
@@ -1375,8 +1378,8 @@ export const activity: Activity[] = [
     kind: "tool_use",
     tool: "node_detail",
     tool_use_id: "p1-nd",
-    summary: "node_detail(faGit) —— 核对 workG 的源码还原产物",
-    detail: "add_intent 前先看 worker 到底还原出什么，避免凭指纹臆测方向。",
+    summary: "node_detail(faGit): workG 의 소스 코드 복원 산출물 대조",
+    detail: "add_intent 전에 worker 가 실제로 무엇을 복원했는지 먼저 확인해, 지문만으로 방향을 넘겨짚는 일을 피한다.",
   },
   {
     seq: 1103,
@@ -1386,8 +1389,9 @@ export const activity: Activity[] = [
     tool: "node_detail",
     tool_use_id: "p1-nd",
     summary:
-      "faGit 证据：git-dumper 还原出 config.php / db.php / order_api.php；config.php 内 $db=['host'=>'10.10.10.5','user'=>'sa','pass'=>'Acme@2021']",
-    detail: "硬编码指向内网 10.10.10.5(FS01)，佐证 faCreds 的「内网通用」推断——RCE 落地后这组口令值得复用。",
+      "faGit 증거: git-dumper 로 config.php / db.php / order_api.php 복원. config.php 내 $db=['host'=>'10.10.10.5','user'=>'sa','pass'=>'Acme@2021']",
+    detail:
+      "하드코딩 값이 내부망 10.10.10.5(FS01)을 가리켜 faCreds 의「내부망 공용」추정을 뒷받침한다. RCE 가 안착한 뒤 이 비밀번호 묶음은 재사용할 가치가 있다.",
   },
   {
     seq: 1104,
@@ -1396,9 +1400,9 @@ export const activity: Activity[] = [
     kind: "tool_use",
     tool: "add_intent",
     tool_use_id: "p1-ai",
-    summary: "add_intent × 2（Fastjson 突破链，串行分步先派可执行一步）",
+    summary: "add_intent × 2 (Fastjson 돌파 체인, 직렬 단계로 나눠 실행 가능한 첫 단계부터 파견)",
     detail:
-      "intents=[\n  { summary: 'shop.acme.com 组件指纹深挖 + Fastjson 1.2.24 CVE 精确关联(确认 gadget 链)', asset_ids: [shop], parent_ids: [fa3], priority: 7 },\n  { summary: '构造 Fastjson 反序列化 payload 触发 shop RCE，获取反弹 shell', asset_ids: [shop], parent_ids: [fa3], priority: 9 },\n]\n注：这是强依赖串行链，已 TodoWrite 记『指纹→RCE→立足点提权』三步，本轮只派前两步（提权依赖 shell 产出，下轮再派）。",
+      "intents=[\n  { summary: 'shop.acme.com 컴포넌트 지문 심층 분석 + Fastjson 1.2.24 CVE 정밀 연관(gadget 체인 확인)', asset_ids: [shop], parent_ids: [fa3], priority: 7 },\n  { summary: 'Fastjson 역직렬화 payload 를 구성해 shop RCE 를 유발하고 리버스 셸 획득', asset_ids: [shop], parent_ids: [fa3], priority: 9 },\n]\n주: 강한 의존성을 가진 직렬 체인이라 TodoWrite 에 『지문→RCE→거점 권한 상승』 세 단계를 기록했고, 이번 라운드에는 앞 두 단계만 파견한다(권한 상승은 shell 산출물에 의존하므로 다음 라운드에 파견).",
   },
   {
     seq: 1105,
@@ -1407,7 +1411,7 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "add_intent",
     tool_use_id: "p1-ai",
-    summary: "2 intents created → ids=[i6, i7]，已由 fa3 连入血缘",
+    summary: "2 intents created → ids=[i6, i7], fa3 를 통해 계통에 연결됨",
   },
   {
     seq: 1106,
@@ -1415,7 +1419,7 @@ export const activity: Activity[] = [
     ts: T("2026-07-25T14:13:00Z"),
     kind: "text",
     summary:
-      "态势升级：源码 + 硬编码内网口令 + Fastjson RCE 构成一条全新突破路线。已请目标层登记 g3「从外网突破 DMZ，建立内网立足点」，派 i6（指纹/CVE 关联）、i7（触发 RCE）。DMZ 提权一步依赖 shell，记入待办下轮派。",
+      "상황 격상: 소스 코드 + 하드코딩된 내부망 비밀번호 + Fastjson RCE 가 완전히 새로운 돌파 경로를 구성한다. 목표층에 g3「외부망에서 DMZ 를 돌파해 내부망 거점 확보」를 등록 요청했고, i6(지문/CVE 연관)·i7(RCE 유발)을 파견했다. DMZ 권한 상승 단계는 shell 에 의존하므로 할 일에 기록하고 다음 라운드에 파견한다.",
   },
 
   // ── 第 2 轮 · 立足点已建，转内网（2026-07-25 20:25）──
@@ -1424,7 +1428,7 @@ export const activity: Activity[] = [
     worker: "planner",
     ts: T("2026-07-25T20:25:00Z"),
     kind: "round",
-    summary: "第 2 轮 · 立足点已建，转内网",
+    summary: "라운드 2 · 거점 확보 완료, 내부망으로 전환",
   },
   {
     seq: 1201,
@@ -1432,7 +1436,7 @@ export const activity: Activity[] = [
     ts: T("2026-07-25T20:25:18Z"),
     kind: "thinking",
     summary:
-      "对照血缘：i7 交回 fa4「反弹 shell www-data@dmz-web01(10.0.20.15)，位于 DMZ 段」；提权链交回 fa5「sudo -l 命中 NOPASSWD python3 → 可提权 root」、fa6「立足点第二网卡直连内网 10.10.10.0/24」。g3 的验收条件（突破 DMZ + 建立足点）已被 fa4+fa6 直接满足。先核实 fa6 的内网可达性再 prove_goal。",
+      "계통 대조: i7 가 fa4「리버스 셸 www-data@dmz-web01(10.0.20.15), DMZ 세그먼트에 위치」를 회신했고, 권한 상승 체인은 fa5「sudo -l 에서 NOPASSWD python3 탐지 → root 권한 상승 가능」, fa6「거점의 두 번째 NIC 가 내부망 10.10.10.0/24 에 직접 연결」을 회신했다. g3 의 인수 조건(DMZ 돌파 + 거점 확보)은 fa4+fa6 으로 이미 직접 충족됐다. 먼저 fa6 의 내부망 도달성을 확인한 뒤 prove_goal 한다.",
   },
   {
     seq: 1202,
@@ -1441,7 +1445,7 @@ export const activity: Activity[] = [
     kind: "tool_use",
     tool: "node_detail",
     tool_use_id: "p2-nd",
-    summary: "node_detail(fa6) —— 确认双网卡与内网可达",
+    summary: "node_detail(fa6): 이중 NIC 와 내부망 도달 확인",
   },
   {
     seq: 1203,
@@ -1450,7 +1454,8 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "node_detail",
     tool_use_id: "p2-nd",
-    summary: "fa6 证据：ip a → eth0 10.0.20.15(DMZ) / eth1 10.10.10.15(内网)；ping 10.10.10.10 通，跨越 DMZ 边界成立",
+    summary:
+      "fa6 증거: ip a → eth0 10.0.20.15(DMZ) / eth1 10.10.10.15(내부망); ping 10.10.10.10 성공, DMZ 경계 횡단 성립",
   },
   {
     seq: 1204,
@@ -1461,7 +1466,7 @@ export const activity: Activity[] = [
     tool_use_id: "p2-pg",
     summary: "prove_goal(g3, evidence=fa6)",
     detail:
-      "reason：i7 RCE 拿到 DMZ 立足点(fa4)、fa5 提权 root、fa6 证明第二网卡直连内网并 ping 通 DC01——『突破 DMZ 建立内网立足点』验收达成。",
+      "reason: i7 의 RCE 로 DMZ 거점(fa4) 확보, fa5 로 root 권한 상승, fa6 가 두 번째 NIC 의 내부망 직결과 DC01 ping 성공을 입증. 『DMZ 돌파, 내부망 거점 확보』 인수 달성.",
   },
   {
     seq: 1205,
@@ -1470,7 +1475,7 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "prove_goal",
     tool_use_id: "p2-pg",
-    summary: "goal g3 → met（证据 fa6 已连入）；仍有 g1/g2/g4 未达成，任务继续",
+    summary: "goal g3 → met(증거 fa6 연결됨); 아직 g1/g2/g4 가 미달성이라 작업을 계속한다",
   },
   {
     seq: 1206,
@@ -1479,9 +1484,9 @@ export const activity: Activity[] = [
     kind: "tool_use",
     tool: "add_intent",
     tool_use_id: "p2-ai",
-    summary: "add_intent × 4（以立足点为 pivot 展开内网横向）",
+    summary: "add_intent × 4 (거점을 pivot 삼아 내부망 횡적 이동 전개)",
     detail:
-      "intents=[\n  { summary: '以 dmz-web01 为 pivot 做内网 10.10.10.0/24 主机发现与端口识别', asset_ids: [dmz-web01], parent_ids: [fa6], priority: 8 },\n  { summary: '内网横向：复用硬编码口令 sa/Acme@2021 做凭据复用与密码喷洒', parent_ids: [faCreds], priority: 8 },\n  { summary: '内部 Jenkins(10.10.10.20) 未授权 /script Groovy 执行(RCE)', parent_ids: [fa6], priority: 9 },\n  { summary: '对域服务账号做 Kerberoasting 并离线破解', parent_ids: [fa6], priority: 8 },\n]\n主机发现是前置(先派)，其余三条是并行的横向探索维度。",
+      "intents=[\n  { summary: 'dmz-web01 을 pivot 삼아 내부망 10.10.10.0/24 호스트 발견과 포트 식별', asset_ids: [dmz-web01], parent_ids: [fa6], priority: 8 },\n  { summary: '내부망 횡적 이동: 하드코딩 비밀번호 sa/Acme@2021 로 자격 증명 재사용과 패스워드 스프레이', parent_ids: [faCreds], priority: 8 },\n  { summary: '내부 Jenkins(10.10.10.20) 미인증 /script Groovy 실행(RCE)', parent_ids: [fa6], priority: 9 },\n  { summary: '도메인 서비스 계정 대상 Kerberoasting 후 오프라인 크래킹', parent_ids: [fa6], priority: 8 },\n]\n호스트 발견이 선행 단계(먼저 파견)이고, 나머지 세 건은 병렬 횡적 탐색 차원이다.",
   },
   {
     seq: 1207,
@@ -1498,18 +1503,18 @@ export const activity: Activity[] = [
     ts: T("2026-07-25T20:26:20Z"),
     kind: "text",
     summary:
-      "g3 达成，攻击面从外网转入内网。已请登记 g4「内网横向，拿下内部靶标域控 DC01」，派 i9（主机发现）+ i10/i11/i12 三条并行横向。凭据复用直接锚在 faCreds 上——外网源码泄露的口令喂给内网横向。",
+      "g3 달성, 공격면이 외부망에서 내부망으로 전환됐다. g4「내부망 횡적 이동으로 내부 표적 도메인 컨트롤러 DC01 장악」을 등록 요청했고, i9(호스트 발견) + i10/i11/i12 세 건의 병렬 횡적 이동을 파견했다. 자격 증명 재사용은 faCreds 에 직접 고정한다. 외부망 소스 코드 유출로 얻은 비밀번호를 내부망 횡적 이동에 투입하는 것이다.",
   },
 
   // ── 第 3 轮 · 靶标达成复盘（2026-07-26 00:25）──
-  { seq: 1300, worker: "planner", ts: T("2026-07-26T00:25:00Z"), kind: "round", summary: "第 3 轮 · 靶标达成复盘" },
+  { seq: 1300, worker: "planner", ts: T("2026-07-26T00:25:00Z"), kind: "round", summary: "라운드 3 · 표적 달성 리뷰" },
   {
     seq: 1301,
     worker: "planner",
     ts: T("2026-07-26T00:25:16Z"),
     kind: "thinking",
     summary:
-      "对照本轮 worker 产出：i9→fa7「内网存活 DC01/FS01/JENKINS」；i11→fa8「Jenkins /script 无鉴权 Groovy」+ fa9「从 Jenkins 凭据库导出 acme\\svc_deploy 明文口令」；i12→fa10「Kerberoast svc_sql TGS，hashcat 破出 Sql@2020」。svc_deploy 属 Domain Admins，i13 已用其 psexec 拿下 DC01 并 secretsdump。g4 验收（拿下 DC01）应已达成，先核对 finding 证据链再盖章。",
+      "이번 라운드 worker 산출물 대조: i9→fa7「내부망 활성 DC01/FS01/JENKINS」, i11→fa8「Jenkins /script 인증 없는 Groovy」 + fa9「Jenkins 자격 증명 저장소에서 acme\\svc_deploy 평문 비밀번호 추출」, i12→fa10「svc_sql TGS Kerberoast, hashcat 로 Sql@2020 크랙」. svc_deploy 는 Domain Admins 소속이고, i13 이 이를 써서 psexec 로 DC01 을 장악하고 secretsdump 했다. g4 인수(DC01 장악)는 이미 달성됐을 것이므로, 먼저 finding 증거 체인을 대조한 뒤 확정한다.",
   },
   {
     seq: 1302,
@@ -1518,7 +1523,7 @@ export const activity: Activity[] = [
     kind: "tool_use",
     tool: "list_findings",
     tool_use_id: "p3-lf",
-    summary: "list_findings —— 核对 DC01 沦陷的确认证据",
+    summary: "list_findings: DC01 함락 확정 증거 대조",
   },
   {
     seq: 1303,
@@ -1528,7 +1533,7 @@ export const activity: Activity[] = [
     tool: "list_findings",
     tool_use_id: "p3-lf",
     summary:
-      "F-09「域控 DC01 完全控制 / secretsdump 导出全域哈希」critical（证据：psexec svc_deploy@10.10.10.10 + NTDS.dit dump）；上游链 fa9→fa10→i13 完整",
+      "F-09「도메인 컨트롤러 DC01 완전 장악 / secretsdump 로 전체 도메인 해시 추출」critical(증거: psexec svc_deploy@10.10.10.10 + NTDS.dit dump); 상류 체인 fa9→fa10→i13 완전",
   },
   {
     seq: 1304,
@@ -1539,7 +1544,7 @@ export const activity: Activity[] = [
     tool_use_id: "p3-pg",
     summary: "prove_goal(g4, evidence=F-09)",
     detail:
-      "reason：Jenkins 泄露 svc_deploy(Domain Admin) → psexec 控制 DC01 → secretsdump 全域哈希，F-09 已确认，『拿下内部靶标域控 DC01』达成。",
+      "reason: Jenkins 가 svc_deploy(Domain Admin)를 유출 → psexec 로 DC01 장악 → secretsdump 로 전체 도메인 해시, F-09 확정, 『내부 표적 도메인 컨트롤러 DC01 장악』 달성.",
   },
   {
     seq: 1305,
@@ -1548,7 +1553,7 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "prove_goal",
     tool_use_id: "p3-pg",
-    summary: "goal g4 → met；系统提示：g2 仍 open，非最后一个目标，任务未整体收官",
+    summary: "goal g4 → met; 시스템 안내: g2 가 아직 open 이고 마지막 목표가 아니므로, 작업이 전체로 마무리되지 않았다",
   },
   {
     seq: 1306,
@@ -1556,7 +1561,7 @@ export const activity: Activity[] = [
     ts: T("2026-07-26T00:26:10Z"),
     kind: "text",
     summary:
-      "g4 收官，内外网链路完全打通（外网 RCE → DMZ → 内网 → 域控）。逐一比对未覆盖方向：g2「读取用户敏感数据」仍缺临门一脚，但现有 i3（后台用户接口）+ i5（API IDOR）已覆盖该方向、且都在 running。本轮无【本质不同的未覆盖新方向】——按克制原则 0 新意图，等 i3/i5 产出。",
+      "g4 마무리, 내·외부망 경로가 완전히 뚫렸다(외부망 RCE → DMZ → 내부망 → 도메인 컨트롤러). 미커버 방향을 하나씩 대조한다. g2「사용자 민감 데이터 열람」은 아직 마지막 한 걸음이 부족하지만, 기존 i3(백오피스 사용자 엔드포인트) + i5(API IDOR)가 이미 그 방향을 커버하고 있고 둘 다 running 이다. 이번 라운드에는 【본질적으로 다른 미커버 신규 방향】이 없으므로, 절제 원칙에 따라 신규 의도 0, i3/i5 의 산출을 기다린다.",
   },
 
   // ── 第 4 轮 · 后台达成，收敛 g2（2026-07-26 03:55）──
@@ -1565,7 +1570,7 @@ export const activity: Activity[] = [
     worker: "planner",
     ts: T("2026-07-26T03:55:00Z"),
     kind: "round",
-    summary: "第 4 轮 · 后台达成，收敛 g2",
+    summary: "라운드 4 · 백오피스 달성, g2 수렴",
   },
   {
     seq: 1401,
@@ -1573,7 +1578,7 @@ export const activity: Activity[] = [
     ts: T("2026-07-26T03:55:14Z"),
     kind: "thinking",
     summary:
-      "对照 recent_facts：work#2 用 faCreds 里的 Acme@2021 命中 admin 后台（i2 done），后台管理权限到手——g1 验收达成，先 prove_goal 盖章。随后做【量化验收核对】：g2「读取用户敏感数据」当前只有 i3/i5 摸到接口面、尚未真正取到批量数据，实测未达标，【禁止】prove_goal，改为提优先级补足取数意图。",
+      "recent_facts 대조: work#2 가 faCreds 의 Acme@2021 로 admin 백오피스에 적중(i2 done)해 백오피스 관리 권한을 확보했다. g1 인수 달성이므로 먼저 prove_goal 로 확정한다. 이어서 【정량 인수 대조】를 한다. g2「사용자 민감 데이터 열람」은 현재 i3/i5 가 엔드포인트 표면만 건드렸을 뿐 아직 실제로 대량 데이터를 취득하지 못했고 실측상 기준 미달이므로, prove_goal 을 【금지】하고 우선순위를 올려 데이터 취득 의도를 보강하는 쪽으로 바꾼다.",
   },
   {
     seq: 1402,
@@ -1584,7 +1589,7 @@ export const activity: Activity[] = [
     tool_use_id: "p4-pg",
     summary: "prove_goal(g1, evidence=fa1)",
     detail:
-      "reason：i2 用外网泄露的硬编码口令 Acme@2021 成功登入 admin 后台（Element-UI），获取后台管理权限，g1 达成。",
+      "reason: i2 가 외부망에서 유출된 하드코딩 비밀번호 Acme@2021 로 admin 백오피스(Element-UI)에 로그인 성공, 백오피스 관리 권한을 획득, g1 달성.",
   },
   {
     seq: 1403,
@@ -1593,7 +1598,7 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "prove_goal",
     tool_use_id: "p4-pg",
-    summary: "goal g1 → met；剩余未达成：g2",
+    summary: "goal g1 → met; 남은 미달성: g2",
   },
   {
     seq: 1404,
@@ -1601,7 +1606,7 @@ export const activity: Activity[] = [
     ts: T("2026-07-26T03:55:40Z"),
     kind: "thinking",
     summary:
-      "g2 量化核对：目标要求『读取用户敏感数据』=实际拿到批量用户记录。graph_overview 里 findings 尚无『成功导出用户数据』条目，i3/i5 均 running 未回取数结果——实测未达标。严禁以『后台已进、大体达成』提前标 met，继续派意图补足差距。",
+      "g2 정량 대조: 목표 요구사항 『사용자 민감 데이터 열람』은 곧 실제로 대량 사용자 레코드를 취득하는 것이다. graph_overview 의 findings 에는 아직 『사용자 데이터 추출 성공』 항목이 없고, i3/i5 모두 running 으로 데이터 취득 결과를 회신하지 않았다. 실측상 기준 미달이다. 『백오피스에 이미 진입했으니 대체로 달성』이라며 성급히 met 로 표시하는 것을 엄격히 금지하고, 의도를 계속 파견해 격차를 메운다.",
   },
   {
     seq: 1405,
@@ -1610,9 +1615,9 @@ export const activity: Activity[] = [
     kind: "tool_use",
     tool: "add_intent",
     tool_use_id: "p4-ai",
-    summary: "add_intent × 2（收敛 g2 取数，提高优先级）",
+    summary: "add_intent × 2 (g2 데이터 취득 수렴, 우선순위 상향)",
     detail:
-      "intents=[\n  { summary: '已登入 admin 后台，枚举用户管理/导出接口并批量拉取用户敏感字段', asset_ids: [admin], parent_ids: [fa1], priority: 9 },\n  { summary: 'api.acme.com 订单 IDOR 遍历 order_id 批量拉取用户订单/PII', asset_ids: [api], parent_ids: [fa2], priority: 9 },\n]\n注：i3/i5 已在 running，本轮以更精准的取数描述 + 提优先级(→9)加码，不重复派同义意图。",
+      "intents=[\n  { summary: 'admin 백오피스 로그인 완료, 사용자 관리/내보내기 엔드포인트를 열거해 사용자 민감 필드를 대량 추출', asset_ids: [admin], parent_ids: [fa1], priority: 9 },\n  { summary: 'api.acme.com 주문 IDOR 로 order_id 를 순회해 사용자 주문/PII 를 대량 추출', asset_ids: [api], parent_ids: [fa2], priority: 9 },\n]\n주: i3/i5 는 이미 running 상태라, 이번 라운드에는 더 정밀한 데이터 취득 설명 + 우선순위 상향(→9)으로 증원하며, 같은 뜻의 의도를 중복 파견하지 않는다.",
   },
   {
     seq: 1406,
@@ -1621,7 +1626,7 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "add_intent",
     tool_use_id: "p4-ai",
-    summary: "2 intents updated → ids=[i3, i5]（优先级升至 9，描述细化为『批量取数』）",
+    summary: "2 intents updated → ids=[i3, i5](우선순위 9 로 상향, 설명을 『대량 데이터 취득』으로 구체화)",
   },
   {
     seq: 1407,
@@ -1629,7 +1634,7 @@ export const activity: Activity[] = [
     ts: T("2026-07-26T03:55:58Z"),
     kind: "text",
     summary:
-      "g1 达成（4/4 里已 met 3 个：g1/g3/g4）。g2 严守量化验收——只进后台不算，必须拿到批量用户数据才盖章；已把 i3/i5 提到 priority 9 并细化为取数意图，等 worker 回传即可收官整个任务。",
+      "g1 달성(4개 중 met 3개: g1/g3/g4). g2 는 정량 인수를 엄격히 지킨다. 백오피스에 진입한 것만으로는 인정되지 않고, 반드시 대량 사용자 데이터를 취득해야 확정한다. i3/i5 를 priority 9 로 올리고 데이터 취득 의도로 구체화했으며, worker 회신이 오면 작업 전체를 마무리할 수 있다.",
   },
 
   // work#1 · i1 子域枚举与端口扫描（done）
