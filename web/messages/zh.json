@@ -4247,5 +4247,182 @@
       "viewFullJson": "查看完整模型审查输入 JSON",
       "modelInput": "模型审查输入"
     }
+  },
+  "agentEditor": {
+    "tab": {
+      "prompt": "配置与提示词",
+      "wrapup": "收尾提示词",
+      "triggers": "触发"
+    },
+    "notFound": "未找到 Agent：{key}",
+    "llm": {
+      "label": "默认模型（LLM 配置）",
+      "follow": "跟随任务 / 全局激活配置",
+      "defaultSuffix": " · 默认",
+      "hint": "为该 Agent 绑定固定 LLM 配置（点「保存配置」生效）。优先级：Agent 绑定 > 任务/会话指定 > 全局激活。"
+    },
+    "config": {
+      "maxTurns": "最大循环次数（0=不限）",
+      "runSeconds": "运行时长（秒，0=不限）",
+      "save": "保存配置"
+    },
+    "webSearch": {
+      "label": "网络搜索",
+      "onHint": "为该 Agent 开启后（点上方保存生效），可用 web_search 联网检索",
+      "offHint": "需先在「系统配置」开启网络搜索并配置后端，才能在此启用"
+    },
+    "shell": {
+      "label": "交互式 Shell",
+      "hint": "为该 Agent 开启后（点上方保存生效），可用持久 PTY 会话工具（shell_open/send/read/close/list）驱动 msfconsole/ssh/REPL 等交互程序"
+    },
+    "prompt": {
+      "varsLabel": "变量（点击插入占位符，渲染时由运行时数据替换）",
+      "example": "示例：{example}",
+      "noVars": "（无变量）",
+      "placeholder": "留空则使用内置默认提示词",
+      "previewBtn": "预览渲染",
+      "saveVersion": "保存为新版本",
+      "resetDefault": "恢复默认"
+    },
+    "preview": {
+      "title": "渲染预览",
+      "descPrefix": "所有",
+      "descSuffix": "已由后端用示例值替换。",
+      "renderError": "渲染错误：{error}",
+      "failed": "预览失败：{error}"
+    },
+    "version": {
+      "historyLabel": "版本历史",
+      "current": "当前",
+      "none": "（暂无保存的版本，使用内置默认）",
+      "noNote": "（无备注）",
+      "empty": "（空）",
+      "compareCurrent": "与当前版本对比",
+      "loadToEditor": "加载到编辑器"
+    },
+    "diff": {
+      "title": "版本对比：v{from} → v{to}（当前）",
+      "removed": "- 删除",
+      "added": "+ 新增"
+    },
+    "wrapup": {
+      "desc": "当此 Agent 因<b>超时</b>或<b>步数耗尽</b>被终止时，系统会注入这段「收尾提示词」跑一轮收尾：先把已识别但未落库的内容写回，再输出一句总结（避免烂尾）。留空则使用内置默认。",
+      "bodyLabel": "收尾提示词正文",
+      "custom": "自定义",
+      "useDefault": "使用内置默认",
+      "placeholder": "留空则使用内置默认收尾提示词",
+      "turnsLabel": "收尾轮数（收尾阶段自身最多跑几轮；0=用内置默认 {default} 轮）",
+      "save": "保存",
+      "resetDefault": "恢复默认",
+      "defaultLabel": "内置默认（只读，供参考）"
+    },
+    "taskTimeout": {
+      "desc": "<b>任务超时收尾</b>（与上面的 per-run 收尾是<b>两套</b>）：当<b>整个任务</b>到达超时上限、即将结束时注入。与 per-run 语义常相反（如 planner：per-run 说“别停继续规划”，任务超时说“到点停止、做最后判定”）。留空则用内置默认。",
+      "bodyLabel": "任务超时收尾提示词正文",
+      "placeholder": "留空则使用内置默认任务超时收尾提示词",
+      "turnsLabel": "收尾轮数（0=用内置默认 {default} 轮）"
+    },
+    "toast": {
+      "savedVersion": "已保存为版本 v{version}",
+      "saveFailed": "保存失败：{error}",
+      "resetToDefaultVersion": "已恢复为内置默认（v{version}）",
+      "resetToDefault": "已恢复为内置默认",
+      "resetFailed": "恢复失败：{error}",
+      "wrapupSaved": "收尾配置已保存（下次运行生效）",
+      "wrapupCleared": "已清空，将使用内置默认",
+      "taskTimeoutWrapupSaved": "任务超时收尾配置已保存（下次运行生效）",
+      "configSaved": "已保存运行配置（立即生效）",
+      "mcpVisOn": "已开启 MCP「{name}」可见",
+      "mcpVisOff": "已取消 MCP「{name}」可见",
+      "skillVisOn": "已开启 Skill「{name}」可见",
+      "skillVisOff": "已取消 Skill「{name}」可见",
+      "toolBound": "已绑定工具「{key}」",
+      "toolUnbound": "已解绑工具「{key}」",
+      "toolBindFailed": "保存工具绑定失败：{error}",
+      "loadedToEditor": "已加载 v{version} 到编辑器，确认后点「保存为新版本」"
+    },
+    "mcp": {
+      "desc": "勾选此 Agent 可见的 MCP 服务器。",
+      "none": "（暂无 MCP）"
+    },
+    "skill": {
+      "desc": "勾选此 Agent 可见的 Skill。",
+      "none": "（暂无 Skill）"
+    },
+    "tools": {
+      "desc": "勾选绑定给此 Agent 的内置工具。",
+      "trafficBadge": "流量",
+      "disabledBadge": "已停用",
+      "needCapture": "需开启流量捕获",
+      "none": "（暂无工具）"
+    },
+    "triggers": {
+      "desc": "触发器让这个自定义 Agent 自动运行：每次触发都<b>新建一个会话运行</b>（在「对话」页可见）。可多选触发条件；系统会把「本次为何触发 + 相关任务/finding/目标」自动附加到你写的基础消息后面。",
+      "policyLabel": "触发后处理策略（决定触发如何排队/合并运行）",
+      "runMode": "运行模式",
+      "serial": "串行（排队，一次一个）",
+      "parallel": "并行（各自并发会话）",
+      "mergeMode": "合并模式",
+      "mergeByTask": "按任务合并",
+      "mergeAll": "全部合并成一条",
+      "mergeNone": "不合并",
+      "maxParallel": "最大并发（0=不限）",
+      "policyParallel": "并行：每次触发立即各开一个会话并发运行，不合并；超过最大并发的触发排队等空位。",
+      "policyByTask": "串行·按任务合并：同 agent 一次跑一个；排队中同一任务的事件触发合并成一条会话。",
+      "policyAll": "串行·全部合并：同 agent 一次跑一个；取队列时把当前排队的所有触发合并成一条会话。",
+      "policyNone": "串行·不合并：同 agent 一次跑一个；每条触发各自一个会话。",
+      "editTitle": "编辑触发器 #{id}（改完点「保存修改」）",
+      "addTitle": "新增触发器（每种条件可填各自的用户消息）",
+      "onInterval": "定时触发",
+      "every": "每",
+      "seconds": "秒",
+      "intervalPlaceholder": "定时触发时发给 agent 的话，如：巡检所有任务",
+      "onFinding": "发现 finding 时触发",
+      "findingPlaceholder": "发现 finding 时发给 agent 的话（系统会附带任务与 finding 详情）",
+      "onGoalMet": "目标达成时触发",
+      "goalPlaceholder": "目标达成时发给 agent 的话（系统会附带任务与达成的目标）",
+      "onTaskTimeout": "任务超时时触发",
+      "taskTimeoutPlaceholder": "任务超时时发给 agent 的话（系统会附带任务编号与目标）",
+      "onToolCall": "工具调用时触发",
+      "toolSelectHint": "选择要监听的工具（至少一个）；任务执行中这些工具每次<b>调用完成</b>都会触发。已选 {count} 个。",
+      "toolListEmpty": "（工具列表为空）",
+      "toolCallPlaceholder": "工具被调用时发给 agent 的话（系统会附带任务信息、工具入参与返回内容）",
+      "onTaskCreate": "任务创建时触发",
+      "taskCreatePlaceholder": "任务被创建时发给 agent 的话（系统会附带任务编号与目标）",
+      "saveEdit": "保存修改",
+      "add": "添加触发器",
+      "cancelEdit": "取消编辑",
+      "existing": "已有触发器",
+      "existingNone": "（暂无）",
+      "edit": "编辑",
+      "delete": "删除",
+      "errNoCondition": "至少选择一种触发条件",
+      "errNoTool": "工具调用触发至少选择一个工具",
+      "savedEdit": "已保存修改",
+      "added": "已添加触发器",
+      "saveEditFailed": "保存失败：{error}",
+      "addFailed": "添加失败：{error}",
+      "savePolicyFailed": "保存策略失败：{error}",
+      "deleteFailed": "删除失败：{error}",
+      "cond": {
+        "everyN": "每 {sec}s",
+        "finding": "发现 finding",
+        "goalMet": "目标达成",
+        "taskTimeout": "任务超时",
+        "toolCall": "工具调用({count})",
+        "taskCreate": "任务创建",
+        "none": "（无条件）"
+      },
+      "detail": {
+        "interval": "定时：{msg}",
+        "finding": "finding：{msg}",
+        "goal": "目标：{msg}",
+        "timeout": "超时：{msg}",
+        "taskCreate": "任务创建：{msg}",
+        "tools": "工具：{tools}",
+        "toolsNone": "（未选）",
+        "message": "消息：{msg}"
+      }
+    }
   }
 }
