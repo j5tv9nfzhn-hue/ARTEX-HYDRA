@@ -6113,5 +6113,263 @@
         "rollback": "回滚到上一版本？\n\n程序会重启，正在运行的任务会被中断。\n注意：数据库结构不会回退，旧版本可能无法识别新版写入的数据。"
       }
     }
+  },
+  "llmPage": {
+    "page": {
+      "subtitle": "全 Agent 共享的格式 / 模型 / 限速配置。点击卡片编辑，星标为当前激活配置。",
+      "poolConfig": "轮询配置",
+      "enabled": "已开启",
+      "new": "新建",
+      "tab": {
+        "profiles": "模型配置",
+        "retry": "重试与退避"
+      },
+      "empty": "还没有模型配置，点击右上角「新建」创建第一个。",
+      "toast": {
+        "activated": "已激活：{name}",
+        "activateFailed": "激活失败：{msg}",
+        "cannotDeleteActive": "无法删除当前激活的配置",
+        "deleted": "已删除：{name}",
+        "deleteFailed": "删除失败：{msg}"
+      }
+    },
+    "card": {
+      "proxy": "代理 {proxy}",
+      "thinking": "思考 {effort}",
+      "thinkingOff": "关",
+      "excluded": "不参与轮询",
+      "priority": "优先级 {priority}",
+      "active": "已激活",
+      "activate": "设为激活",
+      "deleteAria": "删除配置"
+    },
+    "health": {
+      "noKey": {
+        "label": "未配置 Key",
+        "hint": "未填 API Key，无法调用"
+      },
+      "tripped": "已熔断",
+      "trippedCooldown": "已熔断 · {cooldown}",
+      "degraded": "异常 · 失败 {fails} 次",
+      "ok": "正常"
+    },
+    "pool": {
+      "title": "LLM 轮询 · 故障转移",
+      "desc": "开启后，<b>未指定模型</b>的 Agent 在当前配置不可用（余额不足 / Key 失效 / 限流 / 服务异常）时自动切到下一个配置。",
+      "enable": {
+        "label": "启用轮询",
+        "hint": "默认关闭。关闭时始终只用激活配置，失败即失败。",
+        "aria": "LLM 轮询开关"
+      },
+      "bindFallback": {
+        "label": "指定模型失败时也兜底",
+        "hint": "默认关闭：Agent 或任务指定了某个配置就只用它，失败即失败（不会悄悄换成别的模型）。开启后，指定的配置失败时也会回落到下面的轮询链。",
+        "aria": "绑定配置失败兜底开关"
+      },
+      "order": {
+        "label": "轮询顺序",
+        "tooFew": "当前只有 {n} 个可用配置，轮询不会生效——至少需要 2 个已填 API Key 且参与轮询的配置。"
+      },
+      "recoverAll": "全部恢复",
+      "badge": {
+        "active": "激活",
+        "excluded": "不参与轮询"
+      },
+      "cooldown": "冷却 {cooldown}",
+      "consecutiveFails": "连续失败 {fails} 次",
+      "recoverNow": {
+        "aria": "立即恢复",
+        "title": "立即恢复：清除熔断，下次调用重试该配置"
+      },
+      "priority": "优先级 {priority}",
+      "empty": "暂无配置",
+      "note": "激活配置恒为第 1 顺位，其余按优先级从高到低（在各配置里设置）。某个配置失败后进入冷却 （60s → 5min → 30min），冷却期内被跳过，恢复后自动切回。上下文窗口装不下当前请求的配置会被跳过。 指定了模型的 Agent 与任务默认不参与轮询。",
+      "toast": {
+        "enabled": "已开启 LLM 轮询",
+        "disabled": "已关闭 LLM 轮询",
+        "fallbackUpdated": "已更新兜底设置",
+        "setFailed": "设置失败：{msg}",
+        "recoveredOne": "已恢复该配置",
+        "recoveredAll": "已恢复全部配置",
+        "recoverFailed": "恢复失败：{msg}"
+      }
+    },
+    "profile": {
+      "titleNew": "新建模型配置",
+      "titleEdit": "编辑：{name}",
+      "activeBadge": "激活中",
+      "descNew": "新建后不会自动激活，请在卡片上「设为激活」以启用。",
+      "descEdit": "修改后点击保存；激活配置保存后对全部 Agent 立即生效。",
+      "name": {
+        "label": "名称",
+        "placeholder": "例如：OpenAI 生产"
+      },
+      "format": {
+        "label": "格式",
+        "placeholder": "选择格式"
+      },
+      "model": {
+        "label": "模型",
+        "loadTitle": "从 API 加载可用模型"
+      },
+      "baseUrl": {
+        "label": "Base URL（可选）"
+      },
+      "proxy": {
+        "label": "代理（可选）",
+        "hint": "仅 LLM 出站请求走此代理，支持 http/https/socks5，可带账号密码（如 socks5://user:pass@host:port，密码含特殊字符需 URL 编码）；留空表示不使用代理（直连）。"
+      },
+      "sessionHeader": {
+        "label": "自定义会话头（可选）",
+        "placeholder": "如 x-session-id（留空=不发送）",
+        "hint": "填写头名后，每次请求都会带上这个 HTTP 头，头值自动填为 <b>当前会话的 session id</b>（chat 会话如 conv-12、worker 如 exp3-worker-i87）。用于按 session-id 头做提示缓存 / 粘性路由的网关；同一会话多轮稳定、不同会话互不相同。留空则不发送。"
+      },
+      "apiKey": {
+        "placeholderSet": "已设置（{hint}），留空保持不变"
+      },
+      "rps": "每秒限速",
+      "rpm": "每分钟限速",
+      "cw": "上下文窗口(K)",
+      "rateHint": "限速 0 = 不限，全 Agent 共享。上下文窗口单位 K（千 token），0 = 默认 200K，上限 1000（即 1M）；设太高会导致压缩不触发。",
+      "priority": {
+        "label": "轮询优先级",
+        "hint": "数字越大越先被选中；激活配置恒为第 1 顺位，与本值无关。相同优先级的配置会轮流打头，天然分摊额度。"
+      },
+      "exclude": {
+        "label": "不参与轮询",
+        "hint": "开启后不会被当作故障转移目标（仍可被 Agent / 任务显式指定使用）。 适合「只给某个 Agent 专用、不希望别人失败时烧掉」的昂贵配置。",
+        "aria": "不参与轮询"
+      },
+      "streaming": {
+        "label": "流式输出 · streaming",
+        "hint": "开启（默认）走流式 SSE，有运行中实时进度与实时 token 计数。 关闭则走真·非流式（stream:false，一次性返回完整响应）——可绕开部分网关糟糕的 SSE 实现（空帧 / 思考字段丢帧），代价是失去运行中的实时进度。",
+        "aria": "流式输出"
+      },
+      "maxTokens": {
+        "label": "输出上限 · max tokens",
+        "hint": "单次回复最多生成多少 token，随每次请求发出。0（默认）= 不发送该字段，由服务端默认值决定。 这与上面的「上下文窗口」是两回事：那是模型总容量，只在本地用来算压缩阈值。 设太小会让推理模型在思考阶段就被截断，一个字答案都出不来。"
+      },
+      "maxTokensField": {
+        "label": "上限字段名",
+        "opt": {
+          "default": "max_tokens（默认）"
+        }
+      },
+      "maxTokensFieldHint": {
+        "openai": "上限发哪个键。max_tokens 是默认，绝大多数兼容网关只认它；OpenAI 官方推理模型（o 系列 / GPT-5）反过来只认 max_completion_tokens，收到 max_tokens 会直接报 unsupported_parameter。",
+        "anthropic": "仅 openai 格式可选。Anthropic 的字段名固定为 max_tokens。",
+        "openai-responses": "仅 openai 格式可选。Responses API 的字段名固定为 max_output_tokens。"
+      },
+      "thinkingType": {
+        "label": "思考开关 · thinking.type",
+        "hint": "控制是否发送 thinking 字段。不发送=不带该字段（兼容 MiniMax 等不支持 的模型）；关闭=发 disabled；开启=发 enabled。与下面的强度互相独立。",
+        "opt": {
+          "none": "不发送（默认）",
+          "disabled": "关闭",
+          "enabled": "开启"
+        }
+      },
+      "effort": {
+        "label": "思考强度 · reasoning_effort",
+        "hint": "独立的强度档位（OpenAI reasoning_effort / Anthropic output_config.effort）。 有些接口没有 thinking 字段、只靠强度即可激活思考，故可单独设置、不发送思考开关。",
+        "opt": {
+          "none": "不发送（默认）"
+        }
+      },
+      "testing": "测试中…",
+      "testConnection": "测试连接",
+      "create": "新建",
+      "save": "保存",
+      "toast": {
+        "modelsLoaded": "已加载 {n} 个模型",
+        "loadModelsFailed": "加载模型失败：{error}",
+        "noModels": "未获取到模型",
+        "loadModelsError": "加载模型出错：{msg}",
+        "testOk": "连接成功 · {latency}ms · {model}",
+        "testReply": "回复：{reply}",
+        "testFailed": "连接失败：{error}",
+        "unknown": "未知",
+        "testError": "测试出错：{msg}",
+        "nameModelRequired": "请填写名称与模型",
+        "created": "已新建：{name}（在卡片上「设为激活」以启用）",
+        "savedActive": "已保存，激活配置即时生效，无需重启",
+        "saved": "已保存",
+        "saveFailed": "保存失败：{msg}"
+      }
+    },
+    "retryLayer": {
+      "connect": {
+        "title": "建连重试",
+        "where": "SDK · 拿到 200 之前",
+        "trigger": "连不上或还没拿到 200：连接重置 / 读写超时 / DNS 失败等网络层错误，以及 HTTP 408、429、500、502、503、504。",
+        "skips": "其余状态码（400 / 401 / 403 / 404 / 413 / 422 等）都是确定性拒绝，重发也一样失败，直接上抛。",
+        "desc": "原样重发同一个请求。流一旦开始（已经拿到 200），中途断开就不归这层管了。",
+        "attemptsLabel": "重试次数",
+        "defInterval": "0.5s→1s→2s 指数（封顶 8s）",
+        "offHint": "-1 = 一次都不重试，失败立刻上抛"
+      },
+      "empty": {
+        "title": "空响应重试",
+        "where": "SDK · 仅 openai 格式",
+        "trigger": "HTTP 200、finish_reason 是正常 stop，但整条响应一个内容块都没有——网关空帧、思考字段丢帧、采样打嗝都会长这样。",
+        "skips": "因 max_tokens 截断而没有内容的不算（那要靠调高输出上限解决，重发只会再撞一次）。",
+        "desc": "重发整个 prompt，所以在长上下文上比较贵，次数不宜给大。",
+        "attemptsLabel": "重试次数",
+        "defInterval": "0.5s→1s→2s 指数（封顶 8s）",
+        "offHint": "-1 = 空响应直接原样交出"
+      },
+      "stream": {
+        "title": "同 provider 安全窗口重试",
+        "where": "本项目 · 未交付输出前",
+        "trigger": "流已经建立（拿到 200）之后才出问题：连接中途断开、供应商 overloaded、流内的 429 / 5xx 错误事件——且一个 token 都还没交给调用方。",
+        "skips": "额度耗尽（402 / insufficient_quota，交给轮询换配置）、上下文过长（413 / context length，交给压缩）、400 / 401 / 403 / 404 / 422 确定性拒绝，都不重试。",
+        "desc": "在同一个配置上重放同一个请求。因为还没交付任何输出，重放不会重复模型输出或工具执行。",
+        "attemptsLabel": "重试次数",
+        "defInterval": "0.5s→1s 指数（封顶 4s）",
+        "offHint": "-1 = 断流直接交给外层的意图重跑"
+      },
+      "breaker": {
+        "title": "轮询熔断",
+        "where": "本项目 · 进程级，全局一份",
+        "trigger": "瞬时失败（429、5xx、网络错误）连续累计到阈值时熔断；余额不足（402）、密钥失效（401 / 403）、模型不存在（404）这类确定性失败不看阈值，第一次就熔断。",
+        "skips": "成功一次即清零，所以偶尔抽风的配置不会被慢慢攒到熔断。",
+        "desc": "熔断后进入冷却，冷却期内轮询直接跳过这个配置。状态落库，重启不丢。",
+        "attemptsLabel": "连续失败几次熔断",
+        "defInterval": "1min→5min→30min 梯度",
+        "offHint": "-1 = 瞬时失败永不熔断（确定性失败仍然熔断）"
+      },
+      "intent": {
+        "title": "意图重跑",
+        "where": "本项目 · 进程级，全局一份",
+        "trigger": "前面几层都没兜住：worker 以 model_error 收场——内层重试全部用尽，或者流已经开始交付输出后才断掉（那时重放不安全，只能整条重来）。",
+        "skips": "额度耗尽已经由轮询换配置处理，不在这里重跑；任务被暂停 / 终止 / 进入收尾时立即让位，不占用退避时间。",
+        "desc": "整条意图从头再跑一遍。它是最外层，一次重跑意味着里面几层的次数会再乘一遍。",
+        "attemptsLabel": "重跑次数",
+        "defInterval": "固定 3s",
+        "offHint": "-1 = 不重跑，该意图直接判为 blocked"
+      }
+    },
+    "retry": {
+      "defaultN": "默认 {n}",
+      "triggerLabel": "触发",
+      "skipsLabel": "不走这层",
+      "intervalMs": "间隔 ms",
+      "defaultBackoff": "默认退避",
+      "fixed": "固定 {human}",
+      "emptyLine": "留空 = 用默认；{hint}。",
+      "override": {
+        "label": "重试覆盖",
+        "hint": "只对这个配置生效，覆盖「重试与退避」里的全局默认。每格留空 = 跟随全局；次数填 -1 = 关掉这层重试；间隔填了就用固定间隔取代指数退避。熔断与意图重跑是进程级的，只能在全局那页调。"
+      },
+      "loading": "读取重试策略…",
+      "intro": "一次模型调用的失败会依次经过五层重试，由内到外：<chain> 建连 → 空响应 → 同 provider 安全窗口 → 轮询熔断 → 意图重跑</chain>。内层用尽才轮到外层，所以次数是<emph>相乘</emph>的——把每层都拉满，一次抖动能烧掉几十次请求。 全部留空即当前默认值，与没有这页时的行为完全一致。前三层可以在每个模型配置里单独覆盖。",
+      "save": "保存",
+      "resetAll": "全部恢复默认",
+      "toast": {
+        "loadFailed": "读取重试策略失败：{msg}",
+        "saved": "已保存，即时生效（正在跑的这一轮调用仍用旧参数）",
+        "saveFailed": "保存失败：{msg}"
+      }
+    }
   }
 }
