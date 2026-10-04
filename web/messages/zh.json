@@ -2520,26 +2520,6 @@
       "fb256b6b": "证据说明",
       "fbdca45e": "下移证据 {var0}"
     },
-    "link-traffic-dialog": {
-      "16168dd8": "条流量保存为已有漏洞的证据。",
-      "23b3add2": "将所选",
-      "2fa13b77": "已选漏洞：#{var0} {var1}",
-      "300ee3de": "加载中…",
-      "4d0b4688": "取消",
-      "504e2153": "请选择一个漏洞",
-      "659b30b2": "名称 / 摘要 / 漏洞类别",
-      "6644f061": "保存中…",
-      "67a246a3": "下一页",
-      "7640bed5": "没有匹配的漏洞，请先登记漏洞",
-      "aa250a0f": "关联到漏洞",
-      "b41561d8": "上一页",
-      "bce2ef61": "条",
-      "c044ce49": "确认关联",
-      "dae828fe": "第",
-      "e75feb88": "查找漏洞",
-      "eaa96d40": "页 · 共",
-      "ff792716": "已关联 {var0} 条流量到漏洞 #{var1}"
-    },
     "table-pagination": {
       "14ce4ab1": "共 0 条",
       "2189643c": "条/页",
@@ -5815,5 +5795,22 @@
       "pinFailed": "置顶失败：{msg}",
       "unpinFailed": "取消置顶失败：{msg}"
     }
+  },
+  "linkTraffic": {
+    "title": "关联到漏洞",
+    "description": "将所选 {count} 条流量保存为已有漏洞的证据。",
+    "findLabel": "查找漏洞",
+    "searchPlaceholder": "名称 / 摘要 / 漏洞类别",
+    "loading": "加载中…",
+    "empty": "没有匹配的漏洞，请先登记漏洞",
+    "prevPage": "上一页",
+    "nextPage": "下一页",
+    "pageInfo": "第 {page} 页 · 共 {total} 条",
+    "selected": "已选漏洞：#{id} {name}",
+    "selectPrompt": "请选择一个漏洞",
+    "cancel": "取消",
+    "saving": "保存中…",
+    "confirm": "确认关联",
+    "boundToast": "已关联 {count} 条流量到漏洞 #{id}"
   }
 }
