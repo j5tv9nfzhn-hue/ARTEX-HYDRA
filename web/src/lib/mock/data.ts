@@ -824,7 +824,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "root",
       type: "fact",
-      payload: P({ summary: "根：acme.com 外网→内网纵深渗透" }),
+      payload: P({ summary: "루트: acme.com 외부망→내부망 심층 침투" }),
       priority: 0,
       state: "origin",
       origin: "system",
@@ -835,7 +835,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "g1",
       type: "goal",
-      payload: P({ text: "获取 acme.com 后台管理权限" }),
+      payload: P({ text: "acme.com 관리자 백오피스 권한 획득" }),
       priority: 9,
       state: "met",
       origin: "goals",
@@ -844,7 +844,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "g2",
       type: "goal",
-      payload: P({ text: "读取用户敏感数据" }),
+      payload: P({ text: "사용자 민감 데이터 열람" }),
       priority: 8,
       state: "open",
       origin: "goals",
@@ -853,7 +853,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "g3",
       type: "goal",
-      payload: P({ text: "从外网突破 DMZ，建立内网立足点" }),
+      payload: P({ text: "외부망에서 DMZ 돌파, 내부망 거점 확보" }),
       priority: 9,
       state: "met",
       origin: "goals",
@@ -862,7 +862,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "g4",
       type: "goal",
-      payload: P({ text: "内网横向，拿下内部靶标域控 DC01" }),
+      payload: P({ text: "내부망 횡적 이동, 내부 표적 도메인 컨트롤러 DC01 장악" }),
       priority: 10,
       state: "met",
       origin: "goals",
@@ -873,7 +873,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i1",
       type: "intent",
-      payload: P({ summary: "acme.com 子域枚举与端口扫描" }),
+      payload: P({ summary: "acme.com 서브도메인 열거와 포트 스캔" }),
       priority: 6,
       state: "done",
       origin: "planner",
@@ -882,7 +882,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i2",
       type: "intent",
-      payload: P({ summary: "admin 后台默认口令 / 弱口令测试" }),
+      payload: P({ summary: "admin 백오피스 기본 비밀번호 / 취약한 비밀번호 테스트" }),
       priority: 9,
       state: "done",
       origin: "planner",
@@ -891,7 +891,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i3",
       type: "intent",
-      payload: P({ summary: "枚举后台功能与用户数据接口" }),
+      payload: P({ summary: "백오피스 기능과 사용자 데이터 엔드포인트 열거" }),
       priority: 8,
       state: "running",
       origin: "planner",
@@ -900,7 +900,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i4",
       type: "intent",
-      payload: P({ summary: "www.acme.com/search 页 SQL 注入探测" }),
+      payload: P({ summary: "www.acme.com/search 페이지 SQL 인젝션 탐지" }),
       priority: 8,
       state: "done",
       origin: "planner",
@@ -909,7 +909,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i5",
       type: "intent",
-      payload: P({ summary: "api.acme.com 订单接口越权(IDOR)测试" }),
+      payload: P({ summary: "api.acme.com 주문 엔드포인트 권한 우회(IDOR) 테스트" }),
       priority: 8,
       state: "running",
       origin: "planner",
@@ -918,7 +918,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "ig",
       type: "intent",
-      payload: P({ summary: "www.acme.com .git 源码泄露与硬编码凭据提取" }),
+      payload: P({ summary: "www.acme.com .git 소스 코드 유출과 하드코딩 자격 증명 추출" }),
       priority: 7,
       state: "done",
       origin: "planner",
@@ -929,7 +929,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i6",
       type: "intent",
-      payload: P({ summary: "shop.acme.com 组件指纹识别与 CVE 关联" }),
+      payload: P({ summary: "shop.acme.com 컴포넌트 지문 식별과 CVE 연관" }),
       priority: 7,
       state: "done",
       origin: "planner",
@@ -938,7 +938,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i7",
       type: "intent",
-      payload: P({ summary: "触发 shop 反序列化 RCE，获取反弹 shell" }),
+      payload: P({ summary: "shop 역직렬화 RCE 유발, 리버스 셸 획득" }),
       priority: 9,
       state: "done",
       origin: "planner",
@@ -947,7 +947,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i8",
       type: "intent",
-      payload: P({ summary: "DMZ 立足点本地信息收集与提权至 root" }),
+      payload: P({ summary: "DMZ 거점 로컬 정보 수집과 root 권한 상승" }),
       priority: 8,
       state: "done",
       origin: "planner",
@@ -958,7 +958,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i9",
       type: "intent",
-      payload: P({ summary: "以立足点为 pivot 做内网主机发现" }),
+      payload: P({ summary: "거점을 pivot 삼아 내부망 호스트 발견" }),
       priority: 8,
       state: "done",
       origin: "planner",
@@ -967,7 +967,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i10",
       type: "intent",
-      payload: P({ summary: "内网凭据复用与密码喷洒" }),
+      payload: P({ summary: "내부망 자격 증명 재사용과 패스워드 스프레이" }),
       priority: 8,
       state: "running",
       origin: "planner",
@@ -976,7 +976,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i11",
       type: "intent",
-      payload: P({ summary: "内部 Jenkins 未授权 Groovy 脚本执行(RCE)" }),
+      payload: P({ summary: "내부 Jenkins 미인증 Groovy 스크립트 실행(RCE)" }),
       priority: 9,
       state: "done",
       origin: "planner",
@@ -985,7 +985,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i12",
       type: "intent",
-      payload: P({ summary: "对域服务账号做 Kerberoasting 并离线破解" }),
+      payload: P({ summary: "도메인 서비스 계정 대상 Kerberoasting 후 오프라인 크래킹" }),
       priority: 8,
       state: "done",
       origin: "planner",
@@ -994,7 +994,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "i13",
       type: "intent",
-      payload: P({ summary: "用域管理员凭据登录并控制域控 DC01" }),
+      payload: P({ summary: "도메인 관리자 자격 증명으로 로그인해 도메인 컨트롤러 DC01 장악" }),
       priority: 10,
       state: "done",
       origin: "planner",
@@ -1005,7 +1005,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fa1",
       type: "fact",
-      payload: P({ summary: "发现子域 admin.acme.com（Element-UI 后台）" }),
+      payload: P({ summary: "서브도메인 admin.acme.com 발견(Element-UI 백오피스)" }),
       priority: 0,
       state: "open",
       origin: "work#1",
@@ -1014,7 +1014,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fa2",
       type: "fact",
-      payload: P({ summary: "search 页 q 参数为 error-based 注入点(MSSQL)" }),
+      payload: P({ summary: "search 페이지 q 파라미터가 오류 기반 인젝션 지점(MSSQL)" }),
       priority: 0,
       state: "open",
       origin: "work#4",
@@ -1023,7 +1023,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "faGit",
       type: "fact",
-      payload: P({ summary: ".git 可下载，git-dumper 还原出后端源码" }),
+      payload: P({ summary: ".git 다운로드 가능, git-dumper 로 백엔드 소스 코드 복원" }),
       priority: 0,
       state: "open",
       origin: "workG",
@@ -1032,7 +1032,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "faCreds",
       type: "fact",
-      payload: P({ summary: "源码 config.php 硬编码 DB 口令 sa / Acme@2021（疑似内网通用）" }),
+      payload: P({ summary: "소스 코드 config.php 에 하드코딩된 DB 비밀번호 sa / Acme@2021(내부망 공용으로 추정)" }),
       priority: 0,
       state: "open",
       origin: "workG",
@@ -1041,7 +1041,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fa3",
       type: "fact",
-      payload: P({ summary: "shop 指纹命中 Fastjson 1.2.24（存在已知反序列化 RCE）" }),
+      payload: P({ summary: "shop 지문이 Fastjson 1.2.24 에 적중(알려진 역직렬화 RCE 존재)" }),
       priority: 0,
       state: "open",
       origin: "work#6",
@@ -1050,7 +1050,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fa4",
       type: "fact",
-      payload: P({ summary: "反弹 shell 成功：www-data@dmz-web01(10.0.20.15)，位于 DMZ 段" }),
+      payload: P({ summary: "리버스 셸 성공: www-data@dmz-web01(10.0.20.15), DMZ 세그먼트에 위치" }),
       priority: 0,
       state: "open",
       origin: "work#7",
@@ -1059,7 +1059,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fa5",
       type: "fact",
-      payload: P({ summary: "sudo -l：(ALL) NOPASSWD: /usr/bin/python3 → 可提权 root" }),
+      payload: P({ summary: "sudo -l: (ALL) NOPASSWD: /usr/bin/python3 → root 권한 상승 가능" }),
       priority: 0,
       state: "open",
       origin: "work#8",
@@ -1068,7 +1068,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fa6",
       type: "fact",
-      payload: P({ summary: "立足点第二网卡直连内网 10.10.10.0/24（跨越 DMZ 边界）" }),
+      payload: P({ summary: "거점의 두 번째 NIC 가 내부망 10.10.10.0/24 에 직결(DMZ 경계를 넘음)" }),
       priority: 0,
       state: "open",
       origin: "work#9",
@@ -1077,7 +1077,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fa7",
       type: "fact",
-      payload: P({ summary: "内网存活：10.10.10.10 DC01(域控) / 10.10.10.5 FS01(SMB) / 10.10.10.20 JENKINS" }),
+      payload: P({ summary: "내부망 생존: 10.10.10.10 DC01(도메인 컨트롤러) / 10.10.10.5 FS01(SMB) / 10.10.10.20 JENKINS" }),
       priority: 0,
       state: "open",
       origin: "work#9",
@@ -1086,7 +1086,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fa8",
       type: "fact",
-      payload: P({ summary: "JENKINS 控制台 /script 无鉴权，可直接执行 Groovy" }),
+      payload: P({ summary: "JENKINS 콘솔 /script 미인증, Groovy 직접 실행 가능" }),
       priority: 0,
       state: "open",
       origin: "work#11",
@@ -1095,7 +1095,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fa9",
       type: "fact",
-      payload: P({ summary: "从 Jenkins 凭据库导出域账号 acme\\svc_deploy 明文口令" }),
+      payload: P({ summary: "Jenkins 자격 증명 저장소에서 도메인 계정 acme\\svc_deploy 평문 비밀번호 덤프" }),
       priority: 0,
       state: "open",
       origin: "work#11",
@@ -1104,7 +1104,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fa10",
       type: "fact",
-      payload: P({ summary: "Kerberoast 到 svc_sql 的 TGS，hashcat 破出口令 Sql@2020" }),
+      payload: P({ summary: "svc_sql 의 TGS 를 Kerberoast, hashcat 으로 비밀번호 Sql@2020 크랙" }),
       priority: 0,
       state: "open",
       origin: "work#12",
@@ -1115,7 +1115,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fi1",
       type: "finding",
-      payload: P({ summary: "后台默认口令 admin/admin123" }),
+      payload: P({ summary: "백오피스 기본 비밀번호 admin/admin123" }),
       priority: 0,
       state: "confirmed",
       origin: "work#2",
@@ -1124,7 +1124,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fi2",
       type: "finding",
-      payload: P({ summary: "SQL 注入（search q）可读 acme_prod 库" }),
+      payload: P({ summary: "SQL 인젝션(search q)으로 acme_prod DB 열람 가능" }),
       priority: 0,
       state: "confirmed",
       origin: "work#4",
@@ -1133,7 +1133,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fi3",
       type: "finding",
-      payload: P({ summary: "IDOR：/v1/orders?id= 可越权读他人订单" }),
+      payload: P({ summary: "IDOR: /v1/orders?id= 로 타인 주문 권한 우회 조회" }),
       priority: 0,
       state: "confirmed",
       origin: "work#5",
@@ -1142,7 +1142,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fiSrc",
       type: "finding",
-      payload: P({ summary: "源码泄露 + 硬编码数据库凭据（sa/Acme@2021）" }),
+      payload: P({ summary: "소스 코드 유출 + 하드코딩 데이터베이스 자격 증명(sa/Acme@2021)" }),
       priority: 0,
       state: "confirmed",
       origin: "workG",
@@ -1151,7 +1151,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fiRce",
       type: "finding",
-      payload: P({ summary: "shop Fastjson 反序列化 RCE，获得服务器命令执行" }),
+      payload: P({ summary: "shop Fastjson 역직렬화 RCE 로 서버 명령 실행 획득" }),
       priority: 0,
       state: "confirmed",
       origin: "work#7",
@@ -1160,7 +1160,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fiPriv",
       type: "finding",
-      payload: P({ summary: "DMZ 立足点本地提权至 root（sudo NOPASSWD 错配）" }),
+      payload: P({ summary: "DMZ 거점 로컬 권한 상승 root(sudo NOPASSWD 오설정)" }),
       priority: 0,
       state: "confirmed",
       origin: "work#8",
@@ -1169,7 +1169,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fiJenkins",
       type: "finding",
-      payload: P({ summary: "内部 Jenkins 未授权 Groovy → 服务器 RCE" }),
+      payload: P({ summary: "내부 Jenkins 미인증 Groovy → 서버 RCE" }),
       priority: 0,
       state: "confirmed",
       origin: "work#11",
@@ -1178,7 +1178,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fiKerb",
       type: "finding",
-      payload: P({ summary: "Kerberoasting 破解域服务账号 svc_sql 口令" }),
+      payload: P({ summary: "Kerberoasting 으로 도메인 서비스 계정 svc_sql 비밀번호 크랙" }),
       priority: 0,
       state: "confirmed",
       origin: "work#12",
@@ -1187,7 +1187,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fiDC",
       type: "finding",
-      payload: P({ summary: "拿下域控 DC01（Domain Admin）—— 内部靶标达成" }),
+      payload: P({ summary: "도메인 컨트롤러 DC01 장악(Domain Admin): 내부 목표 달성" }),
       priority: 0,
       state: "confirmed",
       origin: "work#13",
@@ -1198,7 +1198,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "h1",
       type: "hint",
-      payload: P({ summary: "后台是 Element-UI，优先跑默认口令表" }),
+      payload: P({ summary: "백오피스가 Element-UI 라 기본 비밀번호 목록을 우선 실행" }),
       priority: 5,
       state: "consumed",
       origin: "mainagent",
@@ -1207,7 +1207,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "h2",
       type: "hint",
-      payload: P({ summary: "内网优先打 Jenkins：未授权 /script 直接 Groovy RCE" }),
+      payload: P({ summary: "내부망은 Jenkins 를 우선 공략: 미인증 /script 로 Groovy RCE 직행" }),
       priority: 6,
       state: "consumed",
       origin: "mainagent",
@@ -1216,7 +1216,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "h3",
       type: "hint",
-      payload: P({ summary: "源码里那组 DB 口令拿去内网喷洒，大概率通用" }),
+      payload: P({ summary: "소스 코드의 그 DB 비밀번호를 내부망에 스프레이, 공용일 가능성 높음" }),
       priority: 6,
       state: "consumed",
       origin: "mainagent",
@@ -3912,7 +3912,7 @@ export const coverageGraph = {
       domain: "www.acme.com",
       url: "https://www.acme.com",
       port: 443,
-      page_title: "Acme 首页",
+      page_title: "Acme 홈페이지",
       status_code: 200,
     },
     {
@@ -3958,7 +3958,7 @@ export const coverageGraph = {
       domain: "admin.acme.com",
       url: "https://admin.acme.com",
       port: 443,
-      page_title: "后台登录",
+      page_title: "백오피스 로그인",
       status_code: 200,
     },
     {
