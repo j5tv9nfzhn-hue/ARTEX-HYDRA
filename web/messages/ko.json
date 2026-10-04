@@ -6552,5 +6552,230 @@
         "saveFailed": "저장 실패: {msg}"
       }
     }
+  },
+  "notifyPage": {
+    "title": "알림 발송",
+    "subtitle": "취약점을 발견하면 DingTalk · Feishu · WeCom 등의 채널로 알림을 보냅니다. 채널마다 발송 시점과 필터 규칙을 따로 설정할 수 있습니다.",
+    "globalSwitch": "전체 스위치",
+    "addChannel": "채널 추가",
+    "disabled": "사용 안 함",
+    "aria": {
+      "globalSwitch": "알림 발송 전체 스위치",
+      "enable": "사용",
+      "delete": "삭제",
+      "statusChange": "상태 변경 수신"
+    },
+    "toast": {
+      "loadConfigFailed": "알림 설정을 불러오지 못했습니다: {msg}",
+      "loadChannelsFailed": "채널 목록을 불러오지 못했습니다: {msg}",
+      "nameRequired": "채널 이름을 입력하세요",
+      "saved": "저장했습니다",
+      "channelAdded": "채널을 추가했습니다",
+      "saveFailed": "저장하지 못했습니다: {msg}",
+      "testSent": "테스트 메시지를 보냈습니다 ({ms} ms). 채널에서 확인해 주세요",
+      "testFailed": "테스트에 실패했습니다: {msg}",
+      "deleted": "삭제했습니다: {name}",
+      "deleteFailed": "삭제하지 못했습니다: {msg}",
+      "actionFailed": "처리하지 못했습니다: {msg}",
+      "globalOn": "알림 발송을 켰습니다",
+      "globalOff": "알림 발송을 멈췄습니다"
+    },
+    "stats": {
+      "channels": "채널",
+      "channelsHint": "사용 중 / 전체",
+      "sentToday": "오늘 전달",
+      "pending": "발송 대기",
+      "failed": "실패",
+      "backlog": "최장 적체",
+      "backlogStuck": "발송이 멈췄을 수 있습니다"
+    },
+    "global": {
+      "title": "전역 설정",
+      "baseUrl": "링크 기준 주소",
+      "baseUrlHint": "메시지의 「상세 보기」 버튼이 가리키는 주소입니다. 비워 두면 버튼을 넣지 않습니다.",
+      "digest": "요약 주기 (분)",
+      "digestHint": "「요약」 모드 채널에만 적용됩니다.",
+      "save": "전역 설정 저장"
+    },
+    "tab": {
+      "channels": "채널",
+      "deliveries": "전송 기록"
+    },
+    "mode": {
+      "realtime": "실시간",
+      "digest": "요약"
+    },
+    "kind": {
+      "dingtalk": "DingTalk",
+      "feishu": "Feishu",
+      "wecom": "WeCom",
+      "webhook": "범용 Webhook",
+      "telegram": "Telegram",
+      "email": "이메일"
+    },
+    "sheet": {
+      "addTitle": "알림 채널 추가",
+      "rateLimited": " · 기본 제한 {rate}건/분",
+      "rateUnlimited": " · 제한 없음",
+      "kindLabel": "채널 유형",
+      "kindLocked": "채널 유형은 바꿀 수 없습니다. 유형을 바꾸는 것은 자격 증명을 통째로 교체하는 것과 같으므로, 새 채널을 만들어 주세요.",
+      "nameLabel": "채널 이름",
+      "namePlaceholder": "긴급 대응방 / 일상 공지방",
+      "noFields": "이 채널의 입력 양식이 아직 정의되지 않았습니다 (프런트엔드에 CHANNEL_FIELDS 항목이 없습니다). 항목을 채운 뒤 다시 시도해 주세요.",
+      "modeLabel": "발송 시점",
+      "modeRealtime": "실시간 · 취약점마다 한 건씩 발송",
+      "modeDigest": "요약 · 주기마다 한 건으로 묶어 발송",
+      "modeHint": "「높음 이상은 실시간, 나머지는 요약」처럼 하려면 채널을 두 개 만드세요. 하나는 실시간 + 최소 심각도 높음, 다른 하나는 요약 + 심각도 제한 없음으로 설정합니다.",
+      "rateLabel": "전송 제한 (건/분)",
+      "ratePlaceholder": "0 = 제한 없음",
+      "rateHint": "비워 두면 채널 기본값을 씁니다. 0은 제한 없음을 뜻합니다. 제한을 넘어도 메시지를 버리지 않고 발송만 미룹니다.",
+      "enable": "이 채널 사용",
+      "save": "저장",
+      "add": "추가",
+      "sendTest": "테스트 메시지 발송"
+    },
+    "filter": {
+      "title": "필터 규칙 (비워 두면 필터링하지 않음)",
+      "minSeverity": "최소 심각도",
+      "includeLabel": "이 취약점 유형만 발송",
+      "includePlaceholder": "SQL 주입\n명령 실행",
+      "includeHint": "한 줄에 키워드 하나씩. 대소문자를 구분하지 않는 부분 문자열 매칭입니다. 비우면 모든 유형입니다.",
+      "excludeLabel": "이 취약점 유형은 제외",
+      "excludePlaceholder": "정보 유출",
+      "excludeHint": "제외가 포함보다 우선합니다. 둘 다 걸리면 제외됩니다.",
+      "taskIds": "작업 ID 한정",
+      "assetIds": "자산 ID 한정",
+      "idsHint": "작업/자산을 비우면 제한하지 않습니다. 값을 넣으면 취약점과 교집합이 있어야 합니다.",
+      "onStatusChange": "취약점 처리 상태가 바뀔 때도 발송 (실시간 모드만)"
+    },
+    "severityOpt": {
+      "all": "제한 없음",
+      "low": "낮음 이상",
+      "medium": "중간 이상",
+      "high": "높음 이상",
+      "critical": "심각만"
+    },
+    "masked": {
+      "savedTail": "저장됨 (끝자리 {tail}) · 새 값을 입력하면 덮어쓰고, 비우면 이 항목을 삭제합니다",
+      "saved": "저장됨 · 새 값을 입력하면 덮어쓰고, 비우면 이 항목을 삭제합니다"
+    },
+    "summary": {
+      "includeCount": "유형 {n}개 포함",
+      "excludeCount": "{n}개 제외",
+      "taskCount": "작업 {n}개",
+      "assetCount": "자산 {n}개",
+      "statusChange": "상태 변경 포함",
+      "all": "모든 취약점"
+    },
+    "field": {
+      "dingtalk": {
+        "webhook": {
+          "label": "Webhook 주소"
+        },
+        "secret": {
+          "label": "서명 비밀키",
+          "help": "봇 보안 설정에서 「서명」을 선택했을 때 입력합니다. 「사용자 지정 키워드」를 선택했거나 보안 설정을 켜지 않았다면 비워 둡니다."
+        }
+      },
+      "feishu": {
+        "webhook": {
+          "label": "Webhook 주소"
+        },
+        "secret": {
+          "label": "서명 검증 비밀키",
+          "help": "봇에서 「서명 검증」을 켰을 때 입력하고, 아니면 비워 둡니다."
+        }
+      },
+      "wecom": {
+        "webhook": {
+          "label": "Webhook 주소"
+        }
+      },
+      "webhook": {
+        "url": {
+          "label": "대상 URL"
+        },
+        "method": {
+          "label": "요청 방식",
+          "opt": {
+            "POST": "POST (요청 본문 포함)",
+            "PUT": "PUT (요청 본문 포함)",
+            "PATCH": "PATCH (요청 본문 포함)",
+            "GET": "GET (요청 본문 없음)"
+          }
+        },
+        "headers": {
+          "label": "사용자 지정 요청 헤더",
+          "help": "한 줄에 KEY=VALUE 하나씩. 예: Authorization=Bearer xxx"
+        },
+        "body_template": {
+          "label": "요청 본문 템플릿",
+          "help": "비워 두면 내장 기본 템플릿을 씁니다. 변수: '{{.Title}} {{.Batch}} {{.Count}} {{.HomeURL}} {{.SentAt}}', 그리고 range .Items 아래의 .Name/.VulnClass/.Severity/.Summary/.Assets/.DetailURL/.StatusLabel. 문자열을 넣을 때는 '{{.Xxx}}' 대신 '{{json .Xxx}}'를 쓰세요. 그러지 않으면 제목 안의 따옴표가 JSON을 깨뜨립니다."
+        }
+      },
+      "telegram": {
+        "bot_token": {
+          "label": "Bot Token"
+        },
+        "chat_id": {
+          "label": "Chat ID"
+        },
+        "base_url": {
+          "label": "API 주소",
+          "help": "비워 두면 공식 주소를 씁니다. 자체 구축한 Bot API 리버스 프록시를 쓸 때 입력합니다."
+        }
+      },
+      "email": {
+        "host": {
+          "label": "SMTP 서버"
+        },
+        "port": {
+          "label": "포트",
+          "help": "587은 STARTTLS를 씁니다. 465는 「암시적 TLS」를 켜 주세요."
+        },
+        "username": {
+          "label": "계정"
+        },
+        "password": {
+          "label": "비밀번호 / 앱 비밀번호"
+        },
+        "from": {
+          "label": "발신자"
+        },
+        "to": {
+          "label": "수신자",
+          "help": "여러 주소는 쉼표로 구분합니다."
+        },
+        "tls": {
+          "label": "암시적 TLS",
+          "help": "465 포트에서는 켜고, 587 포트에서는 끕니다 (자동으로 STARTTLS를 씁니다)."
+        }
+      }
+    },
+    "delivery": {
+      "loadFailed": "전송 기록을 불러오지 못했습니다: {msg}",
+      "requeued": "다시 대기열에 넣었습니다",
+      "resendFailed": "재발송에 실패했습니다: {msg}",
+      "allChannels": "모든 채널",
+      "allStates": "모든 상태",
+      "refresh": "새로 고침",
+      "totalCount": "총 {total}건",
+      "colTime": "시간",
+      "colFinding": "취약점",
+      "colChannel": "채널",
+      "colState": "상태",
+      "colAttempts": "시도",
+      "colError": "오류",
+      "loading": "불러오는 중…",
+      "empty": "전송 기록이 없습니다",
+      "noTitle": "(제목 없음)",
+      "statusChanged": "상태 변경",
+      "resend": "재발송"
+    },
+    "unit": {
+      "sec": "{n}초",
+      "min": "{n}분",
+      "hour": "{n}시간"
+    }
   }
 }

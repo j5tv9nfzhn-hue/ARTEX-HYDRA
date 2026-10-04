@@ -6552,5 +6552,230 @@
         "saveFailed": "保存失败：{msg}"
       }
     }
+  },
+  "notifyPage": {
+    "title": "通知推送",
+    "subtitle": "发现漏洞时推送到钉钉 / 飞书 / 企业微信等渠道 · 每个渠道可独立设推送时机与过滤规则",
+    "globalSwitch": "总开关",
+    "addChannel": "添加渠道",
+    "disabled": "已停用",
+    "aria": {
+      "globalSwitch": "推送总开关",
+      "enable": "启用",
+      "delete": "删除",
+      "statusChange": "接收状态变更"
+    },
+    "toast": {
+      "loadConfigFailed": "读取推送配置失败：{msg}",
+      "loadChannelsFailed": "读取渠道列表失败：{msg}",
+      "nameRequired": "请填写渠道名称",
+      "saved": "已保存",
+      "channelAdded": "已添加渠道",
+      "saveFailed": "保存失败：{msg}",
+      "testSent": "已发出测试消息（{ms} ms），请到群里确认",
+      "testFailed": "测试失败：{msg}",
+      "deleted": "已删除：{name}",
+      "deleteFailed": "删除失败：{msg}",
+      "actionFailed": "操作失败：{msg}",
+      "globalOn": "推送已开启",
+      "globalOff": "推送已暂停"
+    },
+    "stats": {
+      "channels": "渠道",
+      "channelsHint": "启用 / 总数",
+      "sentToday": "今日送达",
+      "pending": "待发送",
+      "failed": "失败",
+      "backlog": "最久积压",
+      "backlogStuck": "推送可能卡住了"
+    },
+    "global": {
+      "title": "全局设置",
+      "baseUrl": "回链地址",
+      "baseUrlHint": "消息里「查看详情」按钮指向的地址。留空则不带按钮。",
+      "digest": "汇总周期（分钟）",
+      "digestHint": "仅对「汇总」模式的渠道生效。",
+      "save": "保存全局设置"
+    },
+    "tab": {
+      "channels": "渠道",
+      "deliveries": "投递记录"
+    },
+    "mode": {
+      "realtime": "实时",
+      "digest": "汇总"
+    },
+    "kind": {
+      "dingtalk": "钉钉",
+      "feishu": "飞书",
+      "wecom": "企业微信",
+      "webhook": "通用 Webhook",
+      "telegram": "Telegram",
+      "email": "邮件"
+    },
+    "sheet": {
+      "addTitle": "添加通知渠道",
+      "rateLimited": " · 默认限流 {rate} 条/分钟",
+      "rateUnlimited": " · 不限流",
+      "kindLabel": "渠道类型",
+      "kindLocked": "渠道类型不可修改——改了类型等于换一套凭据，请新建渠道。",
+      "nameLabel": "渠道名称",
+      "namePlaceholder": "应急响应群 / 日常播报群",
+      "noFields": "该渠道的表单尚未定义（前端缺 CHANNEL_FIELDS 条目），请补全后再试。",
+      "modeLabel": "推送时机",
+      "modeRealtime": "实时 · 每条漏洞单独发一条",
+      "modeDigest": "汇总 · 按周期合并成一条",
+      "modeHint": "想做「高危实时、其余汇总」就建两个渠道：一个实时 + 门槛高危，一个汇总 + 不限级别。",
+      "rateLabel": "限流（条/分钟）",
+      "ratePlaceholder": "0 = 不限",
+      "rateHint": "留空用渠道默认值；0 表示不限流。超限不会丢消息，只会推迟发送。",
+      "enable": "启用该渠道",
+      "save": "保存",
+      "add": "添加",
+      "sendTest": "发送测试消息"
+    },
+    "filter": {
+      "title": "过滤规则（留空即不过滤）",
+      "minSeverity": "最低级别",
+      "includeLabel": "只推这些漏洞类型",
+      "includePlaceholder": "SQL注入\n命令执行",
+      "includeHint": "每行一个关键词，大小写不敏感的子串匹配。留空=全部类型。",
+      "excludeLabel": "排除这些漏洞类型",
+      "excludePlaceholder": "信息泄露",
+      "excludeHint": "排除优先于包含：同时命中时会被排除。",
+      "taskIds": "限定任务 ID",
+      "assetIds": "限定资产 ID",
+      "idsHint": "任务/资产留空=不限；填写后要求与漏洞有交集。",
+      "onStatusChange": "漏洞处置状态变更时也推送（仅实时模式）"
+    },
+    "severityOpt": {
+      "all": "不限",
+      "low": "低危及以上",
+      "medium": "中危及以上",
+      "high": "高危及以上",
+      "critical": "仅严重"
+    },
+    "masked": {
+      "savedTail": "已保存（尾号 {tail}） · 填入新值即覆盖，清空则删除该项",
+      "saved": "已保存 · 填入新值即覆盖，清空则删除该项"
+    },
+    "summary": {
+      "includeCount": "类型含 {n} 词",
+      "excludeCount": "排除 {n} 词",
+      "taskCount": "{n} 个任务",
+      "assetCount": "{n} 个资产",
+      "statusChange": "含状态变更",
+      "all": "全部漏洞"
+    },
+    "field": {
+      "dingtalk": {
+        "webhook": {
+          "label": "Webhook 地址"
+        },
+        "secret": {
+          "label": "加签密钥",
+          "help": "机器人安全设置选「加签」时填写；选「自定义关键词」或未开启安全设置则留空"
+        }
+      },
+      "feishu": {
+        "webhook": {
+          "label": "Webhook 地址"
+        },
+        "secret": {
+          "label": "签名校验密钥",
+          "help": "机器人开启「签名校验」时填写，否则留空"
+        }
+      },
+      "wecom": {
+        "webhook": {
+          "label": "Webhook 地址"
+        }
+      },
+      "webhook": {
+        "url": {
+          "label": "目标 URL"
+        },
+        "method": {
+          "label": "请求方法",
+          "opt": {
+            "POST": "POST（带请求体）",
+            "PUT": "PUT（带请求体）",
+            "PATCH": "PATCH（带请求体）",
+            "GET": "GET（不带请求体）"
+          }
+        },
+        "headers": {
+          "label": "自定义请求头",
+          "help": "每行 KEY=VALUE，例如 Authorization=Bearer xxx"
+        },
+        "body_template": {
+          "label": "请求体模板",
+          "help": "留空用内置默认模板。变量：'{{.Title}} {{.Batch}} {{.Count}} {{.HomeURL}} {{.SentAt}}'，以及 range .Items 下的 .Name/.VulnClass/.Severity/.Summary/.Assets/.DetailURL/.StatusLabel。插入字符串请用 '{{json .Xxx}}' 而不是 '{{.Xxx}}'，否则标题里的引号会破坏 JSON。"
+        }
+      },
+      "telegram": {
+        "bot_token": {
+          "label": "Bot Token"
+        },
+        "chat_id": {
+          "label": "Chat ID"
+        },
+        "base_url": {
+          "label": "API 地址",
+          "help": "留空用官方地址；自建 Bot API 反代时填写"
+        }
+      },
+      "email": {
+        "host": {
+          "label": "SMTP 服务器"
+        },
+        "port": {
+          "label": "端口",
+          "help": "587 走 STARTTLS；465 请把「隐式 TLS」打开"
+        },
+        "username": {
+          "label": "账号"
+        },
+        "password": {
+          "label": "密码 / 授权码"
+        },
+        "from": {
+          "label": "发件人"
+        },
+        "to": {
+          "label": "收件人",
+          "help": "多个地址用逗号分隔"
+        },
+        "tls": {
+          "label": "隐式 TLS",
+          "help": "465 端口打开；587 保持关闭（会自动 STARTTLS）"
+        }
+      }
+    },
+    "delivery": {
+      "loadFailed": "读取投递记录失败：{msg}",
+      "requeued": "已重新入队",
+      "resendFailed": "重发失败：{msg}",
+      "allChannels": "全部渠道",
+      "allStates": "全部状态",
+      "refresh": "刷新",
+      "totalCount": "共 {total} 条",
+      "colTime": "时间",
+      "colFinding": "漏洞",
+      "colChannel": "渠道",
+      "colState": "状态",
+      "colAttempts": "尝试",
+      "colError": "错误",
+      "loading": "加载中…",
+      "empty": "暂无投递记录",
+      "noTitle": "（无标题）",
+      "statusChanged": "状态变更",
+      "resend": "重发"
+    },
+    "unit": {
+      "sec": "{n} 秒",
+      "min": "{n} 分钟",
+      "hour": "{n} 小时"
+    }
   }
 }
