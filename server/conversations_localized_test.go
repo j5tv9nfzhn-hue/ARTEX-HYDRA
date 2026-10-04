@@ -67,3 +67,29 @@ func TestDecodeConversationRequestTooLargeLocalized(t *testing.T) {
 	}
 	assertKoreanError(t, "decode.too_large.response", resp.Error)
 }
+
+// TestConversationDefaultTitlesLocalized 는 대화 기본 제목 두 상수(F8)가 한국어이고 서로
+// 구별됨을 단언한다. convDefaultTitle 은 생성 기본값이자 자동 제목 분기의 센티넬이므로,
+// 중국어 "新对话" 로 되돌아가면 사용자가 대화 목록·삭제 다이얼로그에서 중국어를 보게 된다.
+func TestConversationDefaultTitlesLocalized(t *testing.T) {
+	assertKoreanError(t, "default_title", convDefaultTitle)
+	assertKoreanError(t, "attachment_title", convAttachmentTitle)
+	if convDefaultTitle == convAttachmentTitle {
+		t.Fatal("기본 제목과 첨부 기본 제목이 같으면 안 된다")
+	}
+}
+
+// TestIsDefaultConversationTitle 는 자동 제목 분기의 판정을 핀 고정한다. 생성 기본값
+// (convDefaultTitle)과 빈 제목은 자동 제목 대상이고, 사용자가 지은 제목은 아니다. 생성
+// 기본값과 센티넬이 같은 상수라 둘이 어긋나 자동 제목이 안 붙는 회귀를 막는다.
+func TestIsDefaultConversationTitle(t *testing.T) {
+	if !isDefaultConversationTitle("") {
+		t.Fatal("빈 제목은 자동 제목 대상이어야 한다")
+	}
+	if !isDefaultConversationTitle(convDefaultTitle) {
+		t.Fatalf("생성 기본값 %q 는 자동 제목 대상이어야 한다", convDefaultTitle)
+	}
+	if isDefaultConversationTitle("사용자가 지은 제목") {
+		t.Fatal("사용자가 지은 제목은 자동 제목 대상이 아니어야 한다")
+	}
+}

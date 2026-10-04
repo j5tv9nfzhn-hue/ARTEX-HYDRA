@@ -29,8 +29,9 @@ const (
 // 요청이 실패하면 이 문구가 그대로 토스트로 뜨므로 한국어로 둔다. 요청 필드명
 // (agent_key·title·pinned·ids·id)·식별자(LLM·API Key·token)는 사용자가 요청을 고치는 데
 // 쓰는 값이라 원문 그대로 둔다. 用語: 配置→설정(B4c-5), agent→에이전트. %d 가 든 상수는
-// fmt.Sprintf 형식 문자열이다. 기본 대화 제목 "新对话"(센티넬)·재검증 사유·트랜스크립트
-// 문구·트리거 메시지 골격은 이 묶음 밖이다(저널 참조). 로그·주석은 BRIEF 방침상 최하위.
+// fmt.Sprintf 형식 문자열이다. 기본 대화 제목·센티넬은 아래 convDefaultTitle·
+// convAttachmentTitle 로 분리했고(F8), 재검증 사유·트랜스크립트 문구·트리거 메시지
+// 골격은 이 묶음 밖이다(저널 참조). 로그·주석은 BRIEF 방침상 최하위.
 const (
 	convErrRequestTooLarge = "요청 본문이 너무 큽니다"
 	convErrAgentKeyEmpty   = "agent_key 는 비어 있을 수 없습니다"
@@ -45,6 +46,22 @@ const (
 	convErrMessageEmpty    = "메시지는 비어 있을 수 없습니다"
 	convErrBusy            = "이 대화가 이전 메시지를 처리하고 있습니다. 잠시 기다려 주세요"
 )
+
+// 대화 기본 제목. convDefaultTitle 은 표시 문구이자 센티넬이다. 대화를 만들 때 제목으로
+// 쓰고, 첫 사용자 메시지가 오면 제목이 비었거나 이 값일 때만 자동 제목으로 덮어쓴다
+// (sendConversationMessage). 대입하는 쪽과 비교하는 쪽이 어긋나면 자동 제목 분기가
+// 깨지므로 한 상수로 묶는다. convAttachmentTitle 은 첨부만 보낸 첫 메시지의 기본 제목이다.
+const (
+	convDefaultTitle    = "새 대화"
+	convAttachmentTitle = "첨부 메시지"
+)
+
+// isDefaultConversationTitle 은 대화가 아직 자동 생성된 기본 제목(빈 값 또는
+// convDefaultTitle)을 달고 있는지 알려준다. 이 경우 첫 사용자 메시지가 제목을 자동으로
+// 덮어쓴다. 생성 기본값과 이 판정이 같은 상수를 쓰므로 둘이 어긋날 수 없다.
+func isDefaultConversationTitle(title string) bool {
+	return title == "" || title == convDefaultTitle
+}
 
 func decodeConversationRequest(w http.ResponseWriter, r *http.Request, value any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, maxConversationRequestBytes)
@@ -130,7 +147,7 @@ func (s *Server) pgCreateConversation(w http.ResponseWriter, r *http.Request) {
 	}
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
-		title = "新对话"
+		title = convDefaultTitle
 	}
 	if utf8.RuneCountInString(title) > maxConversationTitleRunes {
 		writeErr(w, 400, fmt.Sprintf(convErrTitleTooLong, maxConversationTitleRunes))
@@ -461,10 +478,10 @@ func (s *Server) pgSendConversationMessage(w http.ResponseWriter, r *http.Reques
 	if _, err := pg.AppendConvActivity(c.ID, ua); err != nil {
 		log.Printf("[conv %d] append user msg failed: %v", c.ID, err)
 	}
-	if c.Title == "" || c.Title == "新对话" {
+	if isDefaultConversationTitle(c.Title) {
 		title := firstLine(msg, 40)
 		if title == "" {
-			title = "附件消息"
+			title = convAttachmentTitle
 		}
 		_ = pg.RenameConversation(c.ID, title)
 	}
