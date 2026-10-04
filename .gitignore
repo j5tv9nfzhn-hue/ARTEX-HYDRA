@@ -64,3 +64,7 @@ test-results/
 scan-output/
 evidence-local/
 *.local.env
+
+# API 키·비밀: 어디에 두든 커밋 금지
+*.env
+secrets.env
