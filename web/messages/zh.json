@@ -2698,16 +2698,6 @@
       "fb256b6b": "证据说明",
       "fbdca45e": "下移证据 {var0}"
     },
-    "http-code-block": {
-      "314c868f": "复制报文",
-      "36582b15": "已复制报文",
-      "7fd78167": "关闭自动换行",
-      "8255a8a9": "复制失败，请使用 Ctrl/Cmd+A 后复制",
-      "c6db2737": "（空）",
-      "e381a576": "已复制",
-      "f05db065": "HTTP 报文代码",
-      "fbcef9d6": "开启自动换行"
-    },
     "link-traffic-dialog": {
       "16168dd8": "条流量保存为已有漏洞的证据。",
       "23b3add2": "将所选",
@@ -2839,53 +2829,6 @@
       "8ea8a03a": "本会话暂无 Todo",
       "97f56688": "查看最近 Todo",
       "c6db2737": "（空）"
-    },
-    "traffic-evidence-viewer": {
-      "0430aae4": "请求 Request",
-      "073c639d": "加载更多正文",
-      "3594bb7e": "下载完整",
-      "3bce6946": "响应 Response",
-      "5a994d42": "查看绑定时保存的请求与响应",
-      "69186e9d": "流量证据 #",
-      "8aa00ac9": "预览流量",
-      "926f6b6b": "请求",
-      "96d4e680": "流量 ID：",
-      "a0d95bc3": "正文",
-      "c114f750": "字节",
-      "d67e5a4a": " · 当前为预览",
-      "ee180ed0": "。绑定时会保存完整正文。",
-      "f4eca6a6": "响应"
-    },
-    "traffic-picker-dialog": {
-      "73422182": "页",
-      "034e3b9a": "选择本页未绑定流量",
-      "08d8d0e1": "全部方法",
-      "14451dc6": "域名或 IP",
-      "1636407c": "绑定 {var0} 条流量",
-      "263544b5": "绑定流量",
-      "2b971bff": "筛选并多选请求/响应，已选记录会跨页保留。绑定后可设置用途、说明和顺序。",
-      "2fd51d31": "状态码",
-      "300ee3de": "加载中…",
-      "4d0b4688": "取消",
-      "4d150364": "请求方法",
-      "624d5f81": "方法 / URL",
-      "6312dd18": "没有匹配的流量",
-      "6644f061": "保存中…",
-      "67a246a3": "下一页",
-      "7bebeed9": "选择流量 {var0}",
-      "828ca6cd": "URL / 正文关键词",
-      "89b4aa63": "时间",
-      "b3addb5e": "已绑定",
-      "b41561d8": "上一页",
-      "b8aba490": "条 · 共",
-      "b9c70b05": "目标 host",
-      "bce2ef61": "条",
-      "cc1b21e8": "关键词",
-      "dae828fe": "第",
-      "de61aa8e": "预览",
-      "f24ddc2b": "已选",
-      "f2663619": "已绑定 {var0} 条流量",
-      "f3ea6d34": "操作"
     },
     "transcript": {
       "03e210a6": "拒绝",
@@ -4576,5 +4519,60 @@
     "label": "复制",
     "success": "已复制",
     "error": "复制失败，请手动选择文本复制"
+  },
+  "trafficEvidence": {
+    "picker": {
+      "title": "绑定流量",
+      "description": "筛选并多选请求/响应，已选记录会跨页保留。绑定后可设置用途、说明和顺序。",
+      "host": "目标 host",
+      "hostPlaceholder": "域名或 IP",
+      "method": "请求方法",
+      "allMethods": "全部方法",
+      "keyword": "关键词",
+      "keywordPlaceholder": "URL / 正文关键词",
+      "selectPage": "选择本页未绑定流量",
+      "colMethodUrl": "方法 / URL",
+      "colTime": "时间",
+      "colStatus": "状态码",
+      "colAction": "操作",
+      "selectOne": "选择流量 {id}",
+      "bound": "已绑定",
+      "preview": "预览",
+      "loading": "加载中…",
+      "noMatch": "没有匹配的流量",
+      "selectedSummary": "已选 {selected} 条 · 共 {total} 条",
+      "prevPage": "上一页",
+      "pageNo": "第 {page} 页",
+      "nextPage": "下一页",
+      "cancel": "取消",
+      "saving": "保存中…",
+      "bindCount": "绑定 {count} 条流量",
+      "boundToast": "已绑定 {count} 条流量"
+    },
+    "viewer": {
+      "title": "流量证据 #{id}",
+      "fallbackDesc": "查看绑定时保存的请求与响应",
+      "request": "请求 Request",
+      "response": "响应 Response",
+      "bodyBytes": "正文 {bytes} 字节",
+      "previewSuffix": " · 当前为预览",
+      "downloadRequest": "下载完整请求正文",
+      "downloadResponse": "下载完整响应正文",
+      "loadMore": "加载更多正文"
+    },
+    "captured": {
+      "title": "预览流量",
+      "description": "流量 ID：{id}。绑定时会保存完整正文。"
+    },
+    "code": {
+      "empty": "（空）",
+      "copyFailed": "复制失败，请使用 Ctrl/Cmd+A 后复制",
+      "wrapOff": "关闭自动换行",
+      "wrapOn": "开启自动换行",
+      "copiedPacket": "已复制报文",
+      "copyPacket": "复制报文",
+      "copied": "已复制",
+      "label": "HTTP 报文代码"
+    }
   }
 }

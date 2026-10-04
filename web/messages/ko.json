@@ -2698,16 +2698,6 @@
       "fb256b6b": "",
       "fbdca45e": ""
     },
-    "http-code-block": {
-      "314c868f": "",
-      "36582b15": "",
-      "7fd78167": "",
-      "8255a8a9": "",
-      "c6db2737": "",
-      "e381a576": "",
-      "f05db065": "",
-      "fbcef9d6": ""
-    },
     "link-traffic-dialog": {
       "16168dd8": "",
       "23b3add2": "",
@@ -2839,53 +2829,6 @@
       "8ea8a03a": "",
       "97f56688": "",
       "c6db2737": ""
-    },
-    "traffic-evidence-viewer": {
-      "0430aae4": "",
-      "073c639d": "",
-      "3594bb7e": "",
-      "3bce6946": "",
-      "5a994d42": "",
-      "69186e9d": "",
-      "8aa00ac9": "",
-      "926f6b6b": "",
-      "96d4e680": "",
-      "a0d95bc3": "",
-      "c114f750": "",
-      "d67e5a4a": "",
-      "ee180ed0": "",
-      "f4eca6a6": ""
-    },
-    "traffic-picker-dialog": {
-      "73422182": "",
-      "034e3b9a": "",
-      "08d8d0e1": "",
-      "14451dc6": "",
-      "1636407c": "",
-      "263544b5": "",
-      "2b971bff": "",
-      "2fd51d31": "",
-      "300ee3de": "",
-      "4d0b4688": "",
-      "4d150364": "",
-      "624d5f81": "",
-      "6312dd18": "",
-      "6644f061": "",
-      "67a246a3": "",
-      "7bebeed9": "",
-      "828ca6cd": "",
-      "89b4aa63": "",
-      "b3addb5e": "",
-      "b41561d8": "",
-      "b8aba490": "",
-      "b9c70b05": "",
-      "bce2ef61": "",
-      "cc1b21e8": "",
-      "dae828fe": "",
-      "de61aa8e": "",
-      "f24ddc2b": "",
-      "f2663619": "",
-      "f3ea6d34": ""
     },
     "transcript": {
       "03e210a6": "",
@@ -4576,5 +4519,60 @@
     "label": "복사",
     "success": "복사했습니다",
     "error": "복사에 실패했습니다. 텍스트를 직접 선택해 복사하세요"
+  },
+  "trafficEvidence": {
+    "picker": {
+      "title": "트래픽 연결",
+      "description": "요청·응답을 필터링해 여러 개를 선택할 수 있고, 선택한 기록은 페이지를 넘겨도 유지됩니다. 연결한 뒤에는 용도·설명·순서를 설정할 수 있습니다.",
+      "host": "대상 호스트",
+      "hostPlaceholder": "도메인 또는 IP",
+      "method": "요청 메서드",
+      "allMethods": "전체 메서드",
+      "keyword": "키워드",
+      "keywordPlaceholder": "URL / 본문 키워드",
+      "selectPage": "이 페이지의 미연결 트래픽 선택",
+      "colMethodUrl": "메서드 / URL",
+      "colTime": "시간",
+      "colStatus": "상태 코드",
+      "colAction": "동작",
+      "selectOne": "트래픽 {id} 선택",
+      "bound": "연결됨",
+      "preview": "미리 보기",
+      "loading": "불러오는 중…",
+      "noMatch": "일치하는 트래픽이 없습니다",
+      "selectedSummary": "{selected}건 선택 · 총 {total}건",
+      "prevPage": "이전 페이지",
+      "pageNo": "{page} 페이지",
+      "nextPage": "다음 페이지",
+      "cancel": "취소",
+      "saving": "저장 중…",
+      "bindCount": "트래픽 {count}건 연결",
+      "boundToast": "트래픽 {count}건을 연결했습니다"
+    },
+    "viewer": {
+      "title": "트래픽 증거 #{id}",
+      "fallbackDesc": "연결 시 저장된 요청·응답 보기",
+      "request": "요청 Request",
+      "response": "응답 Response",
+      "bodyBytes": "본문 {bytes} 바이트",
+      "previewSuffix": " · 현재 미리 보기",
+      "downloadRequest": "전체 요청 본문 다운로드",
+      "downloadResponse": "전체 응답 본문 다운로드",
+      "loadMore": "본문 더 불러오기"
+    },
+    "captured": {
+      "title": "트래픽 미리 보기",
+      "description": "트래픽 ID: {id}. 연결 시 전체 본문이 저장됩니다."
+    },
+    "code": {
+      "empty": "(비어 있음)",
+      "copyFailed": "복사에 실패했습니다. Ctrl/Cmd+A 로 전체 선택 후 복사하세요.",
+      "wrapOff": "자동 줄바꿈 끄기",
+      "wrapOn": "자동 줄바꿈 켜기",
+      "copiedPacket": "원문 복사됨",
+      "copyPacket": "원문 복사",
+      "copied": "복사됨",
+      "label": "HTTP 원문 코드"
+    }
   }
 }
