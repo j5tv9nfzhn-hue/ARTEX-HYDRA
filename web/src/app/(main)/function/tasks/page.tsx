@@ -144,20 +144,19 @@ function fmtBytes(n: number): string {
   return `${n} B`;
 }
 
-// UPLOAD_MARKER labels the auto-appended block of uploaded-file paths inside the task
-// description, so re-uploads append under the same block instead of adding a new header.
-const UPLOAD_MARKER = "【上传文件（绝对路径）】";
-
 // appendUploads folds newly-uploaded files' ABSOLUTE paths into the description as a
-// Read/Bash-friendly manifest — the worker opens them by path. Keeps one marked block:
-// first upload adds the header, later uploads append bullets under it.
-function appendUploads(desc: string, atts: ChatAttachment[]): string {
-  const bullets = atts.map((a) => `- ${a.abs ?? a.path}（${fmtBytes(a.size)}）`).join("\n");
-  if (desc.includes(UPLOAD_MARKER)) {
+// Read/Bash-friendly manifest — the worker opens them by path. Keeps one marked block
+// (tasksPage.upload.marker): first upload adds the header, later uploads append bullets
+// under it. The marker/hint come from the active locale so the description seed matches
+// the UI language; the includes() check reuses the same translated marker.
+function appendUploads(desc: string, atts: ChatAttachment[], t: Translator): string {
+  const marker = t("upload.marker");
+  const bullets = atts.map((a) => `- ${a.abs ?? a.path} (${fmtBytes(a.size)})`).join("\n");
+  if (desc.includes(marker)) {
     return `${desc.replace(/\s*$/, "")}\n${bullets}\n`;
   }
   const head = desc.trim() ? `${desc.replace(/\s*$/, "")}\n\n` : "";
-  return `${head}${UPLOAD_MARKER} worker 可用 Read/Bash 按路径打开：\n${bullets}\n`;
+  return `${head}${marker} ${t("upload.hint")}\n${bullets}\n`;
 }
 
 // POLL_MS is the task-list refresh interval. Task state moves on the server (planner /
@@ -639,7 +638,7 @@ export default function TasksPage() {
           total.files_deleted = total.files_deleted || r.files_deleted;
           total.findings_deleted += r.findings_deleted;
           total.llm_records_deleted += r.llm_records_deleted;
-          if (r.cleanup_warning) warnings.push(`#${id}：${r.cleanup_warning}`);
+          if (r.cleanup_warning) warnings.push(`#${id}: ${r.cleanup_warning}`);
           deleted.push(id);
         } catch (e) {
           failed.push({ id, message: (e as Error).message });
@@ -654,19 +653,24 @@ export default function TasksPage() {
           return next;
         });
         const details = deleteDetails(t, total);
-        const summary = `已删除 ${deleted.length} 个任务` + (details.length > 0 ? `（${details.join("，")}）` : "");
+        const summary =
+          details.length > 0
+            ? t("batch.deletedDetails", { count: deleted.length, details: details.join(", ") })
+            : t("batch.deleted", { count: deleted.length });
         if (warnings.length > 0) {
-          toast.warning(`${summary}；部分外部数据清理未完成：${warnings.join("；")}`);
+          toast.warning(t("batch.deleteWarn", { summary, warnings: warnings.join(", ") }));
         } else {
           toast.success(summary);
         }
       }
       if (failed.length > 0) {
-        const head = failed
+        const items = failed
           .slice(0, 3)
-          .map((f) => `#${f.id}（${f.message}）`)
-          .join("；");
-        toast.error(`${failed.length} 个任务删除失败：${head}${failed.length > 3 ? " 等" : ""}`);
+          .map((f) => `#${f.id} (${f.message})`)
+          .join(", ");
+        toast.error(
+          t("batch.deleteFailed", { count: failed.length, items, truncated: failed.length > 3 ? "yes" : "no" }),
+        );
       }
       load();
     },
@@ -692,26 +696,25 @@ export default function TasksPage() {
     const result = await api.archiveTasks(archivableTaskIDs);
     const succeeded = result.items.filter((item) => item.ok);
     const failed = result.items.filter((item) => !item.ok);
-    if (succeeded.length > 0) toast.success(`已将 ${succeeded.length} 个任务加入归档队列`);
+    if (succeeded.length > 0) toast.success(t("batch.archiveQueued", { count: succeeded.length }));
     if (failed.length > 0) {
-      toast.error(
-        `${failed.length} 个任务无法归档：${failed
-          .slice(0, 3)
-          .map((item) => `#${item.id}（${item.error || "状态已变化"}）`)
-          .join("；")}`,
-      );
+      const items = failed
+        .slice(0, 3)
+        .map((item) => `#${item.id} (${item.error || t("batch.statusChanged")})`)
+        .join(", ");
+      toast.error(t("batch.archiveFailed", { count: failed.length, items }));
     }
     setSelectedIds(new Set());
     setActiveTab("archived");
     lastRef.current = "";
     load();
-  }, [archivableTaskIDs, load]);
+  }, [archivableTaskIDs, load, t]);
 
   const controlSelectedTasks = React.useCallback(
     async (action: "pause" | "resume", ids: string[]) => {
       if (ids.length === 0 || batchControlling) return;
       if (ids.length > 100) {
-        toast.error("一次最多控制 100 个任务");
+        toast.error(t("batch.controlLimit"));
         return;
       }
       setBatchControlling(action);
@@ -722,26 +725,31 @@ export default function TasksPage() {
         if (succeeded.length > 0) {
           toast.success(
             action === "pause"
-              ? `已暂停 ${succeeded.length} 个任务`
-              : `已继续 ${succeeded.length} 个任务${succeeded.some((item) => item.queued) ? "，部分任务已进入队列" : ""}`,
+              ? t("batch.paused", { count: succeeded.length })
+              : t("batch.resumed", {
+                  count: succeeded.length,
+                  queued: succeeded.some((item) => item.queued) ? "yes" : "no",
+                }),
           );
         }
         if (failed.length > 0) {
-          const details = failed
+          const items = failed
             .slice(0, 3)
-            .map((item) => `#${item.id}（${item.error || "状态已变化"}）`)
-            .join("；");
-          toast.error(`${failed.length} 个任务操作失败：${details}${failed.length > 3 ? " 等" : ""}`);
+            .map((item) => `#${item.id} (${item.error || t("batch.statusChanged")})`)
+            .join(", ");
+          toast.error(
+            t("batch.controlFailed", { count: failed.length, items, truncated: failed.length > 3 ? "yes" : "no" }),
+          );
         }
         lastRef.current = "";
         load();
       } catch (error) {
-        toast.error(`${action === "pause" ? "批量暂停" : "批量继续"}失败：${(error as Error).message}`);
+        toast.error(t("batch.controlBatchFailed", { action, msg: (error as Error).message }));
       } finally {
         setBatchControlling(null);
       }
     },
-    [batchControlling, load],
+    [batchControlling, load, t],
   );
 
   // 后端把整批分类写入放在一个事务里，所以失败项只可能是勾选后又被删掉的任务。
@@ -750,7 +758,7 @@ export default function TasksPage() {
       const ids = [...selectedIds];
       if (ids.length === 0 || movingCategory) return;
       if (ids.length > 100) {
-        toast.error("一次最多修改 100 个任务的分类");
+        toast.error(t("batch.moveLimit"));
         return;
       }
       setMovingCategory(true);
@@ -758,26 +766,28 @@ export default function TasksPage() {
         const result = await api.updateTasksCategory(ids, categoryID);
         const succeeded = result.items.filter((item) => item.ok);
         const failed = result.items.filter((item) => !item.ok);
-        const target = result.category?.name ?? "未分类";
+        const target = result.category?.name ?? t("filter.uncategorized");
         if (succeeded.length > 0) {
-          toast.success(`已将 ${succeeded.length} 个任务移动到「${target}」`);
+          toast.success(t("batch.moved", { count: succeeded.length, target }));
           setSelectedIds(new Set());
         }
         if (failed.length > 0) {
-          const details = failed
+          const items = failed
             .slice(0, 3)
-            .map((item) => `#${item.id}（${item.error || "任务已不存在"}）`)
-            .join("；");
-          toast.error(`${failed.length} 个任务未能移动：${details}${failed.length > 3 ? " 等" : ""}`);
+            .map((item) => `#${item.id} (${item.error || t("batch.taskGone")})`)
+            .join(", ");
+          toast.error(
+            t("batch.moveFailed", { count: failed.length, items, truncated: failed.length > 3 ? "yes" : "no" }),
+          );
         }
         refreshCategoriesAndTasks();
       } catch (error) {
-        toast.error(`修改分类失败：${(error as Error).message}`);
+        toast.error(t("batch.moveCategoryFailed", { msg: (error as Error).message }));
       } finally {
         setMovingCategory(false);
       }
     },
-    [movingCategory, refreshCategoriesAndTasks, selectedIds],
+    [movingCategory, refreshCategoriesAndTasks, selectedIds, t],
   );
 
   return (
@@ -3085,6 +3095,7 @@ function CreateTaskSheet({
   onCreated: () => void;
   onCategoriesChanged: () => void;
 }) {
+  const t = useTranslations("tasksPage");
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState("");
   const [categoryID, setCategoryID] = React.useState<number | undefined>(undefined);
@@ -3133,10 +3144,10 @@ function CreateTaskSheet({
     setUploading(true);
     try {
       const r = await api.chatUpload("staging", draftIdRef.current, Array.from(files));
-      setDescription((prev) => appendUploads(prev, r.attachments));
+      setDescription((prev) => appendUploads(prev, r.attachments, t));
       setUploadCount((n) => n + r.attachments.length);
     } catch (e) {
-      toast.error("上传失败：" + (e as Error).message);
+      toast.error(t("upload.failed", { msg: (e as Error).message }));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = ""; // allow re-picking the same file

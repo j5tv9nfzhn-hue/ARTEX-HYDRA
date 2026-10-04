@@ -5311,6 +5311,30 @@
       "description": "归档会停止任务调度，将图谱、LLM 历史、文件以及独占资产和流量压缩到本地冷存储。归档完成后可从「已归档」中还原。",
       "cancel": "取消",
       "confirm": "确认归档"
+    },
+    "batch": {
+      "deleted": "已删除 {count} 个任务",
+      "deletedDetails": "已删除 {count} 个任务（{details}）",
+      "deleteWarn": "{summary}；部分外部数据清理未完成：{warnings}",
+      "deleteFailed": "{count} 个任务删除失败：{items}{truncated, select, yes { 等} other {}}",
+      "archiveQueued": "已将 {count} 个任务加入归档队列",
+      "archiveFailed": "{count} 个任务无法归档：{items}",
+      "controlLimit": "一次最多控制 100 个任务",
+      "paused": "已暂停 {count} 个任务",
+      "resumed": "{queued, select, yes {已继续 {count} 个任务，部分任务已进入队列} other {已继续 {count} 个任务}}",
+      "controlFailed": "{count} 个任务操作失败：{items}{truncated, select, yes { 等} other {}}",
+      "controlBatchFailed": "{action, select, pause {批量暂停失败：{msg}} other {批量继续失败：{msg}}}",
+      "moveLimit": "一次最多修改 100 个任务的分类",
+      "moved": "已将 {count} 个任务移动到「{target}」",
+      "moveFailed": "{count} 个任务未能移动：{items}{truncated, select, yes { 等} other {}}",
+      "moveCategoryFailed": "修改分类失败：{msg}",
+      "statusChanged": "状态已变化",
+      "taskGone": "任务已不存在"
+    },
+    "upload": {
+      "marker": "【上传文件（绝对路径）】",
+      "hint": "worker 可用 Read/Bash 按路径打开：",
+      "failed": "上传失败：{msg}"
     }
   }
 }
