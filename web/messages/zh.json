@@ -3621,6 +3621,52 @@
       "updated": "LLM 配置已更新",
       "updatedWithReopened": "LLM 配置已更新，并恢复 {count} 条额度阻塞意图",
       "updateFailed": "更新失败：{message}"
+    },
+    "coverageGraph": {
+      "kind": {
+        "company": "公司",
+        "root_domain": "根域名",
+        "subdomain": "子域名",
+        "ip": "IP",
+        "service": "服务",
+        "app": "App",
+        "endpoint": "端点"
+      },
+      "graph": {
+        "moreCount": "还有 {count} 个{kind}",
+        "scopeIn": "范围内",
+        "tested": "已测",
+        "loading": "加载中…",
+        "empty": "暂无范围内资产（先锚定任务范围）",
+        "refresh": "刷新",
+        "legendTested": "已测（高亮）",
+        "legendUntested": "未测",
+        "legendOutOfScope": "范围外",
+        "hint": "力导向布局，可拖拽节点、滚轮缩放；灰色「⋯」是折叠节点，点开可展开更多。"
+      },
+      "sheet": {
+        "attributes": "属性",
+        "attrType": "类型",
+        "attrTestState": "测试状态",
+        "tested": "已测试",
+        "untested": "未测试",
+        "outOfScope": "范围外（连接节点）",
+        "attrDomain": "域名",
+        "attrRootDomain": "根域名",
+        "attrPort": "端口",
+        "attrTitle": "标题",
+        "attrStatusCode": "状态码",
+        "attrApp": "App",
+        "attrAssetId": "资产ID",
+        "refIntents": "关联意图",
+        "refFacts": "关联事实",
+        "refFindings": "关联发现",
+        "rawData": "原始数据",
+        "refSource": "来源 #{id} · 只读",
+        "foldTitle": "未展示的{kind}（{count}）",
+        "foldHint": "已测优先展示。点「展示更多」把下一批拉进图里。",
+        "showMore": "展示更多（+{step}）"
+      }
     }
   },
   "retest": {
