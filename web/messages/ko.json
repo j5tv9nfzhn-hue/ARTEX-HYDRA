@@ -4558,5 +4558,10 @@
       "highCount": "높음 {count}",
       "totalCount": "취약점 총 {count}건"
     }
+  },
+  "copyButton": {
+    "label": "복사",
+    "success": "복사했습니다",
+    "error": "복사에 실패했습니다. 텍스트를 직접 선택해 복사하세요"
   }
 }

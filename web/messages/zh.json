@@ -4558,5 +4558,10 @@
       "highCount": "高危 {count}",
       "totalCount": "共 {count} 条发现"
     }
+  },
+  "copyButton": {
+    "label": "复制",
+    "success": "已复制",
+    "error": "复制失败，请手动选择文本复制"
   }
 }

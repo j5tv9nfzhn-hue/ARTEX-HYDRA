@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { CheckIcon, CopyIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,12 +24,13 @@ type CopyButtonProps = {
 // 下自动降级(见 copyText)。
 export function CopyButton({
   text,
-  successMessage = "已复制",
-  label = "复制",
+  successMessage,
+  label,
   size = "sm",
   variant = "outline",
   className,
 }: CopyButtonProps) {
+  const t = useTranslations("copyButton");
   const [copied, setCopied] = React.useState(false);
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -43,11 +45,11 @@ export function CopyButton({
     const ok = await copyText(text);
     if (ok) {
       setCopied(true);
-      toast.success(successMessage);
+      toast.success(successMessage ?? t("success"));
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => setCopied(false), 1500);
     } else {
-      toast.error("复制失败，请手动选择文本复制");
+      toast.error(t("error"));
     }
   }
 
@@ -61,7 +63,7 @@ export function CopyButton({
       onClick={handleCopy}
     >
       {copied ? <CheckIcon /> : <CopyIcon />}
-      {label}
+      {label ?? t("label")}
     </Button>
   );
 }
