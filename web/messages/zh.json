@@ -5853,6 +5853,33 @@
         "system": "系统关联",
         "task": "任务初始化"
       }
+    },
+    "toast": {
+      "uploadFailed": "上传失败：{msg}",
+      "createSessionFailed": "新建会话失败：{msg}",
+      "reasonRequired": "请填写删除原因",
+      "workerPaused": "Worker #{id} 已暂停",
+      "workerResumed": "Worker #{id} 已恢复，等待重新领取",
+      "hardDeleteExtra": "（含 {intents} 意图 / {facts} 事实 / {findings} 漏洞）",
+      "workerHardDeleted": "Worker #{id} 及其独占下游已彻底删除{extra}",
+      "workerSoftDeleted": "Worker #{id} 已删除（原因已记录，规划者将据此重新规划）",
+      "workerActionFailed": "Worker 操作失败：{msg}",
+      "loadFailed": "加载失败",
+      "sendFailed": "发送失败：{msg}",
+      "retryLater": "请稍后重试",
+      "messageTooLong": "消息不能超过 {max} 个字符",
+      "workerMessageSent": "消息已发送给 Worker #{id}，已立即继续执行"
+    },
+    "role": {
+      "mainagent": "主 Agent",
+      "planner": "规划 Planner",
+      "worker": "Workers",
+      "system": "系统审计"
+    },
+    "title": {
+      "main": "主 Agent · 会话 #{n}",
+      "planner": "规划 Planner · 态势研判",
+      "system": "系统事件 · LLM 故障转移"
     }
   }
 }

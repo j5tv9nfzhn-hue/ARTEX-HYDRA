@@ -5853,6 +5853,33 @@
         "system": "시스템 연관",
         "task": "작업 초기화"
       }
+    },
+    "toast": {
+      "uploadFailed": "업로드 실패: {msg}",
+      "createSessionFailed": "새 세션 생성 실패: {msg}",
+      "reasonRequired": "삭제 사유를 입력해 주세요",
+      "workerPaused": "Worker #{id} 일시정지됨",
+      "workerResumed": "Worker #{id} 재개됨, 재할당 대기 중",
+      "hardDeleteExtra": "(의도 {intents}건 / 사실 {facts}건 / 취약점 {findings}건 포함)",
+      "workerHardDeleted": "Worker #{id} 및 전용 하위 노드를 완전히 삭제했습니다{extra}",
+      "workerSoftDeleted": "Worker #{id} 삭제됨 (사유 기록됨, 플래너가 이를 반영해 다시 계획합니다)",
+      "workerActionFailed": "Worker 작업 실패: {msg}",
+      "loadFailed": "불러오기 실패",
+      "sendFailed": "전송 실패: {msg}",
+      "retryLater": "잠시 후 다시 시도해 주세요",
+      "messageTooLong": "메시지는 {max}자를 넘을 수 없습니다",
+      "workerMessageSent": "Worker #{id} 에게 메시지를 전송했습니다. 즉시 실행을 재개합니다"
+    },
+    "role": {
+      "mainagent": "메인 에이전트",
+      "planner": "플래너",
+      "worker": "Workers",
+      "system": "시스템 감사"
+    },
+    "title": {
+      "main": "메인 에이전트 · 세션 #{n}",
+      "planner": "플래너 · 상황 판단",
+      "system": "시스템 이벤트 · LLM 장애 전환"
     }
   }
 }

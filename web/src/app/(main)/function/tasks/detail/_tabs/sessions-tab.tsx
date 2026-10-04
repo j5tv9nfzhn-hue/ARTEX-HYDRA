@@ -237,11 +237,13 @@ function fmtDuration(ms: number): string {
   return `${h}h${String(m % 60).padStart(2, "0")}m`;
 }
 
+// Role labels moved to the `sessions.role.*` message catalog (resolved at render in
+// SessionsTab); only the icon stays here since it is not a translatable string.
 const roleMeta = {
-  mainagent: { label: "主 Agent", icon: UserIcon },
-  planner: { label: "规划 Planner", icon: BrainIcon },
-  worker: { label: "Workers", icon: RadioIcon },
-  system: { label: "系统审计", icon: HistoryIcon },
+  mainagent: { icon: UserIcon },
+  planner: { icon: BrainIcon },
+  worker: { icon: RadioIcon },
+  system: { icon: HistoryIcon },
 } as const;
 
 // The main-agent session is the interactive entry point of this tab and has no
@@ -253,12 +255,14 @@ const roleMeta = {
 // segment is a switchable UI session; only the current (highest) one is writable.
 const mainSessionId = (seg: number) => `s-main-${seg}`;
 const mainSessionKey = (seg: number) => `main:${seg}`;
-const mainSessionTitle = (seg: number) => `主 Agent · 会话 #${seg + 1}`;
+// Session titles live in the `sessions.title.*` catalog and are resolved at render
+// inside SessionsTab (module scope has no translator). These fixed sessions carry an
+// empty title placeholder; every consumer overrides it with t("title.*").
 const MAIN_ID = mainSessionId(0);
 const MAIN_SESSION: Session = {
   id: MAIN_ID,
   role: "mainagent",
-  title: mainSessionTitle(0),
+  title: "",
   status: "running",
   live: true,
   last_activity: "",
@@ -273,7 +277,7 @@ const PLANNER_ID = "s-planner";
 const PLANNER_SESSION: Session = {
   id: PLANNER_ID,
   role: "planner",
-  title: "规划 Planner · 态势研判",
+  title: "",
   status: "running",
   live: true,
   last_activity: "",
@@ -286,7 +290,7 @@ const SYSTEM_ID = "s-system";
 const SYSTEM_SESSION: Session = {
   id: SYSTEM_ID,
   role: "system",
-  title: "系统事件 · LLM 故障转移",
+  title: "",
   status: "done",
   live: false,
   last_activity: "",
@@ -486,6 +490,7 @@ function WorkerAssetBadge({ assets }: { assets: IntentAsset[] }) {
 }
 
 export function SessionsTab({ taskId }: { taskId: string }) {
+  const t = useTranslations("sessions");
   const approvalFocus = useApprovalFocus({ taskId });
   const [selectedSessionId, setActiveId] = React.useState(MAIN_ID);
   const focusSession = React.useMemo<Session | undefined>(() => {
@@ -493,9 +498,9 @@ export function SessionsTab({ taskId }: { taskId: string }) {
     if (!source) return undefined;
     if (source.session.startsWith("main:")) {
       const seg = Number(source.session.slice(5));
-      return { ...MAIN_SESSION, id: mainSessionId(seg), seg, title: mainSessionTitle(seg), live: false };
+      return { ...MAIN_SESSION, id: mainSessionId(seg), seg, title: t("title.main", { n: seg + 1 }), live: false };
     }
-    if (source.session === "plan") return { ...PLANNER_SESSION, live: false };
+    if (source.session === "plan") return { ...PLANNER_SESSION, title: t("title.planner"), live: false };
     if (source.session.startsWith("intent:")) {
       const id = source.session.slice(7);
       return {
@@ -509,7 +514,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
       };
     }
     return undefined;
-  }, [approvalFocus.state?.source]);
+  }, [approvalFocus.state?.source, t]);
   // Keep a located archived/older session selectable after leaving focus mode.
   const [locatedSession, setLocatedSession] = React.useState<{ taskId: string; session: Session }>();
   React.useEffect(() => {
@@ -560,7 +565,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
       const r = await api.chatUpload("task", taskId, Array.from(files));
       setAttachments((prev) => [...prev, ...r.attachments]);
     } catch (e) {
-      toast.error(`上传失败：${(e as Error).message}`);
+      toast.error(t("toast.uploadFailed", { msg: (e as Error).message }));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -583,7 +588,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
       setListOpen(false);
       setInput("");
     } catch (e) {
-      toast.error(`新建会话失败：${(e as Error).message}`);
+      toast.error(t("toast.createSessionFailed", { msg: (e as Error).message }));
     } finally {
       setCreatingMain(false);
       setConfirmNewMain(false);
@@ -603,7 +608,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
     async (session: Session, action: "pause" | "resume" | "cancel", reason?: string, mode?: "soft" | "hard") => {
       if (!session.intent_id || session.inherited || controllingIntent) return;
       if (action === "cancel" && !reason?.trim()) {
-        toast.error("请填写删除原因");
+        toast.error(t("toast.reasonRequired"));
         return;
       }
       setControllingIntent(session.intent_id);
@@ -611,31 +616,33 @@ export function SessionsTab({ taskId }: { taskId: string }) {
         const res = await api.controlIntent(taskId, session.intent_id, action, reason, mode);
         if (action === "pause") {
           patchIntentState(session.intent_id, "paused");
-          toast.success(`Worker #${session.intent_id} 已暂停`);
+          toast.success(t("toast.workerPaused", { id: session.intent_id }));
         } else if (action === "resume") {
           patchIntentState(session.intent_id, "open");
-          toast.success(`Worker #${session.intent_id} 已恢复，等待重新领取`);
+          toast.success(t("toast.workerResumed", { id: session.intent_id }));
         } else if (mode === "hard") {
           // 真删除:意图及独占下游已物理移除,从列表剔除该行。
           patchIntentState(session.intent_id);
           const d = res.deleted;
-          const extra = d ? `（含 ${d.intents} 意图 / ${d.facts} 事实 / ${d.findings} 漏洞）` : "";
-          toast.success(`Worker #${session.intent_id} 及其独占下游已彻底删除${extra}`);
+          const extra = d
+            ? t("toast.hardDeleteExtra", { intents: d.intents, facts: d.facts, findings: d.findings })
+            : "";
+          toast.success(t("toast.workerHardDeleted", { id: session.intent_id, extra }));
           setCancelReason("");
         } else {
           // 假删除:意图置 deleted、记录删除原因,保留节点与产出。
           patchIntentState(session.intent_id, "deleted");
-          toast.success(`Worker #${session.intent_id} 已删除（原因已记录，规划者将据此重新规划）`);
+          toast.success(t("toast.workerSoftDeleted", { id: session.intent_id }));
           setCancelReason("");
         }
       } catch (error) {
-        toast.error(`Worker 操作失败：${(error as Error).message}`);
+        toast.error(t("toast.workerActionFailed", { msg: (error as Error).message }));
       } finally {
         setControllingIntent(null);
         setCancelIntent(null);
       }
     },
-    [controllingIntent, patchIntentState, taskId],
+    [controllingIntent, patchIntentState, taskId, t],
   );
 
   // SSE connection state — surfaced so a dropped realtime link is visible, never
@@ -717,7 +724,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
             patchStore(key, (s) => ({
               ...s,
               loading: false,
-              error: (error as Error).message || "加载失败",
+              error: (error as Error).message || t("toast.loadFailed"),
             }));
           })
           .finally(() => loadingKeysRef.current.delete(key));
@@ -745,11 +752,11 @@ export function SessionsTab({ taskId }: { taskId: string }) {
         })
         .catch((e) => {
           if (reqTokenRef.current[key] !== token) return;
-          patchStore(key, (s) => ({ ...s, loading: false, error: (e as Error).message || "加载失败" }));
+          patchStore(key, (s) => ({ ...s, loading: false, error: (e as Error).message || t("toast.loadFailed") }));
         })
         .finally(() => loadingKeysRef.current.delete(key));
     },
-    [taskId, patchStore],
+    [taskId, patchStore, t],
   );
 
   // Load one older page (scroll-up) for a session, preserving scroll position.
@@ -1043,7 +1050,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
       .catch((err) => {
         if (!alive || reqTokenRef.current.mainboot !== token) return;
         if ((err as Error).message === "superseded") return;
-        patchStore(bootKey, (s) => ({ ...s, loading: false, error: (err as Error).message || "加载失败" }));
+        patchStore(bootKey, (s) => ({ ...s, loading: false, error: (err as Error).message || t("toast.loadFailed") }));
       })
       .finally(() => loadingKeysRef.current.delete(bootKey));
 
@@ -1052,7 +1059,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
       esRef.current?.close();
       esRef.current = null;
     };
-  }, [taskId, patchStore]);
+  }, [taskId, patchStore, t]);
 
   React.useEffect(() => {
     let active = true;
@@ -1242,21 +1249,26 @@ export function SessionsTab({ taskId }: { taskId: string }) {
       mainSegs.map((m) => ({
         id: mainSessionId(m.seq),
         role: "mainagent",
-        title: mainSessionTitle(m.seq),
+        title: t("title.main", { n: m.seq + 1 }),
         status: "running",
         live: m.seq === liveMainSeg,
         last_activity: m.created_at,
         seg: m.seq,
       })),
-    [mainSegs, liveMainSeg],
+    [mainSegs, liveMainSeg, t],
   );
 
   const sessions = React.useMemo(() => {
-    const items = [...mainSessions, { ...PLANNER_SESSION, live: plannerLive }, ...workerSessions, SYSTEM_SESSION];
+    const items = [
+      ...mainSessions,
+      { ...PLANNER_SESSION, title: t("title.planner"), live: plannerLive },
+      ...workerSessions,
+      { ...SYSTEM_SESSION, title: t("title.system") },
+    ];
     const located = focusSession ?? retainedSession;
     if (located && !items.some((s) => s.id === located.id)) items.push(located);
     return items;
-  }, [mainSessions, workerSessions, plannerLive, focusSession, retainedSession]);
+  }, [mainSessions, workerSessions, plannerLive, focusSession, retainedSession, t]);
 
   const grouped = {
     mainagent: sessions.filter((s) => s.role === "mainagent"),
@@ -1265,7 +1277,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
     system: sessions.filter((s) => s.role === "system"),
   };
 
-  const active = sessions.find((s) => s.id === activeId) ?? MAIN_SESSION;
+  const active = sessions.find((s) => s.id === activeId) ?? { ...MAIN_SESSION, title: t("title.main", { n: 1 }) };
   const side = useSideQuestions(
     active.role === "mainagent"
       ? `/api/tasks/${taskId}/chat`
@@ -1520,7 +1532,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
       .catch((e) => {
         setInput(text); // restore so the user doesn't lose their text / attachments
         setAttachments(atts);
-        toast.error(`发送失败：${(e as Error).message || "请稍后重试"}`);
+        toast.error(t("toast.sendFailed", { msg: (e as Error).message || t("toast.retryLater") }));
       })
       .finally(() => setSending(false));
   }
@@ -1531,7 +1543,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
     if (side.handleCommand(message, () => setWorkerMessage(""))) return;
     if (!intentId || active.inherited || active.status !== "paused" || workerMessageSending || !message) return;
     if (workerMessageCharCount(message) > MAX_WORKER_MESSAGE_CHARS) {
-      toast.error(`消息不能超过 ${MAX_WORKER_MESSAGE_CHARS} 个字符`);
+      toast.error(t("toast.messageTooLong", { max: MAX_WORKER_MESSAGE_CHARS }));
       return;
     }
     const requestId = workerMessageRequestId || newWorkerMessageRequestID();
@@ -1545,10 +1557,10 @@ export function SessionsTab({ taskId }: { taskId: string }) {
         patchIntentState(intentId, result.state);
         setWorkerMessage("");
         setWorkerMessageRequestId("");
-        toast.success(`消息已发送给 Worker #${intentId}，已立即继续执行`);
+        toast.success(t("toast.workerMessageSent", { id: intentId }));
       })
       .catch((error) => {
-        toast.error(`发送失败：${(error as Error).message || "请稍后重试"}`);
+        toast.error(t("toast.sendFailed", { msg: (error as Error).message || t("toast.retryLater") }));
       })
       .finally(() => setWorkerMessageSending(false));
   }
@@ -1668,7 +1680,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                   <div key={role} className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-muted-foreground">
                       <Meta.icon className="size-3.5" />
-                      {Meta.label}
+                      {t(`role.${role}`)}
                       {role === "mainagent" && (
                         <button
                           type="button"
