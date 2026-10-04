@@ -4424,5 +4424,46 @@
         "message": "消息：{msg}"
       }
     }
+  },
+  "assetSearch": {
+    "placeholder": "DSL 搜索：domain=example AND status_code>=400",
+    "loading": "搜索中…",
+    "found": "找到 {count} 条",
+    "field": {
+      "domain": "域名（根域名/子域名/服务域名）",
+      "ip": "IPv4/IPv6 地址",
+      "url": "完整 URL（服务/接口）",
+      "root_domain": "根域名",
+      "page_title": "页面标题（HTTP 服务）",
+      "icp": "ICP 备案号",
+      "service_name": "服务名称（非 HTTP 服务）",
+      "app_name": "应用名称",
+      "bundle_id": "应用 Bundle ID",
+      "category": "应用分类",
+      "app_icp": "应用 ICP 备案",
+      "method": "HTTP 方法 GET/POST/PUT/…",
+      "service_type": "服务类型：http | other",
+      "record_type": "DNS 解析类型 A/CNAME/MX/…",
+      "technology": "技术指纹（数组字段）",
+      "port": "端口号（整数）",
+      "status_code": "HTTP 状态码（整数）",
+      "company_id": "归属企业 ID（整数）",
+      "task_id": "来源任务 ID（整数）"
+    },
+    "op": {
+      "fuzzy": "模糊匹配",
+      "exact": "精确匹配",
+      "exclude": "排除",
+      "eq": "等于",
+      "ne": "不等于",
+      "gt": "大于",
+      "gte": "大于等于",
+      "lt": "小于",
+      "lte": "小于等于"
+    },
+    "logic": {
+      "and": "且（两个条件都满足）",
+      "or": "或（满足其中之一）"
+    }
   }
 }
