@@ -295,45 +295,6 @@
             "ee9b4fb1": ""
           }
         },
-        "findings": {
-          "detail": {
-            "lineage": {
-              "300ee3de": "",
-              "63a95678": "",
-              "ff4ced71": ""
-            },
-            "page": {
-              "0cd65791": "",
-              "0d8880c8": "",
-              "0de2e9e8": "",
-              "208cd021": "",
-              "300ee3de": "",
-              "3725a172": "",
-              "466f3323": "",
-              "46d4c1b4": "",
-              "4a095f2a": "",
-              "4d9e16ce": "",
-              "5060421d": "",
-              "549a3743": "",
-              "54a0ec15": "",
-              "62e951a6": "",
-              "658193ff": "",
-              "8542beb9": "",
-              "8f3677a6": "",
-              "9b75c8e8": "",
-              "a0681bd8": "",
-              "b03df622": "",
-              "b28f13ea": "",
-              "b77cc19a": "",
-              "b841d7e5": "",
-              "b8b52c1d": "",
-              "bcf0d8ec": "",
-              "c624159a": "",
-              "c69c16e5": "",
-              "f1a69dff": ""
-            }
-          }
-        },
         "llm-records": {
           "page": {
             "60793243": "",
@@ -4557,6 +4518,58 @@
       "criticalCount": "심각 {count}",
       "highCount": "높음 {count}",
       "totalCount": "취약점 총 {count}건"
+    },
+    "detail": {
+      "notFound": "취약점 {id}을(를) 찾을 수 없습니다",
+      "back": "취약점 목록으로 돌아가기",
+      "sourceTask": "출처 작업 #{id} · 읽기 전용",
+      "tab": {
+        "overview": "개요",
+        "lineage": "경로도"
+      },
+      "summary": "요약",
+      "summaryEmpty": "(요약 없음)",
+      "evidence": "증거 / PoC",
+      "evidenceEmpty": "(증거 없음)",
+      "reportStale": "트래픽 증거가 변경되어 상세 보고서를 갱신해야 합니다.",
+      "statusTitle": "상태",
+      "fieldId": "취약점 ID",
+      "fieldSeverity": "심각도 등급",
+      "fieldStatus": "처리 상태",
+      "fieldType": "취약점 유형",
+      "fieldAssets": "연관 자산",
+      "fieldTask": "소속 작업",
+      "taskDeleted": "—(작업이 삭제됨)",
+      "fieldTime": "발견 시각",
+      "severityChanged": "심각도 등급을 「{label}」(으)로 변경했습니다",
+      "statusChanged": "처리 상태를 「{label}」(으)로 변경했습니다"
+    },
+    "traffic": {
+      "title": "연결된 트래픽",
+      "bind": "트래픽 연결",
+      "inherited": "증거 상속 · 읽기 전용",
+      "description": "재현 순서대로 요청과 응답을 정리하세요. 원본 트래픽을 정리해도 연결된 증거는 그대로 유지됩니다.",
+      "retry": "다시 시도",
+      "empty": "연결된 트래픽이 없습니다",
+      "emptyHint": "정상 대조·취약점 증명·보충 검증 요청을 연결할 수 있습니다.",
+      "evidenceNo": "증거 #{id}",
+      "viewRaw": "원문 보기",
+      "editNote": "설명 편집",
+      "moveUp": "증거 {id} 위로 이동",
+      "moveDown": "증거 {id} 아래로 이동",
+      "unbind": "연결 해제",
+      "updated": "트래픽 증거를 갱신했습니다",
+      "editTitle": "트래픽 증거 편집",
+      "editDescription": "이 요청·응답 묶음이 취약점 결론을 어떻게 뒷받침하는지 설명하세요.",
+      "roleLabel": "용도",
+      "noteLabel": "증거 설명",
+      "saveNote": "설명 저장",
+      "role": {
+        "baseline": "정상 대조",
+        "proof": "취약점 증명",
+        "verification": "보충 검증",
+        "supporting": "보조 증거"
+      }
     }
   },
   "copyButton": {

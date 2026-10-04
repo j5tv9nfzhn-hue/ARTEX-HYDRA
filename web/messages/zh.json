@@ -295,45 +295,6 @@
             "ee9b4fb1": "个工具 ·"
           }
         },
-        "findings": {
-          "detail": {
-            "lineage": {
-              "300ee3de": "加载中…",
-              "63a95678": "无链路可展示（该漏洞未关联探索节点，或所属任务已删除）。",
-              "ff4ced71": "无链路"
-            },
-            "page": {
-              "0cd65791": "暂无详细报告。",
-              "0d8880c8": "（无摘要）",
-              "0de2e9e8": "严重等级已改为「{var0}」",
-              "208cd021": "· 只读",
-              "300ee3de": "加载中…",
-              "3725a172": "所属任务",
-              "466f3323": "—（任务已删除）",
-              "46d4c1b4": "摘要",
-              "4a095f2a": "已复制详细报告",
-              "4d9e16ce": "发现时间",
-              "5060421d": "概览",
-              "549a3743": "涉及资产",
-              "54a0ec15": "链路图",
-              "62e951a6": "状态",
-              "658193ff": "漏洞类型",
-              "8542beb9": "处理状态",
-              "8f3677a6": "详细报告",
-              "9b75c8e8": "（无证据）",
-              "a0681bd8": "严重等级",
-              "b03df622": "证据 / PoC",
-              "b28f13ea": "未分类",
-              "b77cc19a": "来源任务 #",
-              "b841d7e5": "流量证据已变更，详细报告待更新。",
-              "b8b52c1d": "处理状态已改为「{var0}」",
-              "bcf0d8ec": "未找到发现 {var0}",
-              "c624159a": "返回发现列表",
-              "c69c16e5": "漏洞 ID",
-              "f1a69dff": "更新失败："
-            }
-          }
-        },
         "llm-records": {
           "page": {
             "60793243": "删除中…",
@@ -4557,6 +4518,58 @@
       "criticalCount": "严重 {count}",
       "highCount": "高危 {count}",
       "totalCount": "共 {count} 条发现"
+    },
+    "detail": {
+      "notFound": "未找到发现 {id}",
+      "back": "返回发现列表",
+      "sourceTask": "来源任务 #{id} · 只读",
+      "tab": {
+        "overview": "概览",
+        "lineage": "链路图"
+      },
+      "summary": "摘要",
+      "summaryEmpty": "（无摘要）",
+      "evidence": "证据 / PoC",
+      "evidenceEmpty": "（无证据）",
+      "reportStale": "流量证据已变更，详细报告待更新。",
+      "statusTitle": "状态",
+      "fieldId": "漏洞 ID",
+      "fieldSeverity": "严重等级",
+      "fieldStatus": "处理状态",
+      "fieldType": "漏洞类型",
+      "fieldAssets": "涉及资产",
+      "fieldTask": "所属任务",
+      "taskDeleted": "—（任务已删除）",
+      "fieldTime": "发现时间",
+      "severityChanged": "严重等级已改为「{label}」",
+      "statusChanged": "处理状态已改为「{label}」"
+    },
+    "traffic": {
+      "title": "关联流量",
+      "bind": "绑定流量",
+      "inherited": "继承证据 · 只读",
+      "description": "按复现顺序组织请求与响应。清理原始流量后，已绑定证据仍然保留。",
+      "retry": "重试",
+      "empty": "暂无关联流量",
+      "emptyHint": "可绑定正常对照、漏洞证明和补充验证请求。",
+      "evidenceNo": "证据 #{id}",
+      "viewRaw": "查看报文",
+      "editNote": "编辑说明",
+      "moveUp": "上移证据 {id}",
+      "moveDown": "下移证据 {id}",
+      "unbind": "解除绑定",
+      "updated": "流量证据已更新",
+      "editTitle": "编辑流量证据",
+      "editDescription": "说明这组请求/响应如何支持漏洞结论。",
+      "roleLabel": "用途",
+      "noteLabel": "证据说明",
+      "saveNote": "保存说明",
+      "role": {
+        "baseline": "正常对照",
+        "proof": "漏洞证明",
+        "verification": "补充验证",
+        "supporting": "辅助证据"
+      }
     }
   },
   "copyButton": {
