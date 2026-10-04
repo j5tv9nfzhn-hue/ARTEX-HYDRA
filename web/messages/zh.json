@@ -4767,7 +4767,17 @@
     },
     "recognized": "已识别 {count} 条",
     "lineError": "第 {line} 行：{error}",
-    "moreErrors": "另有 {count} 行错误"
+    "moreErrors": "另有 {count} 行错误",
+    "error": {
+      "empty": "请填写范围值",
+      "tooLong": "最多 {max} 个字符",
+      "domainSpace": "请输入不含空格的有效域名或 URL",
+      "domainInvalid": "请输入有效域名或 URL",
+      "ipInvalid": "请输入有效 IP",
+      "cidrInvalid": "请输入 CIDR 网段",
+      "cidrPrefixV4": "IPv4 网段前缀需为 /16 至 /32",
+      "cidrPrefixV6": "IPv6 网段前缀需为 /32 至 /128"
+    }
   },
   "approvalFocus": {
     "mismatch": "审批来源与当前会话不一致",

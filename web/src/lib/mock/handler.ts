@@ -4,6 +4,7 @@
 
 import {
   classifyCompanyScopeLine,
+  companyScopeErrorText,
   companyScopeRuleError,
   isCompanyScopeKind,
   normalizeCompanyScopeValue,
@@ -1655,7 +1656,10 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
       const rules: CompanyScopeRule[] = b.scope.map((candidate, index) => {
         if (typeof candidate === "string") {
           const issue = classifyCompanyScopeLine(candidate, index + 1);
-          if (!issue.rule || issue.error) throw new Error(`${index + 1}번째 범위가 유효하지 않습니다:${issue.error ?? "인식할 수 없음"}`);
+          if (!issue.rule || issue.error)
+            throw new Error(
+              `${index + 1}번째 범위가 유효하지 않습니다: ${companyScopeErrorText(issue.error) || "인식할 수 없습니다"}`,
+            );
           return issue.rule;
         }
         const item = candidate as { kind?: unknown; value?: unknown };
@@ -1664,8 +1668,11 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
           item?.kind && isCompanyScopeKind(item.kind)
             ? { kind: item.kind, value }
             : classifyCompanyScopeLine(value, index + 1).rule;
-        const error = rule ? companyScopeRuleError(rule) : "인식할 수 없음";
-        if (!rule || error) throw new Error(`${index + 1}번째 범위가 유효하지 않습니다:${error}`);
+        const error = rule ? companyScopeRuleError(rule) : "";
+        if (!rule || error)
+          throw new Error(
+            `${index + 1}번째 범위가 유효하지 않습니다: ${companyScopeErrorText(error) || "인식할 수 없습니다"}`,
+          );
         return rule;
       });
       const mutation: TaskAssetScopeMutation = {

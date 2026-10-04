@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
-import type { ParsedCompanyScopeText } from "@/lib/company-scope";
+import { MAX_COMPANY_SCOPE_VALUE_LENGTH, type ParsedCompanyScopeText } from "@/lib/company-scope";
 import type { CompanyScopeKind } from "@/lib/types";
 
 // 라벨은 렌더 시점에 t(`kind.${kind}`) 로 해석(아래 배지).
@@ -34,6 +34,16 @@ export function ScopeTextEditor({
     for (const rule of parsed.rules) result.set(rule.kind, (result.get(rule.kind) ?? 0) + 1);
     return result;
   }, [parsed.rules]);
+  // company-scope.ts 는 번역할 수 없는 순수 모듈이라 오류 "코드"만 돌려준다. 여기서
+  // 코드별 메시지로 해석한다(tooLong 은 최대 글자 수를 함께 보간).
+  const errorText = React.useCallback(
+    (code: string) => {
+      if (code === "tooLong") return t("error.tooLong", { max: MAX_COMPANY_SCOPE_VALUE_LENGTH });
+      const key = `error.${code}`;
+      return t.has(key) ? t(key) : code;
+    },
+    [t],
+  );
 
   return (
     <Field data-invalid={parsed.errors.length > 0}>
@@ -65,7 +75,7 @@ export function ScopeTextEditor({
         <FieldError>
           {parsed.errors.slice(0, 5).map((item) => (
             <span key={`${item.line}-${item.error}`} className="block">
-              {t("lineError", { line: item.line, error: item.error })}
+              {t("lineError", { line: item.line, error: errorText(item.error) })}
             </span>
           ))}
           {parsed.errors.length > 5 && (
