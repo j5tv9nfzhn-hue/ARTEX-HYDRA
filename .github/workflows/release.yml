@@ -96,10 +96,34 @@ jobs:
             dist/SHA256SUMS
           generate_release_notes: true
 
+  # ④-0 발행 자격증명 게이트: DOCKERHUB 시크릿이 설정된 경우에만 docker 잡을 실행한다.
+  #     시크릿이 없으면 docker 잡을 건너뛰어(skipped) 릴리스 CI 가 빨간 X 없이 끝나게 한다.
+  #     GitHub Actions 는 잡 수준 if 에서 secrets 를 직접 참조할 수 없어, 시크릿 존재
+  #     여부를 이 잡의 출력으로 넘긴 뒤 docker 잡의 if 조건으로 쓴다.
+  #     어느 네임스페이스로 발행할지는 별도 결정 사안이다(G6·DECISIONS 8).
+  docker-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.check.outputs.publish }}
+    steps:
+      - name: Docker Hub 발행 자격증명 확인
+        id: check
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::DOCKERHUB_USERNAME/DOCKERHUB_TOKEN 시크릿이 없어 Docker 이미지 발행(docker 잡)을 건너뜁니다. 바이너리 릴리스는 정상 진행됩니다."
+          fi
+
   # ④ 多架构镜像 → 推 Docker Hub（复用 binaries 编好的 Linux 二进制，
   #    镜像里只装工具 + 放二进制；arm64 仅需模拟 apt 层，构建快很多）
   docker:
-    needs: binaries
+    needs: [binaries, docker-gate]
+    if: needs.docker-gate.outputs.publish == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4 # 取 Dockerfile 与 skills/
