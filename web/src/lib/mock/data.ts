@@ -2956,7 +2956,7 @@ Content-Length: 655
   "order_id": 1002,
   "user_id": 77,
   "amount": 1299.00,
-  "address": "北京市朝阳区 ****",
+  "address": "서울시 강남구 ****",
   "phone": "138****6021",
   "items": [{ "sku": "A-100", "qty": 1 }]
 }`,
@@ -3099,11 +3099,11 @@ export const agents: Agent[] = [
   {
     id: "1001",
     key: "retester",
-    name: "漏洞复测",
+    name: "취약점 재검증",
     role: "assistant",
     builtin: false,
     enabled: true,
-    description: "从漏洞详情手动启动，保存独立复测结论",
+    description: "취약점 상세에서 수동으로 시작하며, 독립적인 재검증 결론을 저장한다.",
     max_turns: 0,
     mcp_count: 0,
     skill_count: 0,
@@ -3112,11 +3112,11 @@ export const agents: Agent[] = [
   {
     id: "1",
     key: "goals",
-    name: "目标拆解器",
+    name: "목표 분해기",
     role: "goals",
     builtin: true,
     enabled: true,
-    description: "把任务目标拆成可探索的子目标",
+    description: "작업 목표를 탐색 가능한 하위 목표로 분해한다.",
     max_turns: 8,
     mcp_count: 0,
     skill_count: 1,
@@ -3125,11 +3125,11 @@ export const agents: Agent[] = [
   {
     id: "2",
     key: "planner",
-    name: "规划者",
+    name: "플래너",
     role: "planner",
     builtin: true,
     enabled: true,
-    description: "读探索路线、判断目标达成、生成意图",
+    description: "탐색 경로를 읽고, 목표 달성을 판단하며, 의도를 생성한다.",
     max_turns: 0,
     mcp_count: 1,
     skill_count: 2,
@@ -3138,11 +3138,11 @@ export const agents: Agent[] = [
   {
     id: "3",
     key: "mainagent",
-    name: "主 Agent",
+    name: "메인 에이전트",
     role: "mainagent",
     builtin: true,
     enabled: true,
-    description: "人在环路对话，注入 hint / 高优意图",
+    description: "사람이 개입하는 대화로, hint 와 높은 우선순위 의도를 주입한다.",
     max_turns: 0,
     web_search: true,
     mcp_count: 2,
@@ -3156,7 +3156,7 @@ export const agents: Agent[] = [
     role: "worker",
     builtin: true,
     enabled: true,
-    description: "claim 意图 → 跑 Kali 工具 → 图写回",
+    description: "의도 claim → Kali 도구 실행 → 그래프에 반영",
     max_turns: 40,
     run_seconds: 1800,
     web_search: false,
@@ -3168,11 +3168,11 @@ export const agents: Agent[] = [
   {
     id: "5",
     key: "recon-bot",
-    name: "侦察机器人（自定义）",
+    name: "정찰 로봇 (사용자 정의)",
     role: "custom",
     builtin: false,
     enabled: true,
-    description: "定时对新资产做被动侦察",
+    description: "새 자산에 대해 주기적으로 수동적 정찰을 수행한다.",
     max_turns: 12,
     mcp_count: 1,
     skill_count: 1,
@@ -3181,14 +3181,14 @@ export const agents: Agent[] = [
 ];
 
 const promptVars: PromptVar[] = [
-  { name: "Goal", description: "当前任务目标", example: "拿到 acme.com 后台管理权限", source: "runtime" },
-  { name: "AssetSummary", description: "资产图概览", example: "6 子域 / 3 IP / 4 应用 / 4 端点", source: "distilled" },
-  { name: "RouteHint", description: "探索路线提示", example: "优先后台与 API 越权面", source: "exploration" },
+  { name: "Goal", description: "현재 작업 목표", example: "acme.com 관리자 백오피스 권한 획득", source: "runtime" },
+  { name: "AssetSummary", description: "자산 그래프 개요", example: "서브도메인 6개 / IP 3개 / 애플리케이션 4개 / 엔드포인트 4개", source: "distilled" },
+  { name: "RouteHint", description: "탐색 경로 힌트", example: "백오피스와 API 권한 우회 공격면 우선", source: "exploration" },
 ];
 
 const promptVersions: PromptVersion[] = [
-  { version: 3, ts: T("2026-07-25T10:00:00Z"), note: "加强越权探测引导", template_text: "你是 ARTEX 的规划者……" },
-  { version: 2, ts: T("2026-07-20T10:00:00Z"), note: "初版微调", template_text: "你是 ARTEX 的规划者(v2)……" },
+  { version: 3, ts: T("2026-07-25T10:00:00Z"), note: "권한 우회 탐지 유도 강화", template_text: "你是 ARTEX 的规划者……" },
+  { version: 2, ts: T("2026-07-20T10:00:00Z"), note: "초기 버전 미세 조정", template_text: "你是 ARTEX 的规划者(v2)……" },
 ];
 
 export function agentDetail(key: string): AgentDetail {
@@ -3200,11 +3200,11 @@ export function agentDetail(key: string): AgentDetail {
     versions: promptVersions,
     visibility: { mcp: [1, 2], skill: ["api-recon", "playwright-cli"] },
     wrapup_prompt: "",
-    wrapup_default: "时间/步数将尽，请总结已确认发现并标记意图终态。",
+    wrapup_default: "시간·단계 예산이 곧 소진됩니다. 확인된 발견을 요약하고 의도를 종료 상태로 표시하십시오.",
     wrapup_max_turns: 0,
     wrapup_max_turns_default: 3,
     task_timeout_wrapup_supported: a.key === "worker" || a.key === "planner",
-    task_timeout_wrapup_default: "任务超时，请立即收尾并落库当前结论。",
+    task_timeout_wrapup_default: "작업이 시간을 초과했습니다. 즉시 마무리하고 현재 결론을 저장하십시오.",
     task_timeout_wrapup_max_turns_default: 2,
   };
 }
@@ -3235,14 +3235,14 @@ export const mcpServers: MCPServer[] = [
 
 export const mcpToolsById: Record<number, MCPTool[]> = {
   1: [
-    { name: "host_info", description: "查询某 IP 的 Shodan 主机信息" },
-    { name: "search", description: "Shodan 搜索" },
-    { name: "dns_resolve", description: "DNS 解析" },
+    { name: "host_info", description: "특정 IP 의 Shodan 호스트 정보 조회" },
+    { name: "search", description: "Shodan 검색" },
+    { name: "dns_resolve", description: "DNS 해석" },
   ],
   2: [
-    { name: "browser_navigate", description: "浏览器打开 URL" },
-    { name: "browser_click", description: "点击元素" },
-    { name: "browser_snapshot", description: "抓取可访问性快照" },
+    { name: "browser_navigate", description: "브라우저로 URL 열기" },
+    { name: "browser_click", description: "요소 클릭" },
+    { name: "browser_snapshot", description: "접근성 스냅샷 캡처" },
   ],
 };
 
@@ -3250,7 +3250,7 @@ export const mcpToolsById: Record<number, MCPTool[]> = {
 export const skills: SkillItem[] = [
   {
     name: "api-recon",
-    description: "对 REST/GraphQL API 做侦察与越权面枚举；发现新 API 端点时使用。",
+    description: "REST/GraphQL API 에 정찰과 권한 우회 공격면 열거를 수행한다. 새 API 엔드포인트를 발견하면 사용한다.",
     license: "MIT",
     mcps: [],
     files: ["SKILL.md", "scripts/enum.py"],
@@ -3261,7 +3261,7 @@ export const skills: SkillItem[] = [
   },
   {
     name: "playwright-cli",
-    description: "用 Playwright 驱动浏览器做动态爬取与截图；需要渲染 JS 站点时使用。",
+    description: "Playwright 로 브라우저를 구동해 동적 크롤링과 스크린샷을 수행한다. JS 사이트를 렌더링해야 할 때 사용한다.",
     mcps: ["playwright"],
     files: ["SKILL.md"],
     calls: 7,
@@ -3271,7 +3271,7 @@ export const skills: SkillItem[] = [
   },
   {
     name: "scopesentry",
-    description: "从 ScopeSentry 拉取资产并归并到公司范围；批量导入资产时使用。",
+    description: "ScopeSentry 에서 자산을 가져와 회사 범위로 병합한다. 자산을 일괄 가져올 때 사용한다.",
     files: ["SKILL.md", "assets/mapping.md"],
     calls: 0,
     tasks: 0,
@@ -3294,7 +3294,7 @@ export const tools: Tool[] = [
   {
     key: "bash",
     system: true,
-    description: "在 Kali 环境执行 shell 命令（受 scope/破坏性门控）",
+    description: "Kali 환경에서 shell 명령을 실행한다 (scope·파괴적 명령 차단 적용).",
     schema: { type: "object", properties: { command: { type: "string" } }, required: ["command"] },
     agents: ["worker", "mainagent"],
     enabled: true,
@@ -3304,7 +3304,7 @@ export const tools: Tool[] = [
   {
     key: "report_finding",
     system: true,
-    description: "上报一个安全发现并连到相关节点",
+    description: "보안 발견을 보고하고 관련 노드에 연결한다.",
     schema: {
       type: "object",
       properties: {
@@ -3323,7 +3323,7 @@ export const tools: Tool[] = [
   {
     key: "upsert_asset",
     system: true,
-    description: "写入/更新资产节点",
+    description: "자산 노드를 기록·갱신한다.",
     schema: { type: "object", properties: { type: { type: "string" }, value: { type: "string" } } },
     agents: ["worker"],
     enabled: true,
@@ -3333,7 +3333,7 @@ export const tools: Tool[] = [
   {
     key: "list_goals",
     system: true,
-    description: "列出当前任务的目标与达成状态",
+    description: "현재 작업의 목표와 달성 상태를 나열한다.",
     schema: { type: "object", properties: {} },
     agents: ["planner"],
     enabled: true,
@@ -3343,7 +3343,7 @@ export const tools: Tool[] = [
   {
     key: "nuclei_scan",
     system: false,
-    description: "自定义：用 nuclei 跑指定模板",
+    description: "사용자 정의: nuclei 로 지정한 템플릿을 실행한다.",
     schema: {
       type: "object",
       properties: { target: { type: "string" }, template: { type: "string" } },
