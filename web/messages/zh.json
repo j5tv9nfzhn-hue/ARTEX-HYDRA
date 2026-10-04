@@ -2433,17 +2433,6 @@
       "ff06c243": "超时",
       "ff9d6e08": "网络搜索"
     },
-    "approval-execution-focus": {
-      "0149f742": "取消定位",
-      "28b283cb": "重试定位",
-      "2cb271e3": "无法定位原始执行",
-      "33d74fab": "无法定位：{var0}",
-      "4b2af700": "正在加载审批 #{var0} 所在的对话位置…",
-      "7607f260": "已展开审批 #{var0} 对应的工具调用",
-      "796b948a": "审批来源与当前会话不一致",
-      "b057f955": "会话中未找到对应工具调用，记录可能已删除",
-      "ba151ccd": "会话中未找到对应工具调用"
-    },
     "approval-records": {
       "73288185": "查看会话审计片段",
       "74389464": "结果记录时间：",
@@ -2619,19 +2608,6 @@
       "eef3e2c2": "服务类型：http | other",
       "f9d436fa": "完整 URL（服务/接口）"
     },
-    "asset-intercept-rules-editor": {
-      "19815365": "拦截",
-      "74049191": "IP(模糊)",
-      "119ff058": "URL(全等)",
-      "261e663d": "CIDR 网段",
-      "2b1b4fd9": "域名(全等)",
-      "4c0c0aed": "允许",
-      "5f4fc4a6": "域名(模糊)",
-      "661169e8": "IP(全等)",
-      "83098b43": "添加一条",
-      "ac89703d": "URL(模糊)",
-      "b13b86a4": "备注(可选)"
-    },
     "copy-button": {
       "67905220": "复制失败，请手动选择文本复制",
       "4edd1d00": "复制",
@@ -2718,19 +2694,6 @@
       "eaa96d40": "页 · 共",
       "ff792716": "已关联 {var0} 条流量到漏洞 #{var1}"
     },
-    "scope-text-editor": {
-      "60849240": "资产范围",
-      "129cece6": "已识别",
-      "282d6846": "域名",
-      "4cb19a99": "example.com\n203.0.113.10\n198.51.100.0/24\n京ICP备12345678号-1\n企业名称关键词",
-      "7eeca0f2": "另有",
-      "7f14a9fd": "每行一条，自动识别域名、IP、CIDR、ICP 备案和企业关键词。",
-      "b32a0002": "行错误",
-      "bce2ef61": "条",
-      "c53f3845": "行：",
-      "cc1b21e8": "关键词",
-      "dae828fe": "第"
-    },
     "table-pagination": {
       "14ce4ab1": "共 0 条",
       "2189643c": "条/页",
@@ -2801,14 +2764,6 @@
       "e07b18f6": "管理模板",
       "f77e04c5": "应用模板时预填这些任务级规则（拦截/允许，仅对新任务生效，不进全局）。",
       "fd6908f6": "任务分类"
-    },
-    "todo-popover": {
-      "14360e17": "解析 Todo 失败",
-      "657951dc": "最近 Todo",
-      "86bef95b": " · 加载中…",
-      "8ea8a03a": "本会话暂无 Todo",
-      "97f56688": "查看最近 Todo",
-      "c6db2737": "（空）"
     },
     "ui": {
       "sortable-head": {
@@ -4579,5 +4534,56 @@
     "searchHint": "输入名称、地址或 ID 搜索记录",
     "removeAria": "移除引用 {label}",
     "selectedHint": "发送时读取最新详情 · 最多 10 条"
+  },
+  "assetInterceptRules": {
+    "action": {
+      "block": "拦截",
+      "allow": "允许"
+    },
+    "kind": {
+      "exact_domain": "域名(全等)",
+      "exact_ip": "IP(全等)",
+      "exact_url": "URL(全等)",
+      "fuzzy_domain": "域名(模糊)",
+      "fuzzy_ip": "IP(模糊)",
+      "fuzzy_url": "URL(模糊)",
+      "cidr": "CIDR 网段"
+    },
+    "notePlaceholder": "备注(可选)",
+    "add": "添加一条"
+  },
+  "scopeEditor": {
+    "defaultLabel": "资产范围",
+    "defaultDescription": "每行一条，自动识别域名、IP、CIDR、ICP 备案和企业关键词。",
+    "placeholder": "example.com\n203.0.113.10\n198.51.100.0/24\n京ICP备12345678号-1\n企业名称关键词",
+    "kind": {
+      "domain": "域名",
+      "ip": "IP",
+      "cidr": "CIDR",
+      "icp": "ICP",
+      "keyword": "关键词"
+    },
+    "recognized": "已识别 {count} 条",
+    "lineError": "第 {line} 行：{error}",
+    "moreErrors": "另有 {count} 行错误"
+  },
+  "approvalFocus": {
+    "mismatch": "审批来源与当前会话不一致",
+    "noSource": "无法定位原始执行",
+    "notFoundDeleted": "会话中未找到对应工具调用，记录可能已删除",
+    "notFound": "会话中未找到对应工具调用",
+    "locateFail": "无法定位：{error}",
+    "expanded": "已展开审批 #{id} 对应的工具调用",
+    "loading": "正在加载审批 #{id} 所在的对话位置…",
+    "retry": "重试定位",
+    "cancel": "取消定位"
+  },
+  "todoPopover": {
+    "parseError": "解析 Todo 失败",
+    "none": "本会话暂无 Todo",
+    "view": "查看最近 Todo",
+    "recent": "最近 Todo",
+    "loadingSuffix": " · 加载中…",
+    "empty": "（空）"
   }
 }

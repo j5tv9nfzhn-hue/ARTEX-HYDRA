@@ -2433,17 +2433,6 @@
       "ff06c243": "",
       "ff9d6e08": ""
     },
-    "approval-execution-focus": {
-      "0149f742": "",
-      "28b283cb": "",
-      "2cb271e3": "",
-      "33d74fab": "",
-      "4b2af700": "",
-      "7607f260": "",
-      "796b948a": "",
-      "b057f955": "",
-      "ba151ccd": ""
-    },
     "approval-records": {
       "73288185": "",
       "74389464": "",
@@ -2619,19 +2608,6 @@
       "eef3e2c2": "",
       "f9d436fa": ""
     },
-    "asset-intercept-rules-editor": {
-      "19815365": "",
-      "74049191": "",
-      "119ff058": "",
-      "261e663d": "",
-      "2b1b4fd9": "",
-      "4c0c0aed": "",
-      "5f4fc4a6": "",
-      "661169e8": "",
-      "83098b43": "",
-      "ac89703d": "",
-      "b13b86a4": ""
-    },
     "copy-button": {
       "67905220": "",
       "4edd1d00": "",
@@ -2718,19 +2694,6 @@
       "eaa96d40": "",
       "ff792716": ""
     },
-    "scope-text-editor": {
-      "60849240": "",
-      "129cece6": "",
-      "282d6846": "",
-      "4cb19a99": "",
-      "7eeca0f2": "",
-      "7f14a9fd": "",
-      "b32a0002": "",
-      "bce2ef61": "",
-      "c53f3845": "",
-      "cc1b21e8": "",
-      "dae828fe": ""
-    },
     "table-pagination": {
       "14ce4ab1": "",
       "2189643c": "",
@@ -2801,14 +2764,6 @@
       "e07b18f6": "",
       "f77e04c5": "",
       "fd6908f6": ""
-    },
-    "todo-popover": {
-      "14360e17": "",
-      "657951dc": "",
-      "86bef95b": "",
-      "8ea8a03a": "",
-      "97f56688": "",
-      "c6db2737": ""
     },
     "ui": {
       "sortable-head": {
@@ -4579,5 +4534,56 @@
     "searchHint": "이름·주소·ID 를 입력해 기록을 검색하세요",
     "removeAria": "인용 제거 {label}",
     "selectedHint": "전송 시 최신 상세 정보를 읽습니다 · 최대 10건"
+  },
+  "assetInterceptRules": {
+    "action": {
+      "block": "차단",
+      "allow": "허용"
+    },
+    "kind": {
+      "exact_domain": "도메인(완전 일치)",
+      "exact_ip": "IP(완전 일치)",
+      "exact_url": "URL(완전 일치)",
+      "fuzzy_domain": "도메인(부분 일치)",
+      "fuzzy_ip": "IP(부분 일치)",
+      "fuzzy_url": "URL(부분 일치)",
+      "cidr": "CIDR 대역"
+    },
+    "notePlaceholder": "비고(선택)",
+    "add": "규칙 추가"
+  },
+  "scopeEditor": {
+    "defaultLabel": "자산 범위",
+    "defaultDescription": "한 줄에 하나씩 입력하면 도메인·IP·CIDR·ICP 등록·기업 키워드를 자동으로 인식합니다.",
+    "placeholder": "example.com\n203.0.113.10\n198.51.100.0/24\n기업명 키워드",
+    "kind": {
+      "domain": "도메인",
+      "ip": "IP",
+      "cidr": "CIDR",
+      "icp": "ICP",
+      "keyword": "키워드"
+    },
+    "recognized": "{count}건 인식됨",
+    "lineError": "{line}행: {error}",
+    "moreErrors": "그 외 {count}행 오류"
+  },
+  "approvalFocus": {
+    "mismatch": "승인 출처가 현재 대화와 일치하지 않습니다",
+    "noSource": "원본 실행을 찾을 수 없습니다",
+    "notFoundDeleted": "대화에서 해당 도구 호출을 찾지 못했습니다. 기록이 삭제되었을 수 있습니다.",
+    "notFound": "대화에서 해당 도구 호출을 찾지 못했습니다.",
+    "locateFail": "찾을 수 없음: {error}",
+    "expanded": "승인 #{id}에 해당하는 도구 호출을 펼쳤습니다",
+    "loading": "승인 #{id}가 있는 대화 위치를 불러오는 중…",
+    "retry": "다시 찾기",
+    "cancel": "찾기 취소"
+  },
+  "todoPopover": {
+    "parseError": "Todo 를 해석하지 못했습니다",
+    "none": "이 대화에 Todo 없음",
+    "view": "최근 Todo 보기",
+    "recent": "최근 Todo",
+    "loadingSuffix": " · 불러오는 중…",
+    "empty": "(비어 있음)"
   }
 }

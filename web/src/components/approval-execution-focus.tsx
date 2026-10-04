@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import type { Activity, InterceptExecution } from "@/lib/types";
 
 // Resolve one exact persisted call, independently of transcript pagination.
 export function useApprovalFocus({ taskId, conversationId }: { taskId?: string; conversationId?: number }) {
+  const t = useTranslations("approvalFocus");
   const [state, setState] = React.useState<{
     id: number;
     source?: InterceptExecution;
@@ -34,12 +36,12 @@ export function useApprovalFocus({ taskId, conversationId }: { taskId?: string; 
             ? source.conversation_id !== conversationId
             : source.task_id !== taskId || source.conversation_id != null
         ) {
-          throw new Error("审批来源与当前会话不一致");
+          throw new Error(t("mismatch"));
         }
         setState({ id, source, loading: false });
       })
       .catch((e) => {
-        if (!cancelled) setState({ id, error: (e as Error).message || "无法定位原始执行", loading: false });
+        if (!cancelled) setState({ id, error: (e as Error).message || t("noSource"), loading: false });
       });
     return () => {
       cancelled = true;
@@ -65,6 +67,7 @@ export function useApprovalHistory(
   loadPage: (before: number) => Promise<HistoryPage>,
   mergePage: (page: HistoryPage) => void,
 ) {
+  const t = useTranslations("approvalFocus");
   const itemsRef = React.useRef(items);
   itemsRef.current = items;
   const [result, setResult] = React.useState<{ source: InterceptExecution; error?: string }>();
@@ -78,13 +81,13 @@ export function useApprovalHistory(
         const page = await loadPage(before);
         if (cancelled) return;
         if (!page.items.length || (before > 0 && page.items[0].seq >= before)) {
-          throw new Error("会话中未找到对应工具调用，记录可能已删除");
+          throw new Error(t("notFoundDeleted"));
         }
         mergePage(page);
         current = page.items;
         before = current[0].seq;
         if (!page.hasMore && !current.some((a) => a.seq === source.seq)) {
-          throw new Error("会话中未找到对应工具调用");
+          throw new Error(t("notFound"));
         }
       }
       if (!cancelled) setResult({ source });
@@ -94,7 +97,7 @@ export function useApprovalHistory(
     return () => {
       cancelled = true;
     };
-  }, [source, loaded, loadPage, mergePage]);
+  }, [source, loaded, loadPage, mergePage, t]);
   return {
     ready: !!source && result?.source === source && !result.error,
     error: result?.source === source ? result?.error : undefined,
@@ -108,6 +111,7 @@ export function ApprovalExecutionFocus({
   focus: ReturnType<typeof useApprovalFocus>;
   history: ReturnType<typeof useApprovalHistory>;
 }) {
+  const t = useTranslations("approvalFocus");
   const { state } = focus;
   if (!state) return null;
   const error = state.error || history.error;
@@ -118,19 +122,19 @@ export function ApprovalExecutionFocus({
     >
       <span className={error ? "text-destructive" : "text-muted-foreground"}>
         {error
-          ? `无法定位：${error}`
+          ? t("locateFail", { error })
           : history.ready
-            ? `已展开审批 #${state.id} 对应的工具调用`
-            : `正在加载审批 #${state.id} 所在的对话位置…`}
+            ? t("expanded", { id: state.id })
+            : t("loading", { id: state.id })}
       </span>
       <div className="flex gap-2">
         {error ? (
           <Button size="sm" variant="outline" onClick={focus.retry}>
-            重试定位
+            {t("retry")}
           </Button>
         ) : null}
         <Button size="sm" variant="ghost" onClick={focus.close}>
-          取消定位
+          {t("cancel")}
         </Button>
       </div>
     </div>
