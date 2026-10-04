@@ -5216,5 +5216,45 @@
     },
     "resultCompanies": "신규·갱신 기업: {names}",
     "moreErrors": "… 오류 총 {count}건"
+  },
+  "tasksPage": {
+    "tab": {
+      "current": "현재 작업",
+      "archived": "보관됨"
+    },
+    "filter": {
+      "searchPlaceholder": "설명 / 목표 / ID 검색",
+      "clearSearch": "검색어 지우기",
+      "statusPlaceholder": "상태",
+      "allStatus": "전체 상태",
+      "categoryPlaceholder": "작업 분류",
+      "allCategory": "전체 분류",
+      "uncategorized": "미분류"
+    },
+    "count": "{shown}/{total}건",
+    "selected": "{count}건 선택됨",
+    "clearSelection": "선택 해제",
+    "batchPause": "일시정지 {count}",
+    "batchResume": "재개 {count}",
+    "batchArchive": "보관 {count}",
+    "empty": {
+      "noTasks": "작업이 없습니다. 오른쪽 위 「새 작업」을 눌러 시작하세요.",
+      "noMatch": "일치하는 작업이 없습니다."
+    },
+    "table": {
+      "selectAllAria": "이 페이지 작업 전체 선택",
+      "name": "이름",
+      "description": "설명",
+      "target": "목표",
+      "status": "상태",
+      "goalProgress": "목표 진행도",
+      "findings": "취약점",
+      "findingsSub": "심각/높음/중간/낮음",
+      "findingsTitle": "심각 / 높음 / 중간 / 낮음",
+      "runningWorker": "실행 중 Worker",
+      "created": "생성 시각",
+      "duration": "실행 시간",
+      "actions": "동작"
+    }
   }
 }

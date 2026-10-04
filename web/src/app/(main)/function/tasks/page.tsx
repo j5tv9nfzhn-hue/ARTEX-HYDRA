@@ -42,6 +42,7 @@ import {
   Undo2Icon,
   XIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { AssetInterceptRulesEditor } from "@/components/asset-intercept-rules-editor";
@@ -228,15 +229,9 @@ function fmtDateTime(unix?: number): string {
   return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
-  { value: "created", label: "已创建" },
-  { value: "queued", label: "排队中" },
-  { value: "running", label: "运行中" },
-  { value: "paused", label: "已暂停" },
-  { value: "done", label: "已完成" },
-  { value: "failed", label: "失败" },
-  { value: "timeout", label: "已超时" },
-];
+// 상태 필터 옵션. 라벨은 렌더 시점에 status.task 네임스페이스로 번역하므로 여기서는
+// 값(순서 포함)만 둔다.
+const STATUS_OPTIONS: readonly TaskStatus[] = ["created", "queued", "running", "paused", "done", "failed", "timeout"];
 
 // Select 不接受空字符串 value,所以「无分类」在筛选器、新建表单和批量移动里
 // 统一用这个哨兵值,提交时再翻译成后端的 null。
@@ -260,7 +255,7 @@ const TASK_SORT_FIELDS: readonly TaskSortField[] = ["id", "created", "duration",
 const TASK_SORT_PREFERENCE_KEY = "artex_task_list_sort";
 const TASK_FILTER_PREFERENCE_KEY = "artex_task_list_filters";
 
-const TASK_STATUS_RANK = new Map(STATUS_OPTIONS.map((option, index) => [option.value, index]));
+const TASK_STATUS_RANK = new Map(STATUS_OPTIONS.map((status, index) => [status, index]));
 
 function taskIsPinned(task: Task): boolean {
   return task.pinned ?? Boolean(task.pinned_at);
@@ -303,6 +298,8 @@ function compareTasks(left: Task, right: Task, field: TaskSortField, direction: 
 }
 
 export default function TasksPage() {
+  const t = useTranslations("tasksPage");
+  const ts = useTranslations("status");
   const [activeTab, setActiveTab] = React.useState("current");
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [categories, setCategories] = React.useState<TaskCategory[]>([]);
@@ -329,7 +326,7 @@ export default function TasksPage() {
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as { status?: unknown; category?: unknown };
-        if (parsed.status === "all" || STATUS_OPTIONS.some((option) => option.value === parsed.status)) {
+        if (parsed.status === "all" || STATUS_OPTIONS.some((status) => status === parsed.status)) {
           setStatusFilter(parsed.status as TaskStatus | "all");
         }
         if (
@@ -780,8 +777,8 @@ export default function TasksPage() {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-4">
       <TabsList className="mx-4 lg:mx-6">
-        <TabsTrigger value="current">当前任务</TabsTrigger>
-        <TabsTrigger value="archived">已归档</TabsTrigger>
+        <TabsTrigger value="current">{t("tab.current")}</TabsTrigger>
+        <TabsTrigger value="archived">{t("tab.archived")}</TabsTrigger>
       </TabsList>
       <TabsContent value="current">
         <Card>
@@ -790,7 +787,7 @@ export default function TasksPage() {
               <div className="relative w-full sm:max-w-xs">
                 <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
                 <Input
-                  placeholder="搜索描述 / 目标 / ID"
+                  placeholder={t("filter.searchPlaceholder")}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   className="pl-8"
@@ -799,7 +796,7 @@ export default function TasksPage() {
                   <button
                     type="button"
                     onClick={() => setQuery("")}
-                    aria-label="清除搜索"
+                    aria-label={t("filter.clearSearch")}
                     className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
                   >
                     <XIcon className="size-4" />
@@ -808,14 +805,14 @@ export default function TasksPage() {
               </div>
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as TaskStatus | "all")}>
                 <SelectTrigger className="w-36">
-                  <SelectValue placeholder="状态" />
+                  <SelectValue placeholder={t("filter.statusPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="all">全部状态</SelectItem>
-                    {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>
-                        {s.label}
+                    <SelectItem value="all">{t("filter.allStatus")}</SelectItem>
+                    {STATUS_OPTIONS.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {ts(`task.${status}`)}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -823,12 +820,12 @@ export default function TasksPage() {
               </Select>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-40">
-                  <SelectValue placeholder="任务分类" />
+                  <SelectValue placeholder={t("filter.categoryPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="all">全部分类</SelectItem>
-                    <SelectItem value={UNCATEGORIZED_VALUE}>未分类</SelectItem>
+                    <SelectItem value="all">{t("filter.allCategory")}</SelectItem>
+                    <SelectItem value={UNCATEGORIZED_VALUE}>{t("filter.uncategorized")}</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={String(category.id)}>
                         {category.name}
@@ -838,13 +835,13 @@ export default function TasksPage() {
                 </SelectContent>
               </Select>
               <span className="text-muted-foreground text-xs tabular-nums">
-                {filtered.length}/{tasks.length} 条
+                {t("count", { shown: filtered.length, total: tasks.length })}
               </span>
               {selectedIds.size > 0 && (
                 <>
-                  <span className="text-xs tabular-nums">已选 {selectedIds.size} 个</span>
+                  <span className="text-xs tabular-nums">{t("selected", { count: selectedIds.size })}</span>
                   <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-                    取消选择
+                    {t("clearSelection")}
                   </Button>
                   {pausableTaskIDs.length > 0 && (
                     <Button
@@ -858,7 +855,7 @@ export default function TasksPage() {
                       ) : (
                         <PauseIcon data-icon="inline-start" />
                       )}
-                      暂停 {pausableTaskIDs.length}
+                      {t("batchPause", { count: pausableTaskIDs.length })}
                     </Button>
                   )}
                   {resumableTaskIDs.length > 0 && (
@@ -873,7 +870,7 @@ export default function TasksPage() {
                       ) : (
                         <PlayIcon data-icon="inline-start" />
                       )}
-                      继续 {resumableTaskIDs.length}
+                      {t("batchResume", { count: resumableTaskIDs.length })}
                     </Button>
                   )}
                   {archivableTaskIDs.length > 0 && (
@@ -883,7 +880,7 @@ export default function TasksPage() {
                       trigger={
                         <Button size="sm" variant="outline">
                           <ArchiveIcon data-icon="inline-start" />
-                          归档 {archivableTaskIDs.length}
+                          {t("batchArchive", { count: archivableTaskIDs.length })}
                         </Button>
                       }
                     />
@@ -914,11 +911,11 @@ export default function TasksPage() {
 
             {tasks.length === 0 ? (
               <div className="text-muted-foreground mx-4 flex items-center justify-center rounded-lg border border-dashed py-20 text-sm lg:mx-6">
-                暂无任务，点击右上角「新建任务」开始。
+                {t("empty.noTasks")}
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-muted-foreground mx-4 flex items-center justify-center rounded-lg border border-dashed py-20 text-sm lg:mx-6">
-                没有匹配的任务。
+                {t("empty.noMatch")}
               </div>
             ) : (
               <Table className="**:data-[slot='table-cell']:px-4 **:data-[slot='table-head']:px-4">
@@ -928,7 +925,7 @@ export default function TasksPage() {
                       <Checkbox
                         checked={headerChecked}
                         onCheckedChange={(checked) => toggleSelectedPage(checked === true)}
-                        aria-label="选择本页全部任务"
+                        aria-label={t("table.selectAllAria")}
                       />
                     </TableHead>
                     <SortableTaskHead
@@ -939,24 +936,25 @@ export default function TasksPage() {
                       className="font-mono"
                       onSort={sortTasksBy}
                     />
-                    <TableHead>名称</TableHead>
-                    <TableHead>描述</TableHead>
-                    <TableHead>目标</TableHead>
+                    <TableHead>{t("table.name")}</TableHead>
+                    <TableHead>{t("table.description")}</TableHead>
+                    <TableHead>{t("table.target")}</TableHead>
                     <SortableTaskHead
                       field="status"
-                      label="状态"
+                      label={t("table.status")}
                       activeField={sortField}
                       direction={sortDirection}
                       onSort={sortTasksBy}
                     />
-                    <TableHead className="text-center">目标进度</TableHead>
-                    <TableHead className="text-center" title="严重 / 高 / 中 / 低">
-                      漏洞 <span className="text-muted-foreground font-normal">严/高/中/低</span>
+                    <TableHead className="text-center">{t("table.goalProgress")}</TableHead>
+                    <TableHead className="text-center" title={t("table.findingsTitle")}>
+                      {t("table.findings")}{" "}
+                      <span className="text-muted-foreground font-normal">{t("table.findingsSub")}</span>
                     </TableHead>
-                    <TableHead className="text-center">运行中 Worker</TableHead>
+                    <TableHead className="text-center">{t("table.runningWorker")}</TableHead>
                     <SortableTaskHead
                       field="created"
-                      label="创建时间"
+                      label={t("table.created")}
                       activeField={sortField}
                       direction={sortDirection}
                       align="right"
@@ -964,7 +962,7 @@ export default function TasksPage() {
                     />
                     <SortableTaskHead
                       field="duration"
-                      label="运行时长"
+                      label={t("table.duration")}
                       activeField={sortField}
                       direction={sortDirection}
                       align="right"
@@ -972,7 +970,7 @@ export default function TasksPage() {
                     />
                     <TableHead className="text-right">Token</TableHead>
                     <TableHead className="sticky right-0 z-10 bg-card text-right shadow-[-1px_0_0_0_hsl(var(--border))]">
-                      操作
+                      {t("table.actions")}
                     </TableHead>
                   </TableRow>
                 </TableHeader>
