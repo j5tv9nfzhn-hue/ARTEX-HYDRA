@@ -1125,78 +1125,6 @@
             "feb74334": ""
           }
         },
-        "traffic": {
-          "page": {
-            "16753107": "",
-            "89480123": "",
-            "02618c91": "",
-            "0430aae4": "",
-            "08d8d0e1": "",
-            "1a91ad3c": "",
-            "1b2abbc5": "",
-            "1de4e204": "",
-            "2480d057": "",
-            "27ca9880": "",
-            "2fd51d31": "",
-            "300ee3de": "",
-            "3672863b": "",
-            "3755f56f": "",
-            "3b33cd0c": "",
-            "3b6ef811": "",
-            "3bce6946": "",
-            "3e44b2a9": "",
-            "3e566401": "",
-            "3f2d43f2": "",
-            "489dce77": "",
-            "49100b4e": "",
-            "4bbc4e5f": "",
-            "4d0b4688": "",
-            "4d2566f1": "",
-            "4eec6399": "",
-            "537f1f15": "",
-            "577774ea": "",
-            "59c958c7": "",
-            "5a78e17f": "",
-            "5dceaa04": "",
-            "676c8a98": "",
-            "6a7e1528": "",
-            "6ac0ea8b": "",
-            "6bb59acb": "",
-            "6c7dcbb7": "",
-            "6edad232": "",
-            "776d3b44": "",
-            "78fe5b03": "",
-            "7bebeed9": "",
-            "84fcd70d": "",
-            "88578f66": "",
-            "89abbca1": "",
-            "89b4aa63": "",
-            "923b57ad": "",
-            "96656e1e": "",
-            "9a7098d3": "",
-            "9a8c9578": "",
-            "9f872a5f": "",
-            "a6d3de0e": "",
-            "aa250a0f": "",
-            "b284a0bd": "",
-            "b77e2ac8": "",
-            "bb8667ff": "",
-            "bce2ef61": "",
-            "c004be65": "",
-            "cafad584": "",
-            "d0d26c44": "",
-            "d171c5cb": "",
-            "d4302ef6": "",
-            "d8502a5e": "",
-            "f05b3138": "",
-            "f24ddc2b": "",
-            "f492933f": "",
-            "fa88ab39": "",
-            "fb540492": "",
-            "fdd5f454": "",
-            "ff5efc05": ""
-          }
-        },
         "workspace": {
           "page": {
             "00d4b1b3": "",
@@ -5578,6 +5506,86 @@
     "option": {
       "enter": "Enter 전송, Shift+Enter 줄바꿈",
       "ctrlEnter": "Ctrl+Enter 전송, Enter 줄바꿈"
+    }
+  },
+  "traffic": {
+    "title": "트래픽",
+    "subtitle": "전역 녹화 프록시 · 모든 HTTP 왕래",
+    "recording": "녹화 중",
+    "stopped": "중지됨",
+    "total": "총 <n></n>건",
+    "picker": {
+      "selectTarget": "대상 선택…",
+      "selectTargetCount": "대상 선택 ({count})",
+      "batchByTarget": "대상별 일괄 삭제",
+      "sortAriaDesc": "데이터 패킷 수가 현재 내림차순입니다. 클릭하면 오름차순으로 전환합니다",
+      "sortAriaAsc": "데이터 패킷 수가 현재 오름차순입니다. 클릭하면 내림차순으로 전환합니다",
+      "sortTipDesc": "데이터 패킷 수 내림차순",
+      "sortTipAsc": "데이터 패킷 수 오름차순",
+      "selectAll": "전체 선택",
+      "deselectAll": "전체 선택 해제",
+      "empty": "트래픽 기록이 없습니다",
+      "deleteSelected": "선택 삭제 ({count})"
+    },
+    "toolbar": {
+      "hostHint": "먼저 왼쪽에서 대상을 선택하거나 host 를 입력하세요",
+      "deleteHost": "이 대상 삭제",
+      "purgeTitle": "전체 트래픽을 삭제하고 저장 공간을 압축합니다",
+      "purgeEmptyTitle": "현재 트래픽 기록이 없습니다",
+      "purgeAll": "전체 비우기",
+      "search": "전체 검색 (URL / 메서드 / 유형 / 상태 코드…)",
+      "method": "메서드",
+      "allMethods": "전체 메서드"
+    },
+    "filters": {
+      "advanced": "고급 필터",
+      "body": "응답 내용 (본문 키워드, 3자 이상)",
+      "path": "경로 (예: /api/user/…)",
+      "status": "상태 코드",
+      "allStatus": "전체 상태 코드",
+      "respLen": "응답 길이",
+      "min": "최소(B)",
+      "max": "최대(B)",
+      "clear": "필터 지우기"
+    },
+    "selection": {
+      "selected": "선택한 트래픽 {count}건",
+      "linkToVuln": "취약점에 연결",
+      "clear": "선택 비우기"
+    },
+    "table": {
+      "selectPage": "이 페이지 트래픽 선택",
+      "time": "시간",
+      "method": "메서드",
+      "status": "상태 코드",
+      "respLen": "응답 길이",
+      "selectRow": "트래픽 {id} 선택",
+      "loading": "불러오는 중…",
+      "empty": "일치하는 트래픽이 없습니다."
+    },
+    "detail": {
+      "request": "요청 Request",
+      "response": "응답 Response",
+      "loadingMsg": "메시지를 불러오는 중…",
+      "loadFailed": "(메시지를 불러올 수 없습니다)"
+    },
+    "toast": {
+      "purgedWithSpace": "트래픽 {deleted}건을 비웠습니다, 저장 공간 {space} 확보",
+      "purged": "트래픽 {deleted}건을 비웠습니다",
+      "purgeFailed": "비우기 실패: {msg}"
+    },
+    "dialog": {
+      "titlePurge": "전체 트래픽 기록을 비울까요?",
+      "titleSelected": "선택한 {count}개 대상의 전체 트래픽을 삭제할까요?",
+      "titleFilter": "이 대상의 전체 트래픽을 삭제할까요?",
+      "descPurge": "전체 트래픽 기록 <n></n>건(요청/응답 원문 포함)을 영구히 삭제하며, 현재 필터 조건은 무시합니다. 이 작업은 되돌릴 수 없습니다. 취약점에 연결된 트래픽 증거는 별도 증거 보관소에 저장되므로 영향을 받지 않습니다.<br></br><muted>비운 뒤 저장 공간도 함께 압축해, 인덱스가 점유하던 디스크 공간을 시스템에 돌려줍니다. 이 동안 트래픽 녹화가 잠시 중단됩니다.</muted>",
+      "descSelected": "대상 <n></n>개(<hosts></hosts>)의 모든 트래픽 기록(요청/응답 원문 포함)을 영구히 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
+      "descFilter": "host 에 <host></host> 를 포함하는 모든 트래픽 기록(요청/응답 원문 포함)을 영구히 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
+      "cancel": "취소",
+      "confirmPurge": "비우기 확인",
+      "confirmDelete": "삭제 확인",
+      "purging": "비우는 중…",
+      "deleting": "삭제하는 중…"
     }
   }
 }
