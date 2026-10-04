@@ -2413,7 +2413,7 @@ export const activity: Activity[] = [
     intent_id: "i10",
     ts: T("2026-07-26T03:42:00Z"),
     kind: "thinking",
-    summary: "源码泄露的 sa/Acme@2021 是 DB 口令，企业常见口令复用。对 DC01/FS01/JENKINS 做密码喷洒。",
+    summary: "소스 코드 유출로 얻은 sa/Acme@2021 은 DB 비밀번호인데, 기업에서는 비밀번호 재사용이 흔하다. DC01/FS01/JENKINS 를 대상으로 패스워드 스프레이를 수행한다.",
   },
   {
     seq: 361,
@@ -2433,8 +2433,8 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "bash",
     tool_use_id: "t10a",
-    summary: "FS01 [+] acme.local\\sa:Acme@2021 (Pwn3d!)\nDC01 [-] 认证失败",
-    detail: "FS01 上 sa 口令复用成功且有管理员权限；DC01 不通。",
+    summary: "FS01 [+] acme.local\\sa:Acme@2021 (Pwn3d!)\nDC01 [-] 인증 실패",
+    detail: "FS01 에서 sa 비밀번호 재사용에 성공했고 관리자 권한도 있다. DC01 은 연결되지 않았다.",
   },
   {
     seq: 363,
@@ -2442,7 +2442,7 @@ export const activity: Activity[] = [
     intent_id: "i10",
     ts: T("2026-07-26T03:50:00Z"),
     kind: "thinking",
-    summary: "FS01 已拿下，正在枚举共享目录寻找更多凭据和敏感文件……",
+    summary: "FS01 을 장악했고, 공유 디렉터리를 열거해 더 많은 자격 증명과 민감 파일을 찾는 중이다…",
   },
 
   // work#11 · i11 Jenkins 未授权 RCE（done）
@@ -2452,7 +2452,7 @@ export const activity: Activity[] = [
     intent_id: "i11",
     ts: T("2026-07-25T21:32:00Z"),
     kind: "thinking",
-    summary: "JENKINS 8080 直接可访问，先看 /script 控制台是否需要认证。",
+    summary: "JENKINS 8080 에 바로 접근할 수 있으니, 먼저 /script 콘솔이 인증을 요구하는지 확인한다.",
   },
   {
     seq: 371,
@@ -2473,7 +2473,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t11a",
     summary: "200",
-    detail: "Script Console 无需登录即可访问。",
+    detail: "Script Console 에 로그인 없이 접근할 수 있다.",
   },
   {
     seq: 373,
@@ -2494,7 +2494,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t11b",
     summary: "nt authority\\system",
-    detail: "Groovy 以 SYSTEM 权限执行。",
+    detail: "Groovy 가 SYSTEM 권한으로 실행된다.",
   },
   {
     seq: 375,
@@ -2504,7 +2504,7 @@ export const activity: Activity[] = [
     kind: "tool_use",
     tool: "bash",
     tool_use_id: "t11c",
-    summary: "curl -s -d 'script=...' http://10.10.10.20:8080/scriptText  # 导出 Jenkins 凭据库",
+    summary: "curl -s -d 'script=...' http://10.10.10.20:8080/scriptText  # Jenkins 자격 증명 저장소 덤프",
   },
   {
     seq: 376,
@@ -2515,7 +2515,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t11c",
     summary: "acme\\svc_deploy : Deploy@Acme2024\nacme\\svc_build : Build#2023!",
-    detail: "两个域服务账号明文口令导出。",
+    detail: "도메인 서비스 계정 두 개의 평문 비밀번호를 덤프했다.",
   },
   {
     seq: 377,
@@ -2533,7 +2533,7 @@ export const activity: Activity[] = [
     intent_id: "i11",
     ts: T("2026-07-25T21:50:00Z"),
     kind: "result",
-    summary: "Jenkins 未授权 RCE 确认，并导出两个域服务账号凭据。",
+    summary: "Jenkins 미인증 RCE 를 확인했고, 도메인 서비스 계정 두 개의 자격 증명을 덤프했다.",
     input_tokens: 96000,
     output_tokens: 6200,
     cache_read_tokens: 64000,
@@ -2547,7 +2547,7 @@ export const activity: Activity[] = [
     intent_id: "i12",
     ts: T("2026-07-25T22:42:00Z"),
     kind: "thinking",
-    summary: "用 svc_deploy 凭据做域认证，然后 GetUserSPNs 请求可 Kerberoast 的服务账号 TGS。",
+    summary: "svc_deploy 자격 증명으로 도메인 인증을 하고, GetUserSPNs 로 Kerberoast 가능한 서비스 계정의 TGS 를 요청한다.",
   },
   {
     seq: 381,
@@ -2568,7 +2568,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t12a",
     summary: "svc_sql  MSSQLSvc/db01.acme.local:1433  $krb5tgs$23$*svc_sql$...",
-    detail: "拿到 svc_sql 的 TGS 票据（Kerberos RC4）。",
+    detail: "svc_sql 의 TGS 티켓 (Kerberos RC4) 을 확보했다.",
   },
   {
     seq: 383,
@@ -2589,7 +2589,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t12b",
     summary: "$krb5tgs$23$*svc_sql$...:Sql@2020",
-    detail: "8 分钟破出口令 Sql@2020。",
+    detail: "8분 만에 비밀번호 Sql@2020 을 크랙했다.",
   },
   {
     seq: 385,
@@ -2607,7 +2607,7 @@ export const activity: Activity[] = [
     intent_id: "i12",
     ts: T("2026-07-25T23:20:00Z"),
     kind: "result",
-    summary: "Kerberoasting 破出 svc_sql 口令，入图供域控攻击使用。",
+    summary: "Kerberoasting 으로 svc_sql 비밀번호를 크랙했고, 도메인 컨트롤러 공격에 쓰도록 그래프에 반영했다.",
     input_tokens: 108000,
     output_tokens: 6800,
     cache_read_tokens: 72000,
@@ -2621,7 +2621,7 @@ export const activity: Activity[] = [
     intent_id: "i13",
     ts: T("2026-07-25T23:52:00Z"),
     kind: "thinking",
-    summary: "svc_deploy 来自 Jenkins 凭据库，先查组成员资格——若属于 Domain Admins 就可直接 psexec DC01。",
+    summary: "svc_deploy 는 Jenkins 자격 증명 저장소에서 나왔으니, 먼저 그룹 멤버십을 조회한다. Domain Admins 소속이면 곧바로 DC01 에 psexec 할 수 있다.",
   },
   {
     seq: 391,
@@ -2642,7 +2642,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t13a",
     summary: "ACME\\Administrator\nACME\\svc_deploy",
-    detail: "svc_deploy 是 Domain Admins 成员。",
+    detail: "svc_deploy 는 Domain Admins 멤버다.",
   },
   {
     seq: 393,
@@ -2663,7 +2663,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t13b",
     summary: "C:\\Windows\\system32> whoami\nnt authority\\system",
-    detail: "以 SYSTEM 身份登录域控 DC01。",
+    detail: "SYSTEM 권한으로 도메인 컨트롤러 DC01 에 로그인했다.",
   },
   {
     seq: 395,
@@ -2684,7 +2684,7 @@ export const activity: Activity[] = [
     tool: "bash",
     tool_use_id: "t13c",
     summary: "Administrator:500:aad3b435...:::  krbtgt:502:aad3b435...:::",
-    detail: "全域 NTLM 哈希导出（含 krbtgt），可制作黄金票据持久控制。",
+    detail: "전체 도메인 NTLM 해시를 덤프했고 (krbtgt 포함), 골든 티켓을 만들어 지속적으로 장악할 수 있다.",
   },
   {
     seq: 397,
@@ -2702,7 +2702,7 @@ export const activity: Activity[] = [
     intent_id: "i13",
     ts: T("2026-07-26T00:20:00Z"),
     kind: "result",
-    summary: "域控 DC01 拿下，secretsdump 导出全域哈希，靶标达成。",
+    summary: "도메인 컨트롤러 DC01 을 장악했고, secretsdump 로 전체 도메인 해시를 덤프해 목표를 달성했다.",
     input_tokens: 144000,
     output_tokens: 9200,
     cache_read_tokens: 96000,
