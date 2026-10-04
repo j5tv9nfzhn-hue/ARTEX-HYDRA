@@ -2830,37 +2830,6 @@
       "97f56688": "",
       "c6db2737": ""
     },
-    "transcript": {
-      "03e210a6": "",
-      "2029839d": "",
-      "26670dda": "",
-      "300ee3de": "",
-      "3cd2f404": "",
-      "3cf03e48": "",
-      "3dec7f67": "",
-      "411ebfda": "",
-      "48e001aa": "",
-      "4c0c0aed": "",
-      "4c7c52c7": "",
-      "5351664a": "",
-      "59e41356": "",
-      "666b4aff": "",
-      "68d7f63b": "",
-      "72d6f287": "",
-      "73c7e297": "",
-      "a72ef18d": "",
-      "b114b915": "",
-      "b1f41182": "",
-      "b4098535": "",
-      "c53355f7": "",
-      "c6db2737": "",
-      "c9d3b085": "",
-      "d68ff8cf": "",
-      "ded698ae": "",
-      "ed0ecde3": "",
-      "f4ec6001": "",
-      "f9230344": ""
-    },
     "ui": {
       "sortable-head": {
         "0dc6cfa2": "",
@@ -4573,6 +4542,43 @@
       "copyPacket": "원문 복사",
       "copied": "복사됨",
       "label": "HTTP 원문 코드"
+    }
+  },
+  "transcript": {
+    "newRound": "새 라운드",
+    "streaming": "실시간 스트리밍 중…",
+    "loading": "불러오는 중…",
+    "withThinking": "추론 포함",
+    "kind": {
+      "thinking": "추론",
+      "result": "요약",
+      "note": "설명"
+    },
+    "tool": {
+      "name": "도구",
+      "running": "실행 중…",
+      "failed": "✕ 실패",
+      "command": "명령",
+      "output": "출력",
+      "empty": "(비어 있음)",
+      "loadFailed": "(불러오기 실패)",
+      "pinned": "고정된 도구 호출 #{seq}"
+    },
+    "approval": {
+      "request": "승인 요청",
+      "historyReadonly": "기록 · 읽기 전용",
+      "allowed": "허용됨",
+      "timeout": "시간 초과됨",
+      "denied": "거부됨",
+      "allow": "허용",
+      "deny": "거부",
+      "expand": "승인 상세 펼치기",
+      "collapse": "승인 상세 접기",
+      "retry": "상세 다시 시도",
+      "loading": "승인 상세를 불러오는 중…",
+      "loadError": "승인 상세를 불러오지 못했습니다",
+      "allowedToast": "실행을 허용했습니다",
+      "deniedToast": "실행을 거부했습니다"
     }
   }
 }
