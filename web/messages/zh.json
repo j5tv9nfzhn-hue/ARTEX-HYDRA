@@ -2811,40 +2811,6 @@
       "4edd1d00": "复制",
       "e381a576": "已复制"
     },
-    "exploration-graph": {
-      "65664218": "压缩结论",
-      "0cfaa01f": "来源任务",
-      "208cd021": "· 只读",
-      "25e268d8": "意图",
-      "4b8163f5": "压缩",
-      "4edd1d00": "复制",
-      "4f3c4f8b": "压缩的节点（",
-      "5bf3bf64": "继承自任务 #{var0}，只读",
-      "5d87083e": "派生",
-      "62e951a6": "状态",
-      "6931bb1d": "产出",
-      "6f7fbe53": "暂无探索数据",
-      "77a6fb9f": "原始数据",
-      "7cabe771": "优先级",
-      "7d3c35c2": "属性",
-      "7eeca0f2": "另有",
-      "8553ffff": "根任务",
-      "86835d5f": "漏洞",
-      "89b4aa63": "时间",
-      "941f0831": "目标",
-      "a63d5bdc": "证明",
-      "ab3656a9": "提示",
-      "b1947c01": "意图链",
-      "b27b76aa": "事实",
-      "b77cc19a": "来源任务 #",
-      "c52e7403": "（继承，只读）",
-      "c63f79e6": "来源",
-      "cf0c20e3": "来源 #",
-      "e188ebca": "起点",
-      "e381a576": "已复制",
-      "e4e46c72": "类型",
-      "f28e12a4": "个成员节点未随当前图加载"
-    },
     "finding-retest-dialog": {
       "32092399": "复测漏洞 #",
       "03c927d7": "该漏洞正在复测，可查看已有会话",
@@ -4519,6 +4485,49 @@
       "cancel": "取消",
       "deleting": "删除中",
       "delete": "删除"
+    }
+  },
+  "explorationGraph": {
+    "kind": {
+      "task": "根任务",
+      "begin": "起点",
+      "goal": "目标",
+      "hint": "提示",
+      "intent": "意图",
+      "fact": "事实",
+      "finding": "漏洞",
+      "digest": "压缩"
+    },
+    "rel": {
+      "spawns": "派生",
+      "derived_from": "意图链",
+      "yields": "产出",
+      "proves": "证明"
+    },
+    "detail": {
+      "attributes": "属性",
+      "type": "类型",
+      "state": "状态",
+      "priority": "优先级",
+      "origin": "来源",
+      "sourceTask": "来源任务",
+      "time": "时间",
+      "digestConclusion": "压缩结论",
+      "members": "压缩的节点（{count}）",
+      "membersNotLoaded": "另有 {count} 个成员节点未随当前图加载",
+      "raw": "原始数据",
+      "copy": "复制",
+      "copied": "已复制",
+      "sourceBadge": "来源 #{id}",
+      "sourceTaskBadge": "来源任务 #{id} · 只读",
+      "inheritedTooltip": "继承自任务 #{id}，只读",
+      "inheritedReadOnly": "#{id}（继承，只读）"
+    },
+    "emptyHint": "暂无探索数据",
+    "lineage": {
+      "empty": "无链路可展示（该漏洞未关联探索节点，或所属任务已删除）。",
+      "emptyHint": "无链路",
+      "loading": "加载中…"
     }
   }
 }

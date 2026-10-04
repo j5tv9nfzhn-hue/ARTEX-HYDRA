@@ -2811,40 +2811,6 @@
       "4edd1d00": "",
       "e381a576": ""
     },
-    "exploration-graph": {
-      "65664218": "",
-      "0cfaa01f": "",
-      "208cd021": "",
-      "25e268d8": "",
-      "4b8163f5": "",
-      "4edd1d00": "",
-      "4f3c4f8b": "",
-      "5bf3bf64": "",
-      "5d87083e": "",
-      "62e951a6": "",
-      "6931bb1d": "",
-      "6f7fbe53": "",
-      "77a6fb9f": "",
-      "7cabe771": "",
-      "7d3c35c2": "",
-      "7eeca0f2": "",
-      "8553ffff": "",
-      "86835d5f": "",
-      "89b4aa63": "",
-      "941f0831": "",
-      "a63d5bdc": "",
-      "ab3656a9": "",
-      "b1947c01": "",
-      "b27b76aa": "",
-      "b77cc19a": "",
-      "c52e7403": "",
-      "c63f79e6": "",
-      "cf0c20e3": "",
-      "e188ebca": "",
-      "e381a576": "",
-      "e4e46c72": "",
-      "f28e12a4": ""
-    },
     "finding-retest-dialog": {
       "32092399": "",
       "03c927d7": "",
@@ -4519,6 +4485,49 @@
       "cancel": "취소",
       "deleting": "삭제 중",
       "delete": "삭제"
+    }
+  },
+  "explorationGraph": {
+    "kind": {
+      "task": "루트 작업",
+      "begin": "시작점",
+      "goal": "목표",
+      "hint": "힌트",
+      "intent": "의도",
+      "fact": "사실",
+      "finding": "취약점",
+      "digest": "압축"
+    },
+    "rel": {
+      "spawns": "파생",
+      "derived_from": "의도 체인",
+      "yields": "산출",
+      "proves": "증명"
+    },
+    "detail": {
+      "attributes": "속성",
+      "type": "유형",
+      "state": "상태",
+      "priority": "우선순위",
+      "origin": "출처",
+      "sourceTask": "출처 작업",
+      "time": "시간",
+      "digestConclusion": "압축 결론",
+      "members": "압축된 노드 ({count})",
+      "membersNotLoaded": "멤버 노드 {count}개가 현재 그래프에 로드되지 않았습니다",
+      "raw": "원시 데이터",
+      "copy": "복사",
+      "copied": "복사됨",
+      "sourceBadge": "출처 #{id}",
+      "sourceTaskBadge": "출처 작업 #{id} · 읽기 전용",
+      "inheritedTooltip": "작업 #{id} 에서 상속, 읽기 전용",
+      "inheritedReadOnly": "#{id} (상속, 읽기 전용)"
+    },
+    "emptyHint": "아직 탐색 데이터가 없습니다",
+    "lineage": {
+      "empty": "표시할 경로가 없습니다 (이 취약점에 연결된 탐색 노드가 없거나, 해당 작업이 삭제되었습니다).",
+      "emptyHint": "경로 없음",
+      "loading": "불러오는 중…"
     }
   }
 }

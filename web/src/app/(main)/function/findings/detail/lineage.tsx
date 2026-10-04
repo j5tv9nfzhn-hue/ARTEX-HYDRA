@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import * as React from "react";
 
 import { ExplorationGraph } from "@/components/exploration-graph";
@@ -10,6 +11,7 @@ import type { Edge, TaskNode } from "@/lib/types";
 // node down to this finding's node — the same 攻击链路图 canvas as the task graph,
 // scoped to just this finding's lineage.
 export function FindingLineageView({ findingId }: { findingId: string }) {
+  const t = useTranslations("explorationGraph");
   const [nodes, setNodes] = React.useState<TaskNode[]>([]);
   const [edges, setEdges] = React.useState<Edge[]>([]);
   const [loaded, setLoaded] = React.useState(false);
@@ -35,7 +37,7 @@ export function FindingLineageView({ findingId }: { findingId: string }) {
   if (loaded && nodes.length === 0) {
     return (
       <p className="text-muted-foreground p-6 text-sm">
-        无链路可展示（该漏洞未关联探索节点，或所属任务已删除）。
+        {t("lineage.empty")}
       </p>
     );
   }
@@ -45,7 +47,7 @@ export function FindingLineageView({ findingId }: { findingId: string }) {
       nodes={nodes}
       edges={edges}
       className="h-[68vh]"
-      emptyHint={loaded ? "无链路" : "加载中…"}
+      emptyHint={loaded ? t("lineage.emptyHint") : t("lineage.loading")}
     />
   );
 }
