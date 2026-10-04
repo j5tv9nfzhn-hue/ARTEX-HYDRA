@@ -109,6 +109,15 @@ Upstream provides several methods: an install script (`./install.sh`), precompil
 
 **Common flags:** `./start.sh -addr :8787 -proxy :8788` — `-addr` is the frontend and API, `-proxy` is the traffic-recording proxy port.
 
+### Model selection and output language
+
+The Korean localization is **driven by a prompt directive (`langDirective()` in `agent/prompt.go`), not a hard-coded cap.** So how consistently the output stays in Korean depends on the model's capability, the role, and the context.
+
+- **Use a capable frontier model.** In local isolated-sandbox checks, `gpt-4o` produced its worker artifacts in Korean, but a cheaper, smaller model (for example `gpt-4o-mini`) let the report fall back to the original language. Output-language quality tracks model capability directly, so use a capable model wherever a human reads the report.
+- **Some role- and context-dependent drift remains.** Even with `gpt-4o`, the planner's situation summary occasionally reverts to the original language on some turns, and the structured fields of `report_finding` can lean toward English, mirroring the target app and its technical terms. Stating "write in Korean" explicitly in the task instruction raises the fidelity.
+
+> **Token-cap pitfall on the OpenAI-compatible path.** OpenAI-family models such as `gpt-4o` cap response tokens at 16,384. OpenAI-compatible requests, however, carry a larger default output cap (32,768), so leaving it unchanged makes every call fail with `400 (max_tokens is too large)`. In that case, **set that profile's `max_tokens` to 16,384 or lower on the LLM settings page.** Anthropic-family models (including the default `claude-opus-4-8`) allow 32,768 and do not hit this pitfall.
+
 ### Reverse-proxy deployment (HTTPS / expose only 443)
 
 The frontend and the API/SSE are both served by the same backend port (default `:8787`), and the live activity stream connects **same-origin** by default. So there is no need to set `NEXT_PUBLIC_SSE_BASE` separately: expose only 443 to the public network and keep 8787 internal.
