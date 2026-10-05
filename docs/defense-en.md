@@ -99,7 +99,7 @@ Attacks that replay leaked ID/password lists are amplified by an autonomous agen
 
 ## 4. Detection rules and log patterns (practical)
 
-Written as product-independent **pseudo-rules**. Translate them into your own WAF/IPS/SIEM syntax.
+Written as product-independent **pseudo-rules**. Translate them into your own WAF/IPS/SIEM syntax. The rules below that rest on static fingerprints are also shipped as ready-to-deploy [Sigma rules (`detections/sigma/`)](../detections/). Note that the core behavior and correlation detection (4.1 and 4.2) does not reduce to a single rule, so build it as a correlation rule in your own SIEM from the description below.
 
 ### 4.1 WAF/IPS (behavior-based)
 

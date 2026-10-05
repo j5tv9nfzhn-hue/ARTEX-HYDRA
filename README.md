@@ -300,6 +300,7 @@ sequenceDiagram
   - 공격자가 노리는 진입점과 하드닝(보조 인증·본인확인, API 인가, 자격 증명 스터핑, 세션·비밀 관리)
   - WAF·SIEM·인증 로그 탐지 규칙(의사 규칙), 하드닝 체크리스트, 사고 대응 요약
 - **[Defense & Detection Guide (영어판 · docs/defense-en.md)](docs/defense-en.md)** — 해외 팀·협업자와 공유할 수 있는 같은 내용의 영어판입니다.
+- **[배포용 탐지 규칙 (detections/)](detections/)** — 위 가이드의 정적 지문 탐지를 바로 쓸 수 있는 [Sigma](https://sigmahq.io) 규칙으로 제공합니다. `sigma convert` 로 Splunk·Elasticsearch 등 자신의 SIEM 쿼리로 변환하십시오.
 
 > 이 자료는 계속 보강됩니다. 보완할 탐지 규칙·하드닝 항목 제안은 이슈로 환영합니다.
 
