@@ -8,12 +8,14 @@ import (
 	"testing"
 )
 
-// server.go 의 writeErr/fmt.Errorf 사용자 응답을 한국어로 유지하는 회귀 방어 테스트다
-// (F3b-server.go). 한국어 판정은 F3a 의 assertKoreanError(한글 포함·중국어 한자 0)를,
-// 응답 본문 추출은 task_categories 테스트의 decodeErrorField 를 재사용한다(같은 package
-// server). 범위는 writeErr 24곳 + validateTaskProfileIDs 가 writeErr 로 노출하는
-// fmt.Errorf 2곳이다. 에이전트에 전달되는 프롬프트·도구 설명·seed 의도 요약·기본 제목
-// (未命名任务)·로그는 원문 보존이라 이 테스트의 대상이 아니다.
+// server.go 의 사용자 노출 응답을 한국어로 유지하는 회귀 방어 테스트다(F3b-server.go +
+// F34). 한국어 판정은 F3a 의 assertKoreanError(한글 포함·중국어 한자 0)를, 응답 본문
+// 추출은 task_categories 테스트의 decodeErrorField 를 재사용한다(같은 package server).
+// 범위는 ① F3b: writeErr 24곳 + validateTaskProfileIDs 가 writeErr 로 노출하는
+// fmt.Errorf 2곳, ② F34: writeErr 를 거치지 않는 사용자 노출 5곳(chatUnavailableReason
+// 의 return 3종 + testLLM·웹 검색 프로브의 writeJSON error 2종)이다. 에이전트에 전달되는
+// 프롬프트·도구 설명·seed 의도 요약·기본 제목(未命名任务)·로그는 원문 보존이라 이 테스트의
+// 대상이 아니다.
 
 // TestServerErrorConstantsLocalized 는 응답 상수 전부가 한국어임을 단언한다. 형식 문자열
 // 상수(%d 포함)는 실제 포매팅한 결과로도 함께 검사해, 치환값이 들어가도 한국어가 깨지지
@@ -36,6 +38,12 @@ func TestServerErrorConstantsLocalized(t *testing.T) {
 		"new_session":           errTaskDeletingNewSession,
 		"new_message":           errTaskDeletingNewMessage,
 		"main_agent_busy":       errMainAgentBusy,
+		// F34: writeErr 를 거치지 않는 사용자 노출 응답
+		"chat_no_profile":       errChatNoLLMProfile,
+		"chat_no_active":        errChatNoActiveLLMProfile,
+		"chat_not_ready":        errChatLLMNotReady,
+		"llm_test_no_api_key":   errLLMTestNoAPIKey,
+		"web_search_no_results": errWebSearchProbeNoResults,
 	}
 	for label, msg := range plain {
 		assertKoreanError(t, label, msg)
@@ -207,6 +215,19 @@ func TestServerHandlersResponsesLocalized(t *testing.T) {
 			code:    http.StatusBadRequest,
 			want:    errAssetIDRequired,
 		},
+		{
+			// F34(b): profile_id 를 비우고(=DB 미조회) api_key 도 비우면 TestConnection
+			// 전에 writeJSON{ok:false,error}로 반환한다(status 200). liveServer 는
+			// llmCfg.APIKey 도 "" 라 전역 폴백 키도 없다.
+			name: "testLLM/no-api-key",
+			req: func() *http.Request {
+				return httptest.NewRequest(http.MethodPost, "/api/llm/test", strings.NewReader(`{}`))
+			},
+			handler: func(s *Server) http.HandlerFunc { return s.testLLM },
+			server:  liveServer,
+			code:    http.StatusOK,
+			want:    errLLMTestNoAPIKey,
+		},
 	}
 
 	for _, c := range cases {
@@ -224,4 +245,18 @@ func TestServerHandlersResponsesLocalized(t *testing.T) {
 			assertKoreanError(t, c.name, got)
 		})
 	}
+}
+
+// TestChatUnavailableReasonLocalized 는 F34(a)의 chatUnavailableReason() 이 사용자에게
+// 실제로 돌려주는 사유가 한국어 상수에 연결되어 있음을 확인한다. pg 가 nil 이면(테스트에
+// DB 없음) "준비 안 됨" 경로로 바로 떨어지므로, 그 return 이 errChatLLMNotReady 임을
+// 단언한다(상수를 중국어로 되돌리면 깨짐 = 적대적 비공허성). 나머지 두 사유(설정 없음·활성
+// 설정 없음)는 pg(DB)가 필요한 분기라 위 상수 단언으로 핀 고정한다.
+func TestChatUnavailableReasonLocalized(t *testing.T) {
+	s := &Server{m: &Manager{}} // m.pg == nil → 세 번째 return 경로
+	got := s.chatUnavailableReason()
+	if got != errChatLLMNotReady {
+		t.Fatalf("chatUnavailableReason() = %q, 기대 = %q", got, errChatLLMNotReady)
+	}
+	assertKoreanError(t, "chat_not_ready", got)
 }

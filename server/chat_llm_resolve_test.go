@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/Autumn-27/artex/db"
@@ -30,8 +29,8 @@ func TestChatUnavailableReasonDistinguishesStates(t *testing.T) {
 		_ = m.pg.DeleteProfile(p.ID)
 	}
 
-	if reason := s.chatUnavailableReason(); !strings.Contains(reason, "尚未配置") {
-		t.Fatalf("no-profile reason=%q, want 尚未配置", reason)
+	if reason := s.chatUnavailableReason(); reason != errChatNoLLMProfile {
+		t.Fatalf("no-profile reason=%q, want %q", reason, errChatNoLLMProfile)
 	}
 
 	id, err := m.pg.SaveProfile(&db.LLMProfile{Name: "p1", Format: "anthropic", Model: "claude-x", APIKey: "sk-test"})
@@ -44,15 +43,15 @@ func TestChatUnavailableReasonDistinguishesStates(t *testing.T) {
 	})
 
 	// Profile exists but is not activated.
-	if reason := s.chatUnavailableReason(); !strings.Contains(reason, "没有已激活") {
-		t.Fatalf("inactive reason=%q, want 没有已激活", reason)
+	if reason := s.chatUnavailableReason(); reason != errChatNoActiveLLMProfile {
+		t.Fatalf("inactive reason=%q, want %q", reason, errChatNoActiveLLMProfile)
 	}
 
 	// Once activated, the reason no longer claims a missing/inactive config.
 	if err := m.pg.SetActiveProfile(id); err != nil {
 		t.Fatal(err)
 	}
-	if reason := s.chatUnavailableReason(); strings.Contains(reason, "尚未配置") || strings.Contains(reason, "没有已激活") {
+	if reason := s.chatUnavailableReason(); reason == errChatNoLLMProfile || reason == errChatNoActiveLLMProfile {
 		t.Fatalf("active reason=%q should not report missing/inactive", reason)
 	}
 }

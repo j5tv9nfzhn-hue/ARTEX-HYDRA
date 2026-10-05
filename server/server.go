@@ -75,6 +75,20 @@ const (
 	errMainAgentBusy          = "메인 에이전트가 이전 메시지를 처리하는 중입니다. 잠시 후 다시 시도해 주세요"
 )
 
+// 사용자에게 노출되지만 writeErr 를 거치지 않는 응답 문구(한국어). writeJSON 의 error
+// 필드나 메서드 return 으로 화면에 그대로 뜨므로 위 블록과 성격은 같되 경로가 다르다.
+// nav 경로는 web i18n 라벨(nav.system="시스템", llmConfig="LLM 설정")과 동일 표기. (F34)
+const (
+	// 채팅 LLM 부재 사유 (chatUnavailableReason → writeErr 503 / 대화 종료 사유)
+	errChatNoLLMProfile       = "아직 LLM 설정이 없습니다: 시스템 → LLM 설정에서 설정을 하나 추가해 주세요"
+	errChatNoActiveLLMProfile = "활성화된 LLM 설정이 없습니다: 시스템 → LLM 설정에서 하나를 활성화하거나, 이 대화에서 사용할 설정을 지정해 주세요"
+	errChatLLMNotReady        = "LLM이 준비되지 않아 대화할 수 없습니다: 시스템 → LLM 설정에 사용할 수 있고 활성화된 설정이 있는지 확인해 주세요"
+
+	// LLM 연결 테스트·웹 검색 프로브 (writeJSON {ok:false, error:…}, 설정 화면 점검 결과)
+	errLLMTestNoAPIKey         = "API Key가 제공되지 않았습니다"
+	errWebSearchProbeNoResults = "검색 결과가 0건입니다(요청이 제한되었거나 프록시가 연결되지 않았을 수 있습니다)"
+)
+
 // Server exposes the ARTEX backend over a JSON HTTP API for the shadcn/ui
 // frontend.
 type Server struct {
@@ -586,13 +600,13 @@ func (s *Server) resolveChatAgent(c *db.Conversation) *agent.ChatAgent {
 func (s *Server) chatUnavailableReason() string {
 	if s.m.pg != nil {
 		if profiles, err := s.m.pg.ListProfiles(); err == nil && len(profiles) == 0 {
-			return "尚未配置 LLM：请到 系统 → LLM 配置 添加一个配置"
+			return errChatNoLLMProfile
 		}
 		if active, err := s.m.pg.ActiveProfile(); err == nil && active == nil {
-			return "没有已激活的 LLM 配置：请到 系统 → LLM 配置 激活一个，或在本对话为该会话指定一个配置"
+			return errChatNoActiveLLMProfile
 		}
 	}
-	return "LLM 未就绪，无法对话：请检查 系统 → LLM 配置是否有可用且已激活的配置"
+	return errChatLLMNotReady
 }
 
 // providerForProfile returns a cached provider+cfg for a profile id, so every agent
@@ -1451,7 +1465,7 @@ func (s *Server) testLLM(w http.ResponseWriter, r *http.Request) {
 		s.cfgMu.Unlock()
 	}
 	if cfg.APIKey == "" {
-		writeJSON(w, 200, map[string]any{"ok": false, "error": "未提供 API Key"})
+		writeJSON(w, 200, map[string]any{"ok": false, "error": errLLMTestNoAPIKey})
 		return
 	}
 	// 重试参数【不】带进连接测试:测试有 30s 硬超时,把配置的重试次数/长间隔叠上去
@@ -3647,7 +3661,7 @@ func (s *Server) testWebSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(results) == 0 {
-		writeJSON(w, 200, map[string]any{"ok": false, "error": "搜索返回 0 条结果（可能被限流或代理不通）", "backend": backend})
+		writeJSON(w, 200, map[string]any{"ok": false, "error": errWebSearchProbeNoResults, "backend": backend})
 		return
 	}
 	writeJSON(w, 200, map[string]any{"ok": true, "count": len(results), "backend": backend})
