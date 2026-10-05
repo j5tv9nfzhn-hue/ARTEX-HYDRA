@@ -54,6 +54,15 @@ traffic carries no ARTEX-unique User-Agent, so the network layer is intentionall
 [`suricata/README.md`](suricata/README.md) for the scope, the TLS caveat, and how to validate with
 `suricata -T` and a reference pcap.
 
+## Tests
+
+The Suricata network rules ship with a reproducible regression test in [`tests/`](tests/): it synthesizes a
+deterministic capture with scapy, runs `suricata -r` over it, and asserts that the presence rule fires once
+per probe, the velocity rule trips past its rate threshold, and a benign-User-Agent capture produces zero
+alerts. No binary capture is committed — the test regenerates it on every run. See
+[`tests/README.md`](tests/README.md). The Sigma rules are validated by `sigma check` and `sigma convert`
+(below).
+
 ## How to read these honestly
 
 - **Static indicators can be changed.** An operator can set a different User-Agent, so the absence of

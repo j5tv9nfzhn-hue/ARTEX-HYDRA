@@ -49,18 +49,24 @@ docker run --rm -v "$PWD/detections/suricata":/r -w /r jasonish/suricata:latest 
   suricata -T -S artex.rules -l /tmp
 ```
 
-To confirm the rules actually fire, run Suricata offline against a packet capture that contains a plaintext
-HTTP request carrying the enrich User-Agent (for example, capture a loopback `curl -A 'artex-enrich/1.0'`
-against a local server, or synthesize flows with scapy), then read the alerts:
+To confirm the rules actually fire, a reproducible regression test lives in
+[`../tests/suricata/`](../tests/suricata/). It synthesizes a deterministic capture with scapy, runs
+`suricata -r` over it, and asserts the alert counts — needing only Docker:
+
+```sh
+detections/tests/suricata/run.sh
+```
+
+It asserts that sid 1000001 fires exactly once per probe (35 over a 35-flow capture), that sid 1000002
+trips past the 30-in-300 s rate (**5** alerts on Suricata 8.0.7, flows 31–35), and that the same capture
+with a benign browser User-Agent produces **0** alerts — confirming the signatures are specific. See
+[`../tests/README.md`](../tests/README.md). To check against your own traffic instead, capture a loopback
+`curl -A 'artex-enrich/1.0'` against a local server and read the alerts:
 
 ```sh
 suricata -r enrich.pcap -S artex.rules -l out && \
   grep -c '"signature_id":1000001' out/eve.json    # presence: one per probe
 ```
-
-A reference run over 35 enrich probes from one source within ~35 s produced **35** alerts on sid 1000001 and
-**5** on sid 1000002 (fired after the 30-in-300 s threshold was crossed); the same capture with a benign
-browser User-Agent produced **0** alerts, confirming the signatures are specific.
 
 ## Contributing
 
