@@ -19,6 +19,19 @@ import (
 	actool "github.com/Autumn-27/norma/tool"
 )
 
+// 사용자 노출 HTTP 에러 응답 문구. 아래 네 문구는 HTTP 핸들러(findingTrafficAccess·
+// bindFindingTraffic·editFindingTraffic)에서만 반환되고 에이전트 도구 경로
+// (toolGetFindingTraffic)에는 닿지 않으므로 한국어로 번역한다. 반대로
+// readEvidencePreview 의 errors.New(offset/length 검증)·이진 본문 플레이스홀더와
+// roTool("get_finding_traffic") 도구 설명은 에이전트가 읽는 두뇌 입력이라 원문을
+// 보존한다(각 지점 주석 참조, F16 두뇌 경계 계열).
+const (
+	errFindingTrafficInheritedReadonly  = "상속된 취약점은 읽기 전용이라 출처 작업에서 수정해야 합니다"
+	errFindingTrafficSelectRequired     = "트래픽을 선택하세요"
+	errFindingTrafficVersionRequired    = "version 과 유효한 요청 본문은 필수입니다"
+	errFindingTrafficBindingIDsRequired = "binding_ids 는 필수입니다"
+)
+
 func (s *Server) evidenceStore() *evidence.Store {
 	return evidence.New(s.m.pg, s.m.traffic, filepath.Join(s.m.dir, "evidence"))
 }
@@ -128,7 +141,7 @@ func (s *Server) findingTrafficAccess(w http.ResponseWriter, r *http.Request, wr
 			return 0, false
 		}
 		if write && inherited {
-			writeErr(w, 403, "继承漏洞只读，请在来源任务中修改")
+			writeErr(w, 403, errFindingTrafficInheritedReadonly)
 			return 0, false
 		}
 	}
@@ -171,7 +184,7 @@ func (s *Server) bindFindingTraffic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(body.Refs) == 0 {
-		writeErr(w, 400, "请选择流量")
+		writeErr(w, 400, errFindingTrafficSelectRequired)
 		return
 	}
 	out, err := s.evidenceStore().Bind(r.Context(), id, body.Refs)
@@ -194,14 +207,14 @@ func (s *Server) editFindingTraffic(w http.ResponseWriter, r *http.Request) {
 		Order   []string `json:"binding_ids"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body); err != nil || body.Version == nil {
-		writeErr(w, 400, "version 和有效请求体必填")
+		writeErr(w, 400, errFindingTrafficVersionRequired)
 		return
 	}
 	var order []int64
 	bindingID := int64(0)
 	if r.Method == http.MethodPut {
 		if body.Order == nil {
-			writeErr(w, 400, "binding_ids 必填")
+			writeErr(w, 400, errFindingTrafficBindingIDsRequired)
 			return
 		}
 		order = []int64{}
@@ -238,6 +251,10 @@ type evidencePreview struct {
 	Binary     bool   `json:"binary"`
 }
 
+// readEvidencePreview 는 HTTP 핸들러와 에이전트 도구(toolGetFindingTraffic)가 함께
+// 쓰는 공유 헬퍼다. 아래 두 errors.New 와 이진 본문 플레이스홀더(Content)는 에이전트
+// 도구 결과(actool.Errorf·body 콘텐츠)로 되먹여져 두뇌 입력이 되므로, 성능 드리프트를
+// 피하려고 중국어 원문을 보존한다(F16 두뇌 경계 계열 — 표시/입력 분리는 별도 결정 대기).
 func readEvidencePreview(store *evidence.Store, snapshot db.TrafficEvidenceSnapshot, side string, offset, length int64) (out evidencePreview, err error) {
 	if offset < 0 || length < 0 {
 		return out, errors.New("offset / length 不能为负数")
