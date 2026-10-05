@@ -328,10 +328,17 @@ func (m *Manager) Workers() int {
 	return n
 }
 
+// errWorkersPositive 는 워크 에이전트 수 설정(settingWorkers)이 1 미만일 때 SetWorkers 가
+// 돌려주는 사용자 노출 오류다. 유일 호출처인 설정 PUT 핸들러(server.go:3512)가
+// writeErr(400, err.Error()) 로 그대로 응답하며, 에이전트 도구(actool) 로 되먹이는 경로는
+// 없으므로 사용자 전용으로 보고 한국어로 유지한다. 용어는 UI 설정 화면(ko.json
+// settings.workers "워크 에이전트 수")과 맞춘다.
+const errWorkersPositive = "워크 에이전트 수는 1 이상이어야 합니다"
+
 // SetWorkers persists the concurrent work-agent count. Values <=0 are rejected.
 func (m *Manager) SetWorkers(n int) error {
 	if n <= 0 {
-		return fmt.Errorf("workers 必须 >0")
+		return errors.New(errWorkersPositive)
 	}
 	return m.pg.SetSetting(settingWorkers, strconv.Itoa(n))
 }
@@ -381,6 +388,10 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 		} else {
 			err = tr.RecoverHostDeleteStages(func(_ int64, taskID int64) (bool, error) {
 				if taskID <= 0 {
+					// 기동 중 트래픽 복구 콜백의 내부 정합 오류다. NewManager 가
+					// fmt.Errorf("recover traffic delete staging: %w", err) 로 감싸 기동 실패로
+					// 전파할 뿐 writeErr·actool 어느 경로에도 닿지 않는 운영자 기동 로그라,
+					// F3b(사용자 노출 writeErr) 범위가 아니어서 원문을 보존한다(Z2 계열).
 					return false, errors.New("归档流量暂存日志缺少任务 ID")
 				}
 				task, taskErr := pg.GetTask(taskID)
