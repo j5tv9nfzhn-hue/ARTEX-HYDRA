@@ -1,4 +1,4 @@
-# ARTEX detection rules (Sigma)
+# ARTEX detection rules
 
 > 한국어: 이 디렉터리는 [방어·탐지 가이드(docs/defense-ko.md)](../docs/defense-ko.md)의 4절 "탐지 규칙"을
 > 실제로 배포 가능한 [Sigma](https://sigmahq.io) 규칙으로 옮긴 것입니다. 모든 규칙은 자신이 소유하거나 서면
@@ -44,6 +44,15 @@ Static strings can be changed; behaviour is harder to hide. These Sigma **correl
 Thresholds and windows are conservative defaults — tune them to your baseline. The pure web multi-stage
 case in §4.2 (enumerate → probe → authenticate) still needs base rules specific to your environment,
 because the attack traffic itself carries no ARTEX-unique User-Agent.
+
+## Network rules (Suricata)
+
+Sigma covers host and log telemetry. The one ARTEX artifact observable on the wire — the enrichment prober's
+`artex-enrich/1.0` HTTP User-Agent (`enrich/enrich.go`) — ships as [Suricata](https://suricata.io) rules in
+[`suricata/`](suricata/): a presence signature plus a high-rate enumeration variant. ARTEX's actual attack
+traffic carries no ARTEX-unique User-Agent, so the network layer is intentionally narrow; see
+[`suricata/README.md`](suricata/README.md) for the scope, the TLS caveat, and how to validate with
+`suricata -T` and a reference pcap.
 
 ## How to read these honestly
 

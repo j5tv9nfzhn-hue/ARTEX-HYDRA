@@ -304,7 +304,7 @@ This repository aims to help the **defending side** understand how autonomous AI
   - The fingerprints a defender can observe (IoCs and behavioral signatures) — separated into the target view and the forensic view
   - The entry points attackers target and the corresponding hardening (auxiliary authentication, IDOR, credential stuffing, sessions and secrets)
   - WAF/SIEM/authentication-log detection rules (pseudo-rules), a hardening checklist, and an incident-response summary
-- **[Deployable detection rules (detections/)](detections/)** — the guide's static-fingerprint detections shipped as ready-to-use [Sigma](https://sigmahq.io) rules. Use `sigma convert` to translate them into your own SIEM query language (Splunk, Elasticsearch, and others).
+- **[Deployable detection rules (detections/)](detections/)** — the guide's fingerprint detections shipped as ready-to-use rules: the host/log/SIEM layer as [Sigma](https://sigmahq.io) rules (atomic + correlation; use `sigma convert` for Splunk, Elasticsearch, and others), and the network layer as [Suricata](https://suricata.io) rules targeting the enrich prober User-Agent.
 
 > This material is continually expanded. Suggestions for additional detection rules or hardening items are welcome as issues.
 
