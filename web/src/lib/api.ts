@@ -1147,7 +1147,7 @@ export const api = {
     instructions?: string;
   }) => post<{ name: string }>("/skills", s),
   // uploadSkill installs a skill from a .zip (multipart). Surfaces the backend
-  // error text (e.g. 已存在 / 缺少 SKILL.md) so the UI can show a precise message.
+  // error text (e.g. "이미 존재하는 스킬입니다" / "SKILL.md 를 찾지 못했습니다") so the UI can show a precise message.
   uploadSkill: async (file: File, overwrite = false): Promise<{ name: string; files: number }> => {
     if (MOCK) return { name: file.name.replace(/\.zip$/i, ""), files: 1 };
     const fd = new FormData();
