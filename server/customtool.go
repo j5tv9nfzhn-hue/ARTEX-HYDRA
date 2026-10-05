@@ -42,6 +42,20 @@ type customToolReq struct {
 
 var reToolKey = reAgentKey // 同 agent key 规则:小写字母开头 + 小写字母/数字/下划线
 
+// 사용자 지정 도구 CRUD·시험 실행 엔드포인트가 writeErr 로 사용자에게 돌려주는 검증
+// 오류 응답을 한국어로 고정한다. 에이전트가 읽는 도구 실행 결과(actool.Errorf)와 도구
+// 스키마 description 은 두뇌 경계라 중국어 원문을 보존한다(BRIEF 성능 보존 방침).
+const (
+	errCustomToolKeyFormat          = "key는 소문자로 시작하고 소문자·숫자·밑줄만 사용할 수 있습니다"
+	errCustomToolKindInvalid        = "kind 값은 command, script, http, shell 중 하나여야 합니다"
+	errCustomToolHTTPSchemaRequired = "http 도구에는 매개변수 JSON Schema를 반드시 지정해야 합니다(비워 둘 수 없습니다)"
+	errCustomToolKeyExists          = "이미 존재하는 key입니다(내장 또는 사용자 지정 도구)"
+	errCustomToolEditCustomOnly     = "사용자 지정 도구만 편집할 수 있습니다"
+	errCustomToolBadBody            = "요청 본문이 올바르지 않습니다"
+	errCustomToolShellNoExec        = "shell 유형 도구는 bash 환경 선언이므로 실행할 내용이 없습니다"
+	errCustomToolUnknownKindPrefix  = "알 수 없는 도구 유형입니다: "
+)
+
 func (s *Server) pgCreateCustomTool(w http.ResponseWriter, r *http.Request) {
 	pg := s.pg(w)
 	if pg == nil {
@@ -54,19 +68,19 @@ func (s *Server) pgCreateCustomTool(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Key = strings.TrimSpace(req.Key)
 	if !reToolKey.MatchString(req.Key) {
-		writeErr(w, 400, "key 需小写字母开头，仅含小写字母/数字/下划线")
+		writeErr(w, 400, errCustomToolKeyFormat)
 		return
 	}
 	if req.Kind != "command" && req.Kind != "script" && req.Kind != "http" && req.Kind != "shell" {
-		writeErr(w, 400, "kind 需为 command / script / http / shell")
+		writeErr(w, 400, errCustomToolKindInvalid)
 		return
 	}
 	if req.Kind == "http" && !hasSchemaProps(req.Schema) {
-		writeErr(w, 400, "http 工具必须提供参数 JSON Schema(不能留空)")
+		writeErr(w, 400, errCustomToolHTTPSchemaRequired)
 		return
 	}
 	if exist, _ := pg.GetTool(req.Key); exist != nil {
-		writeErr(w, 409, "该 key 已存在(内置或自定义工具)")
+		writeErr(w, 409, errCustomToolKeyExists)
 		return
 	}
 	if err := pg.CreateCustomTool(&db.Tool{
@@ -91,7 +105,7 @@ func (s *Server) pgUpdateCustomTool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if existing == nil || existing.System {
-		writeErr(w, 400, "只能编辑自定义工具")
+		writeErr(w, 400, errCustomToolEditCustomOnly)
 		return
 	}
 	var req customToolReq
@@ -100,11 +114,11 @@ func (s *Server) pgUpdateCustomTool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Kind != "command" && req.Kind != "script" && req.Kind != "http" && req.Kind != "shell" {
-		writeErr(w, 400, "kind 需为 command / script / http / shell")
+		writeErr(w, 400, errCustomToolKindInvalid)
 		return
 	}
 	if req.Kind == "http" && !hasSchemaProps(req.Schema) {
-		writeErr(w, 400, "http 工具必须提供参数 JSON Schema(不能留空)")
+		writeErr(w, 400, errCustomToolHTTPSchemaRequired)
 		return
 	}
 	if err := pg.UpdateCustomTool(&db.Tool{
@@ -150,7 +164,7 @@ func (s *Server) pgTestCustomTool(w http.ResponseWriter, r *http.Request) {
 	}
 	var req testToolReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeErr(w, 400, "无效的请求体")
+		writeErr(w, 400, errCustomToolBadBody)
 		return
 	}
 	params := req.Params
@@ -169,10 +183,10 @@ func (s *Server) pgTestCustomTool(w http.ResponseWriter, r *http.Request) {
 	case "http":
 		res, _ = s.runHTTPTool(ctx, req.Exec, params, tc)
 	case "shell":
-		writeErr(w, 400, "shell 类型工具是 bash 环境声明，无可执行内容")
+		writeErr(w, 400, errCustomToolShellNoExec)
 		return
 	default:
-		writeErr(w, 400, "未知工具类型: "+req.Kind)
+		writeErr(w, 400, errCustomToolUnknownKindPrefix+req.Kind)
 		return
 	}
 	writeJSON(w, 200, map[string]any{"output": res.Flatten(), "is_error": res.IsError})
