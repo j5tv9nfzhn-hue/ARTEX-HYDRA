@@ -1,0 +1,227 @@
+package server
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
+
+// server.go 의 writeErr/fmt.Errorf 사용자 응답을 한국어로 유지하는 회귀 방어 테스트다
+// (F3b-server.go). 한국어 판정은 F3a 의 assertKoreanError(한글 포함·중국어 한자 0)를,
+// 응답 본문 추출은 task_categories 테스트의 decodeErrorField 를 재사용한다(같은 package
+// server). 범위는 writeErr 24곳 + validateTaskProfileIDs 가 writeErr 로 노출하는
+// fmt.Errorf 2곳이다. 에이전트에 전달되는 프롬프트·도구 설명·seed 의도 요약·기본 제목
+// (未命名任务)·로그는 원문 보존이라 이 테스트의 대상이 아니다.
+
+// TestServerErrorConstantsLocalized 는 응답 상수 전부가 한국어임을 단언한다. 형식 문자열
+// 상수(%d 포함)는 실제 포매팅한 결과로도 함께 검사해, 치환값이 들어가도 한국어가 깨지지
+// 않음을 확인한다.
+func TestServerErrorConstantsLocalized(t *testing.T) {
+	plain := map[string]string{
+		"intent_control":        errTaskDeletingIntentControl,
+		"intent_rerun":          errTaskDeletingIntentRerun,
+		"intent_not_rerunnable": errIntentNotRerunnable,
+		"source_invalid":        errCreateTaskSourceInvalid,
+		"intercept_rules":       errCreateTaskInterceptRules,
+		"category_invalid":      errCreateTaskCategoryInvalid,
+		"company_invalid":       errCreateTaskCompanyInvalid,
+		"llm_profile_invalid":   errLLMProfileInvalid,
+		"asset_store_disabled":  errAssetStoreDisabled,
+		"asset_id_required":     errAssetIDRequired,
+		"python_not_detected":   errPythonNotDetected,
+		"notify_base_url":       errNotifyBaseURLScheme,
+		"notify_digest":         errNotifyDigestRange,
+		"new_session":           errTaskDeletingNewSession,
+		"new_message":           errTaskDeletingNewMessage,
+		"main_agent_busy":       errMainAgentBusy,
+	}
+	for label, msg := range plain {
+		assertKoreanError(t, label, msg)
+	}
+
+	formatted := map[string]string{
+		"source_limit":     fmt.Sprintf(errCreateTaskSourceLimit, 8),
+		"source_not_found": fmt.Sprintf(errCreateTaskSourceNotFound, 999),
+		"company_limit":    fmt.Sprintf(errCreateTaskCompanyLimit, 32),
+		"llm_profile_404":  fmt.Sprintf(errLLMProfileNotFound, 7),
+	}
+	for label, msg := range formatted {
+		assertKoreanError(t, label, msg)
+	}
+}
+
+// TestServerHandlersResponsesLocalized 는 DB 를 건드리지 않고 끝나는 핸들러 경로를 실제
+// HTTP 응답 본문까지 검사해, 상수가 응답에 실제로 실리는 연결을 확인한다(상수를 중국어로
+// 되돌리면 이 테스트가 깨진다 = 적대적 비공허성). DB·엔진·자산 저장소가 필요한 경로
+// (분류/기업 무효·LLM 설정 미존재·파이썬 미탐지·알림 설정·메인 에이전트 점유)는 위
+// 상수 단언으로 핀 고정한다.
+func TestServerHandlersResponsesLocalized(t *testing.T) {
+	// 삭제 장벽이 세워진 서버: beginTaskOperation / IsDeleting 이 "삭제 중"으로 판정한다.
+	deletingServer := func() *Server {
+		s := &Server{m: &Manager{tasks: map[string]*Task{"t1": {ID: "t1"}}}, engine: &Engine{}}
+		s.engine.deleting.Store("t1", true)
+		return s
+	}
+	// 장벽이 없는 서버: 입력 검증까지 진행한다.
+	liveServer := func() *Server {
+		return &Server{m: &Manager{tasks: map[string]*Task{"t1": {ID: "t1"}}}, engine: &Engine{}}
+	}
+
+	cases := []struct {
+		name    string
+		req     func() *http.Request
+		handler func(*Server) http.HandlerFunc
+		server  func() *Server
+		code    int
+		want    string
+	}{
+		{
+			name: "controlIntent/task-deleting",
+			req: func() *http.Request {
+				r := httptest.NewRequest(http.MethodPost, "/api/tasks/t1/intents/5/control", strings.NewReader(`{"action":"pause"}`))
+				r.SetPathValue("id", "t1")
+				r.SetPathValue("iid", "5")
+				return r
+			},
+			handler: func(s *Server) http.HandlerFunc { return s.controlIntent },
+			server:  deletingServer,
+			code:    http.StatusConflict,
+			want:    errTaskDeletingIntentControl,
+		},
+		{
+			name: "rerunIntent/task-deleting",
+			req: func() *http.Request {
+				r := httptest.NewRequest(http.MethodPost, "/api/tasks/t1/intents/5/rerun", nil)
+				r.SetPathValue("id", "t1")
+				r.SetPathValue("iid", "5")
+				return r
+			},
+			handler: func(s *Server) http.HandlerFunc { return s.rerunIntent },
+			server:  deletingServer,
+			code:    http.StatusConflict,
+			want:    errTaskDeletingIntentRerun,
+		},
+		{
+			name: "rerunBlocked/task-deleting",
+			req: func() *http.Request {
+				r := httptest.NewRequest(http.MethodPost, "/api/tasks/t1/intents/rerun-blocked", nil)
+				r.SetPathValue("id", "t1")
+				return r
+			},
+			handler: func(s *Server) http.HandlerFunc { return s.rerunBlocked },
+			server:  deletingServer,
+			code:    http.StatusConflict,
+			want:    errTaskDeletingIntentRerun,
+		},
+		{
+			name: "createTask/source-limit",
+			req: func() *http.Request {
+				// MaxTaskSourceCount=8 → 9개는 한도 초과(루프 전에 반환).
+				r := httptest.NewRequest(http.MethodPost, "/api/tasks", strings.NewReader(
+					`{"goal":"목표","source_task_ids":["1","2","3","4","5","6","7","8","9"]}`))
+				return r
+			},
+			handler: func(s *Server) http.HandlerFunc { return s.createTask },
+			server:  liveServer,
+			code:    http.StatusBadRequest,
+			want:    fmt.Sprintf(errCreateTaskSourceLimit, 8),
+		},
+		{
+			name: "createTask/source-invalid",
+			req: func() *http.Request {
+				r := httptest.NewRequest(http.MethodPost, "/api/tasks", strings.NewReader(
+					`{"goal":"목표","source_task_ids":["abc"]}`))
+				return r
+			},
+			handler: func(s *Server) http.HandlerFunc { return s.createTask },
+			server:  liveServer,
+			code:    http.StatusBadRequest,
+			want:    errCreateTaskSourceInvalid,
+		},
+		{
+			name: "createTask/source-not-found",
+			req: func() *http.Request {
+				// 999 는 tasks 맵에 없음 → 찾을 수 없음(DB 미접근, 맵 조회).
+				r := httptest.NewRequest(http.MethodPost, "/api/tasks", strings.NewReader(
+					`{"goal":"목표","source_task_ids":["999"]}`))
+				return r
+			},
+			handler: func(s *Server) http.HandlerFunc { return s.createTask },
+			server:  liveServer,
+			code:    http.StatusBadRequest,
+			want:    fmt.Sprintf(errCreateTaskSourceNotFound, 999),
+		},
+		{
+			name: "createTask/company-limit",
+			req: func() *http.Request {
+				// MaxTaskCompanyCount=32 → 33개는 NormalizeTaskCompanyIDs(순수 함수)에서 오류.
+				ids := make([]string, 33)
+				for i := range ids {
+					ids[i] = fmt.Sprintf("%d", i+1)
+				}
+				body := `{"goal":"목표","company_ids":[` + strings.Join(ids, ",") + `]}`
+				return httptest.NewRequest(http.MethodPost, "/api/tasks", strings.NewReader(body))
+			},
+			handler: func(s *Server) http.HandlerFunc { return s.createTask },
+			server:  liveServer,
+			code:    http.StatusBadRequest,
+			want:    fmt.Sprintf(errCreateTaskCompanyLimit, 32),
+		},
+		{
+			name: "createTask/llm-profile-invalid",
+			req: func() *http.Request {
+				// llm_profile_ids:[0] → validateTaskProfileIDs 가 loadProfileConfig(DB) 전에 반환.
+				r := httptest.NewRequest(http.MethodPost, "/api/tasks", strings.NewReader(
+					`{"goal":"목표","llm_profile_ids":[0]}`))
+				return r
+			},
+			handler: func(s *Server) http.HandlerFunc { return s.createTask },
+			server:  liveServer,
+			code:    http.StatusBadRequest,
+			want:    errLLMProfileInvalid,
+		},
+		{
+			name: "taskCoverageGraph/asset-store-disabled",
+			req: func() *http.Request {
+				r := httptest.NewRequest(http.MethodGet, "/api/tasks/t1/coverage-graph", nil)
+				r.SetPathValue("id", "t1")
+				return r
+			},
+			handler: func(s *Server) http.HandlerFunc { return s.taskCoverageGraph },
+			server:  liveServer, // Manager.assets==nil → Assets()==nil → 503
+			code:    http.StatusServiceUnavailable,
+			want:    errAssetStoreDisabled,
+		},
+		{
+			name: "taskAssetRefs/asset-id-required",
+			req: func() *http.Request {
+				// asset_id 쿼리 없음 → ParseInt("")=0 → <=0 → 400(Assets() 호출 전).
+				r := httptest.NewRequest(http.MethodGet, "/api/tasks/t1/asset-refs", nil)
+				r.SetPathValue("id", "t1")
+				return r
+			},
+			handler: func(s *Server) http.HandlerFunc { return s.taskAssetRefs },
+			server:  liveServer,
+			code:    http.StatusBadRequest,
+			want:    errAssetIDRequired,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			s := c.server()
+			rec := httptest.NewRecorder()
+			c.handler(s)(rec, c.req())
+			if rec.Code != c.code {
+				t.Fatalf("상태 코드 = %d, 기대 = %d (본문 %q)", rec.Code, c.code, rec.Body.String())
+			}
+			got := decodeErrorField(t, rec.Body.Bytes())
+			if got != c.want {
+				t.Fatalf("응답 문구 = %q, 기대 = %q", got, c.want)
+			}
+			assertKoreanError(t, c.name, got)
+		})
+	}
+}
