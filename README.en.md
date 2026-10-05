@@ -60,12 +60,24 @@ Upstream ARTEX has its prompts, UI, and documentation entirely in Chinese, which
 
 ## Screenshots
 
-<!--
-  Screenshots will be replaced with the Korean UI once the UI localization (next-intl) work is done.
-  The original (Chinese UI) screens can be seen in the "截图预览" section of README.zh.md.
--->
+The three screens below are the localized Korean UI. The data comes from a local, isolated sandbox: every target is the fictional `acme.com` and private address ranges.
 
-Localized screenshots (dashboard, task list, exploration graph, asset coverage, findings, human-in-the-loop chat) will be placed here once the Korean UI localization lands. Until then, the original screens are available in [`README.zh.md`](README.zh.md#截图预览) (Chinese UI).
+<p align="center">
+  <img src="screenshots/ko/dashboard.png" width="900" alt="Dashboard overview"><br>
+  <sub><b>Dashboard</b> — active tasks, confirmed findings, asset nodes, LLM token spend, and the activity feed on one screen.</sub>
+</p>
+
+<p align="center">
+  <img src="screenshots/ko/findings.png" width="900" alt="Findings list"><br>
+  <sub><b>Findings</b> — results aggregated by severity, status, asset, and owning task, exportable to CSV.</sub>
+</p>
+
+<p align="center">
+  <img src="screenshots/ko/chat.png" width="900" alt="Human-in-the-loop chat"><br>
+  <sub><b>Chat</b> — a human steps into the autonomous run to inject hints while the agent summarizes the attack chain in Korean.</sub>
+</p>
+
+The original (Chinese UI) screens are available in [`README.zh.md`](README.zh.md#截图预览) (Chinese UI).
 
 ---
 

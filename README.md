@@ -57,15 +57,24 @@ ARTEX 는 **자신이 소유하거나 서면으로 명시적 허가를 받은 �
 
 ## 화면 미리 보기
 
-<!--
-  스크린샷은 UI 한국어화(next-intl 적용) 작업이 끝난 뒤 한국어 화면으로 교체합니다.
-  원본(중국어 UI) 화면은 README.zh.md 의 "截图预览" 절에서 볼 수 있습니다.
-  교체 대상 파일: screenshots/dashboard.png · tasks.png · sessions.png · graph.png ·
-                  findings.png · assets.png · assets_test.png · traffic.png · chat.png ·
-                  agents.png · llm.png · intercept.png · logs.png
--->
+아래 세 화면은 한국어화를 마친 실제 UI 입니다. 로컬 격리 샌드박스에서 뽑은 데모 데이터이고, 대상은 전부 가상의 `acme.com` 과 사설 대역입니다.
 
-UI 한국어화가 끝나는 대로 한국어 화면(대시보드·작업 목록·탐색 그래프·자산 커버리지·탐지 결과·사람 개입 대화)을 이 자리에 넣습니다. 그때까지는 원본 화면을 [`README.zh.md`](README.zh.md#截图预览)에서 확인할 수 있습니다.
+<p align="center">
+  <img src="screenshots/ko/dashboard.png" width="900" alt="대시보드 — 전체 개요 화면"><br>
+  <sub><b>대시보드</b> — 활성 작업·확인된 취약점·자산 노드·LLM 토큰 소비와 활동 흐름을 한 화면에서 봅니다.</sub>
+</p>
+
+<p align="center">
+  <img src="screenshots/ko/findings.png" width="900" alt="취약점 목록 화면"><br>
+  <sub><b>취약점</b> — 심각도·상태·자산·소속 작업으로 탐지 결과를 집계하고 CSV 로 내보냅니다.</sub>
+</p>
+
+<p align="center">
+  <img src="screenshots/ko/chat.png" width="900" alt="사람 개입 대화 화면"><br>
+  <sub><b>대화</b> — 자율 실행 중에 사람이 끼어들어 힌트를 주고, 에이전트가 공격 체인을 한국어로 요약합니다.</sub>
+</p>
+
+원본(중국어 UI) 전체 화면은 [`README.zh.md`](README.zh.md#截图预览) 에서 볼 수 있습니다.
 
 ---
 
