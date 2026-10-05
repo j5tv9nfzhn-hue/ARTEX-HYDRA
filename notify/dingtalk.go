@@ -38,10 +38,10 @@ func (dingTalkChannel) DestinationKeys() []string { return []string{"webhook"} }
 func (dingTalkChannel) Validate(cfg map[string]any) error {
 	hook := cfgString(cfg, "webhook")
 	if hook == "" {
-		return errors.New("缺少 Webhook 地址")
+		return errors.New("Webhook 주소가 없습니다")
 	}
 	if err := validateHTTPURL(hook); err != nil {
-		return fmt.Errorf("Webhook 地址无效: %w", err)
+		return fmt.Errorf("Webhook 주소가 올바르지 않습니다: %w", err)
 	}
 	return nil
 }
@@ -69,7 +69,7 @@ func (c dingTalkChannel) Send(ctx context.Context, cfg map[string]any, m Message
 				"title":          title,
 				"text":           text,
 				"btnOrientation": "0",
-				"singleTitle":    "查看详情",
+				"singleTitle":    "상세 보기",
 				"singleURL":      m.Items[0].DetailURL,
 			},
 		}
@@ -90,12 +90,12 @@ func (c dingTalkChannel) Send(ctx context.Context, cfg map[string]any, m Message
 		ErrMsg  string `json:"errmsg"`
 	}
 	if err := json.Unmarshal(raw, &res); err != nil {
-		return 0, fmt.Errorf("解析钉钉响应失败: %w (%s)", err, snippet(raw))
+		return 0, fmt.Errorf("DingTalk 응답을 해석하지 못했습니다: %w (%s)", err, snippet(raw))
 	}
 	if res.ErrCode != 0 {
 		// 301000 是签名校验失败、310000 是关键词不匹配——都是配置错误，
 		// 重试不会自愈。
-		return 0, Permanent(fmt.Errorf("钉钉返回错误 %d: %s", res.ErrCode, res.ErrMsg))
+		return 0, Permanent(fmt.Errorf("DingTalk에서 오류가 발생했습니다 (%d): %s", res.ErrCode, res.ErrMsg))
 	}
 	return kept, nil
 }
@@ -117,7 +117,7 @@ func dingTalkSignedURL(hook, secret string, now time.Time) (string, error) {
 	u, err := url.Parse(hook)
 	if err != nil {
 		// 不透传 err：url.Parse 的错误文本里带完整地址（含 access_token）。
-		return "", fmt.Errorf("解析 Webhook 地址失败: %s", redactRequestTarget(hook))
+		return "", fmt.Errorf("Webhook 주소를 해석하지 못했습니다: %s", redactRequestTarget(hook))
 	}
 	q := u.Query()
 	q.Set("timestamp", ts)
