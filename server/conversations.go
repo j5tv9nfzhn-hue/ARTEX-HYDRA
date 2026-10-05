@@ -756,6 +756,20 @@ func (s *Server) nextTriggerRun(agentKey string, cfg triggerBehavior) triggeredR
 	return mergeTriggeredRuns(group)
 }
 
+// [F10/F19 경계 판정 · 두뇌 입력 보존] 아래 P3 트리거 메시지 합성부(taskContextHeader·
+// finalTriggerMessage·mergeTriggeredRuns·mergeAllRuns)가 만드는 중국어 문구는 번역하지 않고
+// 원문을 보존한다. 조립된 message 는 runTriggeredRun 에서 finalTriggerMessage(item) →
+// ca.Chat 의 user 메시지로 들어가는 에이전트 입력(두뇌)이자, 동시에 AppendConvActivity
+// (kind="user")로 전사에 노출되는 이중 용도 문자열이다. 대상: `【任务 …】`(작업 컨텍스트
+// 헤더)·`【本会话合并了…请一并处理】`(합병 안내)·`── 触发 N ──`(구분선). BRIEF 경계 #1
+// (에이전트 두뇌는 번역하지 않는다 — TSecBench 벤치마크 동작 보존)에 해당하고, 표시만
+// 한국어로 가르려면 두뇌용·전사용 두 문자열을 따로 나르도록 구조를 바꿔야 해(F16 동형)
+// 고위험·저가치라 보류한다. 합병 run 의 conversation 제목(`合并触发 · …`)은 ca.Chat 에
+// 안 들어가는 표시 전용이지만, 그 본문(위 보존 대상)이 중국어로 고정되므로 제목만 바꾸면
+// 한 대화에서 제목=한국어·본문=중국어로 섞인다(F7·F8·F12 혼재 금지) — 가치도 낮아 함께 보존.
+// 회귀 가드: trigger_merge_test.go 가 `【任务 #`·`── 触发 `·`共 N 个任务`·`【本会话合并了`·
+// `（目标：` 프레이밍을 핀한다(우발 한국어화 시 FAIL).
+//
 // taskContextHeader renders a task's description/goal once. Same-task fires share
 // this block, so the scheduler no longer repeats it per event (a long task goal
 // times N fires was the dominant bloat). Returns "" for interval/none triggers
