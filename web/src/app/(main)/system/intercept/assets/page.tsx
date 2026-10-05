@@ -3,8 +3,8 @@
 import * as React from "react";
 
 import { BanIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

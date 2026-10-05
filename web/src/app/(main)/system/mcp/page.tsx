@@ -1,28 +1,23 @@
 "use client";
 
 import * as React from "react";
+
+import { PlusIcon, RefreshCwIcon, ServerIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { PlusIcon, RefreshCwIcon, ServerIcon, Trash2Icon } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import type { MCPServer, MCPTool, Agent } from "@/lib/types";
+import type { Agent, MCPServer, MCPTool } from "@/lib/types";
 
 type Transport = "stdio" | "http" | "sse";
 type FormState = {
@@ -60,7 +55,10 @@ export default function MCPPage() {
   const [refreshing, setRefreshing] = React.useState(false);
 
   const load = React.useCallback(() => {
-    api.agents().then(setAgents).catch(() => {});
+    api
+      .agents()
+      .then(setAgents)
+      .catch(() => {});
     api
       .mcpServers()
       .then((ss) => {
@@ -223,11 +221,7 @@ export default function MCPPage() {
     const on = (visibility[serverId] ?? []).includes(agentId);
     try {
       await api.toggleVisibility(agentId, "mcp", serverId, !on);
-      toast.success(
-        on
-          ? t("visibilityRevoked", { name: agentName })
-          : t("visibilityGranted", { name: agentName }),
-      );
+      toast.success(on ? t("visibilityRevoked", { name: agentName }) : t("visibilityGranted", { name: agentName }));
       load();
     } catch (e) {
       toast.error(t("actionFailed", { msg: (e as Error).message }));
@@ -306,24 +300,17 @@ export default function MCPPage() {
               onChange={(e) => setF({ url: e.target.value })}
             />
             <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={form.insecure}
-                onCheckedChange={(v) => setF({ insecure: v === true })}
-              />
+              <Checkbox checked={form.insecure} onCheckedChange={(v) => setF({ insecure: v === true })} />
               {t("insecureLabel")}
             </label>
           </div>
         )}
         <div className="grid gap-2">
-          <Label htmlFor="m-env">
-            {form.transport !== "stdio" ? t("headersLabel") : t("envLabel")}
-          </Label>
+          <Label htmlFor="m-env">{form.transport !== "stdio" ? t("headersLabel") : t("envLabel")}</Label>
           <Textarea
             id="m-env"
             className="font-mono"
-            placeholder={
-              form.transport !== "stdio" ? "Authorization=Bearer xxxx" : "API_KEY=xxxx\nFOO=bar"
-            }
+            placeholder={form.transport !== "stdio" ? "Authorization=Bearer xxxx" : "API_KEY=xxxx\nFOO=bar"}
             value={form.env}
             onChange={(e) => setF({ env: e.target.value })}
           />
@@ -351,9 +338,7 @@ export default function MCPPage() {
               <div key={t.name} className="py-2.5">
                 <code className="font-mono text-sm">{t.name}</code>
                 {t.description && (
-                  <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-                    {t.description}
-                  </p>
+                  <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">{t.description}</p>
                 )}
               </div>
             ))}
@@ -394,17 +379,8 @@ export default function MCPPage() {
                   {s.transport}
                 </Badge>
                 <div className="ml-auto flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <Switch
-                    checked={s.enabled}
-                    onCheckedChange={() => toggleEnabled(s)}
-                    aria-label={t("enableAria")}
-                  />
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    aria-label={t("deleteAria")}
-                    onClick={() => removeServer(s)}
-                  >
+                  <Switch checked={s.enabled} onCheckedChange={() => toggleEnabled(s)} aria-label={t("enableAria")} />
+                  <Button size="icon" variant="outline" aria-label={t("deleteAria")} onClick={() => removeServer(s)}>
                     <Trash2Icon className="text-destructive" />
                   </Button>
                 </div>
@@ -434,15 +410,10 @@ export default function MCPPage() {
       </div>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side="right"
-          className="w-full data-[side=right]:sm:max-w-lg"
-        >
+        <SheetContent side="right" className="w-full data-[side=right]:sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>{editing ? editing.name : t("addServer")}</SheetTitle>
-            <SheetDescription>
-              {t("sheetDesc")}
-            </SheetDescription>
+            <SheetDescription>{t("sheetDesc")}</SheetDescription>
           </SheetHeader>
 
           {editing ? (
@@ -454,7 +425,8 @@ export default function MCPPage() {
               <TabsList>
                 <TabsTrigger value="config">{t("tabConfig")}</TabsTrigger>
                 <TabsTrigger value="tools">
-                  {t("tabTools")}{tools.length ? ` (${tools.length})` : ""}
+                  {t("tabTools")}
+                  {tools.length ? ` (${tools.length})` : ""}
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="config" className="min-h-0 flex-1 overflow-y-auto">

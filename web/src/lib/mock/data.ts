@@ -178,7 +178,8 @@ export const taskTemplates: TaskTemplate[] = [
   {
     id: 1,
     name: "외부 웹 침투",
-    description: "대상의 인터넷 노출면에 블랙박스 침투 테스트를 수행하고, 사이트·엔드포인트·흔한 관리자 진입점을 포괄한다.",
+    description:
+      "대상의 인터넷 노출면에 블랙박스 침투 테스트를 수행하고, 사이트·엔드포인트·흔한 관리자 진입점을 포괄한다.",
     goal: "미인증 접근, 민감 데이터 유출, 서버 장악으로 이어질 수 있는 보안 문제를 식별하고 검증한다.",
     created_at: T("2026-07-20T08:00:00Z"),
     updated_at: T("2026-07-25T08:00:00Z"),
@@ -594,7 +595,8 @@ export const findings: Finding[] = [
     report:
       '## 취약점 개요\n\n`www.acme.com/search` 의 `q` 파라미터에 **오류 기반 SQL 인젝션**(MSSQL)이 존재하며, 데이터베이스 버전과 스키마는 물론 민감 데이터까지 읽을 수 있습니다.\n\n## 영향\n\n- `acme_prod` 데이터베이스의 테이블 구조와 사용자/주문 데이터를 읽을 수 있음\n- 오류 메시지가 그대로 노출되어 익스플로잇을 빠르게 구성할 수 있어 위험이 높음\n\n## 재현 절차\n\n1. 오류 기반 인젝션을 유발합니다:\n\n```\nGET /search?q=1\' AND 1=CONVERT(int,@@version)--\n```\n\n2. 응답에 MSSQL 버전 오류가 노출되어 인젝션이 가능함을 확인합니다\n3. 데이터베이스를 추가로 열거합니다: `sqlmap -u "https://www.acme.com/search?q=1" --dbs`\n\n## 조치 권고\n\n- 모든 쿼리를 파라미터화 쿼리/프리페어드 스테이트먼트로 바꿔 문자열 연결을 없앱니다\n- 운영 환경의 상세 오류 노출을 끕니다\n- 데이터베이스 계정 권한을 최소화하고 `xp_cmdshell` 같은 위험한 확장을 비활성화합니다\n',
     summary: "www.acme.com/search 의 q 파라미터에 오류 기반 SQL 인젝션 존재",
-    evidence: "GET /search?q=1' AND 1=CONVERT(int,@@version)-- → MSSQL 버전 오류 메시지를 반환하며, 데이터베이스 구조를 읽을 수 있습니다.",
+    evidence:
+      "GET /search?q=1' AND 1=CONVERT(int,@@version)-- → MSSQL 버전 오류 메시지를 반환하며, 데이터베이스 구조를 읽을 수 있습니다.",
     intent_id: "i-2",
     task_id: "t-acme-web",
     task_description: "Acme 공식 사이트·관리자 백오피스 외부 침투",
@@ -717,7 +719,8 @@ export const findings: Finding[] = [
     severity: "high",
     status: "pending",
     summary: "유출된 소스 코드에 하드코딩된 데이터베이스 자격 증명 sa/Acme@2021",
-    evidence: "git-dumper 로 www.acme.com/.git 을 복원해 config.php 를 얻었고, 평문 DB 비밀번호가 들어 있었으며 이후 내부망에서 재사용 가능함이 확인되었습니다.",
+    evidence:
+      "git-dumper 로 www.acme.com/.git 을 복원해 config.php 를 얻었고, 평문 DB 비밀번호가 들어 있었으며 이후 내부망에서 재사용 가능함이 확인되었습니다.",
     intent_id: "ig",
     task_id: "t-acme-web",
     task_description: "Acme 공식 사이트·관리자 백오피스 외부 침투",
@@ -761,7 +764,8 @@ export const findings: Finding[] = [
     severity: "medium",
     status: "pending",
     summary: "DMZ 호스트가 이중 NIC 로 내부망에 직결되어 경계 격리가 무력화됨",
-    evidence: "dmz-web01 의 두 번째 NIC 가 10.10.10.0/24 에 있어, DMZ 에서 도메인 컨트롤러/파일 서버/Jenkins 에 바로 도달하며 네트워크 분할을 우회합니다.",
+    evidence:
+      "dmz-web01 의 두 번째 NIC 가 10.10.10.0/24 에 있어, DMZ 에서 도메인 컨트롤러/파일 서버/Jenkins 에 바로 도달하며 네트워크 분할을 우회합니다.",
     intent_id: "i9",
     task_id: "t-acme-web",
     task_description: "Acme 공식 사이트·관리자 백오피스 외부 침투",
@@ -788,7 +792,8 @@ export const findings: Finding[] = [
     severity: "high",
     status: "pending",
     summary: "도메인 서비스 계정 svc_sql 이 Kerberoast 대상이며 비밀번호가 약함",
-    evidence: "GetUserSPNs 로 svc_sql 의 TGS 를 요청하고, hashcat -m 13100 으로 Sql@2020 을 오프라인 크랙했습니다. 이 계정은 SQL 관리 그룹에 속합니다.",
+    evidence:
+      "GetUserSPNs 로 svc_sql 의 TGS 를 요청하고, hashcat -m 13100 으로 Sql@2020 을 오프라인 크랙했습니다. 이 계정은 SQL 관리 그룹에 속합니다.",
     intent_id: "i12",
     task_id: "t-acme-web",
     task_description: "Acme 공식 사이트·관리자 백오피스 외부 침투",
@@ -1077,7 +1082,9 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
     {
       id: "fa7",
       type: "fact",
-      payload: P({ summary: "내부망 생존: 10.10.10.10 DC01(도메인 컨트롤러) / 10.10.10.5 FS01(SMB) / 10.10.10.20 JENKINS" }),
+      payload: P({
+        summary: "내부망 생존: 10.10.10.10 DC01(도메인 컨트롤러) / 10.10.10.5 FS01(SMB) / 10.10.10.20 JENKINS",
+      }),
       priority: 0,
       state: "open",
       origin: "work#9",
@@ -2413,7 +2420,8 @@ export const activity: Activity[] = [
     intent_id: "i10",
     ts: T("2026-07-26T03:42:00Z"),
     kind: "thinking",
-    summary: "소스 코드 유출로 얻은 sa/Acme@2021 은 DB 비밀번호인데, 기업에서는 비밀번호 재사용이 흔하다. DC01/FS01/JENKINS 를 대상으로 패스워드 스프레이를 수행한다.",
+    summary:
+      "소스 코드 유출로 얻은 sa/Acme@2021 은 DB 비밀번호인데, 기업에서는 비밀번호 재사용이 흔하다. DC01/FS01/JENKINS 를 대상으로 패스워드 스프레이를 수행한다.",
   },
   {
     seq: 361,
@@ -2547,7 +2555,8 @@ export const activity: Activity[] = [
     intent_id: "i12",
     ts: T("2026-07-25T22:42:00Z"),
     kind: "thinking",
-    summary: "svc_deploy 자격 증명으로 도메인 인증을 하고, GetUserSPNs 로 Kerberoast 가능한 서비스 계정의 TGS 를 요청한다.",
+    summary:
+      "svc_deploy 자격 증명으로 도메인 인증을 하고, GetUserSPNs 로 Kerberoast 가능한 서비스 계정의 TGS 를 요청한다.",
   },
   {
     seq: 381,
@@ -2621,7 +2630,8 @@ export const activity: Activity[] = [
     intent_id: "i13",
     ts: T("2026-07-25T23:52:00Z"),
     kind: "thinking",
-    summary: "svc_deploy 는 Jenkins 자격 증명 저장소에서 나왔으니, 먼저 그룹 멤버십을 조회한다. Domain Admins 소속이면 곧바로 DC01 에 psexec 할 수 있다.",
+    summary:
+      "svc_deploy 는 Jenkins 자격 증명 저장소에서 나왔으니, 먼저 그룹 멤버십을 조회한다. Domain Admins 소속이면 곧바로 DC01 에 psexec 할 수 있다.",
   },
   {
     seq: 391,
@@ -3182,13 +3192,33 @@ export const agents: Agent[] = [
 
 const promptVars: PromptVar[] = [
   { name: "Goal", description: "현재 작업 목표", example: "acme.com 관리자 백오피스 권한 획득", source: "runtime" },
-  { name: "AssetSummary", description: "자산 그래프 개요", example: "서브도메인 6개 / IP 3개 / 애플리케이션 4개 / 엔드포인트 4개", source: "distilled" },
-  { name: "RouteHint", description: "탐색 경로 힌트", example: "백오피스와 API 권한 우회 공격면 우선", source: "exploration" },
+  {
+    name: "AssetSummary",
+    description: "자산 그래프 개요",
+    example: "서브도메인 6개 / IP 3개 / 애플리케이션 4개 / 엔드포인트 4개",
+    source: "distilled",
+  },
+  {
+    name: "RouteHint",
+    description: "탐색 경로 힌트",
+    example: "백오피스와 API 권한 우회 공격면 우선",
+    source: "exploration",
+  },
 ];
 
 const promptVersions: PromptVersion[] = [
-  { version: 3, ts: T("2026-07-25T10:00:00Z"), note: "권한 우회 탐지 유도 강화", template_text: "你是 ARTEX 的规划者……" },
-  { version: 2, ts: T("2026-07-20T10:00:00Z"), note: "초기 버전 미세 조정", template_text: "你是 ARTEX 的规划者(v2)……" },
+  {
+    version: 3,
+    ts: T("2026-07-25T10:00:00Z"),
+    note: "권한 우회 탐지 유도 강화",
+    template_text: "你是 ARTEX 的规划者……",
+  },
+  {
+    version: 2,
+    ts: T("2026-07-20T10:00:00Z"),
+    note: "초기 버전 미세 조정",
+    template_text: "你是 ARTEX 的规划者(v2)……",
+  },
 ];
 
 export function agentDetail(key: string): AgentDetail {
@@ -3261,7 +3291,8 @@ export const skills: SkillItem[] = [
   },
   {
     name: "playwright-cli",
-    description: "Playwright 로 브라우저를 구동해 동적 크롤링과 스크린샷을 수행한다. JS 사이트를 렌더링해야 할 때 사용한다.",
+    description:
+      "Playwright 로 브라우저를 구동해 동적 크롤링과 스크린샷을 수행한다. JS 사이트를 렌더링해야 할 때 사용한다.",
     mcps: ["playwright"],
     files: ["SKILL.md"],
     calls: 7,
@@ -3528,7 +3559,10 @@ interceptHistory.unshift({
   task_id: "t-acme-web",
   agent_name: "work#1",
   tool_name: "Write",
-  tool_input: { path: "reports/summary.md", content: "# 점검 요약\n\n이번 라운드 검증이 완료되어 기존 증거와 후속 권고를 정리한다." },
+  tool_input: {
+    path: "reports/summary.md",
+    content: "# 점검 요약\n\n이번 라운드 검증이 완료되어 기존 증거와 후속 권고를 정리한다.",
+  },
   status: "allowed",
   decision_source: "model",
   reason: "[模型] 기존 점검 결론을 로컬 보고서에 기록하며 업무 데이터는 수정하지 않음.",
@@ -3545,7 +3579,8 @@ export const interceptDetails: Record<number, InterceptAudit> = {
     tool_use_id: "call-write-report",
     correlation: "exact",
     input_digest: "a3b458eca3b458eca3b458eca3b458eca3b458eca3b458eca3b458eca3b458ec1234",
-    user_message: "완료된 점검을 정리해서 결론과 증거 인덱스를 reports/summary.md 에 기록해 줘.\n검증 대기 항목은 남겨 두고 업무 데이터는 건드리지 마.",
+    user_message:
+      "완료된 점검을 정리해서 결론과 증거 인덱스를 reports/summary.md 에 기록해 줘.\n검증 대기 항목은 남겨 두고 업무 데이터는 건드리지 마.",
     context: [
       { kind: "user", text: "이번 라운드의 기존 증거를 모아서 점검 요약을 만들어 줘." },
       {
@@ -4033,7 +4068,8 @@ const WS_TREE: Record<string, { name: string; dir: boolean; size: number; conten
       name: "notes.md",
       dir: false,
       size: 96,
-      content: "# 작업 공간 노트\n\n(데모) 작업 공간 루트 디렉터리에 있는 예시 파일로, 온라인에서 편집하고 저장할 수 있습니다.\n",
+      content:
+        "# 작업 공간 노트\n\n(데모) 작업 공간 루트 디렉터리에 있는 예시 파일로, 온라인에서 편집하고 저장할 수 있습니다.\n",
     },
   ],
   "t-001": [
@@ -4056,7 +4092,12 @@ const WS_TREE: Record<string, { name: string; dir: boolean; size: number; conten
     },
   ],
   transcripts: [
-    { name: "exp1-worker-i12.jsonl", dir: false, size: 512, content: "(데모) 원시 LLM 대화 기록 예시이며, 여기서는 생략합니다." },
+    {
+      name: "exp1-worker-i12.jsonl",
+      dir: false,
+      size: 512,
+      content: "(데모) 원시 LLM 대화 기록 예시이며, 여기서는 생략합니다.",
+    },
   ],
 };
 

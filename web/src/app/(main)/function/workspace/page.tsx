@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+
 import {
   DownloadIcon,
   FileIcon,
@@ -17,33 +18,14 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import type { WorkspaceEntry, WorkspaceFile } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function fmtSize(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -203,13 +185,7 @@ export default function WorkspacePage() {
           <Button variant="ghost" size="icon" className="size-8" onClick={() => load(path)} title={t("refresh")}>
             <RefreshCwIcon className={cn("size-4", loading && "animate-spin")} />
           </Button>
-          <input
-            ref={uploadRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => doUpload(e.target.files)}
-          />
+          <input ref={uploadRef} type="file" multiple className="hidden" onChange={(e) => doUpload(e.target.files)} />
         </div>
       </div>
 
@@ -260,7 +236,11 @@ export default function WorkspacePage() {
                           size="icon"
                           className="size-7"
                           title={t("download")}
-                          onClick={() => api.workspaceDownload(e.path).catch((err) => toast.error(t("downloadFailed", { msg: (err as Error).message })))}
+                          onClick={() =>
+                            api
+                              .workspaceDownload(e.path)
+                              .catch((err) => toast.error(t("downloadFailed", { msg: (err as Error).message })))
+                          }
                         >
                           <DownloadIcon className="size-3.5" />
                         </Button>
@@ -300,9 +280,7 @@ export default function WorkspacePage() {
 
               {edit.file.binary || edit.file.too_large ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-                  <p className="text-muted-foreground text-sm">
-                    {edit.file.too_large ? t("tooLarge") : t("binary")}
-                  </p>
+                  <p className="text-muted-foreground text-sm">{edit.file.too_large ? t("tooLarge") : t("binary")}</p>
                   <Button variant="outline" onClick={() => api.workspaceDownload(edit.file.path)}>
                     <DownloadIcon /> {t("downloadFile")}
                   </Button>
@@ -320,10 +298,7 @@ export default function WorkspacePage() {
                   <SheetFooter className="flex-row items-center justify-between border-t p-3">
                     <span className="text-muted-foreground text-xs">{edit.dirty ? t("dirty") : t("synced")}</span>
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => api.workspaceDownload(edit.file.path)}
-                      >
+                      <Button variant="outline" onClick={() => api.workspaceDownload(edit.file.path)}>
                         <DownloadIcon /> {t("download")}
                       </Button>
                       <Button onClick={saveFile} disabled={!edit.dirty || edit.saving}>

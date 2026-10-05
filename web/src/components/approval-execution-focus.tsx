@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+
 import { useTranslations } from "next-intl";
+
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import type { Activity, InterceptExecution } from "@/lib/types";

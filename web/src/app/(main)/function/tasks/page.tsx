@@ -1238,9 +1238,7 @@ const TaskRow = React.memo(function TaskRow({
           const f = task.findings;
           const total = f ? f.critical + f.high + f.medium + f.low : 0;
           if (!f || total === 0) return <span className="text-muted-foreground">0</span>;
-          const seg = (n: number, cls: string) => (
-            <span className={n > 0 ? cls : "text-muted-foreground"}>{n}</span>
-          );
+          const seg = (n: number, cls: string) => <span className={n > 0 ? cls : "text-muted-foreground"}>{n}</span>;
           return (
             <span className="font-medium whitespace-nowrap" title={t("table.findingsTitle")}>
               {seg(f.critical, "text-rose-600 dark:text-rose-400")}
@@ -2876,9 +2874,7 @@ function CategoryManagementSheet({
     } catch (error) {
       const msg = (error as Error).message;
       toast.error(
-        selectedView === "new"
-          ? t("categoryManage.createFailed", { msg })
-          : t("categoryManage.updateFailed", { msg }),
+        selectedView === "new" ? t("categoryManage.createFailed", { msg }) : t("categoryManage.updateFailed", { msg }),
       );
     } finally {
       setSaving(false);
@@ -2918,7 +2914,9 @@ function CategoryManagementSheet({
     try {
       await api.updateTaskCategory(task.id, category?.id);
       onTaskMoved(task.id, category);
-      toast.success(t("categoryManage.moved", { id: task.id, name: category?.name ?? t("categoryManage.uncategorized") }));
+      toast.success(
+        t("categoryManage.moved", { id: task.id, name: category?.name ?? t("categoryManage.uncategorized") }),
+      );
     } catch (error) {
       toast.error(t("categoryManage.moveFailed", { msg: (error as Error).message }));
     } finally {

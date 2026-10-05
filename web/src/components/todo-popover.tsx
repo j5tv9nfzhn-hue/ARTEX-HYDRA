@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+
 import { ListTodo } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -73,7 +74,10 @@ export function TodoPopover({
           {(todos ?? []).map((t, i) => (
             <li
               key={`${i}:${t.content}`}
-              className={cn("flex gap-1.5 px-1 text-xs", t.status === "completed" && "text-muted-foreground line-through")}
+              className={cn(
+                "flex gap-1.5 px-1 text-xs",
+                t.status === "completed" && "text-muted-foreground line-through",
+              )}
             >
               <span className="shrink-0">{MARK[t.status] ?? "☐"}</span>
               <span className="break-words">{t.content}</span>

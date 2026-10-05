@@ -1,20 +1,24 @@
 "use client";
 
 import * as React from "react";
+
+import {
+  EyeIcon,
+  GitCompareIcon,
+  InfoIcon,
+  PencilIcon,
+  RotateCcwIcon,
+  SaveIcon,
+  Trash2Icon,
+  XIcon,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { EyeIcon, GitCompareIcon, InfoIcon, PencilIcon, RotateCcwIcon, SaveIcon, Trash2Icon, XIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Markdown } from "@/components/markdown";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -23,11 +27,27 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Markdown } from "@/components/markdown";
 import { api } from "@/lib/api";
+import type {
+  Agent,
+  AgentDetail,
+  AgentTrigger,
+  MCPServer,
+  PromptVar,
+  PromptVersion,
+  Settings,
+  SkillItem,
+  Tool,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
-import type { Agent, AgentDetail, AgentTrigger, MCPServer, PromptVar, PromptVersion, Settings, SkillItem, Tool } from "@/lib/types";
 
 // Traffic tools are host tools gated by the global 流量捕获 switch: bindable, but
 // only usable when capture is on. Keep this list in sync with traffic.SeedToolMetas.
@@ -72,10 +92,22 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
   const [settings, setSettings] = React.useState<Settings | null>(null);
 
   React.useEffect(() => {
-    api.mcpServers().then(setMcp).catch(() => {});
-    api.skills().then(setSkills).catch(() => {});
-    api.tools().then(setTools).catch(() => {});
-    api.settings().then(setSettings).catch(() => {});
+    api
+      .mcpServers()
+      .then(setMcp)
+      .catch(() => {});
+    api
+      .skills()
+      .then(setSkills)
+      .catch(() => {});
+    api
+      .tools()
+      .then(setTools)
+      .catch(() => {});
+    api
+      .settings()
+      .then(setSettings)
+      .catch(() => {});
   }, []);
   // global gates: traffic tools need 流量捕获, web search needs the master switch.
   const captureOn = !!settings?.traffic_capture;
@@ -249,7 +281,10 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
     } catch (e) {
       toast.error(tr("toast.toolBindFailed", { error: (e as Error).message }));
       reload();
-      api.tools().then(setTools).catch(() => {});
+      api
+        .tools()
+        .then(setTools)
+        .catch(() => {});
     }
   }
 
@@ -287,9 +322,14 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
             <div className="grid gap-3 rounded-md border p-3">
               {showLLM && (
                 <div className="grid gap-1.5">
-                  <Label htmlFor="llm-profile" className="text-xs">{tr("llm.label")}</Label>
+                  <Label htmlFor="llm-profile" className="text-xs">
+                    {tr("llm.label")}
+                  </Label>
                   <div className="flex flex-wrap items-center gap-3">
-                    <Select value={llmProfileId || "__follow__"} onValueChange={(v) => setLlmProfileId(v === "__follow__" ? "" : v)}>
+                    <Select
+                      value={llmProfileId || "__follow__"}
+                      onValueChange={(v) => setLlmProfileId(v === "__follow__" ? "" : v)}
+                    >
                       <SelectTrigger id="llm-profile" className="h-8 w-72">
                         <SelectValue />
                       </SelectTrigger>
@@ -302,9 +342,7 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                         ))}
                       </SelectContent>
                     </Select>
-                    <span className="text-muted-foreground max-w-md text-xs">
-                      {tr("llm.hint")}
-                    </span>
+                    <span className="text-muted-foreground max-w-md text-xs">{tr("llm.hint")}</span>
                   </div>
                 </div>
               )}
@@ -312,14 +350,30 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                 {showConfig && (
                   <>
                     <div className="grid gap-1.5">
-                      <Label htmlFor="max-turns" className="text-xs">{tr("config.maxTurns")}</Label>
-                      <Input id="max-turns" type="number" min={0} className="h-8 w-32"
-                        value={maxTurns} onChange={(e) => setMaxTurns(e.target.value)} />
+                      <Label htmlFor="max-turns" className="text-xs">
+                        {tr("config.maxTurns")}
+                      </Label>
+                      <Input
+                        id="max-turns"
+                        type="number"
+                        min={0}
+                        className="h-8 w-32"
+                        value={maxTurns}
+                        onChange={(e) => setMaxTurns(e.target.value)}
+                      />
                     </div>
                     <div className="grid gap-1.5">
-                      <Label htmlFor="run-seconds" className="text-xs">{tr("config.runSeconds")}</Label>
-                      <Input id="run-seconds" type="number" min={0} className="h-8 w-32"
-                        value={runSecs} onChange={(e) => setRunSecs(e.target.value)} />
+                      <Label htmlFor="run-seconds" className="text-xs">
+                        {tr("config.runSeconds")}
+                      </Label>
+                      <Input
+                        id="run-seconds"
+                        type="number"
+                        min={0}
+                        className="h-8 w-32"
+                        value={runSecs}
+                        onChange={(e) => setRunSecs(e.target.value)}
+                      />
                     </div>
                   </>
                 )}
@@ -336,7 +390,9 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                     onCheckedChange={setWebSearch}
                   />
                   <div className="grid gap-0.5">
-                    <Label htmlFor="web-search" className="text-sm">{tr("webSearch.label")}</Label>
+                    <Label htmlFor="web-search" className="text-sm">
+                      {tr("webSearch.label")}
+                    </Label>
                     <span className="text-muted-foreground text-xs">
                       {webSearchGlobalOn ? tr("webSearch.onHint") : tr("webSearch.offHint")}
                     </span>
@@ -345,16 +401,12 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
               )}
               {showInteractiveShell && (
                 <div className="flex items-center gap-3 border-t pt-3">
-                  <Switch
-                    id="interactive-shell"
-                    checked={interactiveShell}
-                    onCheckedChange={setInteractiveShell}
-                  />
+                  <Switch id="interactive-shell" checked={interactiveShell} onCheckedChange={setInteractiveShell} />
                   <div className="grid gap-0.5">
-                    <Label htmlFor="interactive-shell" className="text-sm">{tr("shell.label")}</Label>
-                    <span className="text-muted-foreground text-xs">
-                      {tr("shell.hint")}
-                    </span>
+                    <Label htmlFor="interactive-shell" className="text-sm">
+                      {tr("shell.label")}
+                    </Label>
+                    <span className="text-muted-foreground text-xs">{tr("shell.hint")}</span>
                   </div>
                 </div>
               )}
@@ -367,10 +419,15 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
               {variables.map((v) => (
                 <Tooltip key={v.name}>
                   <TooltipTrigger asChild>
-                    <button type="button" onClick={() => setPrompt((p) => `${p}{{.${v.name}}}`)}
-                      className="hover:bg-muted inline-flex items-center gap-1 rounded-md border bg-muted/40 px-2 py-1 font-mono text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setPrompt((p) => `${p}{{.${v.name}}}`)}
+                      className="hover:bg-muted inline-flex items-center gap-1 rounded-md border bg-muted/40 px-2 py-1 font-mono text-xs"
+                    >
                       {`{{.${v.name}}}`}
-                      <Badge variant="secondary" className="px-1 py-0 text-[10px]">{v.source}</Badge>
+                      <Badge variant="secondary" className="px-1 py-0 text-[10px]">
+                        {v.source}
+                      </Badge>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
@@ -383,8 +440,13 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
             </div>
           </div>
 
-          <Textarea className="font-mono text-xs" rows={16} value={prompt}
-            placeholder={tr("prompt.placeholder")} onChange={(e) => setPrompt(e.target.value)} />
+          <Textarea
+            className="font-mono text-xs"
+            rows={16}
+            value={prompt}
+            placeholder={tr("prompt.placeholder")}
+            onChange={(e) => setPrompt(e.target.value)}
+          />
 
           <div className="flex flex-wrap gap-2">
             <Dialog>
@@ -396,7 +458,9 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
               <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>{tr("preview.title")}</DialogTitle>
-                  <DialogDescription>{tr("preview.descPrefix")} {`{{.Var}}`} {tr("preview.descSuffix")}</DialogDescription>
+                  <DialogDescription>
+                    {tr("preview.descPrefix")} {`{{.Var}}`} {tr("preview.descSuffix")}
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="max-h-[60vh] overflow-auto rounded-md border bg-muted/30 p-3">
                   <Markdown text={preview} />
@@ -411,19 +475,30 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
             </Button>
           </div>
 
-
           <Separator />
           <div className="grid gap-2">
             <Label className="text-muted-foreground text-xs">{tr("version.historyLabel")}</Label>
             <ul className="grid gap-1">
               {versions.map((ver, i) => (
-                <li key={ver.version} className="flex items-center gap-2 rounded-md px-1 py-0.5 text-xs hover:bg-muted/50">
+                <li
+                  key={ver.version}
+                  className="flex items-center gap-2 rounded-md px-1 py-0.5 text-xs hover:bg-muted/50"
+                >
                   <span className="font-mono shrink-0">v{ver.version}</span>
-                  {i === 0 && <Badge variant="secondary" className="px-1.5 py-0 shrink-0">{tr("version.current")}</Badge>}
+                  {i === 0 && (
+                    <Badge variant="secondary" className="px-1.5 py-0 shrink-0">
+                      {tr("version.current")}
+                    </Badge>
+                  )}
                   <span className="text-muted-foreground truncate flex-1">{ver.note}</span>
                   {ver.ts && (
                     <span className="text-muted-foreground/60 shrink-0 tabular-nums">
-                      {new Date(ver.ts).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(ver.ts).toLocaleDateString("ko-KR", {
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   )}
                   <Button variant="ghost" size="icon-sm" className="size-6 shrink-0" onClick={() => setViewVer(ver)}>
@@ -436,20 +511,25 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                   )}
                 </li>
               ))}
-              {versions.length === 0 && (
-                <li className="text-muted-foreground text-xs">{tr("version.none")}</li>
-              )}
+              {versions.length === 0 && <li className="text-muted-foreground text-xs">{tr("version.none")}</li>}
             </ul>
           </div>
 
           {/* 查看版本 dialog */}
-          <Dialog open={!!viewVer} onOpenChange={(o) => { if (!o) setViewVer(null); }}>
+          <Dialog
+            open={!!viewVer}
+            onOpenChange={(o) => {
+              if (!o) setViewVer(null);
+            }}
+          >
             <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                 <DialogTitle>
                   v{viewVer?.version}
                   {viewVer?.version === versions[0]?.version && (
-                    <Badge variant="secondary" className="ml-2 px-1.5 py-0 align-middle">{tr("version.current")}</Badge>
+                    <Badge variant="secondary" className="ml-2 px-1.5 py-0 align-middle">
+                      {tr("version.current")}
+                    </Badge>
                   )}
                 </DialogTitle>
                 <DialogDescription>
@@ -466,15 +546,29 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
               </pre>
               <div className="flex gap-2 justify-end">
                 {viewVer && viewVer.version !== versions[0]?.version && (
-                  <Button variant="outline" size="sm" onClick={() => {
-                    if (viewVer) { setDiffVer(viewVer); setViewVer(null); }
-                  }}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (viewVer) {
+                        setDiffVer(viewVer);
+                        setViewVer(null);
+                      }
+                    }}
+                  >
                     <GitCompareIcon className="mr-1 size-3.5" /> {tr("version.compareCurrent")}
                   </Button>
                 )}
-                <Button size="sm" onClick={() => {
-                  if (viewVer) { setPrompt(viewVer.template_text); setViewVer(null); toast.success(tr("toast.loadedToEditor", { version: viewVer.version })); }
-                }}>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (viewVer) {
+                      setPrompt(viewVer.template_text);
+                      setViewVer(null);
+                      toast.success(tr("toast.loadedToEditor", { version: viewVer.version }));
+                    }
+                  }}
+                >
                   {tr("version.loadToEditor")}
                 </Button>
               </div>
@@ -482,14 +576,25 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
           </Dialog>
 
           {/* 版本对比 dialog */}
-          <Dialog open={!!diffVer} onOpenChange={(o) => { if (!o) setDiffVer(null); }}>
+          <Dialog
+            open={!!diffVer}
+            onOpenChange={(o) => {
+              if (!o) setDiffVer(null);
+            }}
+          >
             <DialogContent className="sm:max-w-3xl">
               <DialogHeader>
-                <DialogTitle>{tr("diff.title", { from: diffVer?.version ?? "", to: versions[0]?.version ?? "" })}</DialogTitle>
+                <DialogTitle>
+                  {tr("diff.title", { from: diffVer?.version ?? "", to: versions[0]?.version ?? "" })}
+                </DialogTitle>
                 <DialogDescription>
                   <span className="inline-flex items-center gap-3 text-xs">
-                    <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-red-600 dark:text-red-400">{tr("diff.removed")}</span>
-                    <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-green-600 dark:text-green-400">{tr("diff.added")}</span>
+                    <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-red-600 dark:text-red-400">
+                      {tr("diff.removed")}
+                    </span>
+                    <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-green-600 dark:text-green-400">
+                      {tr("diff.added")}
+                    </span>
                   </span>
                 </DialogDescription>
               </DialogHeader>
@@ -508,9 +613,13 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
           <div className="flex items-center gap-2">
             <Label className="text-xs">{tr("wrapup.bodyLabel")}</Label>
             {wrapup.trim() ? (
-              <Badge variant="secondary" className="px-1.5 py-0">{tr("wrapup.custom")}</Badge>
+              <Badge variant="secondary" className="px-1.5 py-0">
+                {tr("wrapup.custom")}
+              </Badge>
             ) : (
-              <Badge variant="outline" className="px-1.5 py-0">{tr("wrapup.useDefault")}</Badge>
+              <Badge variant="outline" className="px-1.5 py-0">
+                {tr("wrapup.useDefault")}
+              </Badge>
             )}
           </div>
           <Textarea
@@ -524,12 +633,22 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
             <Label htmlFor="wrapup-turns" className="text-xs">
               {tr("wrapup.turnsLabel", { default: wrapupTurnsDefault })}
             </Label>
-            <Input id="wrapup-turns" type="number" min={0} className="h-8 w-32"
-              value={wrapupTurns} onChange={(e) => setWrapupTurns(e.target.value)} />
+            <Input
+              id="wrapup-turns"
+              type="number"
+              min={0}
+              className="h-8 w-32"
+              value={wrapupTurns}
+              onChange={(e) => setWrapupTurns(e.target.value)}
+            />
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={saveWrapup}>{tr("wrapup.save")}</Button>
-            <Button size="sm" variant="outline" onClick={resetWrapup}>{tr("wrapup.resetDefault")}</Button>
+            <Button size="sm" onClick={saveWrapup}>
+              {tr("wrapup.save")}
+            </Button>
+            <Button size="sm" variant="outline" onClick={resetWrapup}>
+              {tr("wrapup.resetDefault")}
+            </Button>
           </div>
           {wrapupDefault && (
             <>
@@ -552,9 +671,13 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
               <div className="flex items-center gap-2">
                 <Label className="text-xs">{tr("taskTimeout.bodyLabel")}</Label>
                 {ttWrapup.trim() ? (
-                  <Badge variant="secondary" className="px-1.5 py-0">{tr("wrapup.custom")}</Badge>
+                  <Badge variant="secondary" className="px-1.5 py-0">
+                    {tr("wrapup.custom")}
+                  </Badge>
                 ) : (
-                  <Badge variant="outline" className="px-1.5 py-0">{tr("wrapup.useDefault")}</Badge>
+                  <Badge variant="outline" className="px-1.5 py-0">
+                    {tr("wrapup.useDefault")}
+                  </Badge>
                 )}
               </div>
               <Textarea
@@ -568,12 +691,22 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                 <Label htmlFor="tt-turns" className="text-xs">
                   {tr("taskTimeout.turnsLabel", { default: ttTurnsDefault })}
                 </Label>
-                <Input id="tt-turns" type="number" min={0} className="h-8 w-32"
-                  value={ttTurns} onChange={(e) => setTtTurns(e.target.value)} />
+                <Input
+                  id="tt-turns"
+                  type="number"
+                  min={0}
+                  className="h-8 w-32"
+                  value={ttTurns}
+                  onChange={(e) => setTtTurns(e.target.value)}
+                />
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={saveTaskTimeoutWrapup}>{tr("wrapup.save")}</Button>
-                <Button size="sm" variant="outline" onClick={resetTaskTimeoutWrapup}>{tr("wrapup.resetDefault")}</Button>
+                <Button size="sm" onClick={saveTaskTimeoutWrapup}>
+                  {tr("wrapup.save")}
+                </Button>
+                <Button size="sm" variant="outline" onClick={resetTaskTimeoutWrapup}>
+                  {tr("wrapup.resetDefault")}
+                </Button>
               </div>
               {ttWrapupDefault && (
                 <div className="grid gap-1.5">
@@ -628,10 +761,7 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
             return (
               <label
                 key={t.key}
-                className={cn(
-                  "flex items-center gap-2 rounded-md border p-2 text-sm",
-                  gated && "opacity-60",
-                )}
+                className={cn("flex items-center gap-2 rounded-md border p-2 text-sm", gated && "opacity-60")}
               >
                 <Checkbox
                   checked={t.agents.includes(agentKey)}
@@ -640,10 +770,14 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                 />
                 <span className="font-mono text-xs">{t.key}</span>
                 {isTraffic && (
-                  <Badge variant="secondary" className="px-1 py-0 text-[9px]">{tr("tools.trafficBadge")}</Badge>
+                  <Badge variant="secondary" className="px-1 py-0 text-[9px]">
+                    {tr("tools.trafficBadge")}
+                  </Badge>
                 )}
                 {!t.enabled && (
-                  <Badge variant="outline" className="text-destructive px-1 py-0 text-[9px]">{tr("tools.disabledBadge")}</Badge>
+                  <Badge variant="outline" className="text-destructive px-1 py-0 text-[9px]">
+                    {tr("tools.disabledBadge")}
+                  </Badge>
                 )}
                 {gated ? (
                   <span className="text-muted-foreground ml-auto text-xs">{tr("tools.needCapture")}</span>
@@ -772,13 +906,19 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
   const [editingId, setEditingId] = React.useState<number | null>(null);
 
   const reload = React.useCallback(() => {
-    api.agentTriggers(agentKey).then(setTriggers).catch(() => setTriggers([]));
+    api
+      .agentTriggers(agentKey)
+      .then(setTriggers)
+      .catch(() => setTriggers([]));
   }, [agentKey]);
   React.useEffect(() => {
     reload();
   }, [reload]);
   React.useEffect(() => {
-    api.tools().then(setTools).catch(() => setTools([]));
+    api
+      .tools()
+      .then(setTools)
+      .catch(() => setTools([]));
   }, []);
 
   function toggleTool(key: string) {
@@ -863,7 +1003,9 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
       reload();
     } catch (e) {
       const msg = (e as Error).message;
-      toast.error(editingId != null ? tr("triggers.saveEditFailed", { error: msg }) : tr("triggers.addFailed", { error: msg }));
+      toast.error(
+        editingId != null ? tr("triggers.saveEditFailed", { error: msg }) : tr("triggers.addFailed", { error: msg }),
+      );
     } finally {
       setSaving(false);
     }
@@ -914,9 +1056,7 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
 
   return (
     <div className="grid gap-4">
-      <p className="text-muted-foreground text-xs">
-        {tr.rich("triggers.desc", { b: (c) => <b>{c}</b> })}
-      </p>
+      <p className="text-muted-foreground text-xs">{tr.rich("triggers.desc", { b: (c) => <b>{c}</b> })}</p>
 
       {/* 触发后处理策略 */}
       <div className="grid gap-3 rounded-md border p-3">
@@ -966,7 +1106,9 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
 
           {runMode === "parallel" && (
             <div className="grid gap-1">
-              <Label htmlFor="tr-maxpar" className="text-xs">{tr("triggers.maxParallel")}</Label>
+              <Label htmlFor="tr-maxpar" className="text-xs">
+                {tr("triggers.maxParallel")}
+              </Label>
               <Input
                 id="tr-maxpar"
                 type="number"
@@ -997,9 +1139,7 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
       {/* 新增 / 编辑触发器 */}
       <div className="grid gap-3 rounded-md border p-3">
         <Label className="text-muted-foreground text-xs">
-          {editingId != null
-            ? tr("triggers.editTitle", { id: editingId })
-            : tr("triggers.addTitle")}
+          {editingId != null ? tr("triggers.editTitle", { id: editingId }) : tr("triggers.addTitle")}
         </Label>
 
         {/* 定时 */}
@@ -1010,13 +1150,26 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
           {onInterval && (
             <div className="grid gap-1.5">
               <div className="flex items-center gap-2">
-                <Label htmlFor="tr-interval" className="text-xs">{tr("triggers.every")}</Label>
-                <Input id="tr-interval" type="number" min={1} className="h-8 w-24"
-                  value={intervalSec} onChange={(e) => setIntervalSec(e.target.value)} />
+                <Label htmlFor="tr-interval" className="text-xs">
+                  {tr("triggers.every")}
+                </Label>
+                <Input
+                  id="tr-interval"
+                  type="number"
+                  min={1}
+                  className="h-8 w-24"
+                  value={intervalSec}
+                  onChange={(e) => setIntervalSec(e.target.value)}
+                />
                 <span className="text-muted-foreground text-xs">{tr("triggers.seconds")}</span>
               </div>
-              <Textarea className="text-xs" rows={2} value={intervalMsg}
-                placeholder={tr("triggers.intervalPlaceholder")} onChange={(e) => setIntervalMsg(e.target.value)} />
+              <Textarea
+                className="text-xs"
+                rows={2}
+                value={intervalMsg}
+                placeholder={tr("triggers.intervalPlaceholder")}
+                onChange={(e) => setIntervalMsg(e.target.value)}
+              />
             </div>
           )}
         </div>
@@ -1027,8 +1180,13 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
             <Checkbox checked={onFinding} onCheckedChange={(v) => setOnFinding(!!v)} /> {tr("triggers.onFinding")}
           </label>
           {onFinding && (
-            <Textarea className="text-xs" rows={2} value={findingMsg}
-              placeholder={tr("triggers.findingPlaceholder")} onChange={(e) => setFindingMsg(e.target.value)} />
+            <Textarea
+              className="text-xs"
+              rows={2}
+              value={findingMsg}
+              placeholder={tr("triggers.findingPlaceholder")}
+              onChange={(e) => setFindingMsg(e.target.value)}
+            />
           )}
         </div>
 
@@ -1038,19 +1196,30 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
             <Checkbox checked={onGoalMet} onCheckedChange={(v) => setOnGoalMet(!!v)} /> {tr("triggers.onGoalMet")}
           </label>
           {onGoalMet && (
-            <Textarea className="text-xs" rows={2} value={goalMsg}
-              placeholder={tr("triggers.goalPlaceholder")} onChange={(e) => setGoalMsg(e.target.value)} />
+            <Textarea
+              className="text-xs"
+              rows={2}
+              value={goalMsg}
+              placeholder={tr("triggers.goalPlaceholder")}
+              onChange={(e) => setGoalMsg(e.target.value)}
+            />
           )}
         </div>
 
         {/* 任务超时 */}
         <div className="grid gap-1.5">
           <label className="flex items-center gap-2 text-sm">
-            <Checkbox checked={onTaskTimeout} onCheckedChange={(v) => setOnTaskTimeout(!!v)} /> {tr("triggers.onTaskTimeout")}
+            <Checkbox checked={onTaskTimeout} onCheckedChange={(v) => setOnTaskTimeout(!!v)} />{" "}
+            {tr("triggers.onTaskTimeout")}
           </label>
           {onTaskTimeout && (
-            <Textarea className="text-xs" rows={2} value={taskTimeoutMsg}
-              placeholder={tr("triggers.taskTimeoutPlaceholder")} onChange={(e) => setTaskTimeoutMsg(e.target.value)} />
+            <Textarea
+              className="text-xs"
+              rows={2}
+              value={taskTimeoutMsg}
+              placeholder={tr("triggers.taskTimeoutPlaceholder")}
+              onChange={(e) => setTaskTimeoutMsg(e.target.value)}
+            />
           )}
         </div>
 
@@ -1065,22 +1234,34 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
                 {tr.rich("triggers.toolSelectHint", { b: (c) => <b>{c}</b>, count: toolNames.length })}
               </div>
               <div className="max-h-40 overflow-y-auto rounded-md border p-2">
-                {tools.length === 0 && <span className="text-muted-foreground text-xs">{tr("triggers.toolListEmpty")}</span>}
+                {tools.length === 0 && (
+                  <span className="text-muted-foreground text-xs">{tr("triggers.toolListEmpty")}</span>
+                )}
                 <div className="grid gap-1">
                   {tools.map((tool) => (
                     <label key={tool.key} className="flex items-start gap-2 text-xs">
-                      <Checkbox className="mt-0.5" checked={toolNames.includes(tool.key)}
-                        onCheckedChange={() => toggleTool(tool.key)} />
+                      <Checkbox
+                        className="mt-0.5"
+                        checked={toolNames.includes(tool.key)}
+                        onCheckedChange={() => toggleTool(tool.key)}
+                      />
                       <span className="min-w-0">
                         <span className="font-medium">{tool.key}</span>
-                        {tool.description && <span className="text-muted-foreground line-clamp-1"> {tool.description}</span>}
+                        {tool.description && (
+                          <span className="text-muted-foreground line-clamp-1"> {tool.description}</span>
+                        )}
                       </span>
                     </label>
                   ))}
                 </div>
               </div>
-              <Textarea className="text-xs" rows={2} value={toolCallMsg}
-                placeholder={tr("triggers.toolCallPlaceholder")} onChange={(e) => setToolCallMsg(e.target.value)} />
+              <Textarea
+                className="text-xs"
+                rows={2}
+                value={toolCallMsg}
+                placeholder={tr("triggers.toolCallPlaceholder")}
+                onChange={(e) => setToolCallMsg(e.target.value)}
+              />
             </div>
           )}
         </div>
@@ -1088,11 +1269,17 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
         {/* 任务创建 */}
         <div className="grid gap-1.5">
           <label className="flex items-center gap-2 text-sm">
-            <Checkbox checked={onTaskCreate} onCheckedChange={(v) => setOnTaskCreate(!!v)} /> {tr("triggers.onTaskCreate")}
+            <Checkbox checked={onTaskCreate} onCheckedChange={(v) => setOnTaskCreate(!!v)} />{" "}
+            {tr("triggers.onTaskCreate")}
           </label>
           {onTaskCreate && (
-            <Textarea className="text-xs" rows={2} value={taskCreateMsg}
-              placeholder={tr("triggers.taskCreatePlaceholder")} onChange={(e) => setTaskCreateMsg(e.target.value)} />
+            <Textarea
+              className="text-xs"
+              rows={2}
+              value={taskCreateMsg}
+              placeholder={tr("triggers.taskCreatePlaceholder")}
+              onChange={(e) => setTaskCreateMsg(e.target.value)}
+            />
           )}
         </div>
 
@@ -1125,29 +1312,57 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="font-medium">{condLabel(t)}</span>
                 {!t.enabled && (
-                  <Badge variant="outline" className="text-destructive px-1 py-0 text-[9px]">{tr("tools.disabledBadge")}</Badge>
+                  <Badge variant="outline" className="text-destructive px-1 py-0 text-[9px]">
+                    {tr("tools.disabledBadge")}
+                  </Badge>
                 )}
               </div>
               <div className="text-muted-foreground grid gap-0.5 text-xs">
-                {t.interval_sec > 0 && t.interval_message && <div className="line-clamp-1">{tr("triggers.detail.interval", { msg: t.interval_message })}</div>}
-                {t.on_finding && t.finding_message && <div className="line-clamp-1">{tr("triggers.detail.finding", { msg: t.finding_message })}</div>}
-                {t.on_goal_met && t.goal_message && <div className="line-clamp-1">{tr("triggers.detail.goal", { msg: t.goal_message })}</div>}
-                {t.on_task_timeout && t.task_timeout_message && <div className="line-clamp-1">{tr("triggers.detail.timeout", { msg: t.task_timeout_message })}</div>}
-                {t.on_task_create && t.task_create_message && <div className="line-clamp-1">{tr("triggers.detail.taskCreate", { msg: t.task_create_message })}</div>}
+                {t.interval_sec > 0 && t.interval_message && (
+                  <div className="line-clamp-1">{tr("triggers.detail.interval", { msg: t.interval_message })}</div>
+                )}
+                {t.on_finding && t.finding_message && (
+                  <div className="line-clamp-1">{tr("triggers.detail.finding", { msg: t.finding_message })}</div>
+                )}
+                {t.on_goal_met && t.goal_message && (
+                  <div className="line-clamp-1">{tr("triggers.detail.goal", { msg: t.goal_message })}</div>
+                )}
+                {t.on_task_timeout && t.task_timeout_message && (
+                  <div className="line-clamp-1">{tr("triggers.detail.timeout", { msg: t.task_timeout_message })}</div>
+                )}
+                {t.on_task_create && t.task_create_message && (
+                  <div className="line-clamp-1">{tr("triggers.detail.taskCreate", { msg: t.task_create_message })}</div>
+                )}
                 {t.on_tool_call && (
                   <>
-                    <div className="line-clamp-1">{tr("triggers.detail.tools", { tools: t.tool_names.join(", ") || tr("triggers.detail.toolsNone") })}</div>
-                    {t.tool_call_message && <div className="line-clamp-1">{tr("triggers.detail.message", { msg: t.tool_call_message })}</div>}
+                    <div className="line-clamp-1">
+                      {tr("triggers.detail.tools", {
+                        tools: t.tool_names.join(", ") || tr("triggers.detail.toolsNone"),
+                      })}
+                    </div>
+                    {t.tool_call_message && (
+                      <div className="line-clamp-1">{tr("triggers.detail.message", { msg: t.tool_call_message })}</div>
+                    )}
                   </>
                 )}
               </div>
             </div>
-            <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-foreground"
-              onClick={() => startEdit(t)} title={tr("triggers.edit")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => startEdit(t)}
+              title={tr("triggers.edit")}
+            >
               <PencilIcon className="size-3.5" />
             </Button>
-            <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive"
-              onClick={() => del(t.id)} title={tr("triggers.delete")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => del(t.id)}
+              title={tr("triggers.delete")}
+            >
               <Trash2Icon className="size-3.5" />
             </Button>
           </div>
