@@ -26,7 +26,7 @@ func evidenceFixture(t *testing.T) (*Store, db.RecordFindingInput, string) {
 	}
 	pg, err := db.Open(dsn)
 	if err != nil {
-		t.Fatal(err)
+		t.Skipf("postgres unavailable (%v) — skipping", err)
 	}
 	t.Cleanup(func() { pg.Close() })
 	task, err := pg.CreateTask("evidence integration "+t.Name(), "local fixtures", nil, 0, 0)
