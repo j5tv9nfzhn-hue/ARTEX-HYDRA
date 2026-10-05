@@ -89,6 +89,17 @@ const (
 	errWebSearchProbeNoResults = "검색 결과가 0건입니다(요청이 제한되었거나 프록시가 연결되지 않았을 수 있습니다)"
 )
 
+// 규칙 모드 채팅(LLM 미설정 시 사람이 직접 조종하는 fallbackChat) 사용자 응답(한국어).
+// reply 는 writeJSON 과 대화 로그 양쪽으로 사용자에게 그대로 노출된다. 입력 트리거 키워드는
+// 기존 영어 별칭(intent/hint)과 같은 방식으로 한국어 별칭(의도/힌트)을 추가로 받는다 —
+// 순수 입력 파싱이고 와이어 포맷이 아니므로 중국어·영어 트리거를 유지한 채 더하기만 한다.
+// 용어는 web i18n·GLOSSARY 와 정합: intent→의도, hint→힌트, finding→취약점, planner→플래너. (F34 d)
+const (
+	fallbackIntentInjected = "우선순위 높은 의도를 하나 주입했습니다: "
+	fallbackHintRecorded   = "힌트를 기록했습니다. 플래너가 다음에 읽습니다: "
+	fallbackChatStatus     = "(규칙 모드, LLM 미설정) 현재 현황: 자산 %d개, 대기 의도 %d개, 확인된 취약점 %d개.\n사용 가능한 명령: \"의도 ...\"로 의도를 주입하고, \"힌트 ...\"로 플래너에게 힌트를 전달합니다."
+)
+
 // Server exposes the ARTEX backend over a JSON HTTP API for the shadcn/ui
 // frontend.
 type Server struct {
@@ -3865,19 +3876,33 @@ func (s *Server) stopChat(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"status": "stopping"})
 }
 
-// fallbackChat is the no-LLM human-steering handler: simple命令 + 态势摘要.
-func (s *Server) fallbackChat(t *Task, msg string) string {
+// fallbackCommand classifies a rule-mode chat message into an intent/hint command
+// plus the trimmed argument. The trigger keywords accept Chinese (意图/提示), English
+// (intent/hint) and Korean (의도/힌트) prefixes — pure input parsing, not a wire
+// format, so the Korean aliases are additive and backward compatible. cmd is
+// "intent", "hint" or "" (status summary). (F34 d)
+func fallbackCommand(msg string) (cmd, text string) {
 	m := strings.TrimSpace(msg)
 	lower := strings.ToLower(m)
 	switch {
-	case strings.HasPrefix(m, "意图") || strings.HasPrefix(lower, "intent"):
-		text := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(m, "意图"), "intent"))
+	case strings.HasPrefix(m, "意图") || strings.HasPrefix(m, "의도") || strings.HasPrefix(lower, "intent"):
+		return "intent", strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(m, "意图"), "의도"), "intent"))
+	case strings.HasPrefix(m, "提示") || strings.HasPrefix(m, "힌트") || strings.HasPrefix(lower, "hint"):
+		return "hint", strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(m, "提示"), "힌트"), "hint"))
+	default:
+		return "", m
+	}
+}
+
+// fallbackChat is the no-LLM human-steering handler: simple命令 + 态势摘要.
+func (s *Server) fallbackChat(t *Task, msg string) string {
+	switch cmd, text := fallbackCommand(msg); cmd {
+	case "intent":
 		_, _ = t.Store.AddIntent(map[string]any{"summary": text}, 9, nil, "human")
-		return "已注入一条高优先级意图：" + text
-	case strings.HasPrefix(m, "提示") || strings.HasPrefix(lower, "hint"):
-		text := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(m, "提示"), "hint"))
+		return fallbackIntentInjected + text
+	case "hint":
 		_, _ = t.Store.AddNode(db.KindHint, map[string]any{"text": text}, 0, "active", "human", nil)
-		return "已记录提示，规划者下次会读到：" + text
+		return fallbackHintRecorded + text
 	default:
 		assetCounts, _ := s.m.Assets().CountsByType()
 		assets := 0
@@ -3886,7 +3911,7 @@ func (s *Server) fallbackChat(t *Task, msg string) string {
 		}
 		fnd, _ := t.Store.ListByKind(db.KindFinding, 1000)
 		fr, _ := t.Store.Frontier(1000)
-		return fmt.Sprintf("（规则模式，未配置 LLM）当前态势：资产 %d，待领意图 %d，确认发现 %d。\n可用指令：以\"意图 ...\"注入意图，\"提示 ...\"给规划者提示。", assets, len(fr), len(fnd))
+		return fmt.Sprintf(fallbackChatStatus, assets, len(fr), len(fnd))
 	}
 }
 

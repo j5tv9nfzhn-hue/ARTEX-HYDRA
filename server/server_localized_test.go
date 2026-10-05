@@ -13,9 +13,10 @@ import (
 // 추출은 task_categories 테스트의 decodeErrorField 를 재사용한다(같은 package server).
 // 범위는 ① F3b: writeErr 24곳 + validateTaskProfileIDs 가 writeErr 로 노출하는
 // fmt.Errorf 2곳, ② F34: writeErr 를 거치지 않는 사용자 노출 5곳(chatUnavailableReason
-// 의 return 3종 + testLLM·웹 검색 프로브의 writeJSON error 2종)이다. 에이전트에 전달되는
-// 프롬프트·도구 설명·seed 의도 요약·기본 제목(未命名任务)·로그는 원문 보존이라 이 테스트의
-// 대상이 아니다.
+// 의 return 3종 + testLLM·웹 검색 프로브의 writeJSON error 2종), ③ F34(d): 규칙 모드
+// 채팅 fallbackChat 의 응답 3종(확인 2종 + 현황 요약)과 한국어 트리거 별칭(의도/힌트) 인식
+// 이다. 에이전트에 전달되는 프롬프트·도구 설명·seed 의도 요약·기본 제목(未命名任务)·로그는
+// 원문 보존이라 이 테스트의 대상이 아니다.
 
 // TestServerErrorConstantsLocalized 는 응답 상수 전부가 한국어임을 단언한다. 형식 문자열
 // 상수(%d 포함)는 실제 포매팅한 결과로도 함께 검사해, 치환값이 들어가도 한국어가 깨지지
@@ -44,6 +45,9 @@ func TestServerErrorConstantsLocalized(t *testing.T) {
 		"chat_not_ready":        errChatLLMNotReady,
 		"llm_test_no_api_key":   errLLMTestNoAPIKey,
 		"web_search_no_results": errWebSearchProbeNoResults,
+		// F34(d): 규칙 모드 채팅 fallbackChat 의 두 확인 응답(뒤에 입력 텍스트를 이어 붙인다)
+		"fallback_intent": fallbackIntentInjected,
+		"fallback_hint":   fallbackHintRecorded,
 	}
 	for label, msg := range plain {
 		assertKoreanError(t, label, msg)
@@ -54,6 +58,8 @@ func TestServerErrorConstantsLocalized(t *testing.T) {
 		"source_not_found": fmt.Sprintf(errCreateTaskSourceNotFound, 999),
 		"company_limit":    fmt.Sprintf(errCreateTaskCompanyLimit, 32),
 		"llm_profile_404":  fmt.Sprintf(errLLMProfileNotFound, 7),
+		// F34(d): 규칙 모드 현황 요약(자산·대기 의도·확인된 취약점 개수 치환)
+		"fallback_status": fmt.Sprintf(fallbackChatStatus, 3, 2, 1),
 	}
 	for label, msg := range formatted {
 		assertKoreanError(t, label, msg)
@@ -259,4 +265,31 @@ func TestChatUnavailableReasonLocalized(t *testing.T) {
 		t.Fatalf("chatUnavailableReason() = %q, 기대 = %q", got, errChatLLMNotReady)
 	}
 	assertKoreanError(t, "chat_not_ready", got)
+}
+
+// TestFallbackCommandParsing 은 규칙 모드 채팅의 트리거 키워드 파싱(fallbackCommand)이 한국어
+// 별칭(의도/힌트)을 인식하면서도 기존 중국어·영어 트리거를 그대로 받고, 키워드만 벗겨 낸
+// 인자를 돌려줌을 확인한다. Store·DB 를 건드리지 않는 순수 입력 파싱이라 DB 없이 돌아간다.
+// 한국어 별칭을 지우면 korean-* 케이스가, 중국어·영어를 지우면 그 케이스가 깨진다(비공허성).
+func TestFallbackCommandParsing(t *testing.T) {
+	cases := []struct {
+		name, in, cmd, text string
+	}{
+		{"korean-intent", "의도 SQLi 주입점 먼저 확인", "intent", "SQLi 주입점 먼저 확인"},
+		{"korean-hint", "힌트 로그인 폼부터 보라", "hint", "로그인 폼부터 보라"},
+		{"chinese-intent", "意图 扫描端口", "intent", "扫描端口"}, // 하위 호환 보존
+		{"chinese-hint", "提示 看登录", "hint", "看登录"},       // 하위 호환 보존
+		{"english-intent", "intent scan ports", "intent", "scan ports"},
+		{"english-hint", "hint try admin:admin", "hint", "try admin:admin"},
+		{"status-korean", "지금 상황 알려줘", "", "지금 상황 알려줘"},
+		{"status-empty", "   ", "", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			cmd, text := fallbackCommand(c.in)
+			if cmd != c.cmd || text != c.text {
+				t.Fatalf("fallbackCommand(%q) = (%q, %q), 기대 = (%q, %q)", c.in, cmd, text, c.cmd, c.text)
+			}
+		})
+	}
 }
