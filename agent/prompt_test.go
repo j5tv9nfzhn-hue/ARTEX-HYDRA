@@ -96,6 +96,20 @@ func TestLangDirectiveAppendedToUserFacingRoles(t *testing.T) {
 	if !strings.Contains(dir, "payload") || !strings.Contains(dir, "原样逐字保留") {
 		t.Fatalf("langDirective must keep commands/payloads verbatim, got %q", dir)
 	}
+	// L1 anti-drift hardening: the directive must (1) forbid leaking the Chinese
+	// instruction/brain language into user-facing text (planner situation-summary
+	// drift), and (2) forbid mirroring the target/material language — e.g. an
+	// English target app — in the display fields (report_finding drift). Both
+	// clauses are locked here so a future edit can't silently drop them.
+	if !strings.Contains(dir, "也绝不能把中文输出给用户") {
+		t.Fatalf("langDirective must forbid leaking Chinese to the user, got %q", dir)
+	}
+	if !strings.Contains(dir, "不要镜像或照抄目标") {
+		t.Fatalf("langDirective must forbid mirroring the target/material language, got %q", dir)
+	}
+	if !strings.Contains(dir, "态势") {
+		t.Fatalf("langDirective must name the planner situation summary as user-facing, got %q", dir)
+	}
 
 	// Even with a DB body that is pure non-directive text, the code-owned tail is
 	// still appended for each user-facing builder — identical guarantee to the
