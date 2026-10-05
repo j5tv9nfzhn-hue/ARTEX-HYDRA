@@ -9,7 +9,7 @@ Deployable [Sigma](https://sigmahq.io) rules that formalize the pseudo-rules in 
 format you can convert to your own SIEM or EDR query language. Every indicator here is grounded in a
 string or behaviour verified in this repository's source, not inferred.
 
-## Rules
+## Atomic rules
 
 - **`sigma/artex_enrich_user_agent.yml`** — inbound `artex-enrich/1.0` User-Agent from ARTEX asset
   enrichment (`enrich/enrich.go`). Target-side, supporting indicator. `level: high`.
@@ -20,13 +20,40 @@ string or behaviour verified in this repository's source, not inferred.
 - **`sigma/destructive_command_hunting.yml`** — destructive shell/DB commands mirroring the ARTEX guard's
   built-in deny list (`db/db.go` seed). Generic hunting lead, not an ARTEX signature. `level: medium`.
 
+## Correlation rules (behaviour)
+
+Static strings can be changed; behaviour is harder to hide. These Sigma **correlation** rules in
+[`sigma/correlation/`](sigma/correlation/) encode the behaviour-based layer of the defense guide
+(sections 4.1–4.2 and 4.4). Each references an atomic rule above by its `id`, so convert the whole
+`sigma/` tree — not a single correlation file — to resolve the reference (see below).
+
+- **`sigma/correlation/artex_enrich_scan_velocity.yml`** — a burst of `artex-enrich/1.0` probes from one
+  source in a short window (enrichment runs at concurrency 4 with no rate limit). The velocity the
+  single-request rule misses. `event_count`, `level: high`.
+- **`sigma/correlation/artex_enrich_fanout.yml`** — one source carrying the enrichment User-Agent to many
+  *distinct* hosts: machine-speed fan-out across an asset list, where breadth (not just volume) is the
+  tell. `value_count`, `level: high`.
+- **`sigma/correlation/artex_guard_block_burst.yml`** — repeated platform-guard control markers on one
+  host, i.e. an active ARTEX run tripping its guard rather than a document that merely quotes the marker.
+  `event_count`, `level: high`.
+- **`sigma/correlation/artex_guard_marker_then_destructive.yml`** — the guard marker and a destructive
+  command co-occurring on one host within a window (defense guide §4.2, multi-stage). Combining an
+  ARTEX-specific marker with the otherwise-generic destructive-command signal raises specificity.
+  `temporal`, `level: high`.
+
+Thresholds and windows are conservative defaults — tune them to your baseline. The pure web multi-stage
+case in §4.2 (enumerate → probe → authenticate) still needs base rules specific to your environment,
+because the attack traffic itself carries no ARTEX-unique User-Agent.
+
 ## How to read these honestly
 
 - **Static indicators can be changed.** An operator can set a different User-Agent, so the absence of
   `artex-enrich/1.0` or `artex-selfupdate` does **not** mean safety. The durable signal is *behaviour* —
   a single source chaining recon → enumeration → probing → auth/injection attempts, adapting to responses,
-  running without pause. That layer is described in the defense guide (sections 1, 2, and 4.1–4.2) and does
-  not reduce to a single atomic rule; build it as a correlation rule in your SIEM.
+  running without pause. That layer is described in the defense guide (sections 1, 2, and 4.1–4.2); the
+  `sigma/correlation/` rules above ship it as deployable correlations (velocity, fan-out, guard-block
+  burst, and a guard-marker-with-destructive-command multi-stage), and the pure web multi-stage case
+  still needs base rules specific to your environment.
 - **The destructive-command rule is generic hunting.** It mirrors ARTEX's guard deny list, but the same
   commands are run by legitimate administrators. Treat a hit as a lead, allow-list your environment, and
   do not attribute it to ARTEX on its own.
@@ -48,6 +75,9 @@ sigma check detections/sigma/
 # compile to a target query language, e.g. Splunk
 sigma plugin install splunk
 sigma convert -t splunk --without-pipeline detections/sigma/artex_enrich_user_agent.yml
+
+# convert the whole tree so the correlation rules can resolve the atomic rules they reference by id
+sigma convert -t splunk --without-pipeline detections/sigma/
 ```
 
 Supported targets include Splunk, Elasticsearch, Microsoft Sentinel, QRadar, and others — see
