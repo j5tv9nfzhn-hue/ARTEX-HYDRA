@@ -64,15 +64,6 @@ function fmtTokens(n: number): string {
   return String(n);
 }
 
-const ASSET_TYPE_LABELS: Record<string, string> = {
-  root_domain: "根域名",
-  ip: "IP",
-  subdomain: "子域名",
-  app: "应用",
-  service: "服务",
-  endpoint: "端点",
-};
-
 const ASSET_COLORS: Record<string, string> = {
   root_domain: "bg-blue-500",
   ip: "bg-indigo-400",
@@ -1095,7 +1086,7 @@ export default function DashboardPage() {
               {assetByType.map(([type, count]) => (
                 <div key={type} className="flex items-center gap-2 text-xs">
                   <span className="w-8 shrink-0 text-right text-[10px] text-muted-foreground">
-                    {t.has(`assetType.${type}`) ? t(`assetType.${type}`) : (ASSET_TYPE_LABELS[type] ?? type)}
+                    {t.has(`assetType.${type}`) ? t(`assetType.${type}`) : type}
                   </span>
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                     <div

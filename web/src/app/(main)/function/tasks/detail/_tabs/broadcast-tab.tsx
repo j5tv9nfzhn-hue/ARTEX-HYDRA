@@ -195,8 +195,7 @@ function KindChip({ kind }: { kind: string }) {
 }
 
 // 节点锚定的资产:类型标签 + 可辨识文本。数据随播报页一起下发(node id → 资产),
-// 展开时直接展示,不额外请求。类型文案走 i18n(assetType);lib/task-assets 仍被
-// 会话标签页共用,暂不改,这里就地查表,未覆盖的类型退回原始字符串。
+// 展开时直接展示,不额外请求。类型文案走 i18n(assetType),未覆盖的类型退回原始字符串。
 function AssetList({ assets, dense = false }: { assets: FindingAsset[]; dense?: boolean }) {
   const t = useTranslations("taskDetail.broadcastTab");
   if (assets.length === 0) return null;
