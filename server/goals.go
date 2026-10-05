@@ -12,6 +12,16 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
+// admitPausedTask 재개 경로(requirePaused)의 사전 조건 검증 오류 문구다. 두 문구는
+// 단건(server.go:1194 → writeErr 409)·배치(task_control.go:298 → items[].error) 작업 제어
+// 응답으로만 사용자에게 노출된다. 오케스트레이터 경로(orchestration.go:343)는 action="pause"
+// 로 고정이라 재개 검증에 닿지 않으므로 두뇌 입력이 아니다. 용어는 task_control.go 의
+// 종료 상태·일시정지 문구와 맞춘다(resume=재개).
+const (
+	errGoalResumeTerminal  = "종료된 작업은 재개할 수 없습니다"
+	errGoalResumeNotPaused = "일시정지된 작업만 재개할 수 있습니다"
+)
+
 type goalSpec struct {
 	Text      string
 	VulnClass string
@@ -130,10 +140,10 @@ func (s *Server) admitTaskWhen(t *Task, mode string, requirePaused bool) (queued
 	lifecycle := t.lifecycleSnapshot()
 	if requirePaused {
 		if isTerminalStatus(lifecycle.Status) {
-			return false, fmt.Errorf("终态任务不能执行继续")
+			return false, fmt.Errorf(errGoalResumeTerminal)
 		}
 		if !lifecycle.Paused {
-			return false, fmt.Errorf("仅已暂停的任务可以继续")
+			return false, fmt.Errorf(errGoalResumeNotPaused)
 		}
 		mode = s.resumeAdmissionMode(t)
 	}
