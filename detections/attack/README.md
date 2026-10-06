@@ -8,7 +8,7 @@
 > 허가를 받은 시스템을 지키는 **방어·탐지 목적에만** 쓰십시오.
 
 A [MITRE ATT&CK](https://attack.mitre.org/) Navigator layer that maps the detection rules in this
-repository to the ATT&CK (Enterprise) techniques they tag. It is generated from the `attack.*` tags on
+repository to the ATT&CK (Enterprise) techniques they tag. It is built by hand from the `attack.*` tags on
 the [Sigma rules](../sigma/) — every technique is grounded in a rule whose indicator is a string or
 behaviour verified in this repository's source, and the [consistency test](../tests/attack/run.sh)
 keeps the layer and the rules from drifting apart.

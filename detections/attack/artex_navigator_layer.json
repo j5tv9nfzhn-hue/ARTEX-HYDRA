@@ -6,7 +6,7 @@
         "layer": "4.5"
     },
     "domain": "enterprise-attack",
-    "description": "MITRE ATT&CK (Enterprise) coverage of the ARTEX detection rules in this repository (detections/sigma, detections/suricata). Every technique below is drawn from the attack.* tags of a rule whose indicator is grounded in this repository's source; nothing is inferred. Score reflects detection strength: 100 = ARTEX-specific signature or behaviour, 50-65 = generic hunting lead that also catches legitimate administration. Regenerated and checked for rule<->layer consistency by detections/tests/attack/run.sh.",
+    "description": "MITRE ATT&CK (Enterprise) coverage of the ARTEX detection rules in this repository (detections/sigma, detections/suricata). Every technique below is drawn from the attack.* tags of a rule whose indicator is grounded in this repository's source; nothing is inferred. Score reflects detection strength: 100 = ARTEX-specific signature or behaviour, 50-65 = generic hunting lead that also catches legitimate administration. Maintained by hand from those tags and checked for rule<->layer consistency by detections/tests/attack/run.sh.",
     "filters": {
         "platforms": [
             "PRE",
