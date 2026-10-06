@@ -3,6 +3,8 @@
 > 이 문서는 상류(원본) ARTEX 의 설계 문서를 한국어로 옮긴 것입니다. 취약점과 트래픽 증거를 연결하는
 > 기능의 설계를 기여자·메인테이너를 위해 정리합니다. 원문(중국어)은
 > [`finding-traffic-evidence-zh.md`](finding-traffic-evidence-zh.md) 에 보존돼 있습니다.
+>
+> English: **[Vulnerability multi-traffic evidence (finding-traffic-evidence-en.md)](finding-traffic-evidence-en.md)**.
 
 취약점 상세 화면의 「연결된 트래픽」은 여러 페이지에 걸친 다중 선택, 용도와 설명 입력, 정렬, 바인딩 해제를 지원합니다. 트래픽 페이지에서도 여러 레코드를 한 번에 선택해 이미 있는 취약점 하나에 연결할 수 있습니다. 작업이 상속한 취약점 증거는 읽기 전용이며, 수정하려면 원본 작업으로 들어가야 합니다.
 

@@ -79,7 +79,7 @@ a **Next.js frontend**.
 The design intent of the main features is documented in the design docs under `docs/`. When you
 work on the feature that links vulnerabilities to traffic evidence (the report agent's automatic
 binding, `report_finding`'s `traffic_refs`, and so on), read the
-[vulnerability multi-traffic-evidence design doc](docs/finding-traffic-evidence-ko.md) first.
+[vulnerability multi-traffic-evidence design doc](docs/finding-traffic-evidence-en.md) first.
 The original (Chinese) is preserved as `finding-traffic-evidence-zh.md` in the same folder.
 
 ### Required versions
