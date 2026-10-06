@@ -49,6 +49,12 @@ func newNotifyFixture(t *testing.T) *notifyFixture {
 	// （防 SSRF 打到同机服务与云元数据）。测试显式打开这个开关；
 	// 守卫「默认拒绝」的行为由 notify 包的 ssrf_test.go 覆盖。
 	t.Setenv(notify.AllowLocalTargetsEnv, "1")
+	// 백그라운드 투递 루프(3초 tick)를 끈다. 이 파일의 케이스들은 stepRealtime·
+	// stepDigest 를 직접 호출해 한 번의 분배 결과(앞 K건 송달·나머지 보류)를 검증하는데,
+	// 백그라운드 루프가 같은 채널을 동시에 처리하면 집계가 타이밍에 따라 흔들려(느린 CI
+	// 에서 간헐 실패) 결정성이 깨진다. 이 변수는 trafficEvidenceServer 가 서버를 세우기
+	// 전에 설정돼야 효과가 있다.
+	t.Setenv(notifyBackgroundDisabledEnv, "1")
 	s, _, request := trafficEvidenceServer(t)
 	pg := s.m.pg
 

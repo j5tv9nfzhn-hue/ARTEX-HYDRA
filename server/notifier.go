@@ -29,6 +29,12 @@ const (
 	// notifyTick 是投递引擎的轮询间隔。3 秒是该引擎实时性的上限，
 	// 也是「漏洞落库」到「消息到达 IM」之间的主要延迟来源。
 	notifyTick = 3 * time.Second
+	// notifyBackgroundDisabledEnv 가 설정되면 서버가 백그라운드 투递 루프
+	// (newNotifier(s).Run)를 띄우지 않는다. 통합 테스트는 stepRealtime·stepDigest 를
+	// 직접 호출해 분배 결과를 결정론적으로 검증하는데, 3 초 주기의 백그라운드 루프가
+	// 같은 채널을 동시에 처리하면 집계가 타이밍에 따라 흔들린다. 이를 막기 위한
+	// 테스트 전용 스위치이며, 변수가 없으면 평소대로 기동한다(프로덕션 동작 불변).
+	notifyBackgroundDisabledEnv = "ARTEX_NOTIFY_BACKGROUND_DISABLED"
 	// notifyLease 是领取投递时的租约时长。必须显著大于单次投递的最坏耗时
 	// （notify 包的 HTTP 客户端超时 15 秒），否则会出现同一行被两个
 	// dispatcher 同时投递。
