@@ -196,11 +196,13 @@ export default function LLMRecordsPage() {
   }, [session]);
 
   // Reset page on filter change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these values intentionally trigger a page reset.
   React.useEffect(() => {
     setPage(0);
   }, [sessionQ, model, size, pickedTask]);
 
   // Load list.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reloadTick is an explicit manual-refetch trigger.
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
