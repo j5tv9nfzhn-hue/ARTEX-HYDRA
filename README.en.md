@@ -71,7 +71,8 @@ The three screens below are the localized Korean UI. The data comes from a local
 
 <p align="center">
   <img src="screenshots/ko/findings.png" width="900" alt="Findings list"><br>
-  <sub><b>Findings</b> — results aggregated by severity, status, asset, and owning task, exportable to CSV.</sub>
+  <sub><b>Findings</b> — results aggregated by severity, status, asset, and owning task, exportable to CSV.</sub><br>
+  <sub>Finding <b>titles</b> are model-generated, so English technical terms can appear, mirroring the target app ([Model selection and output language](#model-selection-and-output-language)). The description under each title and the rest of the UI are Korean.</sub>
 </p>
 
 <p align="center">
