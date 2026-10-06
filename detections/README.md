@@ -115,8 +115,10 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   is not a real MISP type, so the artifact really imports rather than merely looking like MISP — and that it
   stays row-for-row in sync with the CSV above: same values, the intended MISP type/category per indicator,
   and a `to_ids`/`disable_correlation` flag that mirrors the CSV's honesty (rule-backed = actionable, so
-  `to_ids` on; host-forensic port = triage hint, so `to_ids` off and correlation disabled). Add, remove, or
-  retype a CSV row without regenerating the MISP event and it fails.
+  `to_ids` on; host-forensic port = triage hint, so `to_ids` off and correlation disabled). The event is
+  hand-maintained alongside the CSV — it carries curated comments, UUIDs, and tags the CSV does not — so
+  when you add, remove, or retype a CSV row you update the MISP event in the same commit, and this test
+  fails until the two agree.
 - **Sigma backend portability** ([`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh)) proves the rules
   convert beyond the single Splunk example: the whole tree (atomic + correlation) compiles on Splunk, the
   Elasticsearch `eql` target, and Grafana Loki, and the four atomic rules still compile on backends that do not

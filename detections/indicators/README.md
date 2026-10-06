@@ -80,7 +80,12 @@ detections/tests/indicators/run.sh
 The MISP event is covered by its own [MISP export consistency test](../tests/misp/run.sh): it loads the
 event under pymisp (so every attribute type is a real MISP type a server accepts) and asserts it stays
 row-for-row in sync with this CSV — same values, the intended type/category, and the `to_ids` flag matching
-the `rule` column. Add or retype a CSV row without regenerating the MISP event and it fails. Run it with:
+the `rule` column. The event is maintained by hand alongside the CSV — it also carries curated per-attribute
+comments, stable UUIDs, and event-level tags that the CSV does not hold, so there is no generator that would
+overwrite them with lossy defaults. When you add, remove, or retype a CSV row, edit
+[`artex_indicators.misp.json`](artex_indicators.misp.json) to match in the same commit (give a new attribute a
+fresh `uuid` and a grounding `comment`); this test fails until the two agree, so the update cannot be silently
+forgotten. Run it with:
 
 ```sh
 detections/tests/misp/run.sh

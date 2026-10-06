@@ -335,7 +335,8 @@ defender actually loads into a threat-intelligence platform, from drifting away 
 - **Row-for-row sync with the CSV** — every CSV row maps to exactly one MISP attribute with the intended type
   and category (`http.user-agent` → `user-agent`, the guard marker `string` → `pattern-in-file`, `port` →
   `port`, `ip-dst|port` → `ip-dst|port` with the composite `ip|port` value), and no MISP attribute is left
-  without a CSV row. Adding, removing, or retyping a CSV row without regenerating the event fails.
+  without a CSV row. The event is hand-maintained alongside the CSV, so adding, removing, or retyping a CSV
+  row without updating `artex_indicators.misp.json` to match in the same commit fails.
 - **`to_ids` mirrors the `rule` column** — a rule-backed indicator is `to_ids: true`; a host-forensic row
   with no rule is `to_ids: false` with `disable_correlation: true`. Flipping a flag away from what the CSV
   implies fails, so the MISP event cannot quietly over- or under-claim which fingerprints are actionable.
