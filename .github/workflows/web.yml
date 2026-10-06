@@ -1,0 +1,49 @@
+name: web
+# 한국어 UI(web/)의 정적 내보내기 빌드를 푸시·PR 마다 돌려, 프런트엔드 회귀를
+# 머지 전에 잡는다. 릴리스 워크플로(release.yml)는 태그(v*)에서만 web 을 빌드하는데
+# 이 포크에는 태그 푸시 이력이 없어 한 번도 실행된 적이 없다 — 그래서 일상적인 web
+# 변경(TypeScript·React·i18n·next-intl)을 검증하는 역할은 이 워크플로가 맡는다. Go
+# 쪽 빌드·테스트는 ci.yml 이 맡으므로, 여기서는 web/ 가 바뀔 때만 돈다(paths 필터).
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "web/**"
+      - ".github/workflows/web.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/web.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  # 정적 내보내기 빌드가 머지 게이트다. `NEXT_EXPORT=1 next build` 는 next.config 에
+  # typescript.ignoreBuildErrors 설정이 없어 TypeScript 타입 검사까지 함께 수행하므로,
+  # 타입 오류나 내보내기 실패가 있으면 이 잡이 빨갛게 멈춰 머지를 막는다.
+  #
+  # biome 린트는 저장소에 상류에서 딸려온 선재 린트 부채가 남아 있어(G7) 아직 머지
+  # 게이트로 세우지 못한다. 지금 게이트로 두면 기존 변경과 무관한 오류로 모든 PR 이
+  # 빨개지기 때문이다. 그래서 기여자에게 결과만 보여 주는 정보용 단계로 두고
+  # (continue-on-error), 선재 오류가 0 이 되면 이 단계를 게이트로 승격한다.
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: npm ci
+        run: npm ci
+      - name: build:static (머지 게이트 · 타입 검사 포함)
+        run: npm run build:static
+      - name: biome check (정보용 · 선재 린트 부채로 아직 머지 게이트 아님)
+        if: always()
+        continue-on-error: true
+        run: npm run check
