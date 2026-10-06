@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 #
 # Reproducible regression test for the ARTEX Suricata rules
-# (../../suricata/artex.rules). It proves three properties with no committed
+# (../../suricata/artex.rules). It proves four properties with no committed
 # binary capture and no host dependencies beyond Docker:
 #
-#   1. sid 1000001 fires exactly once per enrich probe   (presence)
-#   2. sid 1000002 fires once the 30-in-300s rate is hit (velocity)
-#   3. an identical capture with a benign browser UA      (specificity)
+#   1. the whole rules file loads with zero errors       (validity)
+#      `suricata -T --init-errors-fatal`; a rule that fails to parse or
+#      initialise is fatal even when no capture below exercises it
+#   2. sid 1000001 fires exactly once per enrich probe   (presence)
+#   3. sid 1000002 fires once the 30-in-300s rate is hit (velocity)
+#   4. an identical capture with a benign browser UA     (specificity)
 #      produces zero alerts
 #
-# Everything runs in containers: scapy synthesizes a deterministic pcap, then
-# `suricata -r` reads it offline. The pcap is generated into a scratch dir that
-# is removed on exit and is never committed.
+# Everything runs in containers: `suricata -T` validates the ruleset, scapy
+# synthesizes a deterministic pcap, then `suricata -r` reads it offline. The
+# pcap is generated into a scratch dir that is removed on exit and is never
+# committed.
 #
 # Usage:   detections/tests/suricata/run.sh
 # Env:     SURICATA_IMAGE (default jasonish/suricata:latest)
@@ -38,7 +42,21 @@ trap cleanup EXIT
 fail=0
 note() { printf '  %s\n' "$1"; }
 
-echo "== 1/3  synthesize deterministic captures (scapy) =="
+echo "== 1/4  validate the full ruleset loads (suricata -T) =="
+# `suricata -T` loads the whole rules file in test mode and exits; --init-errors-fatal
+# makes any rule that fails to parse or initialise a hard error. This catches a broken
+# rule even when no capture below exercises it: plain `suricata -r` skips such a rule and
+# still exits 0, so the firing checks would stay green while a signature silently fails to
+# load. This is the Suricata analogue of the Sigma suite's `sigma check` validity assertion.
+if docker run --rm -v "$RULES_DIR:/r:ro" "$SURICATA_IMAGE" \
+     suricata -T -S /r/artex.rules -l /tmp --init-errors-fatal >/dev/null 2>&1; then
+  note "PASS  ruleset loads with zero parse/init errors (suricata -T)"
+else
+  note "FAIL  ruleset loads with zero parse/init errors (suricata -T)"
+  fail=1
+fi
+
+echo "== 2/4  synthesize deterministic captures (scapy) =="
 docker run --rm -v "$SCRATCH:/out" -v "$HERE:/src:ro" "$PYTHON_IMAGE" sh -c "
   pip install --quiet --disable-pip-version-check scapy >/dev/null 2>&1 &&
   python /src/gen_pcap.py /out/enrich.pcap '$ENRICH_UA' $NUM_FLOWS &&
@@ -90,7 +108,7 @@ expect() { # $1 label, $2 actual, $3 op (eq|ge), $4 expected
   fi
 }
 
-echo "== 2/3  run Suricata offline over the enrich capture =="
+echo "== 3/4  run Suricata offline over the enrich capture =="
 run_suricata enrich
 e1="$(alerts enrich 1000001)"
 e2="$(alerts enrich 1000002)"
@@ -98,7 +116,7 @@ expect "sid 1000001 presence: one alert per probe" "$e1" eq "$NUM_FLOWS"
 expect "sid 1000002 velocity: fires past 30-in-300s" "$e2" ge 1
 note "reference (Suricata 8.0.7): sid 1000002 = 5 (flows 31-35)"
 
-echo "== 3/3  run Suricata offline over the benign capture =="
+echo "== 4/4  run Suricata offline over the benign capture =="
 run_suricata benign
 b="$(alerts benign any)"
 expect "benign browser UA produces no ARTEX alerts" "$b" eq 0

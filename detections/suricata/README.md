@@ -46,12 +46,16 @@ Validated with Suricata 8. The load test needs no traffic and always runs:
 ```sh
 # syntax + engine load test (expect: "Configuration provided was successfully loaded")
 docker run --rm -v "$PWD/detections/suricata":/r -w /r jasonish/suricata:latest \
-  suricata -T -S artex.rules -l /tmp
+  suricata -T -S artex.rules -l /tmp --init-errors-fatal
 ```
 
+`--init-errors-fatal` makes a rule that parses but fails to initialise a hard error too, so the load test
+cannot pass with a silently dropped signature.
+
 To confirm the rules actually fire, a reproducible regression test lives in
-[`../tests/suricata/`](../tests/suricata/). It synthesizes a deterministic capture with scapy, runs
-`suricata -r` over it, and asserts the alert counts — needing only Docker:
+[`../tests/suricata/`](../tests/suricata/). It runs this same load check first, then synthesizes a
+deterministic capture with scapy, runs `suricata -r` over it, and asserts the alert counts — needing only
+Docker:
 
 ```sh
 detections/tests/suricata/run.sh

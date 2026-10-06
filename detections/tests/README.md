@@ -46,8 +46,12 @@ are inherited by the runner, so exporting any of them applies to every suite at 
 ## Suricata — [`suricata/`](suricata/)
 
 [`suricata/run.sh`](suricata/run.sh) exercises the network rules in
-[`../suricata/artex.rules`](../suricata/artex.rules) end to end and asserts three properties:
+[`../suricata/artex.rules`](../suricata/artex.rules) end to end and asserts four properties:
 
+- **Valid** — the whole rules file loads under `suricata -T --init-errors-fatal`, so a rule that fails to
+  parse or initialise is caught even when no capture below exercises it. Plain `suricata -r` skips such a
+  rule and still exits 0, so this load check is the Suricata analogue of the Sigma suite's `sigma check`
+  validity assertion.
 - **Presence** — sid `1000001` fires exactly once per enrichment probe.
 - **Velocity** — sid `1000002` fires once the `detection_filter` rate of 30 requests in 300 s per source is
   crossed.
@@ -70,6 +74,7 @@ detections/tests/suricata/run.sh
 Expected output (abridged):
 
 ```
+  PASS  ruleset loads with zero parse/init errors (suricata -T)
   PASS  sid 1000001 presence: one alert per probe  (got 35, want eq 35)
   PASS  sid 1000002 velocity: fires past 30-in-300s  (got 5, want ge 1)
   PASS  benign browser UA produces no ARTEX alerts  (got 0, want eq 0)

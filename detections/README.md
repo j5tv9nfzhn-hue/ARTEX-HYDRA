@@ -69,10 +69,12 @@ from drifting away from the rule set.
 
 The rules ship with reproducible tests in [`tests/`](tests/), each needing only Docker:
 
-- **Suricata** ([`tests/suricata/run.sh`](tests/suricata/run.sh)) synthesizes a deterministic capture with
-  scapy, runs `suricata -r` over it, and asserts that the presence rule fires once per probe, the velocity
-  rule trips past its rate threshold, and a benign-User-Agent capture produces zero alerts. No binary capture
-  is committed — the test regenerates it on every run.
+- **Suricata** ([`tests/suricata/run.sh`](tests/suricata/run.sh)) first validates that the whole rules file
+  loads under `suricata -T --init-errors-fatal` (a rule that fails to parse is caught even if no capture
+  exercises it), then synthesizes a deterministic capture with scapy, runs `suricata -r` over it, and asserts
+  that the presence rule fires once per probe, the velocity rule trips past its rate threshold, and a
+  benign-User-Agent capture produces zero alerts. No binary capture is committed — the test regenerates it on
+  every run.
 - **Sigma** ([`tests/sigma/run.sh`](tests/sigma/run.sh)) runs the `sigma check` and `sigma convert` validation
   below as an executable test: it asserts 0 errors, that the whole tree compiles to a backend query, that each
   atomic indicator string survives into that query, and that a correlation rule fails to convert on its own —
