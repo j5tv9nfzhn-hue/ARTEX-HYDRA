@@ -117,6 +117,8 @@
     "recentRequests": "최근 요청",
     "recording": "기록 중",
     "requestCount": "{count}회 요청",
+    "srcNew": "계량 원장",
+    "srcOld": "활동 통계",
     "statDone": "완료",
     "statExplore": "탐색",
     "statPaused": "일시정지",

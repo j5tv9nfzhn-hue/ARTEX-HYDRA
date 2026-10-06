@@ -643,7 +643,7 @@ export default function DashboardPage() {
               ))}
             </div>
             <span className="text-[10px] font-normal text-muted-foreground">
-              {tokenVersion === "new" ? "llm_usage" : "activity"}
+              {tokenVersion === "new" ? t("srcNew") : t("srcOld")}
             </span>
           </div>
           {/* Profile tabs */}

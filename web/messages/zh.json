@@ -117,6 +117,8 @@
     "recentRequests": "最近请求",
     "recording": "录制中",
     "requestCount": "{count} 次请求",
+    "srcNew": "计量账本",
+    "srcOld": "活动统计",
     "statDone": "完成",
     "statExplore": "探索",
     "statPaused": "暂停",
