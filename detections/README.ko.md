@@ -52,7 +52,7 @@ Sigma 는 호스트와 로그 텔레메트리를 다룹니다. 네트워크 선�
 [Suricata](https://suricata.io) 규칙으로 들어 있습니다. 존재 시그니처 하나와 고속 열거 변형 하나입니다.
 ARTEX 의 실제 공격 트래픽은 ARTEX 고유 User-Agent 를 싣지 않으므로 네트워크 계층은 의도적으로 좁게
 잡았습니다. 범위와 TLS 유의점, `suricata -T` 와 참조 pcap 으로 검증하는 방법은
-[`suricata/README.md`](suricata/README.md)를 참조하십시오.
+[`suricata/README.ko.md`](suricata/README.ko.md)를 참조하십시오.
 
 ## ATT&CK 커버리지
 
@@ -61,7 +61,7 @@ ARTEX 의 실제 공격 트래픽은 ARTEX 고유 User-Agent 를 싣지 않으�
 걸친 일곱 기법으로, 각 기법은 규칙의 `attack.*` 태그에 근거하고 탐지 강도(ARTEX 고유 시그니처인지,
 일반 헌팅 단서인지)로 점수를 매겼습니다. [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/)
 에서 열면 어떤 ARTEX 행동을 어떤 규칙이 덮는지 볼 수 있습니다. 점수 산정과 기법↔규칙 대응, 그리고
-정직한 범위(커버리지는 완전성이 아닙니다)는 [`attack/README.md`](attack/README.md)를 참조하십시오.
+정직한 범위(커버리지는 완전성이 아닙니다)는 [`attack/README.ko.md`](attack/README.ko.md)를 참조하십시오.
 [일관성 테스트](tests/attack/run.sh)가 레이어와 규칙 집합이 서로 어긋나지 않게 지킵니다.
 
 ## 침해지표 목록 (기계가 읽는)
@@ -76,7 +76,7 @@ ARTEX 의 실제 공격 트래픽은 ARTEX 고유 User-Agent 를 싣지 않으�
 STIX 로 내보내는 방어자는 CSV 열을 손으로 매핑할 필요가 없습니다. 규칙에 근거한 지문은 `to_ids`
 로 표시했고, 호스트 포렌식용 포트는 표시하지 않았습니다. 일반 헌팅 단서(파괴 명령)는 오탐을 피하려
 가져오기용 목록에서 의도적으로 뺐습니다. 열 구성, MISP 타입 매핑, 정직한 유의점, 그리고 CSV 와
-MISP 이벤트가 어긋나지 않게 지키는 일관성 테스트는 [`indicators/README.md`](indicators/README.md)를
+MISP 이벤트가 어긋나지 않게 지키는 일관성 테스트는 [`indicators/README.ko.md`](indicators/README.ko.md)를
 참조하십시오.
 
 ## 테스트
