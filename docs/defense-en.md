@@ -176,6 +176,32 @@ The defining trait of an autonomous AI attack is **speed**. An agent can run to 
 - **Decide in advance which logs to retain.** Authentication logs, access logs (including request bodies within the extent you can capture), egress logs, DNS queries. Autonomous attacks accumulate traces quickly, so this material is what you need to reconstruct the attack chain afterward.
 - **Track the scope of compromise asset by asset.** Because the attack spreads along the asset graph, you must reconstruct the **entire path** from the initial entry asset through lateral movement and privilege escalation to prevent re-intrusion.
 
+### 6.1 Triage procedure for a suspected host or traffic
+
+This lays out, in order, what to check first when ARTEX involvement is suspected. As Section 2 split the fingerprints into two perspectives, triage also splits into **(a) whether your service was targeted** and **(b) whether ARTEX ran on a given host**. At any step, do not conclude from a single hit alone; judge by whether several indicators and behavioral signals appear together. Even if the static indicators are all absent, keep investigating when a behavioral signal shows up.
+
+**(a) Target side — was your service targeted by ARTEX**
+
+1. Query your access/authentication logs for the enrichment User-Agent `artex-enrich/1.0`. Check whether single `GET` requests that do not follow redirects arrive across several assets at once in a short interval (Section 2 (a)). Since an operator can change the User-Agent, move to the next step even if nothing matches.
+2. Look for a **multi-stage chain** from the same source (or a few rotating sources): reconnaissance leading to endpoint enumeration, parameter probing, and authentication/injection attempts in short succession, adapting to response codes and lengths, and not stopping its evasive variations even after 401/403/429. This behavioral signal lasts longer than a static User-Agent (Section 2 (a) behavioral signatures).
+3. If you run a SIEM, catch this behavior with the [Sigma correlation rules](../detections/README.md) (enrichment velocity, fan-out, guard-block burst, and the guard marker co-occurring with a destructive command), and escalate any matched source to isolation and session invalidation per the "automatic blocking first" principle above.
+
+**(b) Host forensics — did ARTEX run on a given host**
+
+On a suspected host, check the following. The basis for each indicator is in Section 2 (b) and in the machine-readable [indicator list](../detections/indicators/artex_indicators.csv).
+
+1. **Listening ports.** Check on the host itself whether the default server port `:8787` and the loopback traffic-recording proxy `127.0.0.1:8788` are open.
+   ```sh
+   ss -ltnp | grep -E ':8787|:8788'   # use netstat -ltnp if ss is unavailable
+   ```
+   These two ports can be changed with the `--addr` and `--proxy` flags, so even if this query is empty, also review all open ports and whether an internal admin UI is up.
+2. **Egress logs.** Check whether requests went out to the code-repository host (GitHub releases) with the self-update User-Agent `artex-selfupdate` in your egress logs (`selfupdate/`). This suggests an ARTEX binary ran on the host.
+3. **Audit logs.** If the guard control marker `【ARTEX 平台管控·非目标防御】` appears in audit records, it supports an ARTEX-execution finding (`guard/guard.go`). It is written with this framing on every blocked tool call.
+4. **State and recording stores.** ARTEX keeps its exploration graph in PostgreSQL (the `exploration_nodes`, `assets`, `companies`, `activity` tables and the `agent_prompts` seed) and leaves traffic-recording artifacts in the data directory next to the executable (the `--data` default in `cmd/artex/main.go`). The case strengthens when the trust CA certificate `_ca/mitmproxy-ca-cert.pem`, the traffic index `_index/index.sqlite`, and the `tasks/` and `transcripts/` subdirectories are present together.
+5. **Command auditing.** Compare the destructive-command hunting indicators (the end of Section 2 (b): `rm -rf`, `DROP DATABASE`, `FLUSHALL`, exfiltration pipes, and the like) against the host's command history. A legitimate administrator uses the same commands, so treat them only as leads.
+
+Static indicators (ports, User-Agents, markers) can be changed or deleted by an operator. So **absence does not mean safety**, and the key to triaging an autonomous AI attack is to gather the behavioral signals from (a) and the host traces from (b) and judge them together.
+
 ---
 
 ## 7. Korean official channels: indicators, advisories, and reporting duties
