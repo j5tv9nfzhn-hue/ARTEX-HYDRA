@@ -97,7 +97,7 @@ JSON
   if command -v npm >/dev/null 2>&1; then
     info "프런트엔드 정적 산출물을 빌드합니다…"
     ( cd web && npm ci && npm run build:static )
-    rm -rf server/webui/dist && cp -r web/out server/webui/dist
+    rm -rf server/webui/dist && mkdir -p server/webui && cp -r web/out server/webui/dist
     info "프런트엔드를 내장한 단일 바이너리를 컴파일합니다…"
     CGO_ENABLED=0 go build -tags embedui -trimpath -o artex ./cmd/artex
   else

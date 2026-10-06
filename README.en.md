@@ -108,7 +108,7 @@ Upstream provides several methods: an install script (`./install.sh`), precompil
 
   ```bash
   cd web && npm ci && npm run build:static && cd ..   # 1) static frontend build
-  cp -r web/out server/webui/dist                     # 2) copy into the embed directory
+  mkdir -p server/webui && cp -r web/out server/webui/dist   # 2) copy into the embed directory
   CGO_ENABLED=0 go build -tags embedui -o artex ./cmd/artex   # 3) compile with the frontend embedded
   ./start.sh                                          # → http://localhost:8787
   ```
