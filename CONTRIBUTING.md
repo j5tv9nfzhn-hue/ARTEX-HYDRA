@@ -91,6 +91,42 @@ docker run --rm -v "$PWD":/src -w /src \
   golang:1.26 sh -c 'go build ./... && go vet ./agent/ && go test ./agent/'
 ```
 
+#### DB 통합 테스트 (postgres 필요)
+
+위의 `go test ./agent/` 는 PostgreSQL 에 붙어야 도는 **DB 통합 테스트를 조용히
+건너뜁니다.** `agent`·`config`·`db`·`evidence`·`llmrec`·`server` 여섯 패키지에는 실제
+데이터베이스가 있어야 도는 테스트가 들어 있는데, 환경 변수 `ARTEX_PG_DSN` 도 없고 설정
+파일에도 `database` 항목이 없으면 그 테스트들은 `--- SKIP` 으로 넘어가고 패키지는 `ok` 로
+끝납니다. 그래서 이 여섯 패키지를 고친 뒤 DSN 없이 검증하면 **로컬은 통과(ok)하는데 PR 의
+`go-db` 작업은 실패**할 수 있습니다.
+
+이 테스트들을 로컬에서 돌리려면 PostgreSQL 을 띄우고 `ARTEX_PG_DSN` 을 건넵니다. 아래는
+CI 와 같은 `postgres:16-alpine` 을 격리 네트워크에 띄워 돌리는 예시이며, 위와 같은 named
+volume 을 재사용합니다.
+
+```bash
+# 1) 격리 네트워크와 빈 postgres 를 띄웁니다 (CI 와 같은 이미지·계정).
+docker network create artexko-db 2>/dev/null || true
+docker run -d --name artexko-pg --network artexko-db \
+  -e POSTGRES_USER=artex -e POSTGRES_PASSWORD=artex -e POSTGRES_DB=artex \
+  postgres:16-alpine
+until docker exec artexko-pg pg_isready -U artex -d artex >/dev/null 2>&1; do sleep 1; done
+
+# 2) DSN 을 건네 DB 통합 패키지를 돌립니다 (DSN 의 host 는 컨테이너 이름입니다).
+#    고친 패키지만 돌리려면 ./agent/ 자리를 config·db·evidence·llmrec·server 로 바꿉니다.
+docker run --rm --network artexko-db -v "$PWD":/src -w /src \
+  -v artexko-gomod:/go/pkg/mod -v artexko-gocache:/root/.cache/go-build \
+  -e ARTEX_PG_DSN='postgres://artex:artex@artexko-pg:5432/artex?sslmode=disable' \
+  golang:1.26 sh -c 'go test ./agent/ -count=1'
+
+# 3) 정리합니다.
+docker rm -f artexko-pg && docker network rm artexko-db
+```
+
+CI 의 `go-db` 작업은 이 여섯 패키지를 **각각 자체 postgres 로 격리해** 머지 전에 강제로
+돌립니다(`.github/workflows/ci.yml`). DB 통합 패키지를 고쳤다면 PR 을 올리기 전에 위
+방법으로 해당 패키지를 직접 확인하기를 권합니다.
+
 ### 프런트엔드 (web)
 
 ```bash
