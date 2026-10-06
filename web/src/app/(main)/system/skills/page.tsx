@@ -353,15 +353,21 @@ export default function SkillsPage() {
     api
       .agents()
       .then(setAgents)
-      .catch(() => {});
+      .catch(() => {
+        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+      });
     api
       .mcpServers()
       .then(setMcpOptions)
-      .catch(() => {});
+      .catch(() => {
+        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+      });
     api
       .missingSkills()
       .then(setMissing)
-      .catch(() => {});
+      .catch(() => {
+        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+      });
     api
       .skills()
       .then((ss) => {
@@ -370,10 +376,14 @@ export default function SkillsPage() {
           api
             .skillVisibility(s.name)
             .then((ids) => setVisibility((v) => ({ ...v, [s.name]: ids })))
-            .catch(() => {}),
+            .catch(() => {
+              /* 가시성 조회 실패는 무시한다 */
+            }),
         );
       })
-      .catch(() => {});
+      .catch(() => {
+        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+      });
   }, []);
 
   React.useEffect(() => {

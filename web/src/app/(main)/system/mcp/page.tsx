@@ -58,7 +58,9 @@ export default function MCPPage() {
     api
       .agents()
       .then(setAgents)
-      .catch(() => {});
+      .catch(() => {
+        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+      });
     api
       .mcpServers()
       .then((ss) => {
@@ -67,10 +69,14 @@ export default function MCPPage() {
           api
             .resourceVisibility("mcp", s.id)
             .then((ids) => setVisibility((v) => ({ ...v, [s.id]: ids })))
-            .catch(() => {}),
+            .catch(() => {
+              /* 가시성 조회 실패는 무시한다 */
+            }),
         );
       })
-      .catch(() => {});
+      .catch(() => {
+        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+      });
   }, []);
   React.useEffect(() => {
     load();

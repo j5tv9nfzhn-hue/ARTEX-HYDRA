@@ -26,7 +26,9 @@ export function FindingLineageView({ findingId }: { findingId: string }) {
         setNodes(g.nodes ?? []);
         setEdges(g.edges ?? []);
       })
-      .catch(() => {})
+      .catch(() => {
+        /* 조회 실패는 무시한다 (finally 에서 로딩 상태 해제) */
+      })
       .finally(() => {
         if (alive) setLoaded(true);
       });

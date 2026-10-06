@@ -360,11 +360,15 @@ export default function ToolsPage() {
     api
       .agents()
       .then(setAgents)
-      .catch(() => {});
+      .catch(() => {
+        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+      });
     api
       .settings()
       .then((s) => setCaptureOn(!!s.traffic_capture))
-      .catch(() => {});
+      .catch(() => {
+        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+      });
   }, [reload]);
 
   const [query, setQuery] = React.useState("");

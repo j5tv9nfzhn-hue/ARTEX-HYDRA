@@ -168,7 +168,9 @@ export default function LLMRecordsPage() {
       .then((s) => {
         if (alive) setRecEnabled(!!s.llm_record);
       })
-      .catch(() => {});
+      .catch(() => {
+        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+      });
     return () => {
       alive = false;
     };
@@ -215,14 +217,18 @@ export default function LLMRecordsPage() {
         setRecords(r.records ?? []);
         setTotal(r.total ?? 0);
       })
-      .catch(() => {})
+      .catch(() => {
+        /* 조회 실패는 무시한다 (finally 에서 로딩 상태 해제) */
+      })
       .finally(() => alive && setLoading(false));
     api
       .llmTasks()
       .then((r) => {
         if (alive) setTasks(r.tasks ?? []);
       })
-      .catch(() => {});
+      .catch(() => {
+        /* 조회 실패는 무시한다 */
+      });
     return () => {
       alive = false;
     };
@@ -241,7 +247,9 @@ export default function LLMRecordsPage() {
         setPage(0);
         setReloadTick((n) => n + 1);
       })
-      .catch(() => {})
+      .catch(() => {
+        /* 삭제 후 재조회 실패는 무시한다 (finally 에서 삭제 상태 해제) */
+      })
       .finally(() => setDeleting(false));
   };
 
@@ -259,7 +267,9 @@ export default function LLMRecordsPage() {
       .then((d) => {
         if (alive) setDetail(d);
       })
-      .catch(() => {})
+      .catch(() => {
+        /* 상세 조회 실패는 무시한다 (finally 에서 로딩 상태 해제) */
+      })
       .finally(() => {
         if (alive) setDetailLoading(false);
       });
