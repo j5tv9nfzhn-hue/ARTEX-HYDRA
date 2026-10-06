@@ -66,6 +66,11 @@ ARTEX 는 LLM 멀티 에이전트가 **자율적으로** 침투 테스트를 수
 이 프로젝트는 **Go 백엔드**(단일 바이너리에 프런트엔드를 내장) + **Next.js 프런트엔드**로
 구성됩니다.
 
+주요 기능의 설계 의도는 `docs/` 의 설계 문서에 정리되어 있습니다. 취약점과 트래픽 증거를
+연결하는 기능(보고서 에이전트의 자동 바인딩, `report_finding` 의 `traffic_refs` 등)을
+다룰 때는 [취약점 다중 트래픽 증거 설계 문서](docs/finding-traffic-evidence-ko.md)를 먼저
+읽으십시오. 원문(중국어)은 같은 폴더의 `finding-traffic-evidence-zh.md` 에 보존되어 있습니다.
+
 ### 요구 버전
 
 - Go 1.26 이상 (`go.mod` 기준)
@@ -160,6 +165,8 @@ docker compose up -d     # artex + postgres 기동 → http://localhost:8787
    `build`·`vet`·`test` 를, web 변경이면 `npm run check` 와 `build` 를 통과시킵니다.
 4. **PR 을 엽니다.** 제목·설명은 [PR 템플릿](.github/PULL_REQUEST_TEMPLATE.md)을 따르고,
    무엇을 왜 바꿨는지와 어떻게 검증했는지를 적습니다. UI 를 바꿨다면 스크린샷을 첨부합니다.
+5. 사용자에게 보이는 변경(기능·현지화·문서·탐지 규칙 등)이라면 [변경 이력(CHANGELOG.md)](CHANGELOG.md)
+   의 `[Unreleased]` 절에 한 줄을 더합니다. 내부 리팩터링이나 테스트 전용 변경은 생략해도 됩니다.
 
 ### 커밋 메시지
 

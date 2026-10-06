@@ -359,6 +359,8 @@ Local development and testing:
 
 For other development topics (such as manual vulnerability re-verification), see the "开发" (Development) section of [`README.zh.md`](README.zh.md#开发).
 
+The changes this Korean edition adds on top of upstream ARTEX are tracked in the [changelog (Korean, CHANGELOG.md)](CHANGELOG.md).
+
 ---
 
 ## License and disclaimer
