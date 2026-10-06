@@ -1,0 +1,44 @@
+name: detections
+# 탐지 규칙(Sigma·Suricata·ATT&CK 레이어)이 바뀌는 푸시·PR 마다, 그 규칙이 실제로
+# 발화하고 커버리지 레이어가 규칙과 일치하는지 재현 테스트로 검증한다. 규칙만 바꾸고
+# 테스트·레이어를 갱신하지 않은 변경은 여기서 빨갛게 드러난다. CONTRIBUTING.md 와
+# detections/tests/README.md 가 약속하는 "세 테스트가 기여 계약을 기계적으로 강제한다"를
+# 머지 게이트로 실제로 뒷받침하는 워크플로다. Go 빌드·정적 분석·테스트는 ci.yml 이 맡는다.
+#
+# 세 테스트는 Docker 만 있으면 돈다(ubuntu-latest 러너에 Docker 가 들어 있다). 러너가
+# sigma-cli·scapy·suricata 이미지를 내려받아 컨테이너에서 격리 실행하므로 러너 자체에는
+# 아무것도 설치하지 않고, 규칙 트리를 읽기 전용으로만 마운트해 저장소에 쓰지 않는다.
+# detections/ 아래가 바뀔 때만 돌려(paths 필터) Go 전용 변경에서는 낭비하지 않되, 규칙·
+# 레이어·테스트 변경은 빠짐없이 건다. 공개 Docker 이미지를 인증 없이 내려받으므로 드물게
+# Docker Hub 내려받기 속도 제한에 걸릴 수 있고, 그때는 작업을 다시 돌리면 해소된다.
+on:
+  push:
+    paths:
+      - "detections/**"
+      - ".github/workflows/detections.yml"
+  pull_request:
+    paths:
+      - "detections/**"
+      - ".github/workflows/detections.yml"
+
+permissions:
+  contents: read
+
+# 같은 브랜치에 새 푸시가 오면 앞선 실행을 취소해, 자주 푸시하는 동안 불필요한 실행이
+# 쌓이지 않게 한다.
+concurrency:
+  group: detections-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detections:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sigma 규칙 재현 테스트 (sigma check + 백엔드 변환 + 지표 보존)
+        run: detections/tests/sigma/run.sh
+      - name: Suricata 규칙 재현 테스트 (pcap 합성 → suricata -r → 경보 수 단언)
+        run: detections/tests/suricata/run.sh
+      - name: ATT&CK 레이어 ↔ 규칙 정합 테스트
+        run: detections/tests/attack/run.sh

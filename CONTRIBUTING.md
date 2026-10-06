@@ -180,6 +180,10 @@ detections/tests/suricata/run.sh    # Suricata: pcap 합성 → suricata -r → 
 detections/tests/attack/run.sh      # ATT&CK: 레이어 ↔ 규칙 양방향 정합
 ```
 
+이 세 테스트는 저장소 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))가
+`detections/` 아래가 바뀐 푸시·PR 마다 돌립니다. 따라서 규칙만 바꾸고 테스트·레이어를 갱신하지 않은
+변경은 머지 전에 CI 에서 빨갛게 드러납니다.
+
 규칙 색인과 각 규칙의 근거·한계는 [`detections/README.md`](detections/README.md)에, 테스트의 단언 항목과
 실행법은 [`detections/tests/README.md`](detections/tests/README.md)에 정리되어 있습니다.
 

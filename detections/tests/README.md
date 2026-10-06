@@ -146,3 +146,7 @@ A new detection rule is stronger with a test that shows it firing. Tests should 
 deterministically, assert engine-version-independent properties exactly (and softer ones as floors with a
 recorded reference), and avoid any content that reads as attack guidance. See
 [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) and the rule indexes in [`../README.md`](../README.md).
+
+All three suites run in CI on every push or pull request that touches `detections/`
+(see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml)), so a rule change
+that drops an indicator or drifts from the ATT&CK layer turns the build red before it can merge.
