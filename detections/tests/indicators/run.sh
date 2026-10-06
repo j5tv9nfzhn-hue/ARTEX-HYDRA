@@ -29,6 +29,7 @@ docker run --rm \
   -v "$REPO/guard:/repo/guard:ro" \
   -v "$REPO/db:/repo/db:ro" \
   -v "$REPO/cmd:/repo/cmd:ro" \
+  -v "$REPO/traffic:/repo/traffic:ro" \
   -v "$REPO/.github:/repo/.github:ro" \
   -v "$REPO/.pre-commit-config.yaml:/repo/.pre-commit-config.yaml:ro" \
   -v "$HERE:/src:ro" \

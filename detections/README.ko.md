@@ -20,6 +20,9 @@
 - **`sigma/destructive_command_hunting.yml`** — ARTEX 가드의 기본 차단 목록(`db/db.go` 시드)을
   그대로 반영한 파괴적 셸·DB 명령입니다. ARTEX 고유 시그니처가 아니라 일반적인 헌팅 단서입니다.
   `level: medium`.
+- **`sigma/artex_recording_proxy_ca.yml`** — 기록용 프록시가 `_ca/mitmproxy-ca-cert.pem` 배치로
+  생성하는 MITM CA 인증서 파일(`traffic/traffic.go`)입니다. 호스트·포렌식 아티팩트이며, 파일명
+  자체는 단독 실행한 mitmproxy 와 공유되므로 헌팅 단서로 다룹니다. `level: medium`.
 
 ## 상관(correlation) 규칙 — 행동 기반
 

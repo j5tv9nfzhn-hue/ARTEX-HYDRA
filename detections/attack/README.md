@@ -33,7 +33,7 @@ fully covered". The score is deliberately honest about detection strength:
 
 ## Techniques covered
 
-Seven techniques across four tactics. Each maps to the rule(s) that tag it:
+Eight techniques across six tactics. Each maps to the rule(s) that tag it:
 
 - **Reconnaissance — T1595 (Active Scanning), T1592 (Gather Victim Host Information).**
   [`sigma/artex_enrich_user_agent.yml`](../sigma/artex_enrich_user_agent.yml),
@@ -50,6 +50,10 @@ Seven techniques across four tactics. Each maps to the rule(s) that tag it:
   [`sigma/destructive_command_hunting.yml`](../sigma/destructive_command_hunting.yml), with T1485 also
   reinforced by
   [`sigma/correlation/artex_guard_marker_then_destructive.yml`](../sigma/correlation/artex_guard_marker_then_destructive.yml).
+- **Credential Access / Collection — T1557 (Adversary-in-the-Middle).**
+  [`sigma/artex_recording_proxy_ca.yml`](../sigma/artex_recording_proxy_ca.yml) — the MITM root-CA artifact
+  ARTEX's embedded traffic recorder installs (`traffic/traffic.go`) to decrypt and log the worker tools'
+  traffic. A host/forensic hunting lead.
 
 ## How to use it
 

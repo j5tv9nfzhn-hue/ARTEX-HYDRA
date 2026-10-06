@@ -60,6 +60,15 @@
         "disable_correlation": true,
         "value": "127.0.0.1|8788",
         "comment": "Default loopback traffic-recording MITM proxy endpoint (cmd/artex/main.go --proxy). Loopback — a host-triage hint, not a network block; check with ss/netstat."
+      },
+      {
+        "uuid": "7628f0dc-d5f8-45ea-8aec-64843667658e",
+        "type": "pattern-in-file",
+        "category": "Artifacts dropped",
+        "to_ids": true,
+        "disable_correlation": false,
+        "value": "mitmproxy-ca-cert.pem",
+        "comment": "MITM CA certificate file the ARTEX recording proxy writes on first start (traffic/traffic.go, under <dir>/_ca/); injected into spawned tools via SSL_CERT_FILE/CURL_CA_BUNDLE/REQUESTS_CA_BUNDLE/NODE_EXTRA_CA_CERTS with a loopback HTTP_PROXY. Evidences the recorder having run; the bare filename is shared with standalone mitmproxy, so it is a host-triage lead. Sigma: artex_recording_proxy_ca.yml."
       }
     ]
   }

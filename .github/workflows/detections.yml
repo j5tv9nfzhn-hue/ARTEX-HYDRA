@@ -11,7 +11,8 @@ name: detections
 # 자체에는 아무것도 설치하지 않고, 규칙 트리와 지표가 가리키는 소스 파일을 읽기 전용으로만
 # 마운트해 저장소에 쓰지 않는다. detections/ 아래가 바뀔 때 외에, 지표 테스트가 고정해 둔
 # 소스 파일이 바뀔 때도 돌린다. enrich·selfupdate·guard·db 의 User-Agent·마커·파괴명령
-# 토큰과 cmd/artex/main.go 의 기본 리슨·프록시 포트가 여기에 해당한다. 소스 변경이 지표를
+# 토큰, cmd/artex/main.go 의 기본 리슨·프록시 포트, traffic/traffic.go 의 MITM CA 인증서
+# 파일명이 여기에 해당한다. 소스 변경이 지표를
 # 바꿔 규칙·지표 목록이 조용히 낡는 경우를 머지 게이트에서 잡는다. 공개 Docker 이미지를 인증
 # 없이 내려받으므로 드물게 Docker Hub 내려받기 속도 제한에 걸릴 수 있고, 그때는 작업을
 # 다시 돌리면 해소된다.
@@ -25,6 +26,7 @@ on:
       - "guard/guard.go"
       - "db/db.go"
       - "cmd/artex/main.go"
+      - "traffic/traffic.go"
       - ".github/workflows/detections.yml"
   pull_request:
     paths:
@@ -35,6 +37,7 @@ on:
       - "guard/guard.go"
       - "db/db.go"
       - "cmd/artex/main.go"
+      - "traffic/traffic.go"
       - ".github/workflows/detections.yml"
 
 permissions:

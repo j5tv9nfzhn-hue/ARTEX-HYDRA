@@ -22,6 +22,9 @@ string or behaviour verified in this repository's source, not inferred.
   on a blocked tool call (`guard/guard.go`). Host/forensic indicator. `level: high`.
 - **`sigma/destructive_command_hunting.yml`** — destructive shell/DB commands mirroring the ARTEX guard's
   built-in deny list (`db/db.go` seed). Generic hunting lead, not an ARTEX signature. `level: medium`.
+- **`sigma/artex_recording_proxy_ca.yml`** — creation of the recording proxy's MITM CA file under the
+  `_ca/mitmproxy-ca-cert.pem` layout (`traffic/traffic.go`). Host/forensic artifact; the bare filename is
+  shared with standalone mitmproxy, so it is a hunting lead. `level: medium`.
 
 ## Correlation rules (behaviour)
 

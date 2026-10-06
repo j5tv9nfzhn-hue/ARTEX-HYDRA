@@ -91,6 +91,22 @@
             "comment": "Service/availability stop commands (kill -9 -1, killall -9, iptables -F, nft flush ruleset) from the ARTEX guard deny list. Generic hunting lead. sigma/destructive_command_hunting.yml. Defense guide section 2 (operator view).",
             "enabled": true,
             "showSubtechniques": false
+        },
+        {
+            "techniqueID": "T1557",
+            "tactic": "credential-access",
+            "score": 50,
+            "comment": "ARTEX embedded recording proxy is an adversary-in-the-middle: it installs a MITM root CA (_ca/mitmproxy-ca-cert.pem) to decrypt and log its worker tools' HTTP(S) traffic, including any credentials in transit. The CA file on a host evidences the recorder having run. sigma/artex_recording_proxy_ca.yml. Forensic/host-side; the bare CA filename is shared with standalone mitmproxy, so it is a hunting lead. Defense guide section 2 (operator view).",
+            "enabled": true,
+            "showSubtechniques": false
+        },
+        {
+            "techniqueID": "T1557",
+            "tactic": "collection",
+            "score": 50,
+            "comment": "ARTEX embedded recording proxy is an adversary-in-the-middle: it installs a MITM root CA (_ca/mitmproxy-ca-cert.pem) to decrypt and log (collect) all of its worker tools' HTTP(S) traffic. The CA file on a host evidences the recorder having run. sigma/artex_recording_proxy_ca.yml. Forensic/host-side; the bare CA filename is shared with standalone mitmproxy, so it is a hunting lead. Defense guide section 2 (operator view).",
+            "enabled": true,
+            "showSubtechniques": false
         }
     ],
     "gradient": {
@@ -119,7 +135,7 @@
         },
         {
             "name": "rules",
-            "value": "detections/sigma (8), detections/suricata (2)"
+            "value": "detections/sigma (9), detections/suricata (2)"
         },
         {
             "name": "consistency-test",

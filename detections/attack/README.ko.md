@@ -24,7 +24,7 @@ Navigator 레이어로 정리한 것입니다. [Sigma 규칙](../sigma/)의 `att
 
 ## 다루는 기법
 
-네 전술에 걸친 일곱 기법입니다. 각 기법은 그것을 태그하는 규칙에 대응합니다.
+여섯 전술에 걸친 여덟 기법입니다. 각 기법은 그것을 태그하는 규칙에 대응합니다.
 
 - **정찰(Reconnaissance) — T1595 (Active Scanning), T1592 (Gather Victim Host Information).**
   [`sigma/artex_enrich_user_agent.yml`](../sigma/artex_enrich_user_agent.yml),
@@ -40,6 +40,10 @@ Navigator 레이어로 정리한 것입니다. [Sigma 규칙](../sigma/)의 `att
 - **임팩트(Impact) — T1485 (Data Destruction), T1561.002 (Disk Wipe: Disk Structure Wipe), T1489 (Service Stop).**
   [`sigma/destructive_command_hunting.yml`](../sigma/destructive_command_hunting.yml)이며, T1485 는
   [`sigma/correlation/artex_guard_marker_then_destructive.yml`](../sigma/correlation/artex_guard_marker_then_destructive.yml)로도 보강됩니다.
+- **자격 증명 접근·수집(Credential Access / Collection) — T1557 (Adversary-in-the-Middle).**
+  [`sigma/artex_recording_proxy_ca.yml`](../sigma/artex_recording_proxy_ca.yml)이며, 워커 도구의 트래픽을
+  복호화·기록하려고 ARTEX 내장 트래픽 기록기(`traffic/traffic.go`)가 설치하는 MITM 루트 CA 아티팩트를
+  겨냥한 호스트·포렌식 헌팅 단서입니다.
 
 ## 사용법
 
