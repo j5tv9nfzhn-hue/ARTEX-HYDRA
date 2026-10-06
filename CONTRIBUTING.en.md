@@ -67,7 +67,7 @@ this policy can degrade performance, so we do not accept them.
 - **The procedure for keeping up with upstream changes is in the maintainer document.** When
   the original ARTEX is updated, the runbook for distinguishing preserved assets from
   translation targets, reflecting them, and checking translation symmetry and drift is in
-  [MAINTAINING.md](MAINTAINING.md).
+  [MAINTAINING.en.md](MAINTAINING.en.md).
 
 ---
 

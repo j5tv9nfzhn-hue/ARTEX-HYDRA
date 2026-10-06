@@ -1,5 +1,7 @@
 # 상류 동기화와 번역 드리프트 방지 (메인테이너 안내)
 
+한국어 · [English](MAINTAINING.en.md)
+
 이 문서는 **메인테이너**가 원본 저장소 [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX)의
 변경을 따라잡으면서 한국어 현지화를 유지하는 절차를 정리한 것입니다. 기여 범위·법적 책임·
 현지화 방침은 [CONTRIBUTING.md](CONTRIBUTING.md)에, 사용자용 안내는 [README.md](README.md)에
