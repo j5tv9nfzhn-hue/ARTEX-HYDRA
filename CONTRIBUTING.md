@@ -206,8 +206,8 @@ pre-commit install` 로 설치하면, 탐지 규칙이나 그 규칙이 고정�
 
 이 일곱 테스트는 저장소 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))가
 `detections/` 아래가 바뀐 푸시·PR 마다 돌립니다. 지표 일치 테스트는 그 지표가 가리키는 상류 소스 파일
-(`enrich/`·`selfupdate/`·`guard/`·`db/`)이 바뀔 때도 돌아, 상류 재동기화가 User-Agent·마커를 바꿔 규칙이
-조용히 낡는 경우를 함께 잡습니다. 따라서 규칙만 바꾸고 테스트·레이어를 갱신하지 않은 변경, SigmaHQ 관례를
+(`enrich/`·`selfupdate/`·`guard/`·`db/`·`cmd/artex/main.go`)이 바뀔 때도 돌아, 상류 재동기화가 User-Agent·
+마커·기본 포트를 바꿔 규칙이 조용히 낡는 경우를 함께 잡습니다. 따라서 규칙만 바꾸고 테스트·레이어를 갱신하지 않은 변경, SigmaHQ 관례를
 깨뜨린 규칙, 또는 소스와 어긋난 규칙은 머지 전에 CI 에서 빨갛게 드러납니다.
 
 규칙 색인과 각 규칙의 근거·한계는 [`detections/README.md`](detections/README.md)에, 테스트의 단언 항목과

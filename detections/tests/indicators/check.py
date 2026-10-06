@@ -37,13 +37,16 @@
 # every fingerprint this test grounds must appear in the list — so the artifact a
 # defender imports cannot silently drift from the source it claims to come from.
 #
-# Finally it closes the loop on the merge gate itself: every upstream source file
-# this test reads must be listed in the CI workflow's push and pull_request paths
-# filter (.github/workflows/detections.yml). Otherwise a PR that touches only a
-# newly pinned source (as cmd/artex/main.go once was) would not trigger this test,
-# and the drift above would sail through CI green. The check derives the required
-# set from the indicators it already asserts, so pinning a new source without
-# wiring it into CI fails here until both stay in sync.
+# Finally it closes the loop on the two gates that fire this test: the CI workflow
+# (.github/workflows/detections.yml push/pull_request paths) and the local
+# pre-commit hook (.pre-commit-config.yaml files regex). Every upstream source file
+# this test reads must be covered by both, or a change touching only a newly pinned
+# source (as cmd/artex/main.go once was) would skip the test on one of them: on CI
+# the drift sails through the merge gate green, on the hook it is never caught
+# locally even though the hook's comment promises "the same source scope as CI".
+# The check derives the required set from the indicators it already asserts, so
+# pinning a new source without wiring it into *both* gates fails here until they
+# stay in sync.
 #
 # Pure standard library (the slim image already ships python3); nothing is
 # installed and nothing is written to the repo. Exits non-zero on any failure.
@@ -288,14 +291,19 @@ def paths_for_trigger(text, trigger):
     return items
 
 
-print("== 5/5  CI triggers this test when any pinned source changes ==")
-# The merge gate only runs this test when a file in the workflow's paths filter
-# changes. Every upstream source this test reads must therefore be listed, or a PR
-# touching only that source would skip the test and the drift above would pass CI
-# green. The required set is derived from the indicators themselves, so pinning a
-# new source without wiring it into CI fails here. detections/** covers the rules,
-# the CSV, and the tests, so only non-detections sources are required explicitly.
+print("== 5/5  CI and the pre-commit hook both fire this test on any pinned source ==")
+# Two gates run this test only when a file they filter on changes: the CI workflow's
+# paths filter and the pre-commit hook's files regex. Every upstream source this test
+# reads must be covered by both, or a change touching only that source skips the test
+# on the gate that misses it — on CI the drift above passes the merge gate green, on
+# the hook it is never caught locally. The required set is derived from the indicators
+# themselves, so pinning a new source without wiring it into both gates fails here.
+# detections/** covers the rules, the CSV, and the tests, so only non-detections
+# sources are required explicitly (plus a spot check that each gate still covers the
+# detections/ tree at all).
 WORKFLOW_REL = ".github/workflows/detections.yml"
+PRECOMMIT_REL = ".pre-commit-config.yaml"
+DETECTIONS_SAMPLE = "detections/sigma/artex_enrich_user_agent.yml"
 needed_sources = set()
 for ind in INDICATORS:
     needed_sources.update(ind["sources"])
@@ -327,9 +335,44 @@ else:
                     "would skip this test and let source drift pass the merge gate"
                     % (WORKFLOW_REL, trigger, s))
 
+# The local hook gates on a files regex, not a paths list. Its comment promises the
+# "same source scope as CI", so the same required set must match that regex. This is
+# the sibling drift the CI check above does not see: CI paths can carry a source the
+# hook's regex omits (as cmd/artex/main.go once did), leaving the local gate a false
+# promise even while the merge gate is sound.
+pc_text = read(PRECOMMIT_REL)
+if pc_text is None:
+    bad("pre-commit config missing: %s" % PRECOMMIT_REL)
+else:
+    m = re.search(r"^\s*files:\s*(.+?)\s*$", pc_text, re.M)
+    if not m:
+        bad("%s has no files: pattern on the detections hook" % PRECOMMIT_REL)
+    else:
+        pattern_src = m.group(1).strip().strip("'\"")
+        try:
+            pat = re.compile(pattern_src)
+        except re.error as exc:
+            bad("%s files pattern does not compile: %s" % (PRECOMMIT_REL, exc))
+            pat = None
+        if pat is not None:
+            if pat.search(DETECTIONS_SAMPLE):
+                ok("%s files covers the detections/ tree" % PRECOMMIT_REL)
+            else:
+                bad("%s files does not cover detections/ "
+                    "(rule/CSV/test changes would not fire the local hook)"
+                    % PRECOMMIT_REL)
+            for s in sorted(needed_sources):
+                if pat.search(s):
+                    ok("%s files covers %s" % (PRECOMMIT_REL, s))
+                else:
+                    bad("%s files is missing %s — a commit touching only that source "
+                        "would skip the local hook while CI still runs it (the hook's "
+                        "'same source scope as CI' promise is false for this file)"
+                        % (PRECOMMIT_REL, s))
+
 print()
 print("reference: %d exact fingerprints, %d deny-list tokens, %d published rows, "
-      "%d pinned sources checked against CI paths"
+      "%d pinned sources checked against CI paths and the pre-commit files regex"
       % (len(INDICATORS), len(tokens), len(csv_rows), len(needed_sources)))
 print("RESULT: %s" % ("PASS" if fail == 0 else "FAIL"))
 sys.exit(fail)

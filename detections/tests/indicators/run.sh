@@ -9,9 +9,9 @@
 #
 # No host dependency beyond Docker: the check is pure Python standard library and
 # runs in a container with only the rule tree, the published indicator list, the
-# source packages it pins, and the CI workflow mounted read-only (never work/ or
-# anything else). Nothing is installed on the host and nothing is written to the
-# repo.
+# source packages it pins, and the two configs that gate on them — the CI workflow
+# and the pre-commit hook — mounted read-only (never work/ or anything else).
+# Nothing is installed on the host and nothing is written to the repo.
 #
 # Usage:   detections/tests/indicators/run.sh
 # Env:     PYTHON_IMAGE  (default python:3.12-slim)
@@ -30,5 +30,6 @@ docker run --rm \
   -v "$REPO/db:/repo/db:ro" \
   -v "$REPO/cmd:/repo/cmd:ro" \
   -v "$REPO/.github:/repo/.github:ro" \
+  -v "$REPO/.pre-commit-config.yaml:/repo/.pre-commit-config.yaml:ro" \
   -v "$HERE:/src:ro" \
   "$PYTHON_IMAGE" python3 /src/check.py

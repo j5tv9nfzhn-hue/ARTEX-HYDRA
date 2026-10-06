@@ -282,18 +282,21 @@ each indicator, bidirectionally:
   defender imports, is re-read row by row: every value must still be present in the source file(s) it cites
   and pinned in the rule(s) it cites, and every fingerprint the test grounds must appear in the list. So the
   published CSV cannot silently drift from the source it claims to come from, in either direction.
-- **CI actually fires on each pinned source** — every upstream source the test reads is listed in the
-  workflow's `push` and `pull_request` paths filter
-  ([`.github/workflows/detections.yml`](../../.github/workflows/detections.yml)). The required set is derived
-  from the indicators themselves, so pinning a new source (as the `cmd/artex/main.go` ports once were)
-  without wiring it into CI fails here — otherwise a PR touching only that source would skip the test and let
-  the drift above pass the merge gate green.
+- **Both gates fire on each pinned source** — every upstream source the test reads is covered by the two
+  gates that run it: the CI workflow's `push` and `pull_request` paths filter
+  ([`.github/workflows/detections.yml`](../../.github/workflows/detections.yml)) and the local pre-commit
+  hook's `files` regex ([`.pre-commit-config.yaml`](../../.pre-commit-config.yaml)). The required set is
+  derived from the indicators themselves, so pinning a new source (as the `cmd/artex/main.go` ports once were)
+  without wiring it into *both* gates fails here — otherwise a change touching only that source skips the test
+  on whichever gate omits it: on CI it passes the merge gate green, on the hook it is never caught locally
+  even though the hook promises "the same source scope as CI".
 
 This turns [`../README.md`](../README.md)'s promise — "every indicator here is grounded in a string verified
 in this repository's source, not inferred" — and CONTRIBUTING's first contribution contract into a guard a
 reviewer can re-run. Like the ATT&CK test it needs no detection backend, only the Python standard library;
 [`indicators/check.py`](indicators/check.py) reads the rule tree, the published indicator list, the pinned
-source packages, and the CI workflow mounted read-only and writes nothing.
+source packages, and the two gates that fire it (the CI workflow and the pre-commit config) mounted read-only
+and writes nothing.
 
 ### Run it
 
@@ -312,6 +315,7 @@ Expected output (abridged):
   PASS  enrich-user-agent: 'artex-enrich/1.0' grounded in enrich/enrich.go
   PASS  tested fingerprint 'artex-enrich/1.0' is published in the list
   PASS  .github/workflows/detections.yml push paths covers cmd/artex/main.go
+  PASS  .pre-commit-config.yaml files covers cmd/artex/main.go
 RESULT: PASS
 ```
 
