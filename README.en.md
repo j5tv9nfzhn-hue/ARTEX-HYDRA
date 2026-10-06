@@ -289,12 +289,37 @@ In deep exploration, valuable observations (a particular error, a response fragm
 
 This way, even when there is not yet a corresponding fact in the exploration graph, a later worker reuses observations from another's process. Information flows between workers at the "execution process" level while the boundaries stay intact (each worker still performs only its single assigned intent).
 
+```mermaid
+flowchart LR
+  WA["worker A (intent #12)"] -->|"per-step activity"| ACT[("exploration graph · activity process store")]
+  WB["worker B (intent #34)"] -->|"per-step activity"| ACT
+  WC["worker C (intent #56)"] ==>|"1) search_all_worker_traces(q)"| ACT
+  ACT ==>|"2) hits in A/B's steps (self excluded)"| WC
+  WC ==>|"3) get_worker_trace(intent_id, step_ids)"| ACT
+  ACT ==>|"4) return full process content"| WC
+```
+
 ### The planner's multi-round shared todolist → a stable attack chain
 
 A real attack chain is often an ordered sequence of mutually dependent steps (e.g., find an injection point → obtain credentials → lateral movement → privilege escalation), and dispatching them all in parallel at once would tangle them. So the planner holds a **planning todolist that persists per task and is shared across wakes.**
 
 - The planner is event-driven, so it wakes whenever the graph changes, but **each wake is a fresh session.** The shared todolist records the serial attack chain **once** and then, across subsequent rounds, assigns intents **one step at a time in dependency order** (it does not unfold the whole chain ahead of time in a single round).
 - Each round, it assigns an intent only to the next step whose prerequisite is done and whose depended-upon fact already exists, updating the list as it goes (marking fact-satisfied steps complete).
+
+```mermaid
+flowchart TB
+  subgraph TODO["shared todolist (persists per task · resident across wakes)"]
+    direction LR
+    T1["1 injection point　[done]"]
+    T2["2 obtain credentials　[in progress]"]
+    T3["3 lateral movement　[awaiting prereq]"]
+    T4["4 privilege escalation　[awaiting prereq]"]
+    T1 -. prereq satisfied .-> T2 -.-> T3 -.-> T4
+  end
+  R1["round 1 wake　dispatch intent ①"] --> T1
+  R2["round 2 (① yields fact)　dispatch intent ②"] --> T2
+  R3["round 3 (② yields fact)　dispatch intent ③"] --> T3
+```
 
 This lets the attack chain progress reliably even in an "event-driven + stateless session" environment — without duplication and without going out of order. This is the core of how ARTEX completes multi-step attack chains autonomously.
 
