@@ -1,5 +1,5 @@
 # references base rule: ../artex_enrich_user_agent.yml (ARTEX Asset Enrichment Probe User-Agent)
-title: ARTEX Enrichment Fan-Out (one source, many distinct hosts)
+title: ARTEX Enrichment Fan-Out (One Source, Many Distinct Hosts)
 id: 6fba3b7c-1dd9-4e18-bf55-d93fc1d2e2e0
 status: experimental
 description: |

@@ -190,6 +190,16 @@ detections/tests/indicators/run.sh   # Docker 로 격리 실행, RESULT: PASS �
 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))에서도 규칙 트리나
 위 상류 소스 파일이 바뀐 푸시·PR 마다 자동으로 돌아, 재동기화 드리프트를 머지 게이트에서 잡습니다.
 
+### 5.5 탐지 테스트 도구 핀을 올릴 때
+
+탐지 테스트는 `sigma-cli`·SigmaHQ 검증기 플러그인(`pySigma-validators-sigmahq`)·Suricata 이미지를
+고정 버전으로 돌립니다(각 `run.sh` 의 기본값, 환경 변수로 덮어쓰기 가능). 이 핀을 올리면 상류
+소스가 아니라 **도구 쪽 드리프트**가 생길 수 있습니다. 특히 SigmaHQ 검증기는 판올림마다 새 관례
+검사를 추가하므로, `detections/tests/sigma_lint/run.sh` 가 새 이슈를 빨갛게 드러낼 수 있습니다.
+그때는 규칙을 새 관례에 맞추거나, 단독 규칙 세트에 맞지 않는 관례라면 그 사유를 적어
+[`detections/tests/sigma_lint/validators.yml`](detections/tests/sigma_lint/validators.yml) 의 제외
+목록에 추가합니다. 백엔드 플러그인이 지원을 바꾸면 `sigma_backends` 테스트가 같은 신호를 줍니다.
+
 ---
 
 ## 6. 빌드와 테스트로 마무리 검증

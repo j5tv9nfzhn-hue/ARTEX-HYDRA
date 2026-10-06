@@ -1,5 +1,5 @@
 # references base rule: ../artex_enrich_user_agent.yml (ARTEX Asset Enrichment Probe User-Agent)
-title: ARTEX Enrichment Scan Velocity (burst from one source)
+title: ARTEX Enrichment Scan Velocity (Burst From One Source)
 id: 1d07c5f1-e0ff-4a6a-8017-6008fa790889
 status: experimental
 description: |

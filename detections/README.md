@@ -92,6 +92,12 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   Elasticsearch `eql` target, and Grafana Loki, and the four atomic rules still compile on backends that do not
   support Sigma correlations (Elasticsearch `lucene`, the Microsoft `kusto` backend). It backs the per-backend
   support matrix in [Validate and convert](#validate-and-convert) below with a re-runnable check.
+- **SigmaHQ convention lint** ([`tests/sigma_lint/run.sh`](tests/sigma_lint/run.sh)) runs the full SigmaHQ
+  validator set (the `pySigma-validators-sigmahq` plugin, which plain `sigma check` does not load) against the
+  documented baseline in [`tests/sigma_lint/validators.yml`](tests/sigma_lint/validators.yml) and asserts 0
+  issues. It also checks that the full set actually ran and that only four deliberately excluded, documented
+  checks remain, so a rule that picks up a new convention issue (a mis-cased title, an off-taxonomy field)
+  fails the build.
 
 Each script exits non-zero on any failed assertion. See [`tests/README.md`](tests/README.md).
 
@@ -122,6 +128,11 @@ pip install sigma-cli
 # structural + best-practice validation (expect: 0 errors, 0 issues)
 sigma check detections/sigma/
 
+# full SigmaHQ convention set with the documented baseline for this standalone
+# rule set (expect: 0 issues). Plain `sigma check` above does not load these.
+pip install pySigma-validators-sigmahq
+sigma check --validation-config detections/tests/sigma_lint/validators.yml detections/sigma/
+
 # compile to a target query language, e.g. Splunk
 sigma plugin install splunk
 sigma convert -t splunk --without-pipeline detections/sigma/artex_enrich_user_agent.yml
@@ -129,6 +140,10 @@ sigma convert -t splunk --without-pipeline detections/sigma/artex_enrich_user_ag
 # convert the whole tree so the correlation rules can resolve the atomic rules they reference by id
 sigma convert -t splunk --without-pipeline detections/sigma/
 ```
+
+The baseline enforces every SigmaHQ convention except four checks that encode SigmaHQ's monorepo filing scheme
+and taxonomy, which do not apply to a standalone rule set; each exclusion and its rationale is documented in
+[`tests/sigma_lint/validators.yml`](tests/sigma_lint/validators.yml) and enforced by the lint test above.
 
 ### Sigma backend portability
 
@@ -161,7 +176,7 @@ QRadar plugin (`ibm-qradar-aql`) is not compatible with the pinned pySigma and n
 is not covered by the test. Run `sigma list targets` for the backends installed in your environment.
 
 The examples above use `--without-pipeline`, which emits the generic field names from the rule bodies
-(`c-useragent`, `cs-host`, `CommandLine`). To match your product's schema, drop that flag and apply a
+(`cs-user-agent`, `cs-host`, `CommandLine`). To match your product's schema, drop that flag and apply a
 processing pipeline with `-p` (see `sigma list pipelines`). Note that a product pipeline maps field names but
 may also need a target table the rules' generic `logsource` does not specify — e.g. `-p sentinel_asim` stops
 with "Unable to determine table name" until you set `query_table` for your data, so map the fields and the
@@ -170,5 +185,6 @@ destination table to your environment before deploying.
 ## Contributing
 
 Detection and hardening contributions are welcome. New rules should keep every indicator grounded in an
-observable fact, state limitations in the `description`, pass `sigma check` cleanly, and avoid any content
-that reads as attack guidance. See [`../CONTRIBUTING.md`](../CONTRIBUTING.md).
+observable fact, state limitations in the `description`, pass the SigmaHQ validator baseline cleanly
+(`sigma check --validation-config tests/sigma_lint/validators.yml`), and avoid any content that reads as
+attack guidance. See [`../CONTRIBUTING.md`](../CONTRIBUTING.md).

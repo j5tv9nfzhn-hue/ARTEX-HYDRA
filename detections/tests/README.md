@@ -143,6 +143,46 @@ The script exits non-zero if any assertion fails. sigma-cli is pinned (`3.1.0`, 
 most sensitive to an upstream backend release — a plugin that drops support turns the build red, which is the
 signal to update the pin and the README matrix together.
 
+## SigmaHQ convention lint — [`sigma_lint/`](sigma_lint/)
+
+[`sigma_lint/run.sh`](sigma_lint/run.sh) makes the "passes `sigma check` cleanly" promise in the README and
+`CONTRIBUTING.md` cover SigmaHQ's conventions, not just pySigma's core checks. Plain `sigma check` does not
+load the `pySigma-validators-sigmahq` plugin, so title casing, field-name taxonomy, logsource taxonomy, and
+reference-link conventions go unchecked. This suite installs that plugin and runs the full set against the
+documented baseline in [`sigma_lint/validators.yml`](sigma_lint/validators.yml). It asserts two properties:
+
+- **The documented baseline is clean** — `sigma check` with `validators.yml` reports 0 errors and 0 issues.
+- **The full set is live, and only the documented exclusions remain** — running every SigmaHQ validator with
+  no exclusions still reports issues, and each one is among the four checks `validators.yml` deliberately
+  disables (nothing else). This is the anti-vacuity guard: if the plugin failed to load, the full run would
+  report nothing and the first property would pass for the wrong reason, so the known exclusions are required
+  to appear.
+
+The four exclusions encode SigmaHQ's monorepo filing scheme (logsource-prefixed and `correlation_` filenames)
+and taxonomy (a generic `application` logsource and a product-less `process_creation`), plus the
+branch-vs-permalink reference convention — none of which fit a small standalone rule set that references its
+own living docs. Each exclusion carries its rationale inline in `validators.yml`. Because every *other*
+SigmaHQ check is enforced, a rule that picks up a new convention issue — a mis-cased title, an off-taxonomy
+field name — turns the build red. `pySigma-validators-sigmahq` is pinned (`0.21.0`, override with
+`SIGMAHQ_VALIDATORS_VERSION`); bumping it may surface new conventions, which is the signal to update the rules
+or the documented baseline.
+
+### Run it
+
+Needs only Docker; sigma-cli and the validator plugin run in a container and nothing is written to the repo.
+
+```sh
+detections/tests/sigma_lint/run.sh
+```
+
+Expected output (abridged):
+
+```
+  PASS  sigma check with the documented baseline: 0 errors, 0 issues
+  PASS  every reported issue is one of the four documented exclusions
+RESULT: PASS
+```
+
 ## ATT&CK layer — [`attack/`](attack/)
 
 [`attack/run.sh`](attack/run.sh) checks that the [ATT&CK coverage layer](../attack/) in
@@ -236,8 +276,8 @@ deterministically, assert engine-version-independent properties exactly (and sof
 recorded reference), and avoid any content that reads as attack guidance. See
 [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) and the rule indexes in [`../README.md`](../README.md).
 
-All five suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
+All six suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
 on every push or pull request that touches `detections/` — and the indicator test also runs when the upstream
 source files it pins (`enrich/`, `selfupdate/`, `guard/`, `db/`) change — so a rule change that drops an
-indicator, drifts from the ATT&CK layer, stops converting on a documented backend, or falls out of sync with
-the source turns the build red before it can merge.
+indicator, drifts from the ATT&CK layer, stops converting on a documented backend, breaks a SigmaHQ
+convention, or falls out of sync with the source turns the build red before it can merge.
