@@ -305,6 +305,9 @@ sequenceDiagram
   - WAF·SIEM·인증 로그 탐지 규칙(의사 규칙), 하드닝 체크리스트, 사고 대응 요약
 - **[Defense & Detection Guide (영어판 · docs/defense-en.md)](docs/defense-en.md)** — 해외 팀·협업자와 공유할 수 있는 같은 내용의 영어판입니다.
 - **[배포용 탐지 규칙 (detections/)](detections/)** — 위 가이드의 지문 탐지를 바로 쓸 수 있는 규칙으로 제공합니다. 호스트·로그·SIEM 계층은 [Sigma](https://sigmahq.io) 규칙(원자·상관, `sigma convert` 로 Splunk·Elasticsearch 등으로 변환)으로, 네트워크 계층은 enrich 프로브 UA 를 겨냥한 [Suricata](https://suricata.io) 규칙으로 나눠 담았습니다.
+  - **[ATT&CK 커버리지 레이어 (detections/attack/)](detections/attack/)**: 위 규칙이 겨냥하는 MITRE ATT&CK 기법을 [Navigator](https://mitre-attack.github.io/attack-navigator/) 레이어(JSON)로 정리해, 어떤 공격 행위에 어떤 규칙이 걸리는지 한눈에 보도록 했습니다. 기법은 규칙의 `attack.*` 태그에서만 가져왔고 추정으로 넣은 항목은 없습니다.
+  - **[기계가 읽는 침해지표 목록 (detections/indicators/)](detections/indicators/)**: ARTEX 가 실제로 내보내는 고유 지문을 CSV 한 파일로 모아, 위협 인텔리전스 플랫폼이나 SIEM 조회 테이블에 바로 넣을 수 있는 침해지표(IoC)로 제공합니다. 모든 값은 저장소 소스에서 확인한 문자열이고, 각 행에 출처 파일과 탐지 규칙을 함께 적었습니다.
+  - 위 규칙과 레이어와 지표는 모두 저장소 테스트([detections/tests/](detections/tests/))로 재실행해 검증합니다. 돌려 볼 수 없는 탐지 규칙은 주장일 뿐이라는 원칙을 따릅니다.
 
 > 이 자료는 계속 보강됩니다. 보완할 탐지 규칙·하드닝 항목 제안은 이슈로 환영합니다.
 
