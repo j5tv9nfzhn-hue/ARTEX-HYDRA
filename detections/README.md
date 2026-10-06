@@ -54,9 +54,20 @@ traffic carries no ARTEX-unique User-Agent, so the network layer is intentionall
 [`suricata/README.md`](suricata/README.md) for the scope, the TLS caveat, and how to validate with
 `suricata -T` and a reference pcap.
 
+## ATT&CK coverage
+
+The techniques these rules tag are collected into a [MITRE ATT&CK](https://attack.mitre.org/) Navigator
+layer in [`attack/artex_navigator_layer.json`](attack/) — seven techniques across four tactics
+(Reconnaissance, Command and Control, Execution, Impact), each grounded in a rule's `attack.*` tags and
+scored by detection strength (ARTEX-specific signature vs. generic hunting lead). Open it in the
+[ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/) to see which ARTEX behaviour each
+rule covers; see [`attack/README.md`](attack/README.md) for the scoring, the technique-to-rule map, and
+the honest scope (coverage is not completeness). A [consistency test](tests/attack/run.sh) keeps the layer
+from drifting away from the rule set.
+
 ## Tests
 
-Both rule families ship with reproducible tests in [`tests/`](tests/), each needing only Docker:
+All three rule families ship with reproducible tests in [`tests/`](tests/), each needing only Docker:
 
 - **Suricata** ([`tests/suricata/run.sh`](tests/suricata/run.sh)) synthesizes a deterministic capture with
   scapy, runs `suricata -r` over it, and asserts that the presence rule fires once per probe, the velocity
@@ -66,8 +77,12 @@ Both rule families ship with reproducible tests in [`tests/`](tests/), each need
   below as an executable test: it asserts 0 errors, that the whole tree compiles to a backend query, that each
   atomic indicator string survives into that query, and that a correlation rule fails to convert on its own —
   proving it genuinely depends on the atomic rule it references.
+- **ATT&CK layer** ([`tests/attack/run.sh`](tests/attack/run.sh)) checks that the ATT&CK coverage layer stays
+  consistent with the rules: its scored techniques and tactics must be exactly the `attack.*` tags on the
+  rule set, and each technique must name a rule file that exists. Adding a rule without updating the layer
+  (or vice versa) fails the test.
 
-Both scripts exit non-zero on any failed assertion. See [`tests/README.md`](tests/README.md).
+Each script exits non-zero on any failed assertion. See [`tests/README.md`](tests/README.md).
 
 ## How to read these honestly
 

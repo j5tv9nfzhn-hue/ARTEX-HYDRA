@@ -102,6 +102,44 @@ The script exits non-zero if any assertion fails, so it drops straight into CI o
 is pinned to a reference version (`3.1.0`); override it with `SIGMA_CLI_VERSION`, or the image with
 `PYTHON_IMAGE`, if you mirror them internally.
 
+## ATT&CK layer — [`attack/`]
+
+[`attack/run.sh`](attack/run.sh) checks that the [ATT&CK coverage layer](../attack/) in
+[`../attack/artex_navigator_layer.json`](../attack/artex_navigator_layer.json) stays consistent with the
+rules it claims to cover. A coverage layer that drifts from its rule set is worse than none, so this turns
+"these rules cover these ATT&CK techniques" into something a reviewer can re-run from source. It asserts:
+
+- **Valid layer** — the file parses as JSON and carries the required ATT&CK Navigator v4.x fields, with a
+  well-formed technique ID and a valid ATT&CK tactic on every entry.
+- **Bidirectional match** — the scored techniques are *exactly* the `attack.*` technique tags on the Sigma
+  rules: no rule technique missing from the layer, no layer technique absent from the rules. The tactics
+  match the same way.
+- **Grounded** — every scored technique's comment names a rule file that exists, so the layer cannot cite a
+  rule that was renamed or removed.
+
+This is a consistency check, not a firing test: it needs no detection backend, only the Python standard
+library, so unlike the Sigma and Suricata tests it carries no version-dependent counts. [`attack/check.py`](attack/check.py)
+is the in-container half; it reads the detections tree mounted read-only and writes nothing.
+
+### Run it
+
+Needs only Docker; the check runs in a Python container and nothing is written to the repo.
+
+```sh
+detections/tests/attack/run.sh
+```
+
+Expected output (abridged):
+
+```
+  PASS  scored techniques match the rule set exactly (7: T1059, T1105, T1485, T1489, T1561.002, T1592, T1595)
+  PASS  scored tactics match the rule set exactly (command-and-control, execution, impact, reconnaissance)
+RESULT: PASS
+```
+
+The script exits non-zero if any assertion fails, so it drops straight into CI or a pre-commit hook.
+Override the image with `PYTHON_IMAGE` if you mirror it internally.
+
 ## Contributing
 
 A new detection rule is stronger with a test that shows it firing. Tests should synthesize their own input
