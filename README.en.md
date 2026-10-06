@@ -85,6 +85,8 @@ The original (Chinese UI) screens are available in [`README.zh.md`](README.zh.md
 
 > **Prerequisites:** Docker and Docker Compose. The database is **PostgreSQL**, brought up by compose. Exploration requires an **LLM** (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`; can also be set in the UI).
 
+> **⚠️ The image this compose pulls is the upstream (original) Chinese build.** The `artex` service in `docker-compose.yml` pulls `autumn27/artex`, the image the original author published to Docker Hub. That image has a **Chinese UI and Chinese output**, and the Korean localization this repository adds (Korean UI, Korean reports, `langDirective`) is **not yet included** in it. To see the Korean edition's screens and output, for now build it yourself via the **single-binary build from source** path under ["Other installation methods"](#other-installation-methods) below. A Korean-edition Docker image is in the works.
+
 ```bash
 git clone https://github.com/jiwoochris/artex-ko.git
 cd artex-ko
@@ -93,7 +95,7 @@ docker compose up -d          # brings up the artex image + postgres together
 # → open http://localhost:8787 (on first visit, set the admin password at /setup)
 ```
 
-The image bundles common tools (ripgrep, curl, vim, npm, nmap, and more). `./skills` and `./data` are bind-mounted to the host and survive container recreation.
+The upstream image above bundles common tools (ripgrep, curl, vim, npm, nmap, and more). `./skills` and `./data` are bind-mounted to the host and survive container recreation.
 
 ### Other installation methods
 
