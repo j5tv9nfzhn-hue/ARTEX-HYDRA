@@ -1,6 +1,6 @@
 # 변경 이력
 
-한국어 · [中文(원본·상류)](CHANGELOG.zh.md)
+한국어 · [English](CHANGELOG.en.md) · [中文(원본·상류)](CHANGELOG.zh.md)
 
 이 문서는 ARTEX 한국어판(이 포크)이 상류 저장소에 더한 변경을 기록합니다. 형식은 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 를 참고합니다.
 
