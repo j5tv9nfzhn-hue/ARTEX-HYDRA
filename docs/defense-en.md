@@ -184,9 +184,9 @@ Defending teams in Korea should take their indicators of compromise and security
 
 ### 7.1 Where to get indicators and advisories
 
-- **KISA (Korea Internet & Security Agency), via Boho Nara / KrCERT/CC**, publishes security advisories, vulnerability notices, and incident-response information, and shares threat intelligence across organizations through C-TAS (the Cyber Threat Analysis and Sharing system).
-- **FSI (Financial Security Institute)** shares intrusion and threat information across the financial sector (the finance-sector ISAC). If you are in finance, watch this channel as well.
-- **PIPC (Personal Information Protection Commission)** publishes the criteria for breach notification and the guidance on protective measures.
+- **KISA (Korea Internet & Security Agency), via [Boho Nara / KrCERT/CC](https://www.boho.or.kr)**, publishes security advisories, vulnerability notices, and incident-response information, and shares threat intelligence across organizations through C-TAS (the Cyber Threat Analysis and Sharing system; unlike the open portal, C-TAS is shared among enrolled organizations and takes a separate application).
+- **[FSI (Financial Security Institute)](https://www.fsec.or.kr)** shares intrusion and threat information across the financial sector (the finance-sector ISAC). If you are in finance, watch this channel as well.
+- **[PIPC (Personal Information Protection Commission)](https://www.pipc.go.kr)** publishes the criteria for breach notification and the guidance on protective measures.
 
 These channels are exactly what the section 5 hardening checklist means by "take official indicators of compromise from a trusted source." Even an official IoC is applied only after you review its validity window and false-blocking risk, the same principle explained in section 2, "Why IP-address blocking is a weak first line of defense."
 
