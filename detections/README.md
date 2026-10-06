@@ -67,7 +67,7 @@ from drifting away from the rule set.
 
 ## Tests
 
-All three rule families ship with reproducible tests in [`tests/`](tests/), each needing only Docker:
+The rules ship with reproducible tests in [`tests/`](tests/), each needing only Docker:
 
 - **Suricata** ([`tests/suricata/run.sh`](tests/suricata/run.sh)) synthesizes a deterministic capture with
   scapy, runs `suricata -r` over it, and asserts that the presence rule fires once per probe, the velocity
@@ -81,6 +81,12 @@ All three rule families ship with reproducible tests in [`tests/`](tests/), each
   consistent with the rules: its scored techniques and tactics must be exactly the `attack.*` tags on the
   rule set, and each technique must name a rule file that exists. Adding a rule without updating the layer
   (or vice versa) fails the test.
+- **Indicator source-of-truth** ([`tests/indicators/run.sh`](tests/indicators/run.sh)) checks that each rule's
+  pinned indicator is still the string the upstream source emits — `artex-enrich/1.0` in `enrich/enrich.go`,
+  `artex-selfupdate` in `selfupdate/`, the guard marker in `guard/guard.go`, the destructive tokens in
+  `db/db.go` — and is still pinned in the rule. It catches the drift the other three miss: an upstream re-sync
+  that changes a User-Agent or marker while every rule still compiles and fires. This makes "grounded in a
+  string verified in this repository's source, not inferred" (above) a guard, not a promise.
 
 Each script exits non-zero on any failed assertion. See [`tests/README.md`](tests/README.md).
 

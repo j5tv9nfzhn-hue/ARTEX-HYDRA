@@ -149,12 +149,14 @@ i18n(web): 대시보드 네비게이션 라벨 한국어 번역
 [Suricata](https://suricata.io) 규칙([`detections/suricata/`](detections/suricata/)),
 [MITRE ATT&CK](https://attack.mitre.org/) 커버리지 레이어([`detections/attack/`](detections/attack/)), 그리고
 이 규칙들이 실제로 발화하는지 재현 가능하게 증명하는 테스트([`detections/tests/`](detections/tests/))로
-이루어져 있습니다. 탐지 규칙을 새로 보내거나 고칠 때는 아래 계약을 지켜 주십시오. 세 테스트 스위트가 이
+이루어져 있습니다. 탐지 규칙을 새로 보내거나 고칠 때는 아래 계약을 지켜 주십시오. 네 테스트 스위트가 이
 계약의 상당 부분을 기계적으로 강제하므로, 규칙만 바꾸고 테스트·레이어를 갱신하지 않으면 테스트가 실패합니다.
 
 - **모든 지표를 관측 가능한 사실에 접지합니다.** 규칙이 쓰는 문자열·User-Agent·행동 임계값은 이 저장소
   소스에서 실제로 확인되는 것이어야 하고, 추정으로 만들지 않습니다. 근거가 되는 소스 파일을 규칙 안에
-  밝혀 주십시오(예: `artex-enrich/1.0` 지표는 `enrich/enrich.go` 에서 확인됩니다).
+  밝혀 주십시오(예: `artex-enrich/1.0` 지표는 `enrich/enrich.go` 에서 확인됩니다). 지표 일치 테스트
+  ([`detections/tests/indicators/`](detections/tests/indicators/))가 각 지표가 상류 소스와 규칙 양쪽에
+  여전히 있는지 검사하므로, 상류 재동기화로 소스 문자열이 바뀌면 규칙을 함께 고치지 않는 한 테스트가 실패합니다.
 - **한계를 정직하게 적습니다.** Sigma 규칙은 `description` 에, Suricata 규칙은 주석에 그 규칙이 못 잡는
   경우와 오탐 가능성을 적습니다. ARTEX 고유 시그니처가 아니라 일반 헌팅 리드(예: 파괴 명령)라면 그렇게
   명시해, 한 번의 적중만으로 공격자를 ARTEX 로 단정하지 않게 합니다.
@@ -171,18 +173,21 @@ i18n(web): 대시보드 네비게이션 라벨 한국어 번역
 - **공격 안내로 읽히는 내용을 넣지 않습니다.** 이 저장소의 탐지 자료는 방어·탐지 포지셔닝만 유지합니다.
   익스플로잇 수행 방법이나 탐지 우회 기법처럼 공격을 돕는 서술은 받지 않습니다.
 
-세 테스트 스위트는 Docker 만 있으면 그대로 돌릴 수 있고, 생성물을 저장소에 커밋하지 않습니다. 각 스크립트는
+네 테스트 스위트는 Docker 만 있으면 그대로 돌릴 수 있고, 생성물을 저장소에 커밋하지 않습니다. 각 스크립트는
 단언이 하나라도 실패하면 0 이 아닌 코드로 끝나므로 CI 나 pre-commit 훅에 바로 넣을 수 있습니다.
 
 ```bash
 detections/tests/sigma/run.sh       # Sigma: sigma check + 백엔드 변환 + 지표 보존
 detections/tests/suricata/run.sh    # Suricata: pcap 합성 → suricata -r → 경보 수 단언
 detections/tests/attack/run.sh      # ATT&CK: 레이어 ↔ 규칙 양방향 정합
+detections/tests/indicators/run.sh  # 지표: 규칙의 고정 지표 ↔ 상류 소스 양방향 일치
 ```
 
-이 세 테스트는 저장소 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))가
-`detections/` 아래가 바뀐 푸시·PR 마다 돌립니다. 따라서 규칙만 바꾸고 테스트·레이어를 갱신하지 않은
-변경은 머지 전에 CI 에서 빨갛게 드러납니다.
+이 네 테스트는 저장소 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))가
+`detections/` 아래가 바뀐 푸시·PR 마다 돌립니다. 지표 일치 테스트는 그 지표가 가리키는 상류 소스 파일
+(`enrich/`·`selfupdate/`·`guard/`·`db/`)이 바뀔 때도 돌아, 상류 재동기화가 User-Agent·마커를 바꿔 규칙이
+조용히 낡는 경우를 함께 잡습니다. 따라서 규칙만 바꾸고 테스트·레이어를 갱신하지 않은 변경, 또는 소스와
+어긋난 규칙은 머지 전에 CI 에서 빨갛게 드러납니다.
 
 규칙 색인과 각 규칙의 근거·한계는 [`detections/README.md`](detections/README.md)에, 테스트의 단언 항목과
 실행법은 [`detections/tests/README.md`](detections/tests/README.md)에 정리되어 있습니다.

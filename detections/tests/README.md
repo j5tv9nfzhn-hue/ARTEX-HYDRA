@@ -140,6 +140,54 @@ RESULT: PASS
 The script exits non-zero if any assertion fails, so it drops straight into CI or a pre-commit hook.
 Override the image with `PYTHON_IMAGE` if you mirror it internally.
 
+## Indicator source-of-truth — [`indicators/`](indicators/)
+
+[`indicators/run.sh`](indicators/run.sh) proves the one thing the three tests above do not: that each rule's
+pinned indicator is still the string ARTEX's own source actually emits. The Sigma test proves an indicator
+survives rule→query *compilation*; the ATT&CK test proves the layer matches the rules' tags; the Suricata
+test proves the network rule *fires* on a synthesized capture. None of them look back at the source file the
+indicator claims to come from. The rot they all miss is an upstream re-sync that bumps the prober User-Agent
+to `artex-enrich/2.0` or rewrites the guard marker: every rule still compiles, the layer still matches, the
+pcap test still fires — and the deployed rule silently stops matching real ARTEX traffic. It asserts, for
+each indicator, bidirectionally:
+
+- **Source still emits it** — the value is present in the upstream source file(s) that produce it
+  (`artex-enrich/1.0` in `enrich/enrich.go`, `artex-selfupdate` in `selfupdate/`, the guard marker in
+  `guard/guard.go`). A missing value means an upstream change the rule has not caught up with.
+- **Rule still pins it** — the value is present in the rule built on it, so a rule edit cannot quietly move
+  the indicator away from its source. The Suricata rule is checked by its `startswith` prefix, matching how
+  it actually matches the wire.
+- **Deny-list correspondence** — the destructive-command tokens (`rm -rf`, `mkfs`, `DROP DATABASE`,
+  `FLUSHALL`) appear both in ARTEX's guard deny-list (`db/db.go`) and in the hunting rule that mirrors it.
+  These are generic hunting leads, not unique fingerprints, so the test asserts only the correspondence the
+  rule actually claims.
+
+This turns [`../README.md`](../README.md)'s promise — "every indicator here is grounded in a string verified
+in this repository's source, not inferred" — and CONTRIBUTING's first contribution contract into a guard a
+reviewer can re-run. Like the ATT&CK test it needs no detection backend, only the Python standard library;
+[`indicators/check.py`](indicators/check.py) reads the rule tree and the four pinned source packages mounted
+read-only and writes nothing.
+
+### Run it
+
+Needs only Docker; the check runs in a Python container and nothing is written to the repo.
+
+```sh
+detections/tests/indicators/run.sh
+```
+
+Expected output (abridged):
+
+```
+  PASS  enrichment prober User-Agent: 'artex-enrich/1.0' emitted by enrich/enrich.go
+  PASS  detections/sigma/artex_enrich_user_agent.yml pins 'artex-enrich/1.0'
+  PASS  'FLUSHALL' present in both db/db.go and detections/sigma/destructive_command_hunting.yml
+RESULT: PASS
+```
+
+The script exits non-zero if any assertion fails, so it drops straight into CI or a pre-commit hook.
+Override the image with `PYTHON_IMAGE` if you mirror it internally.
+
 ## Contributing
 
 A new detection rule is stronger with a test that shows it firing. Tests should synthesize their own input
@@ -147,6 +195,8 @@ deterministically, assert engine-version-independent properties exactly (and sof
 recorded reference), and avoid any content that reads as attack guidance. See
 [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) and the rule indexes in [`../README.md`](../README.md).
 
-All three suites run in CI on every push or pull request that touches `detections/`
-(see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml)), so a rule change
-that drops an indicator or drifts from the ATT&CK layer turns the build red before it can merge.
+All four suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
+on every push or pull request that touches `detections/` — and the indicator test also runs when the upstream
+source files it pins (`enrich/`, `selfupdate/`, `guard/`, `db/`) change — so a rule change that drops an
+indicator, drifts from the ATT&CK layer, or falls out of sync with the source turns the build red before it
+can merge.

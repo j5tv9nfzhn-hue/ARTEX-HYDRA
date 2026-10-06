@@ -95,6 +95,11 @@ git log --name-status --oneline d003372..upstream/main
   **새로 생긴 사용자 응답 문구**(`writeErr` 등)가 있는지 확인해서 한국어 상수로 번역합니다.
 - UI(`web/src/**`)가 바뀌어 **새 화면 문자열**이 생겼다면 → 하드코딩하지 말고
   `web/messages/zh.json`(원문)과 `web/messages/ko.json`(번역)에 같은 키로 추가합니다.
+- **탐지 규칙이 고정한 상류 지표**(`enrich/enrich.go` 의 프로버 User-Agent, `selfupdate/` 의
+  자가 갱신 User-Agent, `guard/guard.go` 의 감사 마커, `db/db.go` 의 파괴명령 deny 목록)가
+  바뀌었다면 → `detections/` 의 Sigma·Suricata 규칙과 ATT&CK 레이어도 새 값으로 맞춥니다.
+  이 지표는 번역 대상이 아니라 **탐지의 근거**라, 상류가 값을 바꾸면 규칙이 조용히 낡습니다.
+  5.4 의 지표 일치 테스트가 이 어긋남을 자동으로 잡습니다.
 
 ### 4.3 반영합니다
 
@@ -168,6 +173,22 @@ UI 를 정적으로 내보낸 뒤 프리렌더 HTML 에 중국어가 보이면 �
 cd web && npm ci && NEXT_EXPORT=1 npm run build   # out/ 생성
 # out/**/*.html 에서 가시 텍스트의 중국어 한자가 0 인지 확인
 ```
+
+### 5.4 탐지 지표가 상류 소스와 여전히 맞는지
+
+`detections/` 의 규칙은 상류가 실제로 내보내는 문자열(프로버 User-Agent·자가 갱신
+User-Agent·감사 마커·파괴명령 deny 목록)에 근거합니다. 상류 재동기화가 이 값을 바꾸면
+번역 검사는 전부 통과하는데 배포된 규칙만 조용히 매칭을 멈춥니다. 아래 테스트가 각 지표가
+상류 소스와 규칙 양쪽에 여전히 있는지 양방향으로 확인하므로, 재동기화 뒤에 함께 돌립니다.
+
+```bash
+detections/tests/indicators/run.sh   # Docker 로 격리 실행, RESULT: PASS 이면 일치
+```
+
+실패하면 어느 지표가 어긋났는지와 그 방향(상류 소스가 바뀌었는지, 규칙이 바뀌었는지)을
+출력하므로, 4.2 의 마지막 분류 기준대로 규칙·레이어를 새 값에 맞춥니다. 이 테스트는 저장소
+CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))에서도 규칙 트리나
+위 상류 소스 파일이 바뀐 푸시·PR 마다 자동으로 돌아, 재동기화 드리프트를 머지 게이트에서 잡습니다.
 
 ---
 

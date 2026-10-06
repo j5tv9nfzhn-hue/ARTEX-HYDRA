@@ -1,24 +1,37 @@
 name: detections
 # 탐지 규칙(Sigma·Suricata·ATT&CK 레이어)이 바뀌는 푸시·PR 마다, 그 규칙이 실제로
-# 발화하고 커버리지 레이어가 규칙과 일치하는지 재현 테스트로 검증한다. 규칙만 바꾸고
-# 테스트·레이어를 갱신하지 않은 변경은 여기서 빨갛게 드러난다. CONTRIBUTING.md 와
-# detections/tests/README.md 가 약속하는 "세 테스트가 기여 계약을 기계적으로 강제한다"를
-# 머지 게이트로 실제로 뒷받침하는 워크플로다. Go 빌드·정적 분석·테스트는 ci.yml 이 맡는다.
+# 발화하고 커버리지 레이어가 규칙과 일치하며 지표가 상류 소스와 여전히 맞는지 재현
+# 테스트로 검증한다. 규칙만 바꾸고 테스트·레이어를 갱신하지 않은 변경은 여기서 빨갛게
+# 드러난다. CONTRIBUTING.md 와 detections/tests/README.md 가 약속하는 "네 테스트가 기여
+# 계약을 기계적으로 강제한다"를 머지 게이트로 실제로 뒷받침하는 워크플로다. Go 빌드·정적
+# 분석·테스트는 ci.yml 이 맡는다.
 #
-# 세 테스트는 Docker 만 있으면 돈다(ubuntu-latest 러너에 Docker 가 들어 있다). 러너가
-# sigma-cli·scapy·suricata 이미지를 내려받아 컨테이너에서 격리 실행하므로 러너 자체에는
-# 아무것도 설치하지 않고, 규칙 트리를 읽기 전용으로만 마운트해 저장소에 쓰지 않는다.
-# detections/ 아래가 바뀔 때만 돌려(paths 필터) Go 전용 변경에서는 낭비하지 않되, 규칙·
-# 레이어·테스트 변경은 빠짐없이 건다. 공개 Docker 이미지를 인증 없이 내려받으므로 드물게
-# Docker Hub 내려받기 속도 제한에 걸릴 수 있고, 그때는 작업을 다시 돌리면 해소된다.
+# 네 테스트는 Docker 만 있으면 돈다(ubuntu-latest 러너에 Docker 가 들어 있다). 러너가
+# sigma-cli·scapy·suricata·python 이미지를 내려받아 컨테이너에서 격리 실행하므로 러너
+# 자체에는 아무것도 설치하지 않고, 규칙 트리와 지표가 가리키는 소스 파일을 읽기 전용으로만
+# 마운트해 저장소에 쓰지 않는다. detections/ 아래가 바뀔 때 외에, 지표 테스트가 고정해 둔
+# 상류 소스 파일(enrich/selfupdate/guard/db)이 바뀔 때도 돌려, 상류 재동기화가 User-Agent·
+# 마커를 바꿔 규칙이 조용히 낡는 경우를 머지 게이트에서 잡는다. 공개 Docker 이미지를 인증
+# 없이 내려받으므로 드물게 Docker Hub 내려받기 속도 제한에 걸릴 수 있고, 그때는 작업을
+# 다시 돌리면 해소된다.
 on:
   push:
     paths:
       - "detections/**"
+      - "enrich/enrich.go"
+      - "selfupdate/github.go"
+      - "selfupdate/stage.go"
+      - "guard/guard.go"
+      - "db/db.go"
       - ".github/workflows/detections.yml"
   pull_request:
     paths:
       - "detections/**"
+      - "enrich/enrich.go"
+      - "selfupdate/github.go"
+      - "selfupdate/stage.go"
+      - "guard/guard.go"
+      - "db/db.go"
       - ".github/workflows/detections.yml"
 
 permissions:
@@ -42,3 +55,5 @@ jobs:
         run: detections/tests/suricata/run.sh
       - name: ATT&CK 레이어 ↔ 규칙 정합 테스트
         run: detections/tests/attack/run.sh
+      - name: 탐지 지표 ↔ 상류 소스 일치 테스트 (상류 재동기화 드리프트 가드)
+        run: detections/tests/indicators/run.sh
