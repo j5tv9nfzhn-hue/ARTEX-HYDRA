@@ -1,6 +1,6 @@
 # pre-commit 설정 예시 (공식 문서: https://pre-commit.com)
 #
-# 탐지 규칙(detections/)이나 그 규칙이 고정한 상류 소스가 바뀌는 커밋에서만, 여섯 탐지
+# 탐지 규칙(detections/)이나 그 규칙이 고정한 상류 소스가 바뀌는 커밋에서만, 일곱 탐지
 # 테스트를 한 번에 돌리는 러너(detections/tests/run-all.sh)를 실행한다. 어느 단언이든
 # 실패하면 러너가 0 이 아닌 코드로 끝나 커밋이 멈춘다. CI(.github/workflows/detections.yml)와
 # 같은 규칙·소스 범위를 로컬 커밋 단계에서 먼저 통과시켜, 규칙만 바꾸고 테스트·레이어를
@@ -15,7 +15,7 @@ repos:
   - repo: local
     hooks:
       - id: detections
-        name: 탐지 규칙 테스트 6종 (Sigma·Suricata·ATT&CK·지표)
+        name: 탐지 규칙 테스트 7종 (Sigma·Suricata·ATT&CK·지표·MISP)
         entry: detections/tests/run-all.sh
         language: script
         pass_filenames: false

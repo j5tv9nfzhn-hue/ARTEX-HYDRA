@@ -1,0 +1,66 @@
+{
+  "Event": {
+    "uuid": "1a5aa723-0e87-4cbe-97f4-c84f93e4efeb",
+    "info": "ARTEX (autonomous AI pentest framework) — defensive host/network fingerprints",
+    "date": "2026-10-06",
+    "threat_level_id": "4",
+    "analysis": "2",
+    "distribution": "3",
+    "published": false,
+    "Orgc": {
+      "name": "artex-ko",
+      "uuid": "fff4e6e6-a076-433d-9a12-873ff60de4e6"
+    },
+    "Tag": [
+      { "name": "tlp:clear" },
+      { "name": "type:OSINT" }
+    ],
+    "Attribute": [
+      {
+        "uuid": "cb9d8f4e-cef3-44a4-8499-457620861b74",
+        "type": "user-agent",
+        "category": "Network activity",
+        "to_ids": true,
+        "disable_correlation": false,
+        "value": "artex-enrich/1.0",
+        "comment": "ARTEX asset-enrichment prober User-Agent (enrich/enrich.go). Target-side. An operator can change it, so absence is not safety. Sigma: artex_enrich_user_agent.yml."
+      },
+      {
+        "uuid": "dbe975a6-0a12-43a7-a8e8-4bd0ba65daea",
+        "type": "user-agent",
+        "category": "Network activity",
+        "to_ids": true,
+        "disable_correlation": false,
+        "value": "artex-selfupdate",
+        "comment": "ARTEX self-update egress User-Agent to the release host (selfupdate/github.go, selfupdate/stage.go). Seen in outbound logs from an ARTEX host. Sigma: artex_selfupdate_egress.yml."
+      },
+      {
+        "uuid": "053cbbbd-c345-49f0-b6e3-1b6f6075a218",
+        "type": "pattern-in-file",
+        "category": "Artifacts dropped",
+        "to_ids": true,
+        "disable_correlation": false,
+        "value": "【ARTEX 平台管控·非目标防御】",
+        "comment": "Control-framing prefix ARTEX writes to its audit log on a blocked tool call (guard/guard.go). Its presence in audit records supports an ARTEX-execution finding. Sigma: artex_guard_audit_framing.yml."
+      },
+      {
+        "uuid": "d5fe7761-c297-4e35-acfe-a3a4a5f01f7b",
+        "type": "port",
+        "category": "Network activity",
+        "to_ids": false,
+        "disable_correlation": true,
+        "value": "8787",
+        "comment": "Default ARTEX server HTTP listen port (cmd/artex/main.go --addr). Host-triage hint, not a blocking indicator; check with ss/netstat on a suspected host."
+      },
+      {
+        "uuid": "b575c98a-629d-42d4-bac0-3280f6c6c6b8",
+        "type": "ip-dst|port",
+        "category": "Network activity",
+        "to_ids": false,
+        "disable_correlation": true,
+        "value": "127.0.0.1|8788",
+        "comment": "Default loopback traffic-recording MITM proxy endpoint (cmd/artex/main.go --proxy). Loopback — a host-triage hint, not a network block; check with ss/netstat."
+      }
+    ]
+  }
+}

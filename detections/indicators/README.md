@@ -30,6 +30,28 @@ row records where it comes from and which rule (if any) is built on it.
   indicators that are triaged directly rather than shipped as a (noisy) rule.
 - **`description`** — a one-line note, including the honest caveat where one applies.
 
+## MISP event export
+
+The same indicators ship as a ready-to-import [MISP](https://www.misp-project.org/) event,
+[`artex_indicators.misp.json`](artex_indicators.misp.json), so a defender running a MISP instance (or a
+threat-intelligence platform that ingests the MISP format) can import the fingerprints directly instead of
+mapping the CSV columns by hand. STIX 2.1 is then one export away using MISP's own converter, so the
+repository does not hand-roll a second, lossy format.
+
+- **Type mapping.** Each CSV `type` becomes the equivalent MISP attribute type: `http.user-agent` →
+  `user-agent`, the guard marker `string` → `pattern-in-file` (category *Artifacts dropped*), `port` →
+  `port`, and `ip-dst|port` → `ip-dst|port` (the composite value uses MISP's `ip|port` form, so
+  `127.0.0.1:8788` is stored as `127.0.0.1|8788`).
+- **`to_ids` follows the `rule` column, honestly.** A row that a detection rule is built on is an actionable
+  indicator and is flagged `to_ids: true`. A host-forensic row with no rule — the default listen port and
+  the loopback proxy endpoint — is a triage hint, not a blocking IoC, so it is `to_ids: false` with
+  `disable_correlation: true` (a common port or `127.0.0.1` should not pollute MISP correlations). This is
+  the same distinction the CSV `rule` column and the caveats below already carry.
+- **Import.** `MISPEvent().load_file("artex_indicators.misp.json")` with
+  [pymisp](https://github.com/MISP/PyMISP), the *Add event → Populate from … → MISP format* UI, or the REST
+  API. The event is unpublished and tagged `tlp:clear`; set the distribution and publish state your instance
+  needs on import.
+
 ## How to read this honestly
 
 - **These are changeable fingerprints, not proof of safety.** An operator can set a different User-Agent
@@ -53,4 +75,13 @@ the source, or a known fingerprint dropped from the list, fails the test. Run it
 
 ```sh
 detections/tests/indicators/run.sh
+```
+
+The MISP event is covered by its own [MISP export consistency test](../tests/misp/run.sh): it loads the
+event under pymisp (so every attribute type is a real MISP type a server accepts) and asserts it stays
+row-for-row in sync with this CSV — same values, the intended type/category, and the `to_ids` flag matching
+the `rule` column. Add or retype a CSV row without regenerating the MISP event and it fails. Run it with:
+
+```sh
+detections/tests/misp/run.sh
 ```

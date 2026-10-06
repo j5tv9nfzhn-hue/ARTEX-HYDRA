@@ -71,10 +71,14 @@ For defenders who want the atomic indicators rather than the detection logic,
 [`indicators/artex_indicators.csv`](indicators/) collects the unique fingerprints ARTEX emits into one
 CSV to drop into a threat-intelligence platform, a SIEM lookup, or a host-triage checklist — the enrichment
 and self-update User-Agents, the guard audit marker, and the server/proxy default endpoints — each row
-recording the source file it is grounded in and the rule (if any) built on it. Generic hunting leads (the
+recording the source file it is grounded in and the rule (if any) built on it. The same indicators ship as a
+ready-to-import [MISP](https://www.misp-project.org/) event
+([`indicators/artex_indicators.misp.json`](indicators/)), so a defender running MISP (or exporting on to
+STIX from it) does not have to map the CSV columns by hand — the rule-backed fingerprints are flagged
+`to_ids`, the host-forensic ports are not. Generic hunting leads (the
 destructive commands) are deliberately kept out of the import-ready list to avoid false positives; see
-[`indicators/README.md`](indicators/README.md) for the columns, the honest caveats, and the consistency
-test that keeps the list from drifting.
+[`indicators/README.md`](indicators/README.md) for the columns, the MISP type mapping, the honest caveats,
+and the consistency test that keeps both the CSV and the MISP event from drifting.
 
 ## Tests
 
@@ -105,6 +109,14 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   `pull_request` paths filter, so a PR touching only a newly pinned source cannot skip the test and let that
   drift pass the merge gate. This makes "grounded in a string verified in this repository's source, not
   inferred" (above) a guard, not a promise.
+- **MISP export consistency** ([`tests/misp/run.sh`](tests/misp/run.sh)) proves the MISP event
+  ([`indicators/artex_indicators.misp.json`](indicators/artex_indicators.misp.json)) is a valid MISP document —
+  it loads under [pymisp](https://github.com/MISP/PyMISP), whose object model rejects any attribute type that
+  is not a real MISP type, so the artifact really imports rather than merely looking like MISP — and that it
+  stays row-for-row in sync with the CSV above: same values, the intended MISP type/category per indicator,
+  and a `to_ids`/`disable_correlation` flag that mirrors the CSV's honesty (rule-backed = actionable, so
+  `to_ids` on; host-forensic port = triage hint, so `to_ids` off and correlation disabled). Add, remove, or
+  retype a CSV row without regenerating the MISP event and it fails.
 - **Sigma backend portability** ([`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh)) proves the rules
   convert beyond the single Splunk example: the whole tree (atomic + correlation) compiles on Splunk, the
   Elasticsearch `eql` target, and Grafana Loki, and the four atomic rules still compile on backends that do not

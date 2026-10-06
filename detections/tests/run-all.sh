@@ -5,7 +5,7 @@
 # ../../.github/workflows/detections.yml. CONTRIBUTING.md and this directory's
 # README.md promise that each suite "drops straight into CI or a pre-commit
 # hook"; this is the single entry point that honours that promise for all of
-# them at once, so a contributor does not have to invoke the six run.sh scripts
+# them at once, so a contributor does not have to invoke the seven run.sh scripts
 # by hand (and reviewers do not have to improvise a loop).
 #
 # It runs the suites in the same order as CI, lets each suite's own output flow
@@ -26,7 +26,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 # Same order as the steps in .github/workflows/detections.yml.
-SUITES="sigma sigma_lint sigma_backends suricata attack indicators"
+SUITES="sigma sigma_lint sigma_backends suricata attack indicators misp"
 
 fail=0
 results=""

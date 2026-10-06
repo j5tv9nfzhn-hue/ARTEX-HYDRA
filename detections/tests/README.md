@@ -15,8 +15,8 @@ repository.
 
 ## Run every suite at once — [`run-all.sh`](run-all.sh)
 
-[`run-all.sh`](run-all.sh) runs all six suites below in one command, in the same order as CI, so you do not
-have to invoke the six `run.sh` scripts by hand. Each suite runs to completion even if an earlier one fails,
+[`run-all.sh`](run-all.sh) runs all seven suites below in one command, in the same order as CI, so you do not
+have to invoke the seven `run.sh` scripts by hand. Each suite runs to completion even if an earlier one fails,
 the script prints a one-line PASS/FAIL summary per suite at the end, and it exits non-zero if any suite failed.
 
 ```sh
@@ -318,6 +318,41 @@ RESULT: PASS
 The script exits non-zero if any assertion fails, so it drops straight into CI or a pre-commit hook.
 Override the image with `PYTHON_IMAGE` if you mirror it internally.
 
+## MISP export consistency — [`misp/`](misp/)
+
+[`misp/run.sh`](misp/run.sh) covers the second published form of the indicators — the ready-to-import MISP
+event [`detections/indicators/artex_indicators.misp.json`](../indicators/artex_indicators.misp.json). The
+indicator test above keeps the CSV grounded in the source; this test keeps the MISP event, the artifact a
+defender actually loads into a threat-intelligence platform, from drifting away from that CSV. It asserts:
+
+- **It is really MISP** — the event loads under [pymisp](https://github.com/MISP/PyMISP), whose object model
+  rejects any attribute whose `type` is not a genuine MISP type. A plausible-looking but invalid type fails
+  here, so "valid MISP" is proven by the library a MISP server uses, not asserted.
+- **Row-for-row sync with the CSV** — every CSV row maps to exactly one MISP attribute with the intended type
+  and category (`http.user-agent` → `user-agent`, the guard marker `string` → `pattern-in-file`, `port` →
+  `port`, `ip-dst|port` → `ip-dst|port` with the composite `ip|port` value), and no MISP attribute is left
+  without a CSV row. Adding, removing, or retyping a CSV row without regenerating the event fails.
+- **`to_ids` mirrors the `rule` column** — a rule-backed indicator is `to_ids: true`; a host-forensic row
+  with no rule is `to_ids: false` with `disable_correlation: true`. Flipping a flag away from what the CSV
+  implies fails, so the MISP event cannot quietly over- or under-claim which fingerprints are actionable.
+- **The guard marker survives byte-for-byte** and `detections/**` is in the CI paths filter, so a change to
+  the CSV or the event triggers this suite.
+
+Unlike the pure-standard-library tests above, this suite installs a pinned `pymisp` inside its container
+(nothing is installed on the host); [`misp/check.py`](misp/check.py) reads the CSV, the MISP event, and the
+CI workflow mounted read-only and writes nothing.
+
+### Run it
+
+Needs only Docker; pymisp is installed in the container and nothing is written to the repo.
+
+```sh
+detections/tests/misp/run.sh
+```
+
+The script exits non-zero if any assertion fails. Override the image with `PYTHON_IMAGE` and the pinned
+library with `PYMISP_VERSION` if you mirror them internally.
+
 ## Contributing
 
 A new detection rule is stronger with a test that shows it firing. Tests should synthesize their own input
@@ -325,9 +360,9 @@ deterministically, assert engine-version-independent properties exactly (and sof
 recorded reference), and avoid any content that reads as attack guidance. See
 [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) and the rule indexes in [`../README.md`](../README.md).
 
-All six suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
+All seven suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
 on every push or pull request that touches `detections/` — and the indicator test also runs when the upstream
 source files it pins (`enrich/`, `selfupdate/`, `guard/`, `db/`, `cmd/artex/main.go`) change — so a rule
 change that drops an indicator, drifts from the ATT&CK layer, stops converting on a documented backend,
-breaks a SigmaHQ convention, falls out of sync with the source, or pins a new source the workflow does not
-yet watch turns the build red before it can merge.
+breaks a SigmaHQ convention, falls out of sync with the source, lets the MISP event drift from the CSV, or
+pins a new source the workflow does not yet watch turns the build red before it can merge.
