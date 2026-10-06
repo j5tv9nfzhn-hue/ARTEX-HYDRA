@@ -127,7 +127,7 @@ function JudgeCard() {
   }, [t]);
 
   React.useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   function patch(p: Partial<JudgeConfig>) {
@@ -357,8 +357,8 @@ export default function InterceptPage() {
   }, [t]);
 
   React.useEffect(() => {
-    load();
-    loadScope();
+    void load();
+    void loadScope();
   }, [load, loadScope]);
 
   React.useEffect(() => {
@@ -434,7 +434,7 @@ export default function InterceptPage() {
         toast.success(t("toast.ruleCreated"));
       }
       setOpen(false);
-      load();
+      void load();
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -446,7 +446,7 @@ export default function InterceptPage() {
     try {
       await api.deleteInterceptRule(id);
       toast.success(t("toast.ruleDeleted"));
-      load();
+      void load();
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -455,7 +455,7 @@ export default function InterceptPage() {
   async function handleToggle(rule: InterceptRule) {
     try {
       await api.toggleInterceptRule(rule.id, !rule.enabled);
-      load();
+      void load();
     } catch (e) {
       toast.error((e as Error).message);
     }

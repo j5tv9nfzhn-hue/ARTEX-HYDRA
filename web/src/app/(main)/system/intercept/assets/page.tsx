@@ -111,7 +111,7 @@ export default function AssetInterceptPage() {
   }, [t]);
 
   React.useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   function set(patch: Partial<RuleForm>) {
@@ -147,7 +147,7 @@ export default function AssetInterceptPage() {
         toast.success(t("toast.ruleCreated"));
       }
       setOpen(false);
-      load();
+      void load();
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -160,7 +160,7 @@ export default function AssetInterceptPage() {
     try {
       await api.deleteAssetInterceptRule(rule.id);
       toast.success(t("toast.ruleDeleted"));
-      load();
+      void load();
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -169,7 +169,7 @@ export default function AssetInterceptPage() {
   async function handleToggle(rule: AssetInterceptRule) {
     try {
       await api.toggleAssetInterceptRule(rule.id, !rule.enabled);
-      load();
+      void load();
     } catch (e) {
       toast.error((e as Error).message);
     }
