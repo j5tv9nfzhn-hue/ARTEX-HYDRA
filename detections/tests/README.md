@@ -102,7 +102,7 @@ The script exits non-zero if any assertion fails, so it drops straight into CI o
 is pinned to a reference version (`3.1.0`); override it with `SIGMA_CLI_VERSION`, or the image with
 `PYTHON_IMAGE`, if you mirror them internally.
 
-## ATT&CK layer — [`attack/`]
+## ATT&CK layer — [`attack/`](attack/)
 
 [`attack/run.sh`](attack/run.sh) checks that the [ATT&CK coverage layer](../attack/) in
 [`../attack/artex_navigator_layer.json`](../attack/artex_navigator_layer.json) stays consistent with the
