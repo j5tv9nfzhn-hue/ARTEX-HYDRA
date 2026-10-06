@@ -13,6 +13,36 @@ No binary packet capture is committed. The capture is **synthesized deterministi
 removed afterwards, so the test ships as readable source, not as an opaque fixture, and never bloats the
 repository.
 
+## Run every suite at once — [`run-all.sh`](run-all.sh)
+
+[`run-all.sh`](run-all.sh) runs all six suites below in one command, in the same order as CI, so you do not
+have to invoke the six `run.sh` scripts by hand. Each suite runs to completion even if an earlier one fails,
+the script prints a one-line PASS/FAIL summary per suite at the end, and it exits non-zero if any suite failed.
+
+```sh
+detections/tests/run-all.sh
+```
+
+Expected output (abridged):
+
+```
+===== detection suites summary =====
+  PASS  sigma
+  PASS  sigma_lint
+  PASS  sigma_backends
+  PASS  suricata
+  PASS  attack
+  PASS  indicators
+RESULT: PASS
+```
+
+Because it exits non-zero on any failure, it drops straight into a pre-commit hook. A ready-to-use example
+lives in [`.pre-commit-config.yaml`](../../.pre-commit-config.yaml) at the repository root: install it with
+`pip install pre-commit && pre-commit install`, and the runner then fires on commits that touch the detection
+rules or the upstream source files they pin — the same scope as CI. The image and version overrides the
+individual suites honour (`PYTHON_IMAGE`, `SIGMA_CLI_VERSION`, `SIGMAHQ_VALIDATORS_VERSION`, `SURICATA_IMAGE`)
+are inherited by the runner, so exporting any of them applies to every suite at once.
+
 ## Suricata — [`suricata/`](suricata/)
 
 [`suricata/run.sh`](suricata/run.sh) exercises the network rules in

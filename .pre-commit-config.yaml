@@ -1,0 +1,22 @@
+# pre-commit 설정 예시 (공식 문서: https://pre-commit.com)
+#
+# 탐지 규칙(detections/)이나 그 규칙이 고정한 상류 소스가 바뀌는 커밋에서만, 여섯 탐지
+# 테스트를 한 번에 돌리는 러너(detections/tests/run-all.sh)를 실행한다. 어느 단언이든
+# 실패하면 러너가 0 이 아닌 코드로 끝나 커밋이 멈춘다. CI(.github/workflows/detections.yml)와
+# 같은 규칙·소스 범위를 로컬 커밋 단계에서 먼저 통과시켜, 규칙만 바꾸고 테스트·레이어를
+# 갱신하지 않은 변경이 푸시 전에 걸리게 한다.
+#
+# 설치:        pip install pre-commit && pre-commit install
+# 수동 실행:   pre-commit run detections --all-files
+# 요구 사항:   Docker (각 테스트가 컨테이너에서 격리 실행되고, 러너에는 아무것도 설치하지 않는다).
+#
+# 탐지 테스트만 거는 최소 예시다. Go·웹 린트까지 함께 걸고 싶으면 이 아래에 각자의 훅을 더한다.
+repos:
+  - repo: local
+    hooks:
+      - id: detections
+        name: 탐지 규칙 테스트 6종 (Sigma·Suricata·ATT&CK·지표)
+        entry: detections/tests/run-all.sh
+        language: script
+        pass_filenames: false
+        files: '^(detections/|enrich/enrich\.go|selfupdate/(github|stage)\.go|guard/guard\.go|db/db\.go)'

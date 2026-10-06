@@ -192,6 +192,13 @@ detections/tests/attack/run.sh          # ATT&CK: 레이어 ↔ 규칙 양방향
 detections/tests/indicators/run.sh      # 지표: 규칙의 고정 지표 ↔ 상류 소스 양방향 일치
 ```
 
+여섯을 한 번에 돌리려면 [`detections/tests/run-all.sh`](detections/tests/run-all.sh)를 쓰십시오. CI 와 같은
+순서로 여섯을 순차 실행하고, 앞선 스위트가 실패해도 나머지를 끝까지 돌린 뒤 스위트별 PASS/FAIL 요약을
+출력하며, 하나라도 실패하면 0 이 아닌 코드로 끝납니다. 이 러너를 pre-commit 훅으로 바로 거는 설정 예시가
+저장소 루트의 [`.pre-commit-config.yaml`](.pre-commit-config.yaml)에 있습니다. `pip install pre-commit &&
+pre-commit install` 로 설치하면, 탐지 규칙이나 그 규칙이 고정한 상류 소스가 바뀌는 커밋에서만(CI 와 같은
+범위) 러너가 돌아 규칙·테스트 불일치를 푸시 전에 잡습니다.
+
 이 여섯 테스트는 저장소 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))가
 `detections/` 아래가 바뀐 푸시·PR 마다 돌립니다. 지표 일치 테스트는 그 지표가 가리키는 상류 소스 파일
 (`enrich/`·`selfupdate/`·`guard/`·`db/`)이 바뀔 때도 돌아, 상류 재동기화가 User-Agent·마커를 바꿔 규칙이
