@@ -293,10 +293,10 @@ This way, even when there is not yet a corresponding fact in the exploration gra
 flowchart LR
   WA["worker A (intent #12)"] -->|"per-step activity"| ACT[("exploration graph · activity process store")]
   WB["worker B (intent #34)"] -->|"per-step activity"| ACT
-  WC["worker C (intent #56)"] ==>|"1) search_all_worker_traces(q)"| ACT
-  ACT ==>|"2) hits in A/B's steps (self excluded)"| WC
-  WC ==>|"3) get_worker_trace(intent_id, step_ids)"| ACT
-  ACT ==>|"4) return full process content"| WC
+  WC["worker C (intent #56)"] ==>|"① search_all_worker_traces(q)"| ACT
+  ACT ==>|"② hits in A/B's steps (self excluded)"| WC
+  WC ==>|"③ get_worker_trace(intent_id, step_ids)"| ACT
+  ACT ==>|"④ return full process content"| WC
 ```
 
 ### The planner's multi-round shared todolist → a stable attack chain

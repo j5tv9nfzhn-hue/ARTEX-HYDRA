@@ -288,10 +288,10 @@ sequenceDiagram
 flowchart LR
   WA["worker A (의도 #12)"] -->|"단계별 activity"| ACT[("탐색 그래프 · activity 과정 라이브러리")]
   WB["worker B (의도 #34)"] -->|"단계별 activity"| ACT
-  WC["worker C (의도 #56)"] ==>|"1) search_all_worker_traces(q)"| ACT
-  ACT ==>|"2) A/B 의 단계 명중 (자기 제외)"| WC
-  WC ==>|"3) get_worker_trace(intent_id, step_ids)"| ACT
-  ACT ==>|"4) 전체 과정 내용 반환"| WC
+  WC["worker C (의도 #56)"] ==>|"① search_all_worker_traces(q)"| ACT
+  ACT ==>|"② A/B 의 단계 명중 (자기 제외)"| WC
+  WC ==>|"③ get_worker_trace(intent_id, step_ids)"| ACT
+  ACT ==>|"④ 전체 과정 내용 반환"| WC
 ```
 
 ### planner 의 다중 라운드 공유 todolist → 안정적인 공격 체인
