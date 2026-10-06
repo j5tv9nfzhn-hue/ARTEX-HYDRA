@@ -107,7 +107,7 @@ RESULT: PASS
   기반 규칙을 `id` 로 참조하기 때문이며, 이 참조는 장식이 아니라 강제됩니다. 이는 위 Suricata
   특이성 단언에 해당하는 Sigma 쪽 장치입니다.
 
-이는 [`../README.md`](../README.md) 에 설명한 구조 + 컴파일 검증을, 실행 가능하고 단언하는 형태로 만든
+이는 [`../README.ko.md`](../README.ko.md) 에 설명한 구조 + 컴파일 검증을, 실행 가능하고 단언하는 형태로 만든
 것입니다. 일반 `webserver` / `proxy` / `application` 로그 소스에 대한 실시간 이벤트 매칭 하네스는
 여전히 일부러 넣지 않았습니다. 그것들을 권위 있게 매칭하려면 필드를 정규화하는 백엔드가 필요하고,
 엉성한 매처는 규칙을 받쳐 주기는커녕 깎아내리기 때문입니다. 네트워크 규칙은 다릅니다. Suricata 는
@@ -140,7 +140,7 @@ RESULT: PASS
 ## Sigma 백엔드 이식성 — [`sigma_backends/`](sigma_backends/)
 
 [`sigma_backends/run.sh`](sigma_backends/run.sh) 는 규칙이 Sigma 테스트가 돌려 보는 단일 Splunk
-예시를 넘어서도 변환됨을 증명하고, [`../README.md`](../README.md) 의 백엔드별 지원 표를 정직하게
+예시를 넘어서도 변환됨을 증명하고, [`../README.ko.md`](../README.ko.md) 의 백엔드별 지원 표를 정직하게
 유지합니다. Sigma 상관 규칙 변환은 백엔드에 따라 다르므로, README 는 어떤 `-t` 대상이 트리 전체를
 받고 어떤 대상이 원자 규칙만 받는지 방어자에게 알려 줍니다. 다시 돌려 봐야만 믿을 수 있는
 주장입니다. 두 가지 속성을 단언하는데, 둘 다 긍정형이라 실제 회귀가 있을 때만 실패합니다:
@@ -291,7 +291,7 @@ ARTEX 트래픽에 조용히 매칭을 멈춥니다. 각 지표에 대해 양방
   그 소스를 빠뜨린 관문에서 테스트를 건너뜁니다. CI 에서는 머지 게이트를 초록으로 통과하고, 훅에서는
   "CI 와 같은 소스 범위"라고 약속해 놓고도 로컬에서 끝내 잡히지 않습니다.
 
-이는 [`../README.md`](../README.md) 의 약속("여기 모든 지표는 추정이 아니라 이 저장소 소스에서 확인한
+이는 [`../README.ko.md`](../README.ko.md) 의 약속("여기 모든 지표는 추정이 아니라 이 저장소 소스에서 확인한
 문자열에 근거한다")과 CONTRIBUTING 의 첫 번째 기여 계약을, 검토자가 다시 돌려 볼 수 있는 가드로
 바꿉니다. ATT&CK 테스트처럼 탐지 백엔드가 필요 없고 Python 표준 라이브러리만 있으면 됩니다.
 [`indicators/check.py`](indicators/check.py) 는 규칙 트리, 공개 지표 목록, 고정된 소스 패키지, 그리고
@@ -365,7 +365,7 @@ detections/tests/misp/run.sh
 새 탐지 규칙은 그것이 발화함을 보여 주는 테스트가 있을 때 더 강합니다. 테스트는 자기 입력을 결정론적으로
 생성하고, 엔진 버전과 무관한 속성은 정확히 단언하며(그보다 무른 속성은 기준값을 기록한 하한으로), 공격
 안내로 읽힐 수 있는 내용은 피해야 합니다. [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) 와
-[`../README.md`](../README.md) 의 규칙 색인을 보십시오.
+[`../README.ko.md`](../README.ko.md) 의 규칙 색인을 보십시오.
 
 일곱 스위트는 모두 `detections/` 를 건드리는 모든 push 나 pull request 에서 CI 로 돕니다
 ([`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml) 참조). 그리고 지표

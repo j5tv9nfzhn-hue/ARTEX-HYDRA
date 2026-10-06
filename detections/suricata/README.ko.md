@@ -61,7 +61,7 @@ detections/tests/suricata/run.sh
 sid 1000001 이 프로브마다 정확히 한 번씩 발화하고(35플로 캡처에서 35회), sid 1000002 가 300초에 30
 임계를 넘으며(Suricata 8.0.7 에서 **5**회 경보, 31~35번째 플로), 같은 캡처를 양성(benign) 브라우저
 User-Agent 로 돌리면 경보가 **0** 임을 단언합니다 — 시그니처가 특이함을 확인하는 것입니다.
-[`../tests/README.md`](../tests/README.md)를 참조하십시오. 대신 자신의 트래픽으로 확인하려면, 로컬
+[`../tests/README.ko.md`](../tests/README.ko.md)를 참조하십시오. 대신 자신의 트래픽으로 확인하려면, 로컬
 서버에 대해 루프백 `curl -A 'artex-enrich/1.0'` 을 캡처해 경보를 읽으십시오.
 
 ```sh
