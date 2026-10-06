@@ -96,10 +96,11 @@ git log --name-status --oneline d003372..upstream/main
 - UI(`web/src/**`)가 바뀌어 **새 화면 문자열**이 생겼다면 → 하드코딩하지 말고
   `web/messages/zh.json`(원문)과 `web/messages/ko.json`(번역)에 같은 키로 추가합니다.
 - **탐지 규칙이 고정한 상류 지표**(`enrich/enrich.go` 의 프로버 User-Agent, `selfupdate/` 의
-  자가 갱신 User-Agent, `guard/guard.go` 의 감사 마커, `db/db.go` 의 파괴명령 deny 목록)가
-  바뀌었다면 → `detections/` 의 Sigma·Suricata 규칙과 ATT&CK 레이어도 새 값으로 맞춥니다.
-  이 지표는 번역 대상이 아니라 **탐지의 근거**라, 상류가 값을 바꾸면 규칙이 조용히 낡습니다.
-  5.4 의 지표 일치 테스트가 이 어긋남을 자동으로 잡습니다.
+  자가 갱신 User-Agent, `guard/guard.go` 의 감사 마커, `db/db.go` 의 파괴명령 deny 목록,
+  `cmd/artex/main.go` 의 기본 리슨·기록 프록시 포트)가 바뀌었다면 → `detections/` 의
+  Sigma·Suricata 규칙과 ATT&CK 레이어, 그리고 `detections/indicators/artex_indicators.csv` 의
+  값도 새 값으로 맞춥니다. 이 지표는 번역 대상이 아니라 **탐지의 근거**라, 상류가 값을 바꾸면
+  규칙이 조용히 낡습니다. 5.4 의 지표 일치 테스트가 이 어긋남을 자동으로 잡습니다.
 
 ### 4.3 반영합니다
 
@@ -189,6 +190,14 @@ detections/tests/indicators/run.sh   # Docker 로 격리 실행, RESULT: PASS �
 출력하므로, 4.2 의 마지막 분류 기준대로 규칙·레이어를 새 값에 맞춥니다. 이 테스트는 저장소
 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))에서도 규칙 트리나
 위 상류 소스 파일이 바뀐 푸시·PR 마다 자동으로 돌아, 재동기화 드리프트를 머지 게이트에서 잡습니다.
+
+새 지표를 추가하면서 **새 상류 소스 파일을 고정했다면**(예: `cmd/artex/main.go` 의 포트 지표를
+넣을 때처럼), 그 파일을 반드시 위 워크플로의 `push`·`pull_request` `paths` 필터에도 추가합니다.
+빠뜨리면 그 소스만 바꾼 PR 은 지표 테스트를 발화시키지 못해, 드리프트가 머지 게이트를 조용히
+통과합니다. 이 동기화 자체도 지표 테스트가 자동으로 확인합니다(다섯 번째 검사 "CI triggers this
+test when any pinned source changes"): 테스트가 읽는 모든 비 `detections/` 소스가 양쪽 `paths`
+블록에 열거돼 있지 않으면 테스트가 실패하므로, 소스 고정과 CI 발화 조건이 어긋난 채로 머지되지
+않습니다.
 
 ### 5.5 탐지 테스트 도구 핀을 올릴 때
 

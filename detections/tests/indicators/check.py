@@ -31,11 +31,19 @@
 # the correspondence the rule actually claims — each token appears both in ARTEX's
 # guard deny-list (db/db.go) and in the hunting rule that mirrors it.
 #
-# Finally it validates the published, machine-readable indicator list
+# It then validates the published, machine-readable indicator list
 # (detections/indicators/artex_indicators.csv): every row's value must still be
 # present in the source file(s) it cites and pinned in the rule(s) it cites, and
 # every fingerprint this test grounds must appear in the list — so the artifact a
 # defender imports cannot silently drift from the source it claims to come from.
+#
+# Finally it closes the loop on the merge gate itself: every upstream source file
+# this test reads must be listed in the CI workflow's push and pull_request paths
+# filter (.github/workflows/detections.yml). Otherwise a PR that touches only a
+# newly pinned source (as cmd/artex/main.go once was) would not trigger this test,
+# and the drift above would sail through CI green. The check derives the required
+# set from the indicators it already asserts, so pinning a new source without
+# wiring it into CI fails here until both stay in sync.
 #
 # Pure standard library (the slim image already ships python3); nothing is
 # installed and nothing is written to the repo. Exits non-zero on any failure.
@@ -43,6 +51,7 @@
 import csv
 import io
 import os
+import re
 import sys
 
 ROOT = os.environ.get("ARTEX_REPO_ROOT", "/repo")
@@ -118,7 +127,7 @@ def contains(rel, needle):
     return needle in text
 
 
-print("== 1/3  exact fingerprints are still emitted by the upstream source ==")
+print("== 1/5  exact fingerprints are still emitted by the upstream source ==")
 for ind in INDICATORS:
     value, label = ind["value"], ind["label"]
     present = [s for s in ind["sources"] if contains(s, value) is True]
@@ -133,7 +142,7 @@ for ind in INDICATORS:
             "(upstream drift — update the rule to match)"
             % (label, value, ind["sources"]))
 
-print("== 2/3  each rule still pins the indicator it is built on ==")
+print("== 2/5  each rule still pins the indicator it is built on ==")
 for ind in INDICATORS:
     value, label = ind["value"], ind["label"]
     for rule in ind["rules"]:
@@ -157,7 +166,7 @@ for ind in INDICATORS:
         else:
             bad("%s no longer pins prefix %r" % (rfile, prefix))
 
-print("== 3/3  destructive hunting tokens match ARTEX's guard deny-list ==")
+print("== 3/5  destructive hunting tokens match ARTEX's guard deny-list ==")
 src, rule, tokens = DENYLIST["source"], DENYLIST["rule"], DENYLIST["tokens"]
 for tok in tokens:
     in_src = contains(src, tok)
@@ -174,7 +183,7 @@ for tok in tokens:
     else:
         bad("%r in the deny-list but not pinned by %s" % (tok, rule))
 
-print("== 4/4  the published indicator list matches source and rules ==")
+print("== 4/5  the published indicator list matches source and rules ==")
 CSV_REL = "detections/indicators/artex_indicators.csv"
 EXPECTED_HEADER = ["id", "type", "value", "perspective", "source", "rule", "description"]
 VALID_PERSPECTIVES = {"target", "forensic"}
@@ -236,8 +245,91 @@ else:
             else:
                 bad("tested fingerprint %r is missing from %s" % (ind["value"], CSV_REL))
 
+
+def paths_for_trigger(text, trigger):
+    """Collect the quoted entries of `<trigger>: ... paths: [...]` in the detection
+    workflow. Returns the set of listed paths, or None if the trigger is absent.
+    A deliberately small parser for a known-shape file: it locates the trigger key
+    under `on:`, then the `paths:` list nested in it, and reads the `- "..."` items
+    until the indentation returns to the list's level."""
+    lines = text.splitlines()
+    t_indent = None
+    start = None
+    for idx, line in enumerate(lines):
+        if re.match(r"^\s{2,}%s:\s*$" % re.escape(trigger), line):
+            t_indent = len(line) - len(line.lstrip())
+            start = idx + 1
+            break
+    if start is None:
+        return None
+    items = set()
+    i = start
+    while i < len(lines):
+        line = lines[i]
+        if line.strip():
+            indent = len(line) - len(line.lstrip())
+            if indent <= t_indent:
+                break  # left this trigger block
+            if re.match(r"^\s*paths:\s*$", line):
+                p_indent = indent
+                j = i + 1
+                while j < len(lines):
+                    pl = lines[j]
+                    if pl.strip():
+                        pind = len(pl) - len(pl.lstrip())
+                        if pind <= p_indent:
+                            break
+                        m = re.match(r"""^\s*-\s*['"]?([^'"\s]+)['"]?\s*$""", pl)
+                        if m:
+                            items.add(m.group(1))
+                    j += 1
+                return items
+        i += 1
+    return items
+
+
+print("== 5/5  CI triggers this test when any pinned source changes ==")
+# The merge gate only runs this test when a file in the workflow's paths filter
+# changes. Every upstream source this test reads must therefore be listed, or a PR
+# touching only that source would skip the test and the drift above would pass CI
+# green. The required set is derived from the indicators themselves, so pinning a
+# new source without wiring it into CI fails here. detections/** covers the rules,
+# the CSV, and the tests, so only non-detections sources are required explicitly.
+WORKFLOW_REL = ".github/workflows/detections.yml"
+needed_sources = set()
+for ind in INDICATORS:
+    needed_sources.update(ind["sources"])
+needed_sources.add(DENYLIST["source"])
+for rec in csv_rows:
+    for s in rec["source"].split(";"):
+        if s:
+            needed_sources.add(s)
+needed_sources = {s for s in needed_sources if not s.startswith("detections/")}
+
+wf_text = read(WORKFLOW_REL)
+if wf_text is None:
+    bad("CI workflow missing: %s" % WORKFLOW_REL)
+else:
+    for trigger in ("push", "pull_request"):
+        listed = paths_for_trigger(wf_text, trigger)
+        if listed is None:
+            bad("%s has no %s: trigger" % (WORKFLOW_REL, trigger))
+            continue
+        if "detections/**" not in listed:
+            bad("%s %s paths is missing 'detections/**' "
+                "(rule/CSV/test changes would not trigger the detection tests)"
+                % (WORKFLOW_REL, trigger))
+        for s in sorted(needed_sources):
+            if s in listed:
+                ok("%s %s paths covers %s" % (WORKFLOW_REL, trigger, s))
+            else:
+                bad("%s %s paths is missing %s — a PR touching only that source "
+                    "would skip this test and let source drift pass the merge gate"
+                    % (WORKFLOW_REL, trigger, s))
+
 print()
-print("reference: %d exact fingerprints, %d deny-list tokens, %d published rows checked"
-      % (len(INDICATORS), len(tokens), len(csv_rows)))
+print("reference: %d exact fingerprints, %d deny-list tokens, %d published rows, "
+      "%d pinned sources checked against CI paths"
+      % (len(INDICATORS), len(tokens), len(csv_rows), len(needed_sources)))
 print("RESULT: %s" % ("PASS" if fail == 0 else "FAIL"))
 sys.exit(fail)

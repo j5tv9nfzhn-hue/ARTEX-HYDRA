@@ -282,12 +282,18 @@ each indicator, bidirectionally:
   defender imports, is re-read row by row: every value must still be present in the source file(s) it cites
   and pinned in the rule(s) it cites, and every fingerprint the test grounds must appear in the list. So the
   published CSV cannot silently drift from the source it claims to come from, in either direction.
+- **CI actually fires on each pinned source** — every upstream source the test reads is listed in the
+  workflow's `push` and `pull_request` paths filter
+  ([`.github/workflows/detections.yml`](../../.github/workflows/detections.yml)). The required set is derived
+  from the indicators themselves, so pinning a new source (as the `cmd/artex/main.go` ports once were)
+  without wiring it into CI fails here — otherwise a PR touching only that source would skip the test and let
+  the drift above pass the merge gate green.
 
 This turns [`../README.md`](../README.md)'s promise — "every indicator here is grounded in a string verified
 in this repository's source, not inferred" — and CONTRIBUTING's first contribution contract into a guard a
 reviewer can re-run. Like the ATT&CK test it needs no detection backend, only the Python standard library;
-[`indicators/check.py`](indicators/check.py) reads the rule tree, the published indicator list, and the five
-pinned source packages mounted read-only and writes nothing.
+[`indicators/check.py`](indicators/check.py) reads the rule tree, the published indicator list, the pinned
+source packages, and the CI workflow mounted read-only and writes nothing.
 
 ### Run it
 
@@ -305,6 +311,7 @@ Expected output (abridged):
   PASS  'FLUSHALL' present in both db/db.go and detections/sigma/destructive_command_hunting.yml
   PASS  enrich-user-agent: 'artex-enrich/1.0' grounded in enrich/enrich.go
   PASS  tested fingerprint 'artex-enrich/1.0' is published in the list
+  PASS  .github/workflows/detections.yml push paths covers cmd/artex/main.go
 RESULT: PASS
 ```
 
@@ -320,6 +327,7 @@ recorded reference), and avoid any content that reads as attack guidance. See
 
 All six suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
 on every push or pull request that touches `detections/` — and the indicator test also runs when the upstream
-source files it pins (`enrich/`, `selfupdate/`, `guard/`, `db/`) change — so a rule change that drops an
-indicator, drifts from the ATT&CK layer, stops converting on a documented backend, breaks a SigmaHQ
-convention, or falls out of sync with the source turns the build red before it can merge.
+source files it pins (`enrich/`, `selfupdate/`, `guard/`, `db/`, `cmd/artex/main.go`) change — so a rule
+change that drops an indicator, drifts from the ATT&CK layer, stops converting on a documented backend,
+breaks a SigmaHQ convention, falls out of sync with the source, or pins a new source the workflow does not
+yet watch turns the build red before it can merge.

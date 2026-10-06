@@ -101,8 +101,10 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   that changes a User-Agent or marker while every rule still compiles and fires. The same test re-reads the
   machine-readable [`indicators/artex_indicators.csv`](indicators/artex_indicators.csv) and asserts every
   published row is still grounded in its source and rule, so the artifact a defender imports cannot drift
-  either. This makes "grounded in a string verified in this repository's source, not inferred" (above) a
-  guard, not a promise.
+  either. Finally it asserts that every upstream source it reads is listed in the CI workflow's `push` and
+  `pull_request` paths filter, so a PR touching only a newly pinned source cannot skip the test and let that
+  drift pass the merge gate. This makes "grounded in a string verified in this repository's source, not
+  inferred" (above) a guard, not a promise.
 - **Sigma backend portability** ([`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh)) proves the rules
   convert beyond the single Splunk example: the whole tree (atomic + correlation) compiles on Splunk, the
   Elasticsearch `eql` target, and Grafana Loki, and the four atomic rules still compile on backends that do not
