@@ -163,6 +163,9 @@ docker compose up -d     # artex + postgres 기동 → http://localhost:8787
    `docs/...`, `i18n/...` 처럼 변경 성격을 앞에 둡니다.
 3. 변경을 작성하고 **해당 범위의 검증을 직접 돌립니다.** Go 변경이면 위의
    `build`·`vet`·`test` 를, web 변경이면 `npm run check` 와 `build` 를 통과시킵니다.
+   문서(`.md`)를 바꿨다면 `python3 -I scripts/check-doc-links.py` 로 저장소 안
+   링크·이미지 참조가 깨지지 않았는지 확인합니다(CI 의 `docs` 워크플로가 같은
+   검사를 머지 게이트로 강제합니다).
 4. **PR 을 엽니다.** 제목·설명은 [PR 템플릿](.github/PULL_REQUEST_TEMPLATE.md)을 따르고,
    무엇을 왜 바꿨는지와 어떻게 검증했는지를 적습니다. UI 를 바꿨다면 스크린샷을 첨부합니다.
 5. 사용자에게 보이는 변경(기능·현지화·문서·탐지 규칙 등)이라면 [변경 이력(CHANGELOG.md)](CHANGELOG.md)
