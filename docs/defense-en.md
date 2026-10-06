@@ -178,6 +178,28 @@ The defining trait of an autonomous AI attack is **speed**. An agent can run to 
 
 ---
 
+## 7. Korean official channels: indicators, advisories, and reporting duties
+
+Defending teams in Korea should take their indicators of compromise and security advisories from official channels, and, when an incident occurs, meet the reporting duties the law sets. Make the official sources below your first reference instead of circulating unofficial lists.
+
+### 7.1 Where to get indicators and advisories
+
+- **KISA (Korea Internet & Security Agency), via Boho Nara / KrCERT/CC**, publishes security advisories, vulnerability notices, and incident-response information, and shares threat intelligence across organizations through C-TAS (the Cyber Threat Analysis and Sharing system).
+- **FSI (Financial Security Institute)** shares intrusion and threat information across the financial sector (the finance-sector ISAC). If you are in finance, watch this channel as well.
+- **PIPC (Personal Information Protection Commission)** publishes the criteria for breach notification and the guidance on protective measures.
+
+These channels are exactly what the section 5 hardening checklist means by "take official indicators of compromise from a trusted source." Even an official IoC is applied only after you review its validity window and false-blocking risk, the same principle explained in section 2, "Why IP-address blocking is a weak first line of defense."
+
+### 7.2 Reporting duties under Korean law
+
+Because autonomous attacks spread fast, build the statutory reporting steps into your section 6 incident-response procedure in advance. The following is a summary; confirm the exact scope, deadlines, and conditions against each authority's current rules.
+
+- **Personal-data breach:** under Article 34 of the Personal Information Protection Act, within 72 hours of becoming aware of the breach, report to the PIPC or KISA and notify the affected data subjects (the reporting conditions include a breach affecting 1,000 or more data subjects, a breach of sensitive or unique-identifier data, and a breach caused by unlawful external access).
+- **Security incident:** under the Network Act, an information and communications service provider reports the incident to the Ministry of Science and ICT and KISA (KrCERT/CC) within 24 hours of becoming aware of it.
+- **Financial companies:** under financial-sector supervisory rules you may additionally have to report to bodies such as the Financial Supervisory Service and FSI, so check those rules as well.
+
+---
+
 ## References
 
 - Upstream project: [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX) (AGPL-3.0). This document is the defensive material of its Korean-edition repository.

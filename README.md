@@ -303,6 +303,7 @@ sequenceDiagram
   - 방어자가 관측할 수 있는 지문(IoC·행동 시그니처) — 대상 관점과 포렌식 관점으로 구분
   - 공격자가 노리는 진입점과 하드닝(보조 인증·본인확인, API 인가, 자격 증명 스터핑, 세션·비밀 관리)
   - WAF·SIEM·인증 로그 탐지 규칙(의사 규칙), 하드닝 체크리스트, 사고 대응 요약
+  - 국내 공식 침해지표·보안 권고 채널(KISA·금융보안원·개인정보보호위원회)과 국내법상 신고 의무
 - **[Defense & Detection Guide (영어판 · docs/defense-en.md)](docs/defense-en.md)** — 해외 팀·협업자와 공유할 수 있는 같은 내용의 영어판입니다.
 - **[배포용 탐지 규칙 (detections/)](detections/)** — 위 가이드의 지문 탐지를 바로 쓸 수 있는 규칙으로 제공합니다. 호스트·로그·SIEM 계층은 [Sigma](https://sigmahq.io) 규칙(원자·상관, `sigma convert` 로 Splunk·Elasticsearch 등으로 변환)으로, 네트워크 계층은 enrich 프로브 UA 를 겨냥한 [Suricata](https://suricata.io) 규칙으로 나눠 담았습니다.
   - **[ATT&CK 커버리지 레이어 (detections/attack/)](detections/attack/)**: 위 규칙이 겨냥하는 MITRE ATT&CK 기법을 [Navigator](https://mitre-attack.github.io/attack-navigator/) 레이어(JSON)로 정리해, 어떤 공격 행위에 어떤 규칙이 걸리는지 한눈에 보도록 했습니다. 기법은 규칙의 `attack.*` 태그에서만 가져왔고 추정으로 넣은 항목은 없습니다.
