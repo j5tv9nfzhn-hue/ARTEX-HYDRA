@@ -188,6 +188,7 @@ function graphLabel(n: CoverageGraphNode): string {
     if (n.port) parts.push(`:${n.port}`);
     if (n.page_title) parts.push(n.page_title);
     if (n.status_code) parts.push(String(n.status_code));
+    // biome-ignore lint/nursery/useNullishCoalescing: 표시용 폴백 — 빈 문자열도 다음 후보(ip·label)로 넘겨야 하므로 || 가 의도된 동작이다(?? 는 빈 문자열을 그대로 노출한다)
     return parts.length ? parts.join(" · ") : n.domain || n.ip || n.label;
   }
   if (n.kind === "endpoint" && n.url) {
