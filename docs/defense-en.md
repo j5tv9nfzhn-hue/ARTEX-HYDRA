@@ -78,7 +78,18 @@ This does not mean IP blocking is useless. It becomes meaningful **when you rece
 
 An autonomous agent targets the **same weaknesses** a human attacker does, but repeats them faster and more relentlessly. Below are the priority hardening points from a defender's view.
 
-### 3.1 Auxiliary authentication and identity-verification flows
+### 3.1 Externally exposed attack surface and known (n-day) vulnerabilities
+
+The first and most reliable entry point an autonomous agent targets is not a clever zero-day but a **known, already-disclosed vulnerability left exposed and unpatched**. Typical targets are perimeter devices (VPNs, firewalls), externally reachable management/operations consoles, application servers, middleware, and frameworks (for example widely exploited WebLogic- or Struts-class software), and **auxiliary systems attached for partners, recruitment, or employees rather than the main service**. An autonomous agent enumerates the exposed surface automatically from its asset graph, then targets n-days with public exploits (PoCs) **before the patch is applied**, across hundreds of assets at once. The speed of this find-an-exposed-weakness-and-try-it loop is where the asymmetry with a human attacker opens up.
+
+- **Reduce the attack surface.** Continuously maintain an inventory of internet-exposed assets, management consoles, and auxiliary systems, and move anything that does not need to be external behind the internal network, a VPN, or an allowlist.
+- **Patch known vulnerabilities fast.** Disclosed vulnerabilities (n-days) in perimeter devices, web servers, application servers, and middleware are an autonomous agent's top target, so keep the patch-application interval as short as possible, starting with components that have public PoCs.
+- **Tighten interfaces that must stay exposed.** For management/operations interfaces you cannot avoid exposing, add source restrictions (IP allowlists), MFA, and a VPN to block unauthenticated enumeration itself.
+- **Manage auxiliary systems to the same standard as the main service.** Keep partner, recruitment, and employee auxiliary systems at the same patch and monitoring level as the main service. The entry point an autonomous agent works through is often one of these auxiliary paths rather than the main service. Hardening of the authentication flow itself continues in 3.2 below.
+
+For detection, requests that target a specific vulnerability's known path (URL, parameters) arriving from outside in a short-interval chain are a signal of n-day scanning. This signal shows up best when combined with the behavioral fingerprints in Section 2 and the same-source multi-stage correlation rule in Section 4.
+
+### 3.2 Auxiliary authentication and identity-verification flows
 
 **Authentication and identity-verification flows attached through a different path than the main service** — add-on services, partner channels, recruitment channels — are often loosely validated and become bypass targets. An autonomous agent enumerates these paths automatically and reads response differences to find bypass conditions systematically.
 
@@ -86,12 +97,12 @@ An autonomous agent targets the **same weaknesses** a human attacker does, but r
 - **Re-verify authentication state transitions** (unauthenticated → authenticated, user → privileged) **on the server**, and do not blindly trust the trust markers the client sends (cookies, headers, parameters).
 - Check the **lifetime, reuse, and guessability** of identity-verification tokens and one-time codes.
 
-### 3.2 API authentication and authorization (IDOR and privilege escalation)
+### 3.3 API authentication and authorization (IDOR and privilege escalation)
 
 - Enforce a **server-side ownership/authorization check** on every object access (block IDOR, where changing only an identifier opens someone else's resource).
 - Enumerate horizontal and vertical privilege-escalation paths yourself. Because an autonomous agent mechanically increments and decrements identifiers and tries them in bulk, it quickly finds **holes that a single manual test missed**.
 
-### 3.3 Credential stuffing
+### 3.4 Credential stuffing
 
 Attacks that replay leaked ID/password lists are amplified by an autonomous agent through **speed and distribution**.
 
@@ -100,7 +111,7 @@ Attacks that replay leaked ID/password lists are amplified by an autonomous agen
 - Block preemptively with **compromised-credential detection** (checking against known leak lists; anomalous login location/velocity).
 - Alert on **distribution shifts** in login failures and successes (a sudden low-and-wide attempt).
 
-### 3.4 Session, token, and secret management
+### 3.5 Session, token, and secret management
 
 - Minimize the **scope, lifetime, and renewal** of session tokens, and re-authenticate at every sensitive transition.
 - **Do not expose** API keys or internal tokens in responses, logs, or error messages (an autonomous agent actively harvests clues from error responses).
@@ -150,6 +161,7 @@ Summarized so a defending team can check it right away.
 - [ ] **Does not apply circulating unofficial IP block lists as-is**, and instead takes official indicators of compromise (IoCs) from a trusted source and applies them after reviewing their validity window and false-blocking risk.
 - [ ] Added a **same-source multi-stage correlation rule** to the SIEM.
 - [ ] **Retains authentication, access, and egress logs for a sufficient period** (autonomous attacks are fast, so after-the-fact tracing material matters).
+- [ ] Maintains an **inventory of internet-exposed assets, management consoles, and auxiliary systems to reduce the attack surface**, and **patches known (n-day) vulnerabilities fast** in perimeter devices, application servers, and middleware.
 - [ ] Reduced the blast radius of lateral movement and privilege escalation with network **segmentation**.
 - [ ] **Does not expose** secrets (keys, tokens) in responses, logs, or error messages.
 - [ ] Prepared **automatic blocking/isolation** response (waiting only on human approval cannot keep up with autonomous attack speed).
