@@ -175,7 +175,10 @@ docker compose up -d     # artex + postgres 기동 → http://localhost:8787
    링크·이미지 참조와 문서 앵커(`#헤딩`) 링크가 깨지지 않았는지 확인합니다. 앵커는
    GitHub 과 같은 규칙으로 헤딩에서 slug 를 만들어 대조하므로, 헤딩 글자를 바꾸면서
    그 헤딩을 가리키던 앵커 링크를 함께 고치지 않으면 여기서 걸립니다(CI 의 `docs`
-   워크플로가 같은 검사를 머지 게이트로 강제합니다).
+   워크플로가 같은 검사를 머지 게이트로 강제합니다). 이 검사는 저장소 루트의
+   [`.pre-commit-config.yaml`](.pre-commit-config.yaml)에 `docs` 훅으로도 들어 있어,
+   `pre-commit install` 을 해 두면 커밋할 때 자동으로 돌아갑니다(파이썬 표준 라이브러리만
+   쓰고 네트워크에 접속하지 않아 Docker 없이 끝납니다).
 4. **PR 을 엽니다.** 제목·설명은 [PR 템플릿](.github/PULL_REQUEST_TEMPLATE.md)을 따르고,
    무엇을 왜 바꿨는지와 어떻게 검증했는지를 적습니다. UI 를 바꿨다면 스크린샷을 첨부합니다.
 5. 사용자에게 보이는 변경(기능·현지화·문서·탐지 규칙 등)이라면 [변경 이력(CHANGELOG.md)](CHANGELOG.md)
@@ -258,7 +261,8 @@ detections/tests/misp/run.sh            # MISP: 지표 CSV ↔ MISP 이벤트 �
 출력하며, 하나라도 실패하면 0 이 아닌 코드로 끝납니다. 이 러너를 pre-commit 훅으로 바로 거는 설정 예시가
 저장소 루트의 [`.pre-commit-config.yaml`](.pre-commit-config.yaml)에 있습니다. `pip install pre-commit &&
 pre-commit install` 로 설치하면, 탐지 규칙이나 그 규칙이 고정한 상류 소스가 바뀌는 커밋에서만(CI 와 같은
-범위) 러너가 돌아 규칙·테스트 불일치를 푸시 전에 잡습니다.
+범위) 러너가 돌아 규칙·테스트 불일치를 푸시 전에 잡습니다. 같은 설정 파일에는 문서 내부 링크·이미지·앵커를
+검사하는 `docs` 훅(위 기여 절차 3번의 `check-doc-links.py`)도 함께 들어 있습니다.
 
 이 일곱 테스트는 저장소 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))가
 `detections/` 아래가 바뀐 푸시·PR 마다 돌립니다. 지표 일치 테스트는 그 지표가 가리키는 상류 소스 파일

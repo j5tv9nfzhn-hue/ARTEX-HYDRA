@@ -185,7 +185,10 @@ docker compose up -d     # start artex + postgres → http://localhost:8787
    link/image references and document anchor (`#heading`) links are not broken. Anchors are built
    from headings into slugs with the same rule as GitHub and matched, so if you change a heading's
    text without also fixing the anchor links that pointed to it, it is caught here (CI's `docs`
-   workflow enforces the same check as a merge gate).
+   workflow enforces the same check as a merge gate). This check is also wired as the `docs` hook in
+   the repository root's [`.pre-commit-config.yaml`](.pre-commit-config.yaml), so if you run
+   `pre-commit install` it runs automatically on every commit (it uses only the Python standard
+   library and no network, so it finishes without Docker).
 4. **Open a PR.** Follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md) for the title and
    description, and write what you changed, why, and how you verified it. If you changed the UI,
    attach screenshots.
@@ -282,7 +285,9 @@ prints a per-suite PASS/FAIL summary, and exits with a non-zero code if any one 
 wiring this runner directly as a pre-commit hook is in the repository root's
 [`.pre-commit-config.yaml`](.pre-commit-config.yaml). If you install it with `pip install pre-commit &&
 pre-commit install`, the runner runs only on commits that change detection rules or the upstream source
-those rules pin (the same scope as CI), catching rule/test mismatches before push.
+those rules pin (the same scope as CI), catching rule/test mismatches before push. The same config file
+also includes the `docs` hook that checks in-repo link/image/anchor references (the `check-doc-links.py`
+from step 3 of the contribution flow above).
 
 These seven tests are run by the repository CI
 ([`.github/workflows/detections.yml`](.github/workflows/detections.yml)) on every push/PR that changes
