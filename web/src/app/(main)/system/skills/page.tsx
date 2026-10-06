@@ -372,14 +372,14 @@ export default function SkillsPage() {
       .skills()
       .then((ss) => {
         setSkills(ss);
-        ss.forEach((s) =>
-          api
+        ss.forEach((s) => {
+          void api
             .skillVisibility(s.name)
             .then((ids) => setVisibility((v) => ({ ...v, [s.name]: ids })))
             .catch(() => {
               /* 가시성 조회 실패는 무시한다 */
-            }),
-        );
+            });
+        });
       })
       .catch(() => {
         /* 조회 실패는 무시하고 기본 상태를 유지한다 */

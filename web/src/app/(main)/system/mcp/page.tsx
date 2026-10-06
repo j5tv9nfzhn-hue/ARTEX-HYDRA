@@ -65,14 +65,14 @@ export default function MCPPage() {
       .mcpServers()
       .then((ss) => {
         setServers(ss);
-        ss.forEach((s) =>
-          api
+        ss.forEach((s) => {
+          void api
             .resourceVisibility("mcp", s.id)
             .then((ids) => setVisibility((v) => ({ ...v, [s.id]: ids })))
             .catch(() => {
               /* 가시성 조회 실패는 무시한다 */
-            }),
-        );
+            });
+        });
       })
       .catch(() => {
         /* 조회 실패는 무시하고 기본 상태를 유지한다 */
