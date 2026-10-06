@@ -56,12 +56,18 @@ traffic carries no ARTEX-unique User-Agent, so the network layer is intentionall
 
 ## Tests
 
-The Suricata network rules ship with a reproducible regression test in [`tests/`](tests/): it synthesizes a
-deterministic capture with scapy, runs `suricata -r` over it, and asserts that the presence rule fires once
-per probe, the velocity rule trips past its rate threshold, and a benign-User-Agent capture produces zero
-alerts. No binary capture is committed — the test regenerates it on every run. See
-[`tests/README.md`](tests/README.md). The Sigma rules are validated by `sigma check` and `sigma convert`
-(below).
+Both rule families ship with reproducible tests in [`tests/`](tests/), each needing only Docker:
+
+- **Suricata** ([`tests/suricata/run.sh`](tests/suricata/run.sh)) synthesizes a deterministic capture with
+  scapy, runs `suricata -r` over it, and asserts that the presence rule fires once per probe, the velocity
+  rule trips past its rate threshold, and a benign-User-Agent capture produces zero alerts. No binary capture
+  is committed — the test regenerates it on every run.
+- **Sigma** ([`tests/sigma/run.sh`](tests/sigma/run.sh)) runs the `sigma check` and `sigma convert` validation
+  below as an executable test: it asserts 0 errors, that the whole tree compiles to a backend query, that each
+  atomic indicator string survives into that query, and that a correlation rule fails to convert on its own —
+  proving it genuinely depends on the atomic rule it references.
+
+Both scripts exit non-zero on any failed assertion. See [`tests/README.md`](tests/README.md).
 
 ## How to read these honestly
 

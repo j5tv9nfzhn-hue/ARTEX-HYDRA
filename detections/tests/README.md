@@ -58,15 +58,49 @@ the boundary, so the test asserts `>= 1` and records the reference value separat
 the reference run produces **5** alerts on sid `1000002` (flows 31–35, after the 30-in-300 s threshold is
 crossed).
 
-## Sigma
+## Sigma — [`sigma/`](sigma/)
 
-The Sigma rules under [`../sigma/`](../sigma/) are validated structurally and by compilation with
-[sigma-cli](https://github.com/SigmaHQ/sigma-cli) — `sigma check` (0 errors) and `sigma convert` to a target
-query language — as documented in [`../README.md`](../README.md). A live event-matching harness for the
-generic `webserver` / `proxy` / `application` log sources is intentionally not shipped yet: matching those
-authoritatively needs a backend that normalizes the fields, and a weak matcher would undercut the rules
-rather than support them. Network rules are different — Suricata reads a pcap offline and emits the alert
-record directly — which is why the reproducible matching test exists here first.
+[`sigma/run.sh`](sigma/run.sh) validates the Sigma rules under [`../sigma/`](../sigma/) structurally and by
+compilation with [sigma-cli](https://github.com/SigmaHQ/sigma-cli) (pySigma), and asserts five properties:
+
+- **Valid** — `sigma check` reports 0 errors, 0 condition errors, and 0 issues over the whole tree.
+- **Compiles** — `sigma convert -t splunk` turns the whole tree into a backend query language without error.
+- **Indicators survive** — each atomic indicator string (`artex-enrich/1.0`, `artex-selfupdate`, and the guard
+  marker) is still present in the compiled query, so a rule cannot silently lose the string it is built on.
+- **Correlations compile** — the behaviour rules in [`../sigma/correlation/`](../sigma/correlation/) emit their
+  `event_count` / `value_count` aggregations rather than being dropped.
+- **Correlations are load-bearing** — converting one correlation rule *alone* fails, because it references its
+  atomic base rule by `id`; the reference is enforced, not decorative. This is the Sigma analogue of the
+  Suricata specificity assertion above.
+
+This is the structural + compilation validation documented in [`../README.md`](../README.md), made executable
+and assertive. A live event-matching harness for the generic `webserver` / `proxy` / `application` log sources
+is still intentionally not shipped: matching those authoritatively needs a backend that normalizes the fields,
+and a weak matcher would undercut the rules rather than support them. Network rules are different — Suricata
+reads a pcap offline and emits the alert record directly — which is why the reproducible *matching* test lives
+on the Suricata side, while Sigma gets a reproducible *validation* test.
+
+### Run it
+
+Needs only Docker; sigma-cli and the splunk backend run in a container and nothing is written to the repo.
+
+```sh
+detections/tests/sigma/run.sh
+```
+
+Expected output (abridged):
+
+```
+  PASS  sigma check: 0 errors, 0 condition errors, 0 issues
+  PASS  whole tree converts to splunk (exit 0)
+  PASS  indicator present: artex-enrich/1.0
+  PASS  correlation rule fails to convert alone — it requires its atomic base rule
+RESULT: PASS
+```
+
+The script exits non-zero if any assertion fails, so it drops straight into CI or a pre-commit hook. sigma-cli
+is pinned to a reference version (`3.1.0`); override it with `SIGMA_CLI_VERSION`, or the image with
+`PYTHON_IMAGE`, if you mirror them internally.
 
 ## Contributing
 
