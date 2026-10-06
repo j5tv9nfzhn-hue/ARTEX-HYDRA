@@ -13,7 +13,8 @@ ARTEX 가 스스로 내보내는 고유 지문을 한 파일로 모은, 기계�
 
 - **`id`** — 지표의 안정적인 슬러그입니다.
 - **`type`** — 지표의 종류입니다: `http.user-agent`, `string`(로그·파일에서 찾을 리터럴), `port`,
-  `ip-dst|port`. 이들은 대응하는 MISP/STIX 속성 타입에 매핑됩니다.
+  `ip-dst|port`, `other`(위 범주에 들지 않는 호스트 아티팩트, 예: 데이터베이스 스키마 객체 이름).
+  이들은 대응하는 MISP/STIX 속성 타입에 매핑됩니다.
 - **`value`** — 정확한 지표입니다. 비 ASCII 가드 마커를 포함해 원문 그대로 보존합니다.
 - **`perspective`** — `target`(ARTEX 가 탐침하는 시스템을 *향하는* 트래픽에서 관측) 또는
   `forensic`(ARTEX 가 실행됐거나 경유한 호스트 *위에서* 관측)입니다. 방어 가이드는 이 둘을 일부러
@@ -35,12 +36,13 @@ ARTEX 가 스스로 내보내는 고유 지문을 한 파일로 모은, 기계�
 - **타입 매핑.** 각 CSV `type` 은 대응하는 MISP 속성 타입이 됩니다: `http.user-agent` →
   `user-agent`, 가드 마커 `string` → `pattern-in-file`(카테고리 *Artifacts dropped*), `port` →
   `port`, `ip-dst|port` → `ip-dst|port`(합성 값은 MISP 의 `ip|port` 형식을 쓰므로 `127.0.0.1:8788`
-  은 `127.0.0.1|8788` 로 저장됩니다).
+  은 `127.0.0.1|8788` 로 저장됩니다), 탐색 그래프 스키마 지문 `other` → `other`(카테고리 *Other*).
 - **`to_ids` 는 `rule` 열을 정직하게 따릅니다.** 탐지 규칙이 세워진 행은 조치 가능한 지표이므로
   `to_ids: true` 로 표시합니다. 규칙이 없는 호스트 포렌식 행 — 기본 수신 포트와 루프백 프록시
-  엔드포인트 — 은 차단용 IoC 가 아니라 분류 힌트이므로 `to_ids: false` 에 `disable_correlation: true`
-  로 둡니다(흔한 포트나 `127.0.0.1` 이 MISP 상관을 오염시키면 안 됩니다). 이는 CSV 의 `rule` 열과
-  아래 유의점이 이미 담고 있는 것과 같은 구분입니다.
+  엔드포인트, 그리고 탐색 그래프 스키마 지문 — 은 차단용 IoC 가 아니라 분류 힌트이므로
+  `to_ids: false` 에 `disable_correlation: true` 로 둡니다(흔한 포트나 `127.0.0.1`, 또는 범용 테이블
+  이름이 MISP 상관을 오염시키면 안 됩니다). 이는 CSV 의 `rule` 열과 아래 유의점이 이미 담고
+  있는 것과 같은 구분입니다.
 - **가져오기.** [pymisp](https://github.com/MISP/PyMISP)로
   `MISPEvent().load_file("artex_indicators.misp.json")`, 또는 *Add event → Populate from … → MISP
   format* UI, 또는 REST API 로 가져옵니다. 이벤트는 미발행 상태이고 `tlp:clear` 태그가 붙어
@@ -58,6 +60,11 @@ ARTEX 가 스스로 내보내는 고유 지문을 한 파일로 모은, 기계�
 - **호스트 포렌식 포트는 차단이 아니라 분류용입니다.** `:8787` 과 `127.0.0.1:8788` 은 ARTEX 를
   돌리고 있을 수 있는 호스트를 가리킵니다. `ss`·`netstat` 로 확인하고, 맹목적으로 방화벽을 걸지
   마십시오.
+- **탐색 그래프 스키마 지문은 네트워크·파일 IoC 가 아니라 DB 조사용입니다.** `exploration_nodes`
+  테이블은 ARTEX 가 PostgreSQL 에 두는 탐색 그래프의 핵심 테이블입니다. 단독 적중으로 단정하지
+  말고, 형제 테이블(`exploration_edges`·`exploration_anchors`·`assets`·`companies`·`activity`)과
+  `agent_prompts` 시드가 같은 데이터베이스에 함께 있는지로 확인하십시오. 운영자가 테이블을 바꾸거나
+  지울 수 있으므로 부재가 안전을 뜻하지는 않습니다.
 
 ## 검증
 

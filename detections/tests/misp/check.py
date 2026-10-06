@@ -46,6 +46,9 @@ TYPE_MAP = {
     "string": ("pattern-in-file", "Artifacts dropped"),
     "port": ("port", "Network activity"),
     "ip-dst|port": ("ip-dst|port", "Network activity"),
+    # a host artifact that fits no network/file slot (e.g. a DB schema object
+    # name); MISP's generic "other"/"Other" carries it as a triage lead.
+    "other": ("other", "Other"),
 }
 
 fail = 0

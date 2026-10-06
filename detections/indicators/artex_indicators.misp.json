@@ -2,7 +2,7 @@
   "Event": {
     "uuid": "1a5aa723-0e87-4cbe-97f4-c84f93e4efeb",
     "info": "ARTEX (autonomous AI pentest framework) — defensive host/network fingerprints",
-    "date": "2026-10-06",
+    "date": "2026-10-07",
     "threat_level_id": "4",
     "analysis": "2",
     "distribution": "3",
@@ -69,6 +69,15 @@
         "disable_correlation": false,
         "value": "mitmproxy-ca-cert.pem",
         "comment": "MITM CA certificate file the ARTEX recording proxy writes on first start (traffic/traffic.go, under <dir>/_ca/); injected into spawned tools via SSL_CERT_FILE/CURL_CA_BUNDLE/REQUESTS_CA_BUNDLE/NODE_EXTRA_CA_CERTS with a loopback HTTP_PROXY. Evidences the recorder having run; the bare filename is shared with standalone mitmproxy, so it is a host-triage lead. Sigma: artex_recording_proxy_ca.yml."
+      },
+      {
+        "uuid": "134f14d2-0af0-4a4b-89bb-805ab5f2b1a7",
+        "type": "other",
+        "category": "Other",
+        "to_ids": false,
+        "disable_correlation": true,
+        "value": "exploration_nodes",
+        "comment": "ARTEX exploration-graph table in its PostgreSQL store (db/schema.sql); with exploration_edges/exploration_anchors/assets/companies/activity and an agent_prompts seed it forms the ARTEX dual-graph schema. Host-triage lead checked by inspecting the database, not a blocking IoC."
       }
     ]
   }

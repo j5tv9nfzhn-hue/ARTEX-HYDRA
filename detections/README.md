@@ -76,12 +76,13 @@ from drifting away from the rule set.
 For defenders who want the atomic indicators rather than the detection logic,
 [`indicators/artex_indicators.csv`](indicators/) collects the unique fingerprints ARTEX emits into one
 CSV to drop into a threat-intelligence platform, a SIEM lookup, or a host-triage checklist — the enrichment
-and self-update User-Agents, the guard audit marker, and the server/proxy default endpoints — each row
-recording the source file it is grounded in and the rule (if any) built on it. The same indicators ship as a
+and self-update User-Agents, the guard audit marker, the server/proxy default endpoints, the recording-proxy
+CA certificate, and the PostgreSQL exploration-graph schema fingerprint — each row recording the source file
+it is grounded in and the rule (if any) built on it. The same indicators ship as a
 ready-to-import [MISP](https://www.misp-project.org/) event
 ([`indicators/artex_indicators.misp.json`](indicators/)), so a defender running MISP (or exporting on to
 STIX from it) does not have to map the CSV columns by hand — the rule-backed fingerprints are flagged
-`to_ids`, the host-forensic ports are not. Generic hunting leads (the
+`to_ids`, the host-forensic ports and schema fingerprint are not. Generic hunting leads (the
 destructive commands) are deliberately kept out of the import-ready list to avoid false positives; see
 [`indicators/README.md`](indicators/README.md) for the columns, the MISP type mapping, the honest caveats,
 and the consistency test that keeps both the CSV and the MISP event from drifting.

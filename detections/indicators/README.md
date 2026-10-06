@@ -22,7 +22,8 @@ row records where it comes from and which rule (if any) is built on it.
 
 - **`id`** — a stable slug for the indicator.
 - **`type`** — the kind of indicator: `http.user-agent`, `string` (a literal to hunt for in logs/files),
-  `port`, or `ip-dst|port`. These map onto the equivalent MISP/STIX attribute types.
+  `port`, `ip-dst|port`, or `other` (a host artifact that fits none of the above, e.g. a database schema
+  object name). These map onto the equivalent MISP/STIX attribute types.
 - **`value`** — the exact indicator. Preserved verbatim, including the non-ASCII guard marker.
 - **`perspective`** — `target` (observable in traffic *toward* a system ARTEX probes) or `forensic`
   (observable *on* a host where ARTEX ran or was relayed through). The defense guide keeps these apart on
@@ -43,13 +44,15 @@ repository does not hand-roll a second, lossy format.
 
 - **Type mapping.** Each CSV `type` becomes the equivalent MISP attribute type: `http.user-agent` →
   `user-agent`, the guard marker `string` → `pattern-in-file` (category *Artifacts dropped*), `port` →
-  `port`, and `ip-dst|port` → `ip-dst|port` (the composite value uses MISP's `ip|port` form, so
-  `127.0.0.1:8788` is stored as `127.0.0.1|8788`).
+  `port`, `ip-dst|port` → `ip-dst|port` (the composite value uses MISP's `ip|port` form, so
+  `127.0.0.1:8788` is stored as `127.0.0.1|8788`), and the exploration-graph schema fingerprint `other` →
+  `other` (category *Other*).
 - **`to_ids` follows the `rule` column, honestly.** A row that a detection rule is built on is an actionable
-  indicator and is flagged `to_ids: true`. A host-forensic row with no rule — the default listen port and
-  the loopback proxy endpoint — is a triage hint, not a blocking IoC, so it is `to_ids: false` with
-  `disable_correlation: true` (a common port or `127.0.0.1` should not pollute MISP correlations). This is
-  the same distinction the CSV `rule` column and the caveats below already carry.
+  indicator and is flagged `to_ids: true`. A host-forensic row with no rule — the default listen port, the
+  loopback proxy endpoint, and the exploration-graph schema fingerprint — is a triage hint, not a blocking
+  IoC, so it is `to_ids: false` with `disable_correlation: true` (a common port, `127.0.0.1`, or a generic
+  table name should not pollute MISP correlations). This is the same distinction the CSV `rule` column and
+  the caveats below already carry.
 - **Import.** `MISPEvent().load_file("artex_indicators.misp.json")` with
   [pymisp](https://github.com/MISP/PyMISP), the *Add event → Populate from … → MISP format* UI, or the REST
   API. The event is unpublished and tagged `tlp:clear`; set the distribution and publish state your instance
@@ -68,6 +71,11 @@ repository does not hand-roll a second, lossy format.
   in this list. Importing them as blocking indicators would cause false positives.
 - **Host-forensic ports are for triage, not blocking.** `:8787` and `127.0.0.1:8788` describe a host that
   may be running ARTEX; check them with `ss`/`netstat`, do not firewall them blindly.
+- **The exploration-graph schema fingerprint is for DB inspection, not a network/file IoC.** The
+  `exploration_nodes` table is the core of the exploration graph ARTEX keeps in PostgreSQL. Do not conclude
+  from a single hit; confirm that the sibling tables (`exploration_edges`, `exploration_anchors`, `assets`,
+  `companies`, `activity`) and the `agent_prompts` seed sit in the same database. An operator can rename or
+  drop tables, so absence does not mean safety.
 
 ## Verification
 
