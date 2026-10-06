@@ -65,6 +65,17 @@ rule covers; see [`attack/README.md`](attack/README.md) for the scoring, the tec
 the honest scope (coverage is not completeness). A [consistency test](tests/attack/run.sh) keeps the layer
 from drifting away from the rule set.
 
+## Indicator list (machine-readable)
+
+For defenders who want the atomic indicators rather than the detection logic,
+[`indicators/artex_indicators.csv`](indicators/) collects the unique fingerprints ARTEX emits into one
+CSV to drop into a threat-intelligence platform, a SIEM lookup, or a host-triage checklist — the enrichment
+and self-update User-Agents, the guard audit marker, and the server/proxy default endpoints — each row
+recording the source file it is grounded in and the rule (if any) built on it. Generic hunting leads (the
+destructive commands) are deliberately kept out of the import-ready list to avoid false positives; see
+[`indicators/README.md`](indicators/README.md) for the columns, the honest caveats, and the consistency
+test that keeps the list from drifting.
+
 ## Tests
 
 The rules ship with reproducible tests in [`tests/`](tests/), each needing only Docker:
@@ -87,8 +98,11 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   pinned indicator is still the string the upstream source emits — `artex-enrich/1.0` in `enrich/enrich.go`,
   `artex-selfupdate` in `selfupdate/`, the guard marker in `guard/guard.go`, the destructive tokens in
   `db/db.go` — and is still pinned in the rule. It catches the drift the other three miss: an upstream re-sync
-  that changes a User-Agent or marker while every rule still compiles and fires. This makes "grounded in a
-  string verified in this repository's source, not inferred" (above) a guard, not a promise.
+  that changes a User-Agent or marker while every rule still compiles and fires. The same test re-reads the
+  machine-readable [`indicators/artex_indicators.csv`](indicators/artex_indicators.csv) and asserts every
+  published row is still grounded in its source and rule, so the artifact a defender imports cannot drift
+  either. This makes "grounded in a string verified in this repository's source, not inferred" (above) a
+  guard, not a promise.
 - **Sigma backend portability** ([`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh)) proves the rules
   convert beyond the single Splunk example: the whole tree (atomic + correlation) compiles on Splunk, the
   Elasticsearch `eql` target, and Grafana Loki, and the four atomic rules still compile on backends that do not
@@ -117,7 +131,8 @@ Each script exits non-zero on any failed assertion. See [`tests/README.md`](test
   do not attribute it to ARTEX on its own.
 - **Port indicators are host-forensic, not Sigma.** The ARTEX server default `:8787` and the recording
   proxy `127.0.0.1:8788` (`cmd/artex/main.go`) are best checked on a suspected host with `ss`/`netstat`,
-  so they are documented in the defense guide rather than shipped as a noisy network rule.
+  so they are documented in the defense guide and listed in the [indicator CSV](indicators/) for triage,
+  rather than shipped as a noisy network rule.
 
 ## Validate and convert
 

@@ -31,9 +31,17 @@
 # the correspondence the rule actually claims — each token appears both in ARTEX's
 # guard deny-list (db/db.go) and in the hunting rule that mirrors it.
 #
+# Finally it validates the published, machine-readable indicator list
+# (detections/indicators/artex_indicators.csv): every row's value must still be
+# present in the source file(s) it cites and pinned in the rule(s) it cites, and
+# every fingerprint this test grounds must appear in the list — so the artifact a
+# defender imports cannot silently drift from the source it claims to come from.
+#
 # Pure standard library (the slim image already ships python3); nothing is
 # installed and nothing is written to the repo. Exits non-zero on any failure.
 
+import csv
+import io
 import os
 import sys
 
@@ -166,8 +174,70 @@ for tok in tokens:
     else:
         bad("%r in the deny-list but not pinned by %s" % (tok, rule))
 
+print("== 4/4  the published indicator list matches source and rules ==")
+CSV_REL = "detections/indicators/artex_indicators.csv"
+EXPECTED_HEADER = ["id", "type", "value", "perspective", "source", "rule", "description"]
+VALID_PERSPECTIVES = {"target", "forensic"}
+
+csv_rows = []
+csv_text = read(CSV_REL)
+if csv_text is None:
+    bad("published indicator list missing: %s" % CSV_REL)
+else:
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    if not rows:
+        bad("%s is empty" % CSV_REL)
+    elif rows[0] != EXPECTED_HEADER:
+        bad("%s header is %r, expected %r" % (CSV_REL, rows[0], EXPECTED_HEADER))
+    else:
+        seen_ids = set()
+        for lineno, row in enumerate(rows[1:], start=2):
+            if len(row) != len(EXPECTED_HEADER):
+                bad("%s line %d: %d fields, expected %d"
+                    % (CSV_REL, lineno, len(row), len(EXPECTED_HEADER)))
+                continue
+            rec = dict(zip(EXPECTED_HEADER, row))
+            csv_rows.append(rec)
+            rid, value = rec["id"], rec["value"]
+            if rid in seen_ids:
+                bad("%s: duplicate id %r" % (CSV_REL, rid))
+            seen_ids.add(rid)
+            if not value:
+                bad("%s: row %r has an empty value" % (CSV_REL, rid))
+                continue
+            if rec["perspective"] not in VALID_PERSPECTIVES:
+                bad("%s: row %r perspective %r not in %s"
+                    % (CSV_REL, rid, rec["perspective"], sorted(VALID_PERSPECTIVES)))
+            src_files = [s for s in rec["source"].split(";") if s]
+            if not src_files:
+                bad("%s: row %r cites no source file" % (CSV_REL, rid))
+            for s in src_files:
+                hit = contains(s, value)
+                if hit is True:
+                    ok("%s: %r grounded in %s" % (rid, value, s))
+                elif hit is None:
+                    bad("%s: row %r source file missing: %s" % (CSV_REL, rid, s))
+                else:
+                    bad("%s: row %r value %r not found in source %s (drift)"
+                        % (CSV_REL, rid, value, s))
+            for r in [r for r in rec["rule"].split(";") if r]:
+                hit = contains(r, value)
+                if hit is True:
+                    ok("%s: %r pinned in %s" % (rid, value, r))
+                elif hit is None:
+                    bad("%s: row %r rule file missing: %s" % (CSV_REL, rid, r))
+                else:
+                    bad("%s: row %r value %r not pinned in rule %s"
+                        % (CSV_REL, rid, value, r))
+        published = {rec["value"] for rec in csv_rows}
+        for ind in INDICATORS:
+            if ind["value"] in published:
+                ok("tested fingerprint %r is published in the list" % ind["value"])
+            else:
+                bad("tested fingerprint %r is missing from %s" % (ind["value"], CSV_REL))
+
 print()
-print("reference: %d exact fingerprints, %d deny-list tokens checked"
-      % (len(INDICATORS), len(tokens)))
+print("reference: %d exact fingerprints, %d deny-list tokens, %d published rows checked"
+      % (len(INDICATORS), len(tokens), len(csv_rows)))
 print("RESULT: %s" % ("PASS" if fail == 0 else "FAIL"))
 sys.exit(fail)

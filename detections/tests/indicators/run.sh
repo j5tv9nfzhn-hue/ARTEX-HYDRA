@@ -8,9 +8,9 @@
 # other test stays green while the deployed rule silently stops matching.
 #
 # No host dependency beyond Docker: the check is pure Python standard library and
-# runs in a container with only the rule tree and the four source packages it
-# pins mounted read-only (never work/ or anything else). Nothing is installed on
-# the host and nothing is written to the repo.
+# runs in a container with only the rule tree, the published indicator list, and
+# the five source packages it pins mounted read-only (never work/ or anything
+# else). Nothing is installed on the host and nothing is written to the repo.
 #
 # Usage:   detections/tests/indicators/run.sh
 # Env:     PYTHON_IMAGE  (default python:3.12-slim)
@@ -27,5 +27,6 @@ docker run --rm \
   -v "$REPO/selfupdate:/repo/selfupdate:ro" \
   -v "$REPO/guard:/repo/guard:ro" \
   -v "$REPO/db:/repo/db:ro" \
+  -v "$REPO/cmd:/repo/cmd:ro" \
   -v "$HERE:/src:ro" \
   "$PYTHON_IMAGE" python3 /src/check.py

@@ -277,12 +277,17 @@ each indicator, bidirectionally:
   `FLUSHALL`) appear both in ARTEX's guard deny-list (`db/db.go`) and in the hunting rule that mirrors it.
   These are generic hunting leads, not unique fingerprints, so the test asserts only the correspondence the
   rule actually claims.
+- **Published list stays grounded** — the machine-readable indicator list
+  [`detections/indicators/artex_indicators.csv`](../indicators/artex_indicators.csv), the artifact a
+  defender imports, is re-read row by row: every value must still be present in the source file(s) it cites
+  and pinned in the rule(s) it cites, and every fingerprint the test grounds must appear in the list. So the
+  published CSV cannot silently drift from the source it claims to come from, in either direction.
 
 This turns [`../README.md`](../README.md)'s promise — "every indicator here is grounded in a string verified
 in this repository's source, not inferred" — and CONTRIBUTING's first contribution contract into a guard a
 reviewer can re-run. Like the ATT&CK test it needs no detection backend, only the Python standard library;
-[`indicators/check.py`](indicators/check.py) reads the rule tree and the four pinned source packages mounted
-read-only and writes nothing.
+[`indicators/check.py`](indicators/check.py) reads the rule tree, the published indicator list, and the five
+pinned source packages mounted read-only and writes nothing.
 
 ### Run it
 
@@ -298,6 +303,8 @@ Expected output (abridged):
   PASS  enrichment prober User-Agent: 'artex-enrich/1.0' emitted by enrich/enrich.go
   PASS  detections/sigma/artex_enrich_user_agent.yml pins 'artex-enrich/1.0'
   PASS  'FLUSHALL' present in both db/db.go and detections/sigma/destructive_command_hunting.yml
+  PASS  enrich-user-agent: 'artex-enrich/1.0' grounded in enrich/enrich.go
+  PASS  tested fingerprint 'artex-enrich/1.0' is published in the list
 RESULT: PASS
 ```
 
