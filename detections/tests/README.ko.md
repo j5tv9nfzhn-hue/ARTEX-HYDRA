@@ -99,8 +99,9 @@ RESULT: PASS
 
 - **유효성** — `sigma check` 가 트리 전체에서 오류 0, 조건 오류 0, 이슈 0 을 보고합니다.
 - **컴파일** — `sigma convert -t splunk` 가 트리 전체를 오류 없이 백엔드 질의 언어로 변환합니다.
-- **지표 보존** — 각 원자 지표 문자열(`artex-enrich/1.0`, `artex-selfupdate`, 그리고 가드 마커)이
-  컴파일된 질의에 그대로 남아 있으므로, 규칙이 자신이 기반한 문자열을 조용히 잃을 수 없습니다.
+- **지표 보존** — 각 원자 지표 문자열(`artex-enrich/1.0`, `artex-selfupdate`, 가드 마커, 그리고 기록용
+  프록시 CA 파일명 `mitmproxy-ca-cert.pem`)이 컴파일된 질의에 그대로 남아 있으므로, 규칙이 자신이
+  기반한 문자열을 조용히 잃을 수 없습니다.
 - **상관 규칙 컴파일** — [`../sigma/correlation/`](../sigma/correlation/) 의 행동 규칙이 버려지지
   않고 `event_count` / `value_count` 집계를 내보냅니다.
 - **상관 규칙이 실제로 작동함** — 상관 규칙 하나만 *단독으로* 변환하면 실패합니다. 그 규칙이 원자
@@ -148,7 +149,7 @@ RESULT: PASS
 - **상관 규칙의 이식성** — 트리 전체(원자 + 상관)가 Splunk, Elasticsearch `eql` 대상, Grafana
   `loki` 에서 변환되며, 보강 지표가 각 질의에 그대로 살아남습니다. 상관 규칙이 Splunk 전용이 아님을
   보여 줍니다.
-- **원자 전용 폴백 동작** — 네 개의 원자 규칙은 `lucene` 과 Microsoft `kusto` 백엔드에서도
+- **원자 전용 폴백 동작** — 다섯 개의 원자 규칙은 `lucene` 과 Microsoft `kusto` 백엔드에서도
   변환됩니다. 이 백엔드들은 고정된 버전에서 Sigma 상관 규칙 변환을 지원하지 않으므로, 해당 백엔드를
   쓰는 방어자는 원자 규칙을 배포하고 상관 윈도우는 그 백엔드 고유 기능으로 표현할 수 있습니다.
 
@@ -170,7 +171,7 @@ detections/tests/sigma_backends/run.sh
 
 ```
   PASS  whole tree (atomic + correlation) converts on 'eql', enrich indicator survives
-  PASS  four atomic rules convert on 'kusto', enrich indicator survives
+  PASS  five atomic rules convert on 'kusto', enrich indicator survives
 RESULT: PASS
 ```
 

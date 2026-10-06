@@ -12,7 +12,7 @@
 #
 #   1. sigma check passes          0 errors / 0 condition errors / 0 issues
 #   2. the whole tree compiles     sigma convert -> splunk, exit 0
-#   3. atomic indicators survive   artex-enrich/1.0, artex-selfupdate, guard marker
+#   3. atomic indicators survive   artex-enrich/1.0, artex-selfupdate, guard marker, mitmproxy-ca-cert.pem
 #   4. correlations compile        event_count / value_count aggregations present
 #   5. correlations are load-bearing  one correlation rule converted alone FAILS,
 #                                     because it references its atomic base rule by id

@@ -103,8 +103,9 @@ compilation with [sigma-cli](https://github.com/SigmaHQ/sigma-cli) (pySigma), an
 
 - **Valid** — `sigma check` reports 0 errors, 0 condition errors, and 0 issues over the whole tree.
 - **Compiles** — `sigma convert -t splunk` turns the whole tree into a backend query language without error.
-- **Indicators survive** — each atomic indicator string (`artex-enrich/1.0`, `artex-selfupdate`, and the guard
-  marker) is still present in the compiled query, so a rule cannot silently lose the string it is built on.
+- **Indicators survive** — each atomic indicator string (`artex-enrich/1.0`, `artex-selfupdate`, the guard
+  marker, and the recording-proxy CA filename `mitmproxy-ca-cert.pem`) is still present in the compiled query,
+  so a rule cannot silently lose the string it is built on.
 - **Correlations compile** — the behaviour rules in [`../sigma/correlation/`](../sigma/correlation/) emit their
   `event_count` / `value_count` aggregations rather than being dropped.
 - **Correlations are load-bearing** — converting one correlation rule *alone* fails, because it references its
@@ -151,7 +152,7 @@ properties, both positive so the test fails only on a real regression:
 - **Correlations are portable** — the whole tree (atomic + correlation) converts on Splunk, the Elasticsearch
   `eql` target, and Grafana `loki`, with the enrich indicator surviving into each query. This shows the
   correlation rules are not Splunk-only.
-- **Atomic-only fallback works** — the four atomic rules still convert on `lucene` and the Microsoft `kusto`
+- **Atomic-only fallback works** — the five atomic rules still convert on `lucene` and the Microsoft `kusto`
   backend, which do not support Sigma correlation conversion at the pinned versions, so a defender on those
   backends can deploy the atomic rules and express the correlation window natively.
 
@@ -172,7 +173,7 @@ Expected output (abridged):
 
 ```
   PASS  whole tree (atomic + correlation) converts on 'eql', enrich indicator survives
-  PASS  four atomic rules convert on 'kusto', enrich indicator survives
+  PASS  five atomic rules convert on 'kusto', enrich indicator survives
 RESULT: PASS
 ```
 

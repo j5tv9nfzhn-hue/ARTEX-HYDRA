@@ -7,7 +7,7 @@
 #
 #   1. structural + best-practice validation passes          (sigma check == 0 errors)
 #   2. the whole tree compiles to a backend query language   (sigma convert -> splunk)
-#   3. each atomic indicator string survives into the query  (enrich UA, self-update UA, guard marker)
+#   3. each atomic indicator string survives into the query  (enrich UA, self-update UA, guard marker, CA file)
 #   4. the correlation rules compile as correlations         (event_count / value_count aggregations)
 #   5. a correlation rule converted ALONE fails              (it genuinely depends on its atomic base rule)
 #
@@ -45,8 +45,9 @@ fi
 echo "== 3/4  each atomic indicator survives into the compiled query =="
 # Grep the indicator VALUES, not backend field names or quoting, so the test is
 # robust across splunk-backend releases. These strings come straight from the
-# rule bodies, which are grounded in this repository's source.
-for ind in 'artex-enrich/1.0' 'artex-selfupdate' '【ARTEX 平台管控·非目标防御】'; do
+# rule bodies, which are grounded in this repository's source. The last one is
+# the recording-proxy CA filename, grounded in traffic/traffic.go.
+for ind in 'artex-enrich/1.0' 'artex-selfupdate' '【ARTEX 平台管控·非目标防御】' 'mitmproxy-ca-cert.pem'; do
   if printf '%s' "$tree_out" | grep -qF "$ind"; then
     pass "indicator present: $ind"
   else

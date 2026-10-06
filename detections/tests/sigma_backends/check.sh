@@ -17,7 +17,7 @@
 #   2. The atomic-only fallback works   backends that do not support Sigma
 #      where correlations are not        correlation conversion (Elasticsearch
 #      supported                         lucene, Microsoft kusto) still convert
-#                                        the four atomic rules (exit 0), with the
+#                                        the five atomic rules (exit 0), with the
 #                                        enrich indicator surviving.
 #
 # Every assertion is POSITIVE (a capability that must keep working), so the test
@@ -38,7 +38,7 @@ for plugin in splunk elasticsearch loki kusto; do
 done
 
 ENRICH='artex-enrich/1.0'
-ATOMICS='/sigma/artex_enrich_user_agent.yml /sigma/artex_selfupdate_egress.yml /sigma/artex_guard_audit_framing.yml /sigma/destructive_command_hunting.yml'
+ATOMICS='/sigma/artex_enrich_user_agent.yml /sigma/artex_selfupdate_egress.yml /sigma/artex_guard_audit_framing.yml /sigma/artex_recording_proxy_ca.yml /sigma/destructive_command_hunting.yml'
 
 fail=0
 note() { printf '  %s\n' "$1"; }
@@ -65,15 +65,15 @@ for target in splunk eql loki; do
   fi
 done
 
-echo "== 2/2  atomic-only fallback: the four atomic rules convert where correlations are not supported =="
+echo "== 2/2  atomic-only fallback: the five atomic rules convert where correlations are not supported =="
 # Lucene and kusto (the Microsoft Sentinel / Defender backend) do not convert
-# Sigma correlations at the pinned versions, so a defender deploys the four
+# Sigma correlations at the pinned versions, so a defender deploys the five
 # atomic rules and expresses the correlation logic natively. That fallback must
-# work: all four atomic rules convert and the enrich indicator survives.
+# work: all five atomic rules convert and the enrich indicator survives.
 for target in lucene kusto; do
   if out="$(sigma convert -t "$target" --without-pipeline $ATOMICS 2>&1)" \
      && has_enrich "$out"; then
-    pass "four atomic rules convert on '$target', enrich indicator survives"
+    pass "five atomic rules convert on '$target', enrich indicator survives"
   else
     bad  "atomic-only conversion on '$target' failed or dropped the enrich indicator"
     printf '%s' "$out" | grep -iE 'error|not supported' | head -2 | sed 's/^/        /'
