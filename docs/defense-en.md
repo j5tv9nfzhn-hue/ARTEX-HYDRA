@@ -62,6 +62,16 @@ Use these when, during an intrusion investigation, you look for traces of ARTEX 
 
 > In short: **anchor target-side defense on behavioral fingerprints, and use static UAs (`artex-enrich/1.0` and the like) only as supporting clues.** The operator/forensic fingerprints (`:8787`, `127.0.0.1:8788`, `artex-selfupdate`, the DB schema, the audit-log framing) are valid **when investigating a compromised transit host**.
 
+### Why IP-address blocking is a weak first line of defense
+
+When a security incident becomes known, posts that say "here is a shared list of attacker IPs — block them at your firewall" commonly circulate on social media and community forums. Whatever the good intent of those sharing them, **we do not recommend dropping an unofficial IP list of unclear provenance straight into your block rules** — and this holds especially against autonomous AI attacks.
+
+- **The source is hard to verify.** For an unofficial list posted by an individual, there is no way to confirm who collected it or on what basis, and no way to filter out the IPs unrelated to the incident that may be mixed in.
+- **It ages quickly.** An autonomous agent constantly rotates its origin IP through VPNs, cloud instances, and hijacked relay servers (the "small number of rotating sources" in (a) above). An attack IP observed yesterday was likely already discarded today, so blocking the list still lets the attacker return from a different IP.
+- **The false-blocking risk is high.** If the list mixes in shared ranges, CDNs, or legitimate cloud IPs, the moment you block them you also cut off healthy customer traffic or internal services. Combined with automatic blocking (section 6 below), the false-block damage spreads even faster.
+
+This does not mean IP blocking is useless. It becomes meaningful **when you receive official indicators of compromise (IoCs) from a response agency or trusted threat intelligence and apply them after reviewing their validity window and false-positive potential.** But blocking a single IP line is only a stopgap that chases a rotating origin; what lasts is the **behavior** that is hard to change (the behavior-based detection in sections 2–4) and the **reduction of attack surface** (the hardening in sections 3 and 5 — trimming exposed assets, patching, MFA). This guide's premise — fingerprints can change, but behavior is hard to hide — applies here too.
+
 ---
 
 ## 3. Entry points attackers target, and hardening
@@ -137,6 +147,7 @@ Summarized so a defending team can check it right away.
 - [ ] Unified the identity-verification strength of **auxiliary/partner/recruitment channels** with the main service.
 - [ ] Operates **compromised-credential detection/matching** for leaked credentials.
 - [ ] Runs the WAF in **behavior-based mode** and does not rely on fixed signatures alone.
+- [ ] **Does not apply circulating unofficial IP block lists as-is**, and instead takes official indicators of compromise (IoCs) from a trusted source and applies them after reviewing their validity window and false-blocking risk.
 - [ ] Added a **same-source multi-stage correlation rule** to the SIEM.
 - [ ] **Retains authentication, access, and egress logs for a sufficient period** (autonomous attacks are fast, so after-the-fact tracing material matters).
 - [ ] Reduced the blast radius of lateral movement and privilege escalation with network **segmentation**.
