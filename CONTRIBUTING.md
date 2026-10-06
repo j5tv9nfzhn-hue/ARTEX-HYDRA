@@ -142,6 +142,49 @@ i18n(web): 대시보드 네비게이션 라벨 한국어 번역
 
 ---
 
+## 탐지 규칙·탐지 테스트 기여
+
+이 저장소는 ARTEX 같은 자율 AI 공격을 **방어·탐지**하기 위한 규칙을 [`detections/`](detections/)에 함께
+둡니다. 배포 가능한 [Sigma](https://sigmahq.io) 규칙([`detections/sigma/`](detections/sigma/)), 네트워크용
+[Suricata](https://suricata.io) 규칙([`detections/suricata/`](detections/suricata/)),
+[MITRE ATT&CK](https://attack.mitre.org/) 커버리지 레이어([`detections/attack/`](detections/attack/)), 그리고
+이 규칙들이 실제로 발화하는지 재현 가능하게 증명하는 테스트([`detections/tests/`](detections/tests/))로
+이루어져 있습니다. 탐지 규칙을 새로 보내거나 고칠 때는 아래 계약을 지켜 주십시오. 세 테스트 스위트가 이
+계약의 상당 부분을 기계적으로 강제하므로, 규칙만 바꾸고 테스트·레이어를 갱신하지 않으면 테스트가 실패합니다.
+
+- **모든 지표를 관측 가능한 사실에 접지합니다.** 규칙이 쓰는 문자열·User-Agent·행동 임계값은 이 저장소
+  소스에서 실제로 확인되는 것이어야 하고, 추정으로 만들지 않습니다. 근거가 되는 소스 파일을 규칙 안에
+  밝혀 주십시오(예: `artex-enrich/1.0` 지표는 `enrich/enrich.go` 에서 확인됩니다).
+- **한계를 정직하게 적습니다.** Sigma 규칙은 `description` 에, Suricata 규칙은 주석에 그 규칙이 못 잡는
+  경우와 오탐 가능성을 적습니다. ARTEX 고유 시그니처가 아니라 일반 헌팅 리드(예: 파괴 명령)라면 그렇게
+  명시해, 한 번의 적중만으로 공격자를 ARTEX 로 단정하지 않게 합니다.
+- **정적 검증을 통과시킵니다.** Sigma 규칙은 `sigma check` 가 오류·조건 오류·이슈 0 으로 통과해야 하고,
+  Suricata 규칙은 `suricata -T` 로 깨끗이 로드되어야 합니다.
+- **재현 가능한 테스트를 함께 보냅니다.** 규칙이 발화하는지(또는 구조가 유효한지)를
+  [`detections/tests/`](detections/tests/) 아래 테스트로 증명합니다. 입력은 바이너리를 저장소에 넣지 말고
+  매번 결정론적으로 생성하고, 엔진 버전에 무관한 속성(발화 존재·오탐 없음)은 정확히 단언하며, 버전에 따라
+  흔들리는 수치는 하한으로 단언하고 기준값을 따로 기록합니다.
+- **ATT&CK 레이어를 함께 갱신합니다.** 규칙에 `attack.*` 태그를 더하거나 바꾸면
+  [`detections/attack/artex_navigator_layer.json`](detections/attack/artex_navigator_layer.json) 의 기법·점수도
+  맞춰 갱신합니다. 정합 테스트가 규칙↔레이어 양방향 일치를 강제하므로, 레이어에 없는 규칙 태그나 규칙에
+  없는 레이어 기법이 있으면 실패합니다.
+- **공격 안내로 읽히는 내용을 넣지 않습니다.** 이 저장소의 탐지 자료는 방어·탐지 포지셔닝만 유지합니다.
+  익스플로잇 수행 방법이나 탐지 우회 기법처럼 공격을 돕는 서술은 받지 않습니다.
+
+세 테스트 스위트는 Docker 만 있으면 그대로 돌릴 수 있고, 생성물을 저장소에 커밋하지 않습니다. 각 스크립트는
+단언이 하나라도 실패하면 0 이 아닌 코드로 끝나므로 CI 나 pre-commit 훅에 바로 넣을 수 있습니다.
+
+```bash
+detections/tests/sigma/run.sh       # Sigma: sigma check + 백엔드 변환 + 지표 보존
+detections/tests/suricata/run.sh    # Suricata: pcap 합성 → suricata -r → 경보 수 단언
+detections/tests/attack/run.sh      # ATT&CK: 레이어 ↔ 규칙 양방향 정합
+```
+
+규칙 색인과 각 규칙의 근거·한계는 [`detections/README.md`](detections/README.md)에, 테스트의 단언 항목과
+실행법은 [`detections/tests/README.md`](detections/tests/README.md)에 정리되어 있습니다.
+
+---
+
 ## 라이선스
 
 이 프로젝트는 **GNU Affero General Public License v3.0(AGPL-3.0)** 으로 배포됩니다.
