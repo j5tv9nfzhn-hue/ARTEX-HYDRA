@@ -149,7 +149,7 @@ i18n(web): 대시보드 네비게이션 라벨 한국어 번역
 [Suricata](https://suricata.io) 규칙([`detections/suricata/`](detections/suricata/)),
 [MITRE ATT&CK](https://attack.mitre.org/) 커버리지 레이어([`detections/attack/`](detections/attack/)), 그리고
 이 규칙들이 실제로 발화하는지 재현 가능하게 증명하는 테스트([`detections/tests/`](detections/tests/))로
-이루어져 있습니다. 탐지 규칙을 새로 보내거나 고칠 때는 아래 계약을 지켜 주십시오. 네 테스트 스위트가 이
+이루어져 있습니다. 탐지 규칙을 새로 보내거나 고칠 때는 아래 계약을 지켜 주십시오. 다섯 테스트 스위트가 이
 계약의 상당 부분을 기계적으로 강제하므로, 규칙만 바꾸고 테스트·레이어를 갱신하지 않으면 테스트가 실패합니다.
 
 - **모든 지표를 관측 가능한 사실에 접지합니다.** 규칙이 쓰는 문자열·User-Agent·행동 임계값은 이 저장소
@@ -165,7 +165,10 @@ i18n(web): 대시보드 네비게이션 라벨 한국어 번역
 - **재현 가능한 테스트를 함께 보냅니다.** 규칙이 발화하는지(또는 구조가 유효한지)를
   [`detections/tests/`](detections/tests/) 아래 테스트로 증명합니다. 입력은 바이너리를 저장소에 넣지 말고
   매번 결정론적으로 생성하고, 엔진 버전에 무관한 속성(발화 존재·오탐 없음)은 정확히 단언하며, 버전에 따라
-  흔들리는 수치는 하한으로 단언하고 기준값을 따로 기록합니다.
+  흔들리는 수치는 하한으로 단언하고 기준값을 따로 기록합니다. Sigma 상관 규칙을 더하거나 고치면 백엔드
+  이식성 테스트([`detections/tests/sigma_backends/`](detections/tests/sigma_backends/))가 그 규칙이 여러
+  백엔드에서 변환되는지 확인하므로, [`detections/README.md`](detections/README.md) 의 백엔드 지원 설명과
+  어긋나지 않게 유지해 주십시오.
 - **ATT&CK 레이어를 함께 갱신합니다.** 규칙에 `attack.*` 태그를 더하거나 바꾸면
   [`detections/attack/artex_navigator_layer.json`](detections/attack/artex_navigator_layer.json) 의 기법·점수도
   맞춰 갱신합니다. 정합 테스트가 규칙↔레이어 양방향 일치를 강제하므로, 레이어에 없는 규칙 태그나 규칙에
@@ -173,17 +176,18 @@ i18n(web): 대시보드 네비게이션 라벨 한국어 번역
 - **공격 안내로 읽히는 내용을 넣지 않습니다.** 이 저장소의 탐지 자료는 방어·탐지 포지셔닝만 유지합니다.
   익스플로잇 수행 방법이나 탐지 우회 기법처럼 공격을 돕는 서술은 받지 않습니다.
 
-네 테스트 스위트는 Docker 만 있으면 그대로 돌릴 수 있고, 생성물을 저장소에 커밋하지 않습니다. 각 스크립트는
+다섯 테스트 스위트는 Docker 만 있으면 그대로 돌릴 수 있고, 생성물을 저장소에 커밋하지 않습니다. 각 스크립트는
 단언이 하나라도 실패하면 0 이 아닌 코드로 끝나므로 CI 나 pre-commit 훅에 바로 넣을 수 있습니다.
 
 ```bash
-detections/tests/sigma/run.sh       # Sigma: sigma check + 백엔드 변환 + 지표 보존
-detections/tests/suricata/run.sh    # Suricata: pcap 합성 → suricata -r → 경보 수 단언
-detections/tests/attack/run.sh      # ATT&CK: 레이어 ↔ 규칙 양방향 정합
-detections/tests/indicators/run.sh  # 지표: 규칙의 고정 지표 ↔ 상류 소스 양방향 일치
+detections/tests/sigma/run.sh           # Sigma: sigma check + 백엔드 변환 + 지표 보존
+detections/tests/sigma_backends/run.sh  # Sigma 이식성: 상관 규칙이 여러 백엔드에서 변환되는지
+detections/tests/suricata/run.sh        # Suricata: pcap 합성 → suricata -r → 경보 수 단언
+detections/tests/attack/run.sh          # ATT&CK: 레이어 ↔ 규칙 양방향 정합
+detections/tests/indicators/run.sh      # 지표: 규칙의 고정 지표 ↔ 상류 소스 양방향 일치
 ```
 
-이 네 테스트는 저장소 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))가
+이 다섯 테스트는 저장소 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))가
 `detections/` 아래가 바뀐 푸시·PR 마다 돌립니다. 지표 일치 테스트는 그 지표가 가리키는 상류 소스 파일
 (`enrich/`·`selfupdate/`·`guard/`·`db/`)이 바뀔 때도 돌아, 상류 재동기화가 User-Agent·마커를 바꿔 규칙이
 조용히 낡는 경우를 함께 잡습니다. 따라서 규칙만 바꾸고 테스트·레이어를 갱신하지 않은 변경, 또는 소스와

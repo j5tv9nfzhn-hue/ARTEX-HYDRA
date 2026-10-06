@@ -1,12 +1,12 @@
 name: detections
 # 탐지 규칙(Sigma·Suricata·ATT&CK 레이어)이 바뀌는 푸시·PR 마다, 그 규칙이 실제로
-# 발화하고 커버리지 레이어가 규칙과 일치하며 지표가 상류 소스와 여전히 맞는지 재현
-# 테스트로 검증한다. 규칙만 바꾸고 테스트·레이어를 갱신하지 않은 변경은 여기서 빨갛게
-# 드러난다. CONTRIBUTING.md 와 detections/tests/README.md 가 약속하는 "네 테스트가 기여
-# 계약을 기계적으로 강제한다"를 머지 게이트로 실제로 뒷받침하는 워크플로다. Go 빌드·정적
-# 분석·테스트는 ci.yml 이 맡는다.
+# 발화하고, 여러 SIEM 백엔드로 변환되며, 커버리지 레이어가 규칙과 일치하고, 지표가 상류
+# 소스와 여전히 맞는지 재현 테스트로 검증한다. 규칙만 바꾸고 테스트·레이어를 갱신하지 않은
+# 변경은 여기서 빨갛게 드러난다. CONTRIBUTING.md 와 detections/tests/README.md 가 약속하는
+# "다섯 테스트가 기여 계약을 기계적으로 강제한다"를 머지 게이트로 실제로 뒷받침하는
+# 워크플로다. Go 빌드·정적 분석·테스트는 ci.yml 이 맡는다.
 #
-# 네 테스트는 Docker 만 있으면 돈다(ubuntu-latest 러너에 Docker 가 들어 있다). 러너가
+# 다섯 테스트는 Docker 만 있으면 돈다(ubuntu-latest 러너에 Docker 가 들어 있다). 러너가
 # sigma-cli·scapy·suricata·python 이미지를 내려받아 컨테이너에서 격리 실행하므로 러너
 # 자체에는 아무것도 설치하지 않고, 규칙 트리와 지표가 가리키는 소스 파일을 읽기 전용으로만
 # 마운트해 저장소에 쓰지 않는다. detections/ 아래가 바뀔 때 외에, 지표 테스트가 고정해 둔
@@ -51,6 +51,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Sigma 규칙 재현 테스트 (sigma check + 백엔드 변환 + 지표 보존)
         run: detections/tests/sigma/run.sh
+      - name: Sigma 백엔드 이식성 테스트 (상관 규칙이 여러 백엔드에서 변환되는지 확인)
+        run: detections/tests/sigma_backends/run.sh
       - name: Suricata 규칙 재현 테스트 (pcap 합성 → suricata -r → 경보 수 단언)
         run: detections/tests/suricata/run.sh
       - name: ATT&CK 레이어 ↔ 규칙 정합 테스트

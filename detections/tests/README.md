@@ -102,6 +102,47 @@ The script exits non-zero if any assertion fails, so it drops straight into CI o
 is pinned to a reference version (`3.1.0`); override it with `SIGMA_CLI_VERSION`, or the image with
 `PYTHON_IMAGE`, if you mirror them internally.
 
+## Sigma backend portability — [`sigma_backends/`](sigma_backends/)
+
+[`sigma_backends/run.sh`](sigma_backends/run.sh) proves the rules convert beyond the single Splunk example the
+Sigma test exercises, and keeps the per-backend support matrix in [`../README.md`](../README.md) honest. Sigma
+correlation conversion is backend-dependent, so the README tells a defender which `-t` targets take the whole
+tree and which take only the atomic rules — a claim that is only trustworthy if it is re-run. It asserts two
+properties, both positive so the test fails only on a real regression:
+
+- **Correlations are portable** — the whole tree (atomic + correlation) converts on Splunk, the Elasticsearch
+  `eql` target, and Grafana `loki`, with the enrich indicator surviving into each query. This shows the
+  correlation rules are not Splunk-only.
+- **Atomic-only fallback works** — the four atomic rules still convert on `lucene` and the Microsoft `kusto`
+  backend, which do not support Sigma correlation conversion at the pinned versions, so a defender on those
+  backends can deploy the atomic rules and express the correlation window natively.
+
+It deliberately does not assert the negative "backend X cannot do correlations": that would turn a backend
+*improving* into a red build. The honest limitation lives in the README, reproduced by this test's commands.
+[`sigma_backends/check.sh`](sigma_backends/check.sh) is the in-container half; it installs the pinned sigma-cli
+plus four backends and reads the rule tree mounted read-only.
+
+### Run it
+
+Needs only Docker; sigma-cli and the backends run in a container and nothing is written to the repo.
+
+```sh
+detections/tests/sigma_backends/run.sh
+```
+
+Expected output (abridged):
+
+```
+  PASS  whole tree (atomic + correlation) converts on 'eql', enrich indicator survives
+  PASS  four atomic rules convert on 'kusto', enrich indicator survives
+RESULT: PASS
+```
+
+The script exits non-zero if any assertion fails. sigma-cli is pinned (`3.1.0`, override with
+`SIGMA_CLI_VERSION`); the backend plugins install at their latest compatible version, so this suite is the one
+most sensitive to an upstream backend release — a plugin that drops support turns the build red, which is the
+signal to update the pin and the README matrix together.
+
 ## ATT&CK layer — [`attack/`](attack/)
 
 [`attack/run.sh`](attack/run.sh) checks that the [ATT&CK coverage layer](../attack/) in
@@ -195,8 +236,8 @@ deterministically, assert engine-version-independent properties exactly (and sof
 recorded reference), and avoid any content that reads as attack guidance. See
 [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) and the rule indexes in [`../README.md`](../README.md).
 
-All four suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
+All five suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
 on every push or pull request that touches `detections/` — and the indicator test also runs when the upstream
 source files it pins (`enrich/`, `selfupdate/`, `guard/`, `db/`) change — so a rule change that drops an
-indicator, drifts from the ATT&CK layer, or falls out of sync with the source turns the build red before it
-can merge.
+indicator, drifts from the ATT&CK layer, stops converting on a documented backend, or falls out of sync with
+the source turns the build red before it can merge.

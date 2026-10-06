@@ -87,6 +87,11 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   `db/db.go` — and is still pinned in the rule. It catches the drift the other three miss: an upstream re-sync
   that changes a User-Agent or marker while every rule still compiles and fires. This makes "grounded in a
   string verified in this repository's source, not inferred" (above) a guard, not a promise.
+- **Sigma backend portability** ([`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh)) proves the rules
+  convert beyond the single Splunk example: the whole tree (atomic + correlation) compiles on Splunk, the
+  Elasticsearch `eql` target, and Grafana Loki, and the four atomic rules still compile on backends that do not
+  support Sigma correlations (Elasticsearch `lucene`, the Microsoft `kusto` backend). It backs the per-backend
+  support matrix in [Validate and convert](#validate-and-convert) below with a re-runnable check.
 
 Each script exits non-zero on any failed assertion. See [`tests/README.md`](tests/README.md).
 
@@ -125,8 +130,42 @@ sigma convert -t splunk --without-pipeline detections/sigma/artex_enrich_user_ag
 sigma convert -t splunk --without-pipeline detections/sigma/
 ```
 
-Supported targets include Splunk, Elasticsearch, Microsoft Sentinel, QRadar, and others — see
-`sigma plugin list`. Apply a processing pipeline for your product to map field names correctly.
+### Sigma backend portability
+
+The `sigma/correlation/` rules reference their atomic base rules by `id`, so they only convert on backends
+that support Sigma correlation conversion. That support varies by backend, so `-t` choice matters. The matrix
+below is measured against the pinned reference (`sigma-cli` 3.1.0, latest compatible backends) and reproduced
+by [`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh):
+
+- **Converts the whole tree (atomic + correlation):** Splunk (`-t splunk`), Elasticsearch EQL (`-t eql`),
+  Grafana Loki (`-t loki`). Convert `detections/sigma/` directly and you get the correlation queries too.
+- **Atomic rules only (correlations not yet supported):** Elasticsearch Lucene (`-t lucene`), OpenSearch
+  (`-t opensearch_lucene`), and the Microsoft `kusto` backend that targets Sentinel and Defender XDR
+  (`-t kusto`). On these, convert the four atomic rules and express the correlation window natively in the
+  product (e.g. a Sentinel scheduled-analytics `summarize ... by bin(TimeGenerated, 30m)`). Pass the whole
+  directory and the conversion stops with "Backend does not support correlation rules."
+
+```sh
+# atomic rules only, e.g. for Microsoft Sentinel / Defender (kusto backend)
+sigma plugin install kusto
+sigma convert -t kusto --without-pipeline \
+  detections/sigma/artex_enrich_user_agent.yml \
+  detections/sigma/artex_selfupdate_egress.yml \
+  detections/sigma/artex_guard_audit_framing.yml \
+  detections/sigma/destructive_command_hunting.yml
+```
+
+Known edges at the pinned versions: the Elasticsearch ES|QL target (`-t esql`) rejects the guard-marker rule
+(`String value expressions are not supported`), so convert the other three atomic rules there; and the IBM
+QRadar plugin (`ibm-qradar-aql`) is not compatible with the pinned pySigma and needs `--force-install`, so it
+is not covered by the test. Run `sigma list targets` for the backends installed in your environment.
+
+The examples above use `--without-pipeline`, which emits the generic field names from the rule bodies
+(`c-useragent`, `cs-host`, `CommandLine`). To match your product's schema, drop that flag and apply a
+processing pipeline with `-p` (see `sigma list pipelines`). Note that a product pipeline maps field names but
+may also need a target table the rules' generic `logsource` does not specify — e.g. `-p sentinel_asim` stops
+with "Unable to determine table name" until you set `query_table` for your data, so map the fields and the
+destination table to your environment before deploying.
 
 ## Contributing
 
