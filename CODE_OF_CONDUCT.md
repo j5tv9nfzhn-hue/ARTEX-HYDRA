@@ -1,5 +1,7 @@
 # 행동 강령 (Code of Conduct)
 
+한국어 · [English](CODE_OF_CONDUCT.en.md)
+
 ## 우리의 약속
 
 이 프로젝트에 참여하는 모든 사람이 괴롭힘 없는 환경에서 협력할 수 있도록, 유지관리자와
