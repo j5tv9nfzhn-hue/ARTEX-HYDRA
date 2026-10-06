@@ -139,7 +139,8 @@ cd web
 npm ci
 npm run dev          # 개발 서버
 npm run build        # 프로덕션 빌드
-npm run check        # Biome 린트·포맷 검사
+npm run build:static # 정적 내보내기 빌드(머지 게이트 · TypeScript 타입 검사 포함)
+npm run check        # Biome 린트·포맷 검사(정보용 · 선재 부채로 아직 머지 게이트 아님)
 npm run check:fix    # 자동 수정
 ```
 
@@ -162,7 +163,12 @@ docker compose up -d     # artex + postgres 기동 → http://localhost:8787
 2. 저장소를 **포크**하고 주제 브랜치를 만듭니다. 브랜치 이름은 `feat/...`, `fix/...`,
    `docs/...`, `i18n/...` 처럼 변경 성격을 앞에 둡니다.
 3. 변경을 작성하고 **해당 범위의 검증을 직접 돌립니다.** Go 변경이면 위의
-   `build`·`vet`·`test` 를, web 변경이면 `npm run check` 와 `build` 를 통과시킵니다.
+   `build`·`vet`·`test` 를 통과시킵니다. web 변경이면 `npm run build:static`
+   (머지 게이트 · TypeScript 타입 검사를 함께 수행합니다)을 통과시킵니다.
+   `npm run check`(Biome)는 상류에서 딸려온 선재 린트 부채가 남아 있어 아직 머지
+   게이트가 아니고 `web.yml` 에서 정보용 단계로만 돌리므로, 전체를 통과시킬 필요는
+   없습니다. 대신 **내 변경이 새 오류를 더하지 않았는지**만 확인하면 됩니다(커밋할 때
+   `lint-staged` 가 스테이징한 파일에만 `biome check --write` 를 자동으로 적용합니다).
    문서(`.md`)를 바꿨다면 `python3 -I scripts/check-doc-links.py` 로 저장소 안
    링크·이미지 참조가 깨지지 않았는지 확인합니다(CI 의 `docs` 워크플로가 같은
    검사를 머지 게이트로 강제합니다).
