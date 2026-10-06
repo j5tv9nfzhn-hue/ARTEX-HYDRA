@@ -68,7 +68,7 @@ Eight techniques across six tactics. Each maps to the rule(s) that tag it:
 - **Coverage is not completeness.** A technique scored here means a rule tags it, not that every variant
   of the technique is detected. ARTEX's actual attack traffic carries no ARTEX-unique fingerprint, so the
   wire-level reconnaissance signal is the enrichment prober only; the durable detection is behavioural
-  (see the [defense guide](../../docs/defense-ko.md), sections 1–2 and 4.1–4.2). The pure web multi-stage
+  (see the defense guide, [Korean](../../docs/defense-ko.md) · [English](../../docs/defense-en.md), sections 1–2 and 4.1–4.2). The pure web multi-stage
   case still needs base rules specific to your environment.
 - **Static indicators can be changed.** An operator can set a different User-Agent, so the absence of a
   tagged indicator does not imply safety. This is the same caveat the rule files carry.
