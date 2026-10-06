@@ -241,3 +241,64 @@ docker run --rm -v "$PWD":/src -w /src \
 ```
 chore(upstream): 상류 d003372..b55ceb1 반영 (intercept 토큰 계량) + 신규 UI 문자열 번역
 ```
+
+---
+
+## 8. 검토·검증 수칙 (흔한 함정)
+
+상류 반영·번역·문서 보강을 점검할 때 메인테이너가 반복해서 빠지는 함정 두 가지를 적어
+둡니다. 둘 다 "검사 방법 자체가 틀려서 멀쩡한 것을 깨졌다고 오인하는" 경우라, 불필요한
+되돌림을 막으려고 수칙으로 고정합니다.
+
+### 8.1 저장소 CI 상태는 저장소를 지정해서 확인합니다
+
+이 저장소는 상류 ARTEX 의 포크라서, 로컬 `git remote` 에 `origin`(jiwoochris/artex-ko)과
+`upstream`(Autumn-27/ARTEX)이 함께 등록되어 있습니다(3절 참조). 이 상태에서 `gh` 명령에
+저장소를 지정하지 않으면, `gh` 가 **상류 저장소를 기본값으로 골라** 우리 워크플로가 없는
+상류의 실행 결과를 보여 줍니다. 그러면 상류 CI 가 초록인 것을 보고 **우리 CI 가 통과했다고
+착각**하거나, 우리 워크플로(`ci.yml`·`detections.yml`)를 "HTTP 404 … not found" 로 잘못
+판단할 수 있습니다.
+
+그래서 CI 를 확인할 때는 항상 저장소를 명시합니다.
+
+```bash
+gh run list -R jiwoochris/artex-ko --workflow ci.yml --limit 5
+gh run list -R jiwoochris/artex-ko --workflow detections.yml --limit 5
+```
+
+한 번 설정해 두면 `-R` 를 생략해도 우리 저장소를 기본으로 보도록 바꿀 수 있습니다. 다만 이
+설정은 **로컬 gh 설정**이라 저장소에 커밋되지 않으므로, 새 머신이나 새 체크아웃에서는 다시
+지정해야 합니다.
+
+```bash
+gh repo set-default jiwoochris/artex-ko
+gh repo set-default --view   # jiwoochris/artex-ko 가 보이는지 확인
+```
+
+### 8.2 문서의 외부 링크는 브라우저처럼 GET 으로 확인합니다
+
+방어 가이드([`docs/defense-ko.md`](docs/defense-ko.md)·[`defense-en.md`](docs/defense-en.md))의
+7절은 국내 공식 채널(boho.or.kr·fsec.or.kr·pipc.go.kr)의 링크를 싣습니다. 이 링크가 살아
+있는지 확인할 때 `curl -I`(HEAD 요청)나 기본 User-Agent 로만 확인하면 **멀쩡한 링크를 깨진
+것으로 오인**합니다. 국내 공공·보안 기관 사이트는 다음 세 가지 이유로 단순 확인을 거부하기
+때문입니다.
+
+- **HEAD 요청을 거부합니다.** 예를 들어 fsec.or.kr 은 `curl -I`(HEAD)에 400 을 돌려줍니다.
+- **기본 `curl` User-Agent 를 차단합니다.** fsec.or.kr 과 pipc.go.kr 은 기본 UA 로 보낸
+  GET 요청에도 400 을 돌려줍니다(브라우저 UA 로 보내면 200).
+- **다른 주소로 리다이렉트합니다.** pipc.go.kr 은 `www.pipc.go.kr` 에서 `pipc.go.kr/np/` 로
+  두 번 리다이렉트하므로, 리다이렉트를 따라가지 않으면 최종 상태를 놓칩니다.
+
+따라서 링크 확인은 **브라우저 User-Agent 로, GET 으로, 리다이렉트를 따라가며** 합니다.
+
+```bash
+UA='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36'
+for u in https://www.boho.or.kr https://www.fsec.or.kr https://www.pipc.go.kr; do
+  curl -sS -L -A "$UA" -o /dev/null -w "$u -> %{http_code} %{url_effective}\n" "$u"
+done
+```
+
+최종 상태 코드가 200 이면 링크는 유효합니다. 상태 코드가 400·403 으로 나오면 링크가 깨진
+것이 아니라 **확인 방법이 서버의 접근 정책에 막힌 것**은 아닌지 먼저 의심하고, HEAD·기본
+UA·리다이렉트 미추적 같은 요인을 하나씩 제거해 다시 확인합니다. (2026-10-06 확인 기준으로
+세 링크 모두 위 방법에서 200 이며, pipc.go.kr 은 2회 리다이렉트 뒤 200 입니다.)
