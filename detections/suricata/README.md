@@ -23,7 +23,7 @@ under [`../sigma/`](../sigma/); the defense guide ([Korean](../../docs/defense-k
   `detection_filter` rate of **30 requests in 300 s per source** — the machine-speed velocity a single-hit
   rule misses. Mirrors the Sigma correlation `artex_enrich_scan_velocity`. `classtype: attempted-recon`.
 - **sid 1000003** — `ARTEX worker WebFetch User-Agent`. An inbound HTTP request whose User-Agent starts with
-  `norma/` — the norma SDK's WebFetch tool (`tool/webfetch.go:188`). This UA is hardcoded across all norma
+  `norma/` — the norma SDK's WebFetch tool (`tool/webfetch.go`). This UA is hardcoded across all norma
   versions (v0.1.0–v0.4.3, verified) and reaches the target through the recording proxy, which does not
   modify request headers (`traffic/traffic.go`). Unlike the enrich prober, this fires during the **attack
   phase** (active vulnerability probing). `classtype: attempted-recon`.
@@ -32,7 +32,7 @@ under [`../sigma/`](../sigma/); the defense guide ([Korean](../../docs/defense-k
 
 - **Two ARTEX User-Agents are network-observable.** The enrich prober sends `artex-enrich/1.0`
   (`enrich/enrich.go:233`) during reconnaissance; the norma SDK's WebFetch tool sends `norma/0.4`
-  (`tool/webfetch.go:188`) during the attack phase. The recording proxy (`traffic/traffic.go`) does not
+  (`tool/webfetch.go`) during the attack phase. The recording proxy (`traffic/traffic.go`) does not
   modify request headers, so both UAs reach the target on the wire. Other worker tools (Bash subprocesses
   like `curl`, `nmap`) use their own User-Agents — detect those with generic scanner signatures and the
   behavioural SIEM rules under [`../sigma/`](../sigma/).
