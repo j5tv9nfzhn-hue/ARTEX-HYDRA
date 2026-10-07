@@ -365,7 +365,7 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("[pg] 数据库配置来源: %s", source)
+	log.Printf("[pg] 데이터베이스 설정 출처: %s", source)
 	pg, err := pgdb.Open(dsn)
 	if err != nil {
 		return nil, err
