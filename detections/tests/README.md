@@ -36,6 +36,7 @@ Expected output (abridged):
   PASS  suricata
   PASS  attack
   PASS  indicators
+  PASS  misp
 RESULT: PASS
 ```
 

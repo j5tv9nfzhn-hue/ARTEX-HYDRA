@@ -32,6 +32,7 @@ detections/tests/run-all.sh
   PASS  suricata
   PASS  attack
   PASS  indicators
+  PASS  misp
 RESULT: PASS
 ```
 
