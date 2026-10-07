@@ -93,7 +93,7 @@ The rules above serve defenders with a SIEM, a network sensor, or a threat-intel
 responder — the one at a single suspected host's shell, with no SIEM — [`triage/artex_host_triage.py`](triage/)
 is a read-only script that answers "did ARTEX run here?" from local state. It operationalizes the same
 fingerprints, **plus the three host/DB indicators the CSV deliberately carries without a Sigma rule**
-(the server/proxy listen ports, the recording-proxy CA/stores, and the PostgreSQL exploration schema),
+(the server listen port, the recording-proxy endpoint, and the PostgreSQL exploration schema),
 which are not log- or network-observable and can only be checked on the box. Every finding is a triage
 lead carrying the same caveat as its indicator row. See [`triage/README.md`](triage/README.md); a built-in
 `--self-test` runs as a merge-gate (below).
