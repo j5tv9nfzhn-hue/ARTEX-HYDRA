@@ -9,7 +9,10 @@ description: |
     informed by that list, not an ARTEX-specific signature, and matches are expected from
     legitimate administration. Tune and allow-list for your environment and treat a hit as a
     hunting lead, not a standalone alert. High-noise availability commands the guard also blocks
-    (bare shutdown/reboot) are intentionally omitted here; hunt those separately.
+    (bare shutdown/reboot) are intentionally omitted here; hunt those separately. The database
+    patterns likewise track data-destroying objects (DROP DATABASE/TABLE/SCHEMA) rather than the
+    guard's wider DROP set (INDEX/VIEW/USER/ROLE/TABLESPACE), which alter structure or access
+    rather than destroy data and are noisy in routine migrations.
 references:
     - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
     - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
