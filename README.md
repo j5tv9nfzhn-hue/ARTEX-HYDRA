@@ -107,7 +107,7 @@ docker compose up -d          # artex 이미지 + postgres 를 함께 기동
 
   ```bash
   cd web && npm ci && npm run build:static && cd ..   # 1) 프런트엔드 정적 빌드
-  mkdir -p server/webui && cp -r web/out server/webui/dist   # 2) 내장 디렉터리로 복사
+  rm -rf server/webui/dist && mkdir -p server/webui/dist && cp -a web/out/. server/webui/dist/   # 2) 내장 디렉터리로 동기화(재빌드 시 중첩 방지)
   CGO_ENABLED=0 go build -tags embedui -o artex ./cmd/artex   # 3) 프런트 내장 컴파일
   ./start.sh                                          # → http://localhost:8787
   ```
