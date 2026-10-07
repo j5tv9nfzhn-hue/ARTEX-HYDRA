@@ -42,7 +42,7 @@ detection:
             - 'DROP DATABASE'
             - 'DROP TABLE'
             - 'DROP SCHEMA'
-            - 'TRUNCATE TABLE'
+            - 'TRUNCATE '
             - '.dropDatabase('
             - '.dropCollection('
             - 'FLUSHALL'
@@ -60,4 +60,5 @@ detection:
 falsepositives:
     - Routine system administration, maintenance scripts, and container teardown.
     - CI/CD pipelines that drop and recreate test databases or caches.
+    - The GNU coreutils `truncate` command (e.g. log rotation `truncate -s 0 file`) shares the TRUNCATE token; allow-list it, since it is followed by a flag rather than a table name.
 level: medium
