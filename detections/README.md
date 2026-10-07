@@ -148,7 +148,7 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   fails until the two agree.
 - **Sigma backend portability** ([`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh)) proves the rules
   convert beyond the single Splunk example: the whole tree (atomic + correlation) compiles on Splunk, the
-  Elasticsearch `eql` target, and Grafana Loki, and the four atomic rules still compile on backends that do not
+  Elasticsearch `eql` target, and Grafana Loki, and the five atomic rules still compile on backends that do not
   support Sigma correlations (Elasticsearch `lucene`, the Microsoft `kusto` backend). It backs the per-backend
   support matrix in [Validate and convert](#validate-and-convert) below with a re-runnable check.
 - **SigmaHQ convention lint** ([`tests/sigma_lint/run.sh`](tests/sigma_lint/run.sh)) runs the full SigmaHQ
@@ -224,7 +224,7 @@ by [`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh):
   Grafana Loki (`-t loki`). Convert `detections/sigma/` directly and you get the correlation queries too.
 - **Atomic rules only (correlations not yet supported):** Elasticsearch Lucene (`-t lucene`), OpenSearch
   (`-t opensearch_lucene`), and the Microsoft `kusto` backend that targets Sentinel and Defender XDR
-  (`-t kusto`). On these, convert the four atomic rules and express the correlation window natively in the
+  (`-t kusto`). On these, convert the five atomic rules and express the correlation window natively in the
   product (e.g. a Sentinel scheduled-analytics `summarize ... by bin(TimeGenerated, 30m)`). Pass the whole
   directory and the conversion stops with "Backend does not support correlation rules."
 
@@ -235,6 +235,7 @@ sigma convert -t kusto --without-pipeline \
   detections/sigma/artex_enrich_user_agent.yml \
   detections/sigma/artex_selfupdate_egress.yml \
   detections/sigma/artex_guard_audit_framing.yml \
+  detections/sigma/artex_recording_proxy_ca.yml \
   detections/sigma/destructive_command_hunting.yml
 ```
 

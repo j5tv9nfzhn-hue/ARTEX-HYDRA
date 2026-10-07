@@ -142,7 +142,7 @@ PostgreSQL 탐색 스키마)까지 점검합니다. 이 세 가지는 로그나 
   고쳐야 하고, 둘이 일치할 때까지 이 테스트가 실패합니다.
 - **Sigma 백엔드 이식성** ([`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh)) — 규칙이
   Splunk 예시 하나를 넘어 변환됨을 증명합니다. 트리 전체(원자 + 상관)가 Splunk, Elasticsearch `eql`
-  타깃, Grafana Loki 로 컴파일되고, 네 원자 규칙은 Sigma 상관을 지원하지 않는 백엔드(Elasticsearch
+  타깃, Grafana Loki 로 컴파일되고, 다섯 원자 규칙은 Sigma 상관을 지원하지 않는 백엔드(Elasticsearch
   `lucene`, Microsoft `kusto` 백엔드)에서도 여전히 컴파일됩니다. 아래 "검증과 변환"의 백엔드별 지원
   표를 다시 돌릴 수 있는 점검으로 뒷받침합니다.
 - **SigmaHQ 관례 린트** ([`tests/sigma_lint/run.sh`](tests/sigma_lint/run.sh)) — SigmaHQ 검증기
@@ -218,7 +218,7 @@ sigma convert -t splunk --without-pipeline detections/sigma/
   Grafana Loki(`-t loki`). `detections/sigma/` 를 바로 변환하면 상관 질의까지 함께 얻습니다.
 - **원자 규칙만(상관 아직 미지원):** Elasticsearch Lucene(`-t lucene`),
   OpenSearch(`-t opensearch_lucene`), 그리고 Sentinel·Defender XDR 를 겨냥하는 Microsoft `kusto`
-  백엔드(`-t kusto`). 이들에서는 네 원자 규칙을 변환하고 상관 시간 창은 제품 안에서 네이티브로
+  백엔드(`-t kusto`). 이들에서는 다섯 원자 규칙을 변환하고 상관 시간 창은 제품 안에서 네이티브로
   표현합니다(예: Sentinel 예약 분석의 `summarize ... by bin(TimeGenerated, 30m)`). 디렉터리 전체를
   넘기면 "Backend does not support correlation rules" 로 변환이 멈춥니다.
 
@@ -229,6 +229,7 @@ sigma convert -t kusto --without-pipeline \
   detections/sigma/artex_enrich_user_agent.yml \
   detections/sigma/artex_selfupdate_egress.yml \
   detections/sigma/artex_guard_audit_framing.yml \
+  detections/sigma/artex_recording_proxy_ca.yml \
   detections/sigma/destructive_command_hunting.yml
 ```
 
