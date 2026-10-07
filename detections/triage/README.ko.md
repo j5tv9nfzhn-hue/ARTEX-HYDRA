@@ -30,7 +30,10 @@ ARTEX 가 돌았는가"를 빠르고 근거 있게 답해야 하는 사람을 �
   ([`enrich/enrich.go`](../../enrich/enrich.go)), 자체 업데이트 송신의 User-Agent `artex-selfupdate`
   ([`selfupdate/github.go`](../../selfupdate/github.go)), 플랫폼 가드 감사 마커
   ([`guard/guard.go`](../../guard/guard.go))를 찾습니다. 가드 마커는 비(非)ASCII 프레이밍까지 원문 그대로
-  두어 grep 이 실제로 일치하도록 했습니다.
+  두어 grep 이 실제로 일치하도록 했습니다. 로그 회전으로 `.gz`·`.bz2`·`.xz` 로 압축된 과거 로그도 풀어서
+  함께 검사하므로 호스트의 로그 이력까지 포괄합니다. 다만 파이썬 표준 라이브러리에 코덱이 없는 형식
+  (`.zst`·`.lz4`)은 검사하지 않고 **건너뛴 파일로 보고**합니다. 조용히 깨끗하다고 처리하지 않으니, 그런
+  파일은 먼저 압축을 풀거나 손으로 `grep` 해서 따로 확인하십시오.
 - **PostgreSQL 탐색 스키마**: ARTEX 저장소의 이중 그래프 테이블(`exploration_nodes`·`_edges`·`_anchors` 와
   `assets`·`companies`·`activity`, 그리고 `agent_prompts` 시드)을 확인합니다
   ([`db/schema.sql`](../../db/schema.sql)). DSN 을 주면 `psql` 로 조회하고, `psql` 이 없으면 손으로 돌릴 수

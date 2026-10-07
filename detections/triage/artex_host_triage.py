@@ -38,7 +38,12 @@
 #                               (enrich/enrich.go), the self-update egress UA
 #                               `artex-selfupdate` (selfupdate/github.go), and the
 #                               platform-guard audit marker (guard/guard.go) in the
-#                               log file(s) you point it at.
+#                               log file(s) you point it at. Rotated logs that
+#                               logrotate compressed as .gz/.bz2/.xz are read
+#                               through their standard-library codec so their
+#                               history is scanned too; a format with no stdlib
+#                               codec (.zst/.lz4) is reported as skipped, never
+#                               silently treated as clean.
 #   4. PostgreSQL schema      the dual-graph exploration tables (exploration_nodes /
 #                               _edges / _anchors with assets / companies / activity
 #                               and the agent_prompts seed) in the ARTEX store
@@ -63,7 +68,10 @@
 # finding fired. --self-test exits non-zero on any self-test failure.
 
 import argparse
+import bz2
+import gzip
 import json
+import lzma
 import os
 import re
 import shutil
@@ -274,6 +282,32 @@ def check_recording_proxy_artifacts(data_dir):
 
 # --- check 3: log markers -----------------------------------------------------
 
+# logrotate (and journald) compress rotated logs. gzip is the historical default;
+# bzip2 and xz show up when configured. Open those through their standard-library
+# codec so the markers inside a rotated file are scanned too — a bare text open()
+# would read the compressed bytes as UTF-8 and silently miss every marker in the
+# host's log history, exactly the kind of "absence is not safety" gap this tool
+# warns about. Formats with no stdlib codec (zstd, lz4) cannot be read here; they
+# are reported as skipped so the responder decompresses them by hand rather than
+# mistaking an unscanned file for a clean one.
+STDLIB_LOG_OPENERS = {
+    ".gz": gzip.open,
+    ".bz2": bz2.open,
+    ".xz": lzma.open,
+    ".lzma": lzma.open,
+}
+UNSUPPORTED_COMPRESSED_EXTS = {".zst", ".zstd", ".lz4", ".lz", ".zip", ".7z", ".br"}
+
+
+def open_log_stream(path):
+    """Return a UTF-8 text stream for a log file, transparently decompressing a
+    gzip/bzip2/xz rotated log by extension. The caller uses it as a context
+    manager. Plaintext and anything unrecognized fall through to a plain open."""
+    opener = STDLIB_LOG_OPENERS.get(os.path.splitext(path)[1].lower())
+    if opener is not None:
+        return opener(path, "rt", encoding="utf-8", errors="replace")
+    return open(path, "r", encoding="utf-8", errors="replace")
+
 
 def iter_log_files(logs, log_dirs):
     seen = set()
@@ -293,17 +327,28 @@ def iter_log_files(logs, log_dirs):
 
 
 def scan_logs(logs, log_dirs):
+    """Scan the log files/dirs for ARTEX markers. Returns (findings, skipped),
+    where skipped lists paths in a compressed format with no stdlib codec
+    (e.g. .zst/.lz4) that could not be read and so were NOT scanned."""
     findings = []
+    skipped = []
     for path in iter_log_files(logs, log_dirs):
+        if os.path.splitext(path)[1].lower() in UNSUPPORTED_COMPRESSED_EXTS:
+            # No stdlib codec: do not read gibberish and do not pretend it is
+            # clean — record it so run_checks can tell the responder to grep it
+            # by hand (zstdcat / lz4cat).
+            skipped.append(path)
+            continue
         # Stream line by line instead of f.read(): the sanctioned log targets are
         # whole syslogs (--log /var/log/syslog) that can be hundreds of MB, and all
         # three markers live within a single line, so a line at a time keeps memory
-        # bounded to one line while matching exactly what a full read would. Report
-        # each marker at most once per file (the full-read "value in text" did too),
-        # and stop early once every marker has fired.
+        # bounded to one line while matching exactly what a full read would.
+        # open_log_stream transparently decompresses a .gz/.bz2/.xz rotated log so
+        # its history is scanned too. Report each marker at most once per file (the
+        # full-read "value in text" did too), and stop early once all have fired.
         fired = set()
         try:
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
+            with open_log_stream(path) as f:
                 for line in f:
                     for marker in LOG_MARKERS:
                         if marker["value"] in fired:
@@ -322,9 +367,12 @@ def scan_logs(logs, log_dirs):
                             )
                     if len(fired) == len(LOG_MARKERS):
                         break
-        except OSError:
+        except (OSError, EOFError, lzma.LZMAError):
+            # Unreadable or a corrupt/mislabeled compressed file (gzip.BadGzipFile
+            # and bz2 errors are OSError subclasses; lzma raises LZMAError). Skip it
+            # the same way the plain-read path always skipped an unreadable file.
             continue
-    return findings
+    return findings, skipped
 
 
 # --- check 4: PostgreSQL exploration schema -----------------------------------
@@ -422,7 +470,16 @@ def run_checks(args):
         )
 
     if args.log or args.log_dir:
-        findings += scan_logs(args.log, args.log_dir)
+        log_findings, skipped = scan_logs(args.log, args.log_dir)
+        findings += log_findings
+        if skipped:
+            notes.append(
+                f"log-marker check could not read {len(skipped)} compressed log "
+                "file(s) with no standard-library codec (e.g. .zst/.lz4), so their "
+                "history was NOT scanned — decompress them first or grep them by "
+                "hand (e.g. `zstdcat FILE | grep -F artex-`): "
+                + ", ".join(sorted(skipped))
+            )
     else:
         notes.append("log-marker check skipped (no --log / --log-dir).")
 
@@ -508,8 +565,38 @@ def self_test():
             f.write("outbound artex-selfupdate to release host\n")
             f.write("blocked: " + LOG_MARKERS[2]["value"] + " this operation is denied\n")
             f.write("a normal line with no markers\n")
-        lf = scan_logs([logpath], [])
+        lf, _ = scan_logs([logpath], [])
         check("logs: all three markers fire", len(lf) == 3)
+
+        # 3b. rotated (compressed) logs under a --log-dir are scanned too, not
+        # silently skipped. A responder pointing at /var/log/artex expects the
+        # rotated history to be covered; a plain read of the compressed bytes
+        # would miss every marker inside. Plant one marker per container: a
+        # plaintext current log, a .gz, a .bz2, and an .xz rotation.
+        rot = os.path.join(tmp, "rotated")
+        os.makedirs(rot)
+        with open(os.path.join(rot, "artex.log"), "w", encoding="utf-8") as f:
+            f.write("outbound artex-selfupdate to release host\n")
+        with gzip.open(os.path.join(rot, "artex.log.1.gz"), "wt", encoding="utf-8") as f:
+            f.write("GET / HTTP/1.1 artex-enrich/1.0\n")
+        with bz2.open(os.path.join(rot, "artex.log.2.bz2"), "wt", encoding="utf-8") as f:
+            f.write("blocked: " + LOG_MARKERS[2]["value"] + " this operation is denied\n")
+        with lzma.open(os.path.join(rot, "artex.log.3.xz"), "wt", encoding="utf-8") as f:
+            f.write("another GET / artex-enrich/1.0 probe\n")
+        rf, rskip = scan_logs([], [rot])
+        rtitles = [f.title for f in rf]
+        check("rotated: plaintext + .gz + .bz2 + .xz markers all fire via --log-dir", len(rf) == 4)
+        check("rotated: the .gz/.xz enrichment markers (missed by a plain read) are found",
+              sum("enrichment prober" in t for t in rtitles) == 2)
+        check("rotated: nothing is reported as skipped when every file has a stdlib codec", rskip == [])
+
+        # 3c. a format with no stdlib codec (.zst) is reported as skipped, never
+        # silently treated as clean.
+        zstpath = os.path.join(rot, "artex.log.4.zst")
+        with open(zstpath, "wb") as f:
+            f.write(b"\x28\xb5\x2f\xfd and bytes a plain read would mis-handle")
+        _rf2, rskip2 = scan_logs([], [rot])
+        check("rotated: a .zst log (no stdlib codec) is reported as skipped", zstpath in rskip2)
 
         # 4. clean host: nothing fires, no false positives
         clean = os.path.join(tmp, "clean")
@@ -517,8 +604,9 @@ def self_test():
         cleanlog = os.path.join(tmp, "clean.log")
         with open(cleanlog, "w", encoding="utf-8") as f:
             f.write("nothing to see here\nGET /health 200\n")
+        clean_lf, clean_skip = scan_logs([cleanlog], [])
         check("clean: no artifact findings on an empty data dir", len(check_recording_proxy_artifacts(clean)) == 0)
-        check("clean: no log findings on a benign log", len(scan_logs([cleanlog], [])) == 0)
+        check("clean: no log findings on a benign log", len(clean_lf) == 0 and clean_skip == [])
         check("clean: no port findings on empty listing", len(check_listening_ports("")) == 0)
 
     # 5. pg schema: skipped path returns a manual-query note, no finding
@@ -542,7 +630,10 @@ def build_parser():
     p.add_argument("--log", action="append", default=[], metavar="PATH",
                    help="log file to scan for ARTEX markers (repeatable).")
     p.add_argument("--log-dir", action="append", default=[], metavar="PATH",
-                   help="directory of log files to scan recursively (repeatable).")
+                   help="directory of log files to scan recursively; rotated "
+                        ".gz/.bz2/.xz logs are decompressed and scanned too, while "
+                        ".zst/.lz4 (no stdlib codec) are reported as skipped "
+                        "(repeatable).")
     p.add_argument("--pg-dsn", default=None, metavar="DSN",
                    help="PostgreSQL DSN to check for the exploration schema (defaults to $ARTEX_PG_DSN).")
     p.add_argument("--ports-from", default=None, metavar="FILE",
