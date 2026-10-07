@@ -224,6 +224,8 @@ Because autonomous attacks spread fast, build the statutory reporting steps into
 - **Security incident:** under the Network Act, an information and communications service provider reports the incident to the Ministry of Science and ICT and KISA (KrCERT/CC) within 24 hours of becoming aware of it.
 - **Financial companies:** under financial-sector supervisory rules you may additionally have to report to bodies such as the Financial Supervisory Service and FSI, so check those rules as well.
 
+To actually file: report a security incident through [Boho Nara](https://www.boho.or.kr) or by calling 118 with no area code (the KISA cyber help center), and a personal-data breach through the PIPC [personal-information portal](https://www.privacy.go.kr). The deadlines are short, so record the responsible owner and the contact path in your section 6 incident-response procedure in advance.
+
 ---
 
 ## References
