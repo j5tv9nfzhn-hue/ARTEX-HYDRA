@@ -78,7 +78,7 @@ repository does not hand-roll a second, lossy format.
   drop tables, so absence does not mean safety.
 - **The host/DB rows with no `rule` have a runner.** The three indicators triaged directly rather than
   shipped as a Sigma rule — the listen ports, the recording-proxy endpoint, and this schema fingerprint —
-  are exactly what the [host-triage script](../triage/) checks on a suspected host, so a responder with
+  are all checked by the [host-triage script](../triage/) on a suspected host, so a responder with
   shell access but no SIEM does not have to run `ss`/`netstat`/`psql` by hand.
 
 ## Verification
