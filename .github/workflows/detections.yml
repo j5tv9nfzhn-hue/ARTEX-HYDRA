@@ -61,7 +61,7 @@ jobs:
         run: detections/tests/check-harness-sync.sh
       - name: Sigma 규칙 재현 테스트 (sigma check + 백엔드 변환 + 지표 보존)
         run: detections/tests/sigma/run.sh
-      - name: Sigma 실제 이벤트 매칭 테스트 (원자 규칙이 악성 샘플에 발화·정상 샘플에 침묵)
+      - name: Sigma 실제 이벤트 매칭 테스트 (원자·상관 규칙이 악성 샘플/타임라인에 발화·정상에 침묵)
         run: detections/tests/sigma_match/run.sh
       - name: Sigma SigmaHQ 관례 린트 (전체 검증기 세트 + 문서화된 기준)
         run: detections/tests/sigma_lint/run.sh
