@@ -325,8 +325,8 @@ detections/tests/attack/run.sh
 Expected output (abridged):
 
 ```
-  PASS  scored techniques match the rule set exactly (7: T1059, T1105, T1485, T1489, T1561.002, T1592, T1595)
-  PASS  scored tactics match the rule set exactly (command-and-control, execution, impact, reconnaissance)
+  PASS  scored techniques match the rule set exactly (8: T1059, T1105, T1485, T1489, T1557, T1561.002, T1592, T1595)
+  PASS  scored tactics match the rule set exactly (collection, command-and-control, credential-access, execution, impact, reconnaissance)
 RESULT: PASS
 ```
 
