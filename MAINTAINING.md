@@ -305,6 +305,23 @@ done
 UA·리다이렉트 미추적 같은 요인을 하나씩 제거해 다시 확인합니다. (2026-10-06 확인 기준으로
 세 링크 모두 위 방법에서 200 이며, pipc.go.kr 은 2회 리다이렉트 뒤 200 입니다.)
 
+이 수동 절차는 `scripts/check-external-links.py` 가 그대로 자동화합니다. 추적되는 모든 `.md`
+에서 코드펜스·인라인 코드 밖의 외부 링크를 모으고(예약·플레이스홀더 호스트는 제외), 위와
+같이 브라우저 UA·GET·리다이렉트 추적으로 상태를 확인하며 네트워크 오류·5xx·429 는 재시도해
+일시적 깜빡임과 진짜 장애를 가릅니다. 결과를 네 가지로 나눕니다: OK(2xx·3xx) ·
+RESTRICTED(401·403·405·429, 호스트는 살아 있고 확인 방법만 막힘) · ALLOWED
+(`scripts/external-links-allowlist.txt` 에 적힌, 우리가 고칠 수 없는 상류 상속 죽은 링크) ·
+DOWN(404·410·5xx·연결 오류, 깨졌을 가능성 높음).
+
+- 네트워크 없이 점검 대상만 미리 보기: `python3 -I scripts/check-external-links.py --list`
+- 릴리스·주기 점검(새로 깨진 링크가 있으면 비정상 종료): `python3 -I scripts/check-external-links.py --strict`
+
+외부 링크 생존은 flaky 하므로 **머지 게이트에 넣지 않습니다**. 대신 비차단 워크플로
+[`external-links`](.github/workflows/external-links.yml) 가 매주 월요일과 수동 실행으로
+`--strict` 를 돌려, allowlist 에 없는 DOWN 이 새로 생기면 빨갛게 드러냅니다. 상류 원문 보존
+파일이 물려받은 죽은 링크(예: `CHANGELOG.zh.md` 가 크레딧한, 사라진 기여자 계정)는 우리가
+고칠 수 없으므로 allowlist 에 사유와 함께 적어 strict 점검에서 뺍니다.
+
 ---
 
 ## 9. 릴리스 발행 파이프라인

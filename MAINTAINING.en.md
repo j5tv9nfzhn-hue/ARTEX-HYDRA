@@ -330,6 +330,23 @@ policy**, and re-check by eliminating factors one at a time: HEAD, the default U
 redirects. (As of the 2026-10-06 check, all three links return 200 with the method above, with
 pipc.go.kr returning 200 after two redirects.)
 
+This manual procedure is automated as-is by `scripts/check-external-links.py`. It gathers the external
+links outside code fences and inline code from every tracked `.md` (excluding reserved and placeholder
+hosts), checks their status with a browser UA, GET, and redirect-following as above, and retries on
+network errors, 5xx, and 429 to separate transient flakes from real outages. It sorts results into four
+classes: OK (2xx/3xx) · RESTRICTED (401/403/405/429 — the host is alive, only the checking method is
+blocked) · ALLOWED (a known upstream-inherited dead link we cannot fix, listed in
+`scripts/external-links-allowlist.txt`) · DOWN (404/410/5xx/connection error — likely broken).
+
+- Preview the targets without the network: `python3 -I scripts/check-external-links.py --list`
+- Release/periodic check (exits non-zero on a newly broken link): `python3 -I scripts/check-external-links.py --strict`
+
+External-link liveness is flaky, so it is **not a merge gate**. Instead the non-blocking
+[`external-links`](.github/workflows/external-links.yml) workflow runs `--strict` every Monday and on
+manual dispatch, turning red when a DOWN not on the allowlist newly appears. Dead links inherited by
+upstream-preserved files (for example a vanished contributor account credited in `CHANGELOG.zh.md`) are
+ones we cannot fix, so they go on the allowlist with a reason and are excluded from the strict check.
+
 ---
 
 ## 9. The release pipeline
