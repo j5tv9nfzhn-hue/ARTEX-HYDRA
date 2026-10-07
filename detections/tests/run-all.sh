@@ -29,7 +29,22 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 SUITES="sigma sigma_lint sigma_backends suricata attack indicators misp"
 
 fail=0
+harness_fail=0
 results=""
+
+# Before the suites, verify the harness itself is consistent: the SUITES list
+# above, the per-suite steps in CI, and the suite directories on disk must all
+# name the same suites in the same order. A suite wired into only one of the
+# three (say a new CI step with no SUITES entry) passes every per-suite test yet
+# silently breaks the "run-all.sh runs the same suites as CI" promise, which no
+# other suite can see. This is a gate, not a suite: it runs first and stays out
+# of the per-suite summary below, so that summary remains the detection suites.
+printf '\n===== harness sync =====\n'
+if ! "$HERE/check-harness-sync.sh"; then
+  harness_fail=1
+  fail=1
+fi
+
 for suite in $SUITES; do
   printf '\n===== %s =====\n' "$suite"
   if "$HERE/$suite/run.sh"; then
@@ -43,6 +58,9 @@ done
 
 printf '\n===== detection suites summary =====\n'
 printf '%s' "$results"
+if [ "$harness_fail" -ne 0 ]; then
+  printf '  FAIL  harness sync (run-all.sh / CI / directories out of sync: see above)\n'
+fi
 if [ "$fail" -ne 0 ]; then
   printf 'RESULT: FAIL\n'
   exit 1

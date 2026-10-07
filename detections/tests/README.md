@@ -22,6 +22,14 @@ repository.
 have to invoke the seven `run.sh` scripts by hand. Each suite runs to completion even if an earlier one fails,
 the script prints a one-line PASS/FAIL summary per suite at the end, and it exits non-zero if any suite failed.
 
+Before the suites, it runs a harness self-check ([`check-harness-sync.sh`](check-harness-sync.sh)) that fails
+the run if this suite list, the per-suite steps in [CI](../../.github/workflows/detections.yml), and the suite
+directories on disk ever name different suites or a different order. That is the one gap the seven suites
+cannot see on their own: a suite wired into only one of the three (a new CI step with no `run-all.sh` entry, or
+a directory never added to either) would otherwise pass every per-suite test while a green local `run-all.sh`
+quietly stopped meaning a green CI. The check is a gate, not an eighth suite: it stays out of the summary
+below, so the seven detection suites stay seven.
+
 ```sh
 detections/tests/run-all.sh
 ```
