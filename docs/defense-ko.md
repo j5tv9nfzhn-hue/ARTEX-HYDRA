@@ -197,7 +197,7 @@ ARTEX 연루가 의심될 때 가장 먼저 확인할 것을 순서로 정리합
    두 포트는 `--addr`·`--proxy` 플래그로 바뀔 수 있으므로, 이 조회가 비어도 열린 포트 전체와 내부 관리 UI 가 떠 있는지를 함께 봅니다.
 2. **송신 로그.** 자가 업데이트 User-Agent `artex-selfupdate` 로 코드 저장소 호스트(GitHub 릴리스)에 나간 요청이 송신 로그에 있는지 확인합니다(`selfupdate/`). 이 호스트에서 ARTEX 바이너리가 돌았음을 시사합니다.
 3. **감사 로그.** 가드 통제 마커 `【ARTEX 平台管控·非目标防御】` 가 감사 기록에 있으면 ARTEX 실행을 뒷받침합니다(`guard/guard.go`). 차단된 도구 호출마다 이 프레이밍으로 남습니다.
-4. **상태·기록 저장소.** ARTEX 는 PostgreSQL 에 탐색 그래프를 두고(`exploration_nodes`·`assets`·`companies`·`activity` 테이블과 `agent_prompts` 시드), 실행 파일 옆 데이터 디렉터리(`cmd/artex/main.go` 의 `--data` 기본값)에 기록 프록시 산출물을 남깁니다. 신뢰 CA 인증서 `_ca/mitmproxy-ca-cert.pem`, 트래픽 색인 `_index/index.sqlite`, 그리고 `tasks/`·`transcripts/` 하위 디렉터리가 함께 있으면 정황이 강해집니다.
+4. **상태·기록 저장소.** ARTEX 는 PostgreSQL 에 탐색 그래프를 두고(`exploration_nodes`·`assets`·`companies`·`activity` 테이블과 `agent_prompts` 시드), 실행 파일 옆 데이터 디렉터리(`cmd/artex/main.go` 의 `--data` 기본값)에 상태와 기록을 남깁니다. 이 디렉터리 바로 아래에는 작업별 산출물을 담는 `tasks/` 와 대화 기록을 담는 `transcripts/` 하위 디렉터리가 있고, 기록 프록시의 산출물은 그 안의 `traffic/` 하위 디렉터리에 따로 모입니다(`server/manager.go` 가 데이터 디렉터리 아래 `traffic/` 를 기록 프록시 저장소로 엽니다). 그래서 신뢰 CA 인증서는 `traffic/_ca/mitmproxy-ca-cert.pem`, 트래픽 색인은 `traffic/_index/index.sqlite`, 기록한 요청·응답 본문은 `traffic/_blobs/` 에 있습니다. 이 셋이 `tasks/`·`transcripts/` 와 함께 보이면 기록 프록시가 실제로 돌았다는 정황이 강해집니다.
 5. **명령 감사.** 파괴적 명령 헌팅 지표(2절 (나) 끝의 `rm -rf`·`DROP DATABASE`·`FLUSHALL`·반출 파이프 등)를 호스트 명령 이력과 대조합니다. 정당한 관리자도 같은 명령을 쓰므로 단서로만 다룹니다.
 
 정적 지표(포트·User-Agent·마커)는 운영자가 바꾸거나 지울 수 있습니다. 따라서 **부재가 안전을 뜻하지 않으며**, (가)의 행동 신호와 (나)의 호스트 흔적을 함께 모아 판단하는 것이 자율 AI 공격 분류의 핵심입니다.
