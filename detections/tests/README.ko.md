@@ -13,18 +13,18 @@
 
 ## 모든 스위트를 한 번에 실행 — [`run-all.sh`](run-all.sh)
 
-[`run-all.sh`](run-all.sh) 는 아래 일곱 스위트를 CI 와 같은 순서로 한 명령에 전부 돌리므로, 일곱 개
+[`run-all.sh`](run-all.sh) 는 아래 여덟 스위트를 CI 와 같은 순서로 한 명령에 전부 돌리므로, 여덟 개
 `run.sh` 스크립트를 손으로 하나씩 호출하지 않아도 됩니다. 앞 스위트가 실패해도 각 스위트는 끝까지
 돌고, 스크립트는 마지막에 스위트마다 PASS/FAIL 한 줄 요약을 출력하며, 하나라도 실패하면 0 이 아닌
 코드로 종료합니다.
 
 스위트를 돌리기 전에 하네스 자기 점검([`check-harness-sync.sh`](check-harness-sync.sh))을 먼저 실행합니다.
 이 점검은 위의 스위트 목록, [CI](../../.github/workflows/detections.yml) 의 스위트별 스텝, 디스크의 스위트
-디렉터리 이 셋이 서로 다른 스위트나 다른 순서를 가리키면 실행을 실패로 끝냅니다. 이것은 일곱 스위트가
+디렉터리 이 셋이 서로 다른 스위트나 다른 순서를 가리키면 실행을 실패로 끝냅니다. 이것은 여덟 스위트가
 스스로 보지 못하는 유일한 공백입니다. 세 곳 중 한 곳에만 배선된 스위트(예: `run-all.sh` 항목 없이 CI
 스텝만 추가하거나, 어느 쪽에도 넣지 않은 디렉터리)는 스위트별 테스트를 모두 통과하면서도, 로컬에서
-초록이던 `run-all.sh` 가 더는 초록 CI 를 뜻하지 않게 만듭니다. 이 점검은 여덟째 스위트가 아니라 게이트라서
-아래 요약에는 나타나지 않으므로, 탐지 스위트는 일곱 그대로입니다.
+초록이던 `run-all.sh` 가 더는 초록 CI 를 뜻하지 않게 만듭니다. 이 점검은 아홉째 스위트가 아니라 게이트라서
+아래 요약에는 나타나지 않으므로, 탐지 스위트는 여덟 그대로입니다.
 
 ```sh
 detections/tests/run-all.sh
@@ -35,6 +35,7 @@ detections/tests/run-all.sh
 ```
 ===== detection suites summary =====
   PASS  sigma
+  PASS  sigma_match
   PASS  sigma_lint
   PASS  sigma_backends
   PASS  suricata
@@ -118,11 +119,10 @@ RESULT: PASS
   특이성 단언에 해당하는 Sigma 쪽 장치입니다.
 
 이는 [`../README.ko.md`](../README.ko.md) 에 설명한 구조 + 컴파일 검증을, 실행 가능하고 단언하는 형태로 만든
-것입니다. 일반 `webserver` / `proxy` / `application` 로그 소스에 대한 실시간 이벤트 매칭 하네스는
-여전히 일부러 넣지 않았습니다. 그것들을 권위 있게 매칭하려면 필드를 정규화하는 백엔드가 필요하고,
-엉성한 매처는 규칙을 받쳐 주기는커녕 깎아내리기 때문입니다. 네트워크 규칙은 다릅니다. Suricata 는
-pcap 을 오프라인으로 읽어 경보 레코드를 바로 내보냅니다. 그래서 재현 가능한 *매칭* 테스트는 Suricata
-쪽에 두고, Sigma 에는 재현 가능한 *검증* 테스트를 둡니다.
+것입니다. 아래의 짝 스위트 [`sigma_match/`](sigma_match/) 가 원자 규칙에 대한 *매칭* 절반을 더합니다. 대표적인
+악성 이벤트가 각 규칙을 발화시키고 정상 이벤트는 발화시키지 않음을 확인하므로, 이제 Sigma 규칙도 Suricata
+규칙처럼 재현 가능한 검증 테스트와 재현 가능한 매칭 테스트를 함께 갖습니다. (엉성하게 손으로 짠 매처가 규칙을
+깎아내릴 수 있다는 기존 우려는, 파싱을 전부 pySigma 에 위임해 해소했습니다. 신뢰 모델은 다음 절에서 설명합니다.)
 
 ### 실행
 
@@ -146,6 +146,52 @@ RESULT: PASS
 단언이 하나라도 실패하면 스크립트가 0 이 아닌 코드로 종료하므로 CI 나 pre-commit 훅에 그대로 넣을 수
 있습니다. sigma-cli 는 기준 버전(`3.1.0`)으로 고정돼 있습니다. 내부에 미러를 두었다면
 `SIGMA_CLI_VERSION` 으로 버전을, `PYTHON_IMAGE` 로 이미지를 재정의하십시오.
+
+## Sigma 실시간 이벤트 매칭 — [`sigma_match/`](sigma_match/)
+
+[`sigma_match/run.sh`](sigma_match/run.sh) 는 [`../sigma/`](../sigma/) 아래의 원자 Sigma 규칙이 매칭되는
+이벤트에 실제로 *발화*하고 정상 이벤트에는 침묵함을 증명합니다. Suricata 스위트가 네트워크 규칙에 주는
+"돌려 볼 수 없는 탐지 규칙은 주장일 뿐"이라는 보증을, 호스트·로그 계층 규칙으로 확장한 것입니다. 세 가지
+속성을 단언합니다:
+
+- **규칙·샘플 짝짓기** — 모든 원자 규칙에는 [`events/<이름>.json`](sigma_match/events/) 샘플 파일이 있고,
+  모든 샘플 파일은 규칙으로 되짚어집니다. 샘플 없이 추가한 규칙은 검증을 못 받고 넘어가는 대신 여기서
+  실패합니다.
+- **참 양성(true positive)** — 각 규칙이 자신의 악성 샘플 이벤트를 전부 매칭합니다.
+- **참 음성(true negative)** — 각 규칙이 자신의 정상 샘플 이벤트를 하나도 매칭하지 않습니다. 예를 들어
+  `.mitmproxy/` 아래의 단독 `mitmproxy-ca-cert.pem` 은 기록용 프록시 규칙을 발화시키지 **않습니다**. 그
+  규칙의 `|all` 수식자가 ARTEX 가 쓰는 `_ca/` 디렉터리까지 함께 요구하기 때문이며, 이 판별을 증명하는 것이
+  바로 매칭 테스트입니다.
+
+신뢰 모델은 이렇습니다. 손으로 짠 코드가 아니라 pySigma 가 각 규칙을 파싱해 수식자와 조건을 트리로
+컴파일합니다(`|contains` → 와일드카드 값, `|all` → AND, `1 of selection_*` → OR). [`check.py`](sigma_match/check.py)
+는 그 트리를 따라 걷으며 각 말단만 평가하고, 명시적으로 지원하지 않는 구문을 만나면 조용히 통과시키지 않고
+예외를 던집니다(fail-closed). 범위는 일부러 좁게 잡고 스크립트 머리말에 밝혀 둡니다. **원자 규칙만** 다루며
+(상관 규칙은 시간 창 집계라 `sigma/` 와 `sigma_backends/` 스위트가 이미 다룹니다), 매칭은 **대소문자를 무시**
+하고(`sigma/` 스위트가 겨냥하는 splunk 백엔드의 기본값이며, 파괴 명령 규칙의 오탐 주석 자체가 이를 전제합니다),
+키워드 매칭은 전문 부분 문자열 검색입니다. 이것은 규칙의 필드·값·조건 로직에 대한 회귀 테스트이지, 필드
+정규화가 다를 수 있는 각자의 SIEM 에서 검증하는 일을 대신하지는 않습니다.
+
+### 실행
+
+Docker 만 있으면 됩니다. pySigma 가 컨테이너에서 돌고 저장소에는 아무것도 쓰지 않습니다.
+
+```sh
+detections/tests/sigma_match/run.sh
+```
+
+예상 출력(축약):
+
+```
+  PASS  rule/sample pairing: 5 atomic rules, 5 event files, no orphans
+  PASS  artex_enrich_user_agent: 1/1 positive events matched
+  PASS  artex_recording_proxy_ca: 2/2 benign events correctly not matched
+RESULT: PASS
+```
+
+단언이 하나라도 실패하면 스크립트가 0 이 아닌 코드로 종료하므로 CI 나 pre-commit 훅에 그대로 넣을 수
+있습니다. pySigma 는 기준 버전(`2.0.0`)으로 고정돼 있습니다. 내부에 미러를 두었다면 `PYSIGMA_VERSION`
+으로 버전을, `PYTHON_IMAGE` 로 이미지를 재정의하십시오.
 
 ## Sigma 백엔드 이식성 — [`sigma_backends/`](sigma_backends/)
 
@@ -377,7 +423,7 @@ detections/tests/misp/run.sh
 안내로 읽힐 수 있는 내용은 피해야 합니다. [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) 와
 [`../README.ko.md`](../README.ko.md) 의 규칙 색인을 보십시오.
 
-일곱 스위트는 모두 `detections/` 를 건드리는 모든 push 나 pull request 에서 CI 로 돕니다
+여덟 스위트는 모두 `detections/` 를 건드리는 모든 push 나 pull request 에서 CI 로 돕니다
 ([`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml) 참조). 그리고 지표
 테스트는 그것이 고정한 상류 소스 파일(`enrich/`, `selfupdate/`, `guard/`, `db/`, `cmd/artex/main.go`)이
 바뀔 때도 돕니다. 그래서 지표를 떨어뜨리거나, ATT&CK 레이어에서 어긋나거나, 문서화한 백엔드에서

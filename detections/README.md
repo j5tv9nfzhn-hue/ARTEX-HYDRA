@@ -101,6 +101,12 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   below as an executable test: it asserts 0 errors, that the whole tree compiles to a backend query, that each
   atomic indicator string survives into that query, and that a correlation rule fails to convert on its own —
   proving it genuinely depends on the atomic rule it references.
+- **Sigma live event-matching** ([`tests/sigma_match/run.sh`](tests/sigma_match/run.sh)) extends the Sigma suite
+  above from validity/compilation to actual firing: for every atomic rule it asserts a representative malicious
+  sample event matches and a benign one does not (for example, a standalone CA file under `.mitmproxy/` does not
+  trip the recording-proxy rule, whose `|all` also requires the `_ca/` directory). pySigma does all parsing; the
+  test only walks the compiled condition tree, and correlation rules are out of scope as time-windowed
+  aggregations. It brings "a detection you cannot run is only a claim" to the Sigma side the way Suricata has it.
 - **ATT&CK layer** ([`tests/attack/run.sh`](tests/attack/run.sh)) checks that the ATT&CK coverage layer stays
   consistent with the rules: its scored techniques and tactics must be exactly the `attack.*` tags on the
   rule set, and each technique must name a rule file that exists. Adding a rule without updating the layer

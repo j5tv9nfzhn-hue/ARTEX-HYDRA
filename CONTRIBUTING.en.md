@@ -265,12 +265,13 @@ this contract, so if you change only a rule and do not update the tests/layer, t
   maintains a defense/detection posture only. We do not accept write-ups that aid an attack, such as
   how to carry out an exploit or techniques for evading detection.
 
-The seven test suites run as-is with only Docker, and do not commit their artifacts to the repository.
+The eight test suites run as-is with only Docker, and do not commit their artifacts to the repository.
 Each script exits with a non-zero code if any single assertion fails, so it can be dropped straight
 into CI or a pre-commit hook.
 
 ```bash
 detections/tests/sigma/run.sh           # Sigma: sigma check + backend conversion + indicator preservation
+detections/tests/sigma_match/run.sh     # Sigma: atomic rules fire on malicious sample events, stay quiet on benign
 detections/tests/sigma_lint/run.sh      # Sigma: full SigmaHQ-convention validators + documented criteria
 detections/tests/sigma_backends/run.sh  # Sigma portability: does a correlation rule convert across backends
 detections/tests/suricata/run.sh        # Suricata: synthesize pcap → suricata -r → assert alert counts
@@ -279,8 +280,8 @@ detections/tests/indicators/run.sh      # Indicators: rule's pinned indicators �
 detections/tests/misp/run.sh            # MISP: indicator CSV ↔ MISP event sync + pymisp validity
 ```
 
-To run all seven at once, use [`detections/tests/run-all.sh`](detections/tests/run-all.sh). It runs the
-seven sequentially in the same order as CI, runs the rest to the end even if an earlier suite fails, then
+To run all eight at once, use [`detections/tests/run-all.sh`](detections/tests/run-all.sh). It runs the
+eight sequentially in the same order as CI, runs the rest to the end even if an earlier suite fails, then
 prints a per-suite PASS/FAIL summary, and exits with a non-zero code if any one fails. An example of
 wiring this runner directly as a pre-commit hook is in the repository root's
 [`.pre-commit-config.yaml`](.pre-commit-config.yaml). If you install it with `pip install pre-commit &&
@@ -289,7 +290,7 @@ those rules pin (the same scope as CI), catching rule/test mismatches before pus
 also includes the `docs` hook that checks in-repo link/image/anchor references (the `check-doc-links.py`
 from step 3 of the contribution flow above).
 
-These seven tests are run by the repository CI
+These eight tests are run by the repository CI
 ([`.github/workflows/detections.yml`](.github/workflows/detections.yml)) on every push/PR that changes
 anything under `detections/`. The indicator-match test also runs when the upstream source files those
 indicators point to (`enrich/`, `selfupdate/`, `guard/`, `db/`, `cmd/artex/main.go`) change, catching the

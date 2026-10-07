@@ -18,17 +18,17 @@ repository.
 
 ## Run every suite at once — [`run-all.sh`](run-all.sh)
 
-[`run-all.sh`](run-all.sh) runs all seven suites below in one command, in the same order as CI, so you do not
-have to invoke the seven `run.sh` scripts by hand. Each suite runs to completion even if an earlier one fails,
+[`run-all.sh`](run-all.sh) runs all eight suites below in one command, in the same order as CI, so you do not
+have to invoke the eight `run.sh` scripts by hand. Each suite runs to completion even if an earlier one fails,
 the script prints a one-line PASS/FAIL summary per suite at the end, and it exits non-zero if any suite failed.
 
 Before the suites, it runs a harness self-check ([`check-harness-sync.sh`](check-harness-sync.sh)) that fails
 the run if this suite list, the per-suite steps in [CI](../../.github/workflows/detections.yml), and the suite
-directories on disk ever name different suites or a different order. That is the one gap the seven suites
+directories on disk ever name different suites or a different order. That is the one gap the eight suites
 cannot see on their own: a suite wired into only one of the three (a new CI step with no `run-all.sh` entry, or
 a directory never added to either) would otherwise pass every per-suite test while a green local `run-all.sh`
-quietly stopped meaning a green CI. The check is a gate, not an eighth suite: it stays out of the summary
-below, so the seven detection suites stay seven.
+quietly stopped meaning a green CI. The check is a gate, not a ninth suite: it stays out of the summary
+below, so the eight detection suites stay eight.
 
 ```sh
 detections/tests/run-all.sh
@@ -39,6 +39,7 @@ Expected output (abridged):
 ```
 ===== detection suites summary =====
   PASS  sigma
+  PASS  sigma_match
   PASS  sigma_lint
   PASS  sigma_backends
   PASS  suricata
@@ -122,11 +123,11 @@ compilation with [sigma-cli](https://github.com/SigmaHQ/sigma-cli) (pySigma), an
   Suricata specificity assertion above.
 
 This is the structural + compilation validation documented in [`../README.md`](../README.md), made executable
-and assertive. A live event-matching harness for the generic `webserver` / `proxy` / `application` log sources
-is still intentionally not shipped: matching those authoritatively needs a backend that normalizes the fields,
-and a weak matcher would undercut the rules rather than support them. Network rules are different — Suricata
-reads a pcap offline and emits the alert record directly — which is why the reproducible *matching* test lives
-on the Suricata side, while Sigma gets a reproducible *validation* test.
+and assertive. The companion [`sigma_match/`](sigma_match/) suite below adds the *matching* half for the atomic
+rules — a representative malicious event fires each rule and a benign one does not — so the Sigma rules now get
+both a reproducible validation test and a reproducible matching test, the way the Suricata rule does. (The
+earlier concern that a weak hand-written matcher would undercut the rules is addressed by delegating all parsing
+to pySigma; see the trust model in the next section.)
 
 ### Run it
 
@@ -149,6 +150,51 @@ RESULT: PASS
 The script exits non-zero if any assertion fails, so it drops straight into CI or a pre-commit hook. sigma-cli
 is pinned to a reference version (`3.1.0`); override it with `SIGMA_CLI_VERSION`, or the image with
 `PYTHON_IMAGE`, if you mirror them internally.
+
+## Sigma live event-matching — [`sigma_match/`](sigma_match/)
+
+[`sigma_match/run.sh`](sigma_match/run.sh) proves the atomic Sigma rules under [`../sigma/`](../sigma/) actually
+*fire* on a matching event and stay quiet on a benign one — the "a detection you cannot run is only a claim"
+guarantee the Suricata suite gives the network rule, extended here to the host/log-layer rules. It asserts
+three properties:
+
+- **Rule/sample pairing** — every atomic rule has an [`events/<name>.json`](sigma_match/events/) sample file and
+  every sample file maps back to a rule, so a rule added without samples fails here rather than going untested.
+- **True positives** — each rule matches every one of its malicious sample events.
+- **True negatives** — each rule matches none of its benign sample events. For example, a standalone
+  `mitmproxy-ca-cert.pem` under `.mitmproxy/` does **not** trip the recording-proxy rule, because its `|all`
+  modifier also requires the `_ca/` directory ARTEX writes — the matching test is what proves that discrimination.
+
+The trust model is that pySigma — not hand-written code — parses each rule and compiles its modifiers and
+condition into a tree (`|contains` → a wildcard value, `|all` → an AND, `1 of selection_*` → an OR);
+[`check.py`](sigma_match/check.py) only walks that tree and tests each leaf, and raises rather than passing on
+any construct it does not explicitly support (fail-closed). Scope is deliberately narrow and stated in the
+script header: **atomic rules only** (the correlation rules are time-windowed aggregations the `sigma/` and
+`sigma_backends/` suites already cover), matching is **case-insensitive** (the splunk-backend default the
+`sigma/` suite targets, which the destructive rule's own false-positive note assumes), and keyword matching is
+a full-text substring search. It is a regression test for the rules' field/value/condition logic, not a
+substitute for validating in your own SIEM, whose field normalization may differ.
+
+### Run it
+
+Needs only Docker; pySigma runs in a container and nothing is written to the repo.
+
+```sh
+detections/tests/sigma_match/run.sh
+```
+
+Expected output (abridged):
+
+```
+  PASS  rule/sample pairing: 5 atomic rules, 5 event files, no orphans
+  PASS  artex_enrich_user_agent: 1/1 positive events matched
+  PASS  artex_recording_proxy_ca: 2/2 benign events correctly not matched
+RESULT: PASS
+```
+
+The script exits non-zero if any assertion fails, so it drops straight into CI or a pre-commit hook. pySigma is
+pinned to a reference version (`2.0.0`); override it with `PYSIGMA_VERSION`, or the image with `PYTHON_IMAGE`,
+if you mirror them internally.
 
 ## Sigma backend portability — [`sigma_backends/`](sigma_backends/)
 
@@ -378,7 +424,7 @@ deterministically, assert engine-version-independent properties exactly (and sof
 recorded reference), and avoid any content that reads as attack guidance. See
 [`../../CONTRIBUTING.en.md`](../../CONTRIBUTING.en.md) and the rule indexes in [`../README.md`](../README.md).
 
-All seven suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
+All eight suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
 on every push or pull request that touches `detections/` — and the indicator test also runs when the upstream
 source files it pins (`enrich/`, `selfupdate/`, `guard/`, `db/`, `cmd/artex/main.go`) change — so a rule
 change that drops an indicator, drifts from the ATT&CK layer, stops converting on a documented backend,

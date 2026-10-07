@@ -5,7 +5,7 @@
 # 멈춘다.
 #
 # 1) detections — 탐지 규칙(detections/)이나 그 규칙이 고정한 상류 소스가 바뀌는 커밋에서만,
-#    일곱 탐지 테스트를 한 번에 돌리는 러너(detections/tests/run-all.sh)를 실행한다.
+#    여덟 탐지 테스트를 한 번에 돌리는 러너(detections/tests/run-all.sh)를 실행한다.
 #    CI(.github/workflows/detections.yml)와 같은 규칙·소스 범위를 먼저 통과시켜, 규칙만
 #    바꾸고 테스트·레이어를 갱신하지 않은 변경을 잡는다. 요구 사항은 Docker 다(각 테스트가
 #    컨테이너에서 격리 실행되고, 러너에는 아무것도 설치하지 않는다).
@@ -25,7 +25,7 @@ repos:
   - repo: local
     hooks:
       - id: detections
-        name: 탐지 규칙 테스트 7종 (Sigma·Suricata·ATT&CK·지표·MISP)
+        name: 탐지 규칙 테스트 8종 (Sigma·Suricata·ATT&CK·지표·MISP)
         entry: detections/tests/run-all.sh
         language: script
         pass_filenames: false

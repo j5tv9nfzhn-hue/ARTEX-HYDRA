@@ -2,7 +2,7 @@
 #
 # Harness self-consistency check for the detection test suites. check-harness-sync.sh
 # launches this inside a Python container with the detection tree and the CI
-# workflow mounted read-only under /repo. It proves the one thing the seven
+# workflow mounted read-only under /repo. It proves the one thing the eight
 # detection suites cannot: that run-all.sh, the CI workflow, and the suite
 # directories on disk all name the same suites in the same order.
 #
@@ -26,7 +26,7 @@
 # and set(A) == C (so no directory is orphaned and no listed suite is missing on
 # disk). It is deliberately not a detection suite: it is not in SUITES, not a
 # `.../run.sh` CI step, and not a run.sh directory, so it never counts itself and
-# the seven detection suites stay seven.
+# the eight detection suites stay eight.
 #
 # It parses only the stable machine-readable lines (the SUITES assignment, the
 # `run:` steps, the directory listing), never prose or the example-output blocks
