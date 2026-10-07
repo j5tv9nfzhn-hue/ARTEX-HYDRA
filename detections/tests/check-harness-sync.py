@@ -34,12 +34,23 @@
 #
 # Pure standard library (the slim image already ships python3); nothing is
 # installed and nothing is written to the repo. Exits non-zero on any mismatch.
+#
+# Usage. check-harness-sync.sh runs this inside Docker with the repo mounted at
+# /repo, which is why ROOT defaults to /repo below. To run it directly on the
+# host instead, point ARTEX_REPO_ROOT at the repo root:
+#
+#     ARTEX_REPO_ROOT="$(git rev-parse --show-toplevel)" \
+#         python3 detections/tests/check-harness-sync.py
 
 import os
 import re
 import sys
 
+# Default to /repo, the mount point check-harness-sync.sh uses inside Docker.
+# Track whether the caller set the variable so a missing-path failure can tell a
+# host-direct runner why ROOT is /repo (see main()).
 ROOT = os.environ.get("ARTEX_REPO_ROOT", "/repo")
+ROOT_FROM_ENV = "ARTEX_REPO_ROOT" in os.environ
 TESTS_DIR = os.path.join(ROOT, "detections", "tests")
 RUN_ALL = os.path.join(TESTS_DIR, "run-all.sh")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "detections.yml")
@@ -91,7 +102,19 @@ def suites_from_dirs(path):
 def main():
     for p in (RUN_ALL, CI_WORKFLOW, TESTS_DIR):
         if not os.path.exists(p):
-            fail(f"missing expected path: {p}")
+            hint = ""
+            if not ROOT_FROM_ENV:
+                hint = (
+                    "\n       ARTEX_REPO_ROOT is unset, so ROOT defaulted to /repo "
+                    "(the path check-harness-sync.sh mounts the repo at inside Docker).\n"
+                    "       To run this script directly on the host, point it at the "
+                    "repo root:\n"
+                    '         ARTEX_REPO_ROOT="$(git rev-parse --show-toplevel)" '
+                    "python3 detections/tests/check-harness-sync.py\n"
+                    "       or use the Docker wrapper: "
+                    "detections/tests/check-harness-sync.sh"
+                )
+            fail(f"missing expected path: {p}{hint}")
 
     a = suites_from_run_all(RUN_ALL)
     b = suites_from_ci(CI_WORKFLOW)
