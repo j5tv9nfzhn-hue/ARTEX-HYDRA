@@ -1,0 +1,564 @@
+#!/usr/bin/env python3
+#
+# ARTEX host triage — a read-only responder helper for a suspected ARTEX host.
+#
+# The rest of detections/ serves defenders who run a SIEM (Sigma), a network
+# sensor (Suricata), or a threat-intel platform (the MISP / CSV indicators). This
+# script serves the other responder: the one standing at a single suspect host's
+# shell, with no SIEM, who needs to answer "did ARTEX run here?" from local state.
+# It operationalizes the same indicators the rest of the directory ships, plus the
+# three host/DB indicators the indicator list deliberately carries WITHOUT a Sigma
+# rule because they are not log- or network-observable and can only be checked on
+# the box itself (see detections/indicators/artex_indicators.csv — the rows whose
+# `rule` column is empty: server-listen-port, recording-proxy-endpoint,
+# postgres-exploration-schema).
+#
+# It is a TRIAGE LEAD generator, not an alerting rule. Every check is grounded in
+# a string or path verified in this repository's source, and every finding carries
+# the same honest caveat the matching Sigma rule or indicator row carries: ports
+# are configurable, the MITM CA filename is shared with standalone mitmproxy, the
+# guard marker also appears in logs that merely quote this guide. A hit is a reason
+# to look closer, never an attribution on its own, and the absence of every finding
+# is NOT a clean bill of health — an operator can rename the binary, move the data
+# directory, or change the ports.
+#
+# What it checks (each cites the source it is grounded in):
+#   1. Listening ports        :8787 (admin UI) and 127.0.0.1:8788 (recording proxy)
+#                             — defaults of the --addr / --proxy flags in
+#                               cmd/artex/main.go. Parsed from `ss`/`netstat`/`lsof`
+#                               on the live host, or from --ports-from FILE.
+#   2. Recording-proxy MITM    <data-dir>/traffic/_ca/mitmproxy-ca-cert.pem and the
+#      CA + stores             sibling _index/index.sqlite and _blobs/ the recorder
+#                             writes on first start (traffic/traffic.go; the data
+#                               dir default is data/ next to the binary — see
+#                               cmd/artex/main.go). The CA is the trust anchor of an
+#                               adversary-in-the-middle traffic recorder (ATT&CK
+#                               T1557).
+#   3. Log markers            the enrichment prober UA `artex-enrich/1.0`
+#                               (enrich/enrich.go), the self-update egress UA
+#                               `artex-selfupdate` (selfupdate/github.go), and the
+#                               platform-guard audit marker (guard/guard.go) in the
+#                               log file(s) you point it at.
+#   4. PostgreSQL schema      the dual-graph exploration tables (exploration_nodes /
+#                               _edges / _anchors with assets / companies / activity
+#                               and the agent_prompts seed) in the ARTEX store
+#                               (db/schema.sql). Run against a DSN with `psql` if
+#                               available; otherwise the script prints the exact
+#                               read-only query for you to run by hand.
+#
+# Safety: pure Python standard library, no network, no writes anywhere except the
+# self-test's own temporary directory. It reads host state (open ports, a data
+# directory, log files, and — only if you pass a DSN — the database) and prints
+# what it found. Use it only on a host you own or are authorized in writing to
+# inspect.
+#
+# Usage:
+#   detections/triage/artex_host_triage.py --data-dir /opt/artex/data \
+#       --log /var/log/syslog --log-dir /var/log/artex
+#   detections/triage/artex_host_triage.py --pg-dsn "$ARTEX_PG_DSN"
+#   detections/triage/artex_host_triage.py --self-test     # reproducible fixture test
+#   detections/triage/artex_host_triage.py --json          # machine-readable findings
+#
+# Exit code: 0 by default (triage, not a gate). With --exit-code, exits 1 if any
+# finding fired. --self-test exits non-zero on any self-test failure.
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+# --- grounded constants (every value is verified in this repository's source) ---
+
+# Default listen / recording-proxy ports (cmd/artex/main.go --addr / --proxy).
+SERVER_PORT = 8787
+PROXY_HOST = "127.0.0.1"
+PROXY_PORT = 8788
+
+# Recording-proxy artifacts under <data-dir>/traffic/ (traffic/traffic.go;
+# server/manager.go opens traffic.Open(filepath.Join(dir, "traffic"), ...)).
+TRAFFIC_SUBDIR = "traffic"
+CA_RELPATH = os.path.join("_ca", "mitmproxy-ca-cert.pem")
+INDEX_RELPATH = os.path.join("_index", "index.sqlite")
+BLOBS_RELDIR = "_blobs"
+
+# Log markers. The guard marker is the original (untranslated) framing string the
+# platform guard writes to the audit log on a blocked tool call (guard/guard.go);
+# it is kept verbatim here because that is the exact byte sequence a responder
+# greps for, and translating it would stop the match.
+LOG_MARKERS = [
+    {
+        "value": "artex-enrich/1.0",
+        "title": "enrichment prober User-Agent",
+        "source": "enrich/enrich.go",
+        "severity": "high",
+        "caveat": "An operator can change the User-Agent; absence is not safety.",
+    },
+    {
+        "value": "artex-selfupdate",
+        "title": "self-update egress User-Agent",
+        "source": "selfupdate/github.go",
+        "severity": "medium",
+        "caveat": "Seen in outbound logs from a host running ARTEX; the string is configurable.",
+    },
+    {
+        "value": "【ARTEX 平台管控·非目标防御】",
+        "title": "platform-guard audit-log framing marker",
+        "source": "guard/guard.go",
+        "severity": "high",
+        "caveat": "Also appears in logs that merely quote this defense guide or the ARTEX source.",
+    },
+]
+
+# Dual-graph exploration schema fingerprint (db/schema.sql). Their presence
+# together is the host-forensic tell; any one table name is generic.
+SCHEMA_TABLES = [
+    "exploration_nodes",
+    "exploration_edges",
+    "exploration_anchors",
+    "assets",
+    "companies",
+    "activity",
+    "agent_prompts",
+]
+
+
+class Finding:
+    def __init__(self, check, severity, title, detail, source, caveat):
+        self.check = check
+        self.severity = severity
+        self.title = title
+        self.detail = detail
+        self.source = source
+        self.caveat = caveat
+
+    def as_dict(self):
+        return {
+            "check": self.check,
+            "severity": self.severity,
+            "title": self.title,
+            "detail": self.detail,
+            "source": self.source,
+            "caveat": self.caveat,
+        }
+
+
+# --- check 1: listening ports -------------------------------------------------
+
+# Parse a port-listing produced by `ss -ltnp`, `netstat -ltnp`, or
+# `lsof -nP -iTCP -sTCP:LISTEN`. Kept a pure function of its text input so the
+# self-test can feed synthetic output without opening a real socket. Returns the
+# set of (host, port) LISTEN endpoints it can parse out of any of those formats.
+LISTEN_RE = re.compile(
+    r"(?P<host>\[?[0-9a-fA-F:.*]+\]?):(?P<port>\d{1,5})\b"
+)
+
+
+def parse_listen_endpoints(listing):
+    endpoints = set()
+    for line in listing.splitlines():
+        low = line.lower()
+        # ss/netstat lines for listeners contain the LISTEN state; lsof lines
+        # contain "(LISTEN)". Skip anything that is not a listening socket so a
+        # connected session to :8787 elsewhere is not misread as a local listener.
+        if "listen" not in low:
+            continue
+        for m in LISTEN_RE.finditer(line):
+            host = m.group("host").strip("[]")
+            try:
+                port = int(m.group("port"))
+            except ValueError:
+                continue
+            if 0 < port < 65536:
+                endpoints.add((host, port))
+    return endpoints
+
+
+def gather_listen_listing():
+    """Run the first available port tool; return its stdout, or '' if none work."""
+    for cmd in (
+        ["ss", "-ltnp"],
+        ["netstat", "-ltnp"],
+        ["lsof", "-nP", "-iTCP", "-sTCP:LISTEN"],
+    ):
+        if shutil.which(cmd[0]) is None:
+            continue
+        try:
+            out = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=15, check=False
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if out.stdout:
+            return out.stdout
+    return ""
+
+
+def check_listening_ports(listing):
+    findings = []
+    endpoints = parse_listen_endpoints(listing)
+    for host, port in sorted(endpoints):
+        if port == SERVER_PORT:
+            findings.append(
+                Finding(
+                    "listening-port",
+                    "medium",
+                    "ARTEX default admin-UI port is listening",
+                    f"a process is listening on {host}:{port} (ARTEX --addr default :{SERVER_PORT})",
+                    "cmd/artex/main.go",
+                    "The port is configurable; confirm the process with `ss -ltnp` / `lsof`.",
+                )
+            )
+        if port == PROXY_PORT and (host == PROXY_HOST or host in ("*", "0.0.0.0", "::")):
+            findings.append(
+                Finding(
+                    "listening-port",
+                    "high",
+                    "ARTEX recording-proxy loopback port is listening",
+                    f"a process is listening on {host}:{port} (ARTEX --proxy default {PROXY_HOST}:{PROXY_PORT})",
+                    "cmd/artex/main.go",
+                    "Loopback-only and configurable; correlate with the MITM CA file under traffic/_ca/.",
+                )
+            )
+    return findings
+
+
+# --- check 2: recording-proxy artifacts --------------------------------------
+
+
+def check_recording_proxy_artifacts(data_dir):
+    findings = []
+    traffic = os.path.join(data_dir, TRAFFIC_SUBDIR)
+    ca = os.path.join(traffic, CA_RELPATH)
+    if os.path.isfile(ca):
+        findings.append(
+            Finding(
+                "recording-proxy-ca",
+                "medium",
+                "ARTEX recording-proxy MITM CA certificate present",
+                f"found {ca}",
+                "traffic/traffic.go",
+                "A bare mitmproxy-ca-cert.pem is shared with standalone mitmproxy; "
+                "the traffic/_ca/ layout narrows it to ARTEX.",
+            )
+        )
+    index = os.path.join(traffic, INDEX_RELPATH)
+    if os.path.isfile(index):
+        findings.append(
+            Finding(
+                "recording-proxy-index",
+                "medium",
+                "ARTEX recording-proxy traffic index store present",
+                f"found {index}",
+                "traffic/traffic.go",
+                "The recorder's SQLite index of captured HTTP(S) exchanges; a forensic artifact of a run.",
+            )
+        )
+    blobs = os.path.join(traffic, BLOBS_RELDIR)
+    if os.path.isdir(blobs):
+        findings.append(
+            Finding(
+                "recording-proxy-blobs",
+                "low",
+                "ARTEX recording-proxy body blob store present",
+                f"found {blobs}/",
+                "traffic/traffic.go",
+                "Spilled response bodies from the traffic recorder; corroborates the index/CA.",
+            )
+        )
+    return findings
+
+
+# --- check 3: log markers -----------------------------------------------------
+
+
+def iter_log_files(logs, log_dirs):
+    seen = set()
+    for p in logs:
+        if os.path.isfile(p) and p not in seen:
+            seen.add(p)
+            yield p
+    for d in log_dirs:
+        if not os.path.isdir(d):
+            continue
+        for root, _dirs, files in os.walk(d):
+            for name in sorted(files):
+                p = os.path.join(root, name)
+                if p not in seen:
+                    seen.add(p)
+                    yield p
+
+
+def scan_logs(logs, log_dirs):
+    findings = []
+    for path in iter_log_files(logs, log_dirs):
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                text = f.read()
+        except OSError:
+            continue
+        for marker in LOG_MARKERS:
+            if marker["value"] in text:
+                findings.append(
+                    Finding(
+                        "log-marker",
+                        marker["severity"],
+                        f"ARTEX {marker['title']} in log",
+                        f"{path!r} contains {marker['value']!r}",
+                        marker["source"],
+                        marker["caveat"],
+                    )
+                )
+    return findings
+
+
+# --- check 4: PostgreSQL exploration schema -----------------------------------
+
+# A single read-only query: how many of the dual-graph tables exist in the public
+# schema. Printed for manual use when psql is unavailable or no DSN was given.
+SCHEMA_QUERY = (
+    "SELECT count(*) FROM information_schema.tables "
+    "WHERE table_schema='public' AND table_name IN ("
+    + ", ".join(f"'{t}'" for t in SCHEMA_TABLES)
+    + ");"
+)
+
+
+def check_pg_schema(dsn):
+    findings = []
+    if not dsn:
+        return findings, (
+            "PostgreSQL schema check skipped (no --pg-dsn / ARTEX_PG_DSN). "
+            "To check by hand, run this read-only query against the suspected store:\n"
+            f"    psql <DSN> -c \"{SCHEMA_QUERY}\"\n"
+            f"    (a count at or near {len(SCHEMA_TABLES)} of these tables together is the dual-graph tell; db/schema.sql)"
+        )
+    if shutil.which("psql") is None:
+        return findings, (
+            "PostgreSQL schema check skipped (psql not found on PATH). "
+            f"Run by hand:\n    psql <DSN> -c \"{SCHEMA_QUERY}\""
+        )
+    try:
+        out = subprocess.run(
+            ["psql", dsn, "-tAc", SCHEMA_QUERY],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as e:
+        return findings, f"PostgreSQL schema check could not run: {e}"
+    if out.returncode != 0:
+        return findings, (
+            "PostgreSQL schema check could not connect: "
+            + (out.stderr.strip().splitlines()[-1] if out.stderr.strip() else "psql returned non-zero")
+        )
+    count = out.stdout.strip()
+    try:
+        n = int(count)
+    except ValueError:
+        return findings, f"PostgreSQL schema check returned an unexpected result: {count!r}"
+    if n >= 4:
+        findings.append(
+            Finding(
+                "postgres-schema",
+                "high" if n >= 6 else "medium",
+                "ARTEX dual-graph exploration schema present",
+                f"{n} of {len(SCHEMA_TABLES)} ARTEX exploration-graph tables found in the public schema",
+                "db/schema.sql",
+                "Inspect the database to confirm; a few table names overlap generic apps, the set does not.",
+            )
+        )
+    return findings, f"PostgreSQL schema check: {n} of {len(SCHEMA_TABLES)} ARTEX tables present."
+
+
+# --- reporting ----------------------------------------------------------------
+
+SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
+
+
+def run_checks(args):
+    findings = []
+    notes = []
+
+    if args.ports_from:
+        try:
+            with open(args.ports_from, "r", encoding="utf-8", errors="replace") as f:
+                listing = f.read()
+        except OSError as e:
+            listing = ""
+            notes.append(f"could not read --ports-from {args.ports_from}: {e}")
+    else:
+        listing = gather_listen_listing()
+        if not listing:
+            notes.append(
+                "listening-port check skipped (no ss/netstat/lsof output; "
+                "run on the host as a user that can see listeners, or pass --ports-from)."
+            )
+    findings += check_listening_ports(listing)
+
+    if args.data_dir:
+        for d in args.data_dir:
+            findings += check_recording_proxy_artifacts(d)
+    else:
+        notes.append(
+            "recording-proxy artifact check skipped (no --data-dir; "
+            "ARTEX's default is data/ next to the binary — cmd/artex/main.go)."
+        )
+
+    if args.log or args.log_dir:
+        findings += scan_logs(args.log, args.log_dir)
+    else:
+        notes.append("log-marker check skipped (no --log / --log-dir).")
+
+    pg_findings, pg_note = check_pg_schema(args.pg_dsn or os.environ.get("ARTEX_PG_DSN"))
+    findings += pg_findings
+    if pg_note:
+        notes.append(pg_note)
+
+    findings.sort(key=lambda f: (SEVERITY_ORDER.get(f.severity, 9), f.check, f.title))
+    return findings, notes
+
+
+def print_report(findings, notes):
+    print("ARTEX host triage — read-only; findings are triage leads, not attribution.")
+    print("Use only on a host you own or are authorized in writing to inspect.\n")
+    if findings:
+        print(f"{len(findings)} indicator(s) fired:\n")
+        for f in findings:
+            print(f"  [{f.severity.upper():6}] {f.title}")
+            print(f"           {f.detail}")
+            print(f"           grounded in: {f.source}")
+            print(f"           caveat: {f.caveat}\n")
+    else:
+        print("No ARTEX indicators fired in the checks that ran.")
+        print("This is NOT a clean bill of health: an operator can rename the binary,")
+        print("move the data directory, or change the ports. Absence is not safety.\n")
+    if notes:
+        print("Notes:")
+        for n in notes:
+            print("  - " + n.replace("\n", "\n    "))
+
+
+# --- self-test ----------------------------------------------------------------
+
+
+def self_test():
+    failures = []
+
+    def check(name, cond):
+        print(f"  {'PASS' if cond else 'FAIL'}  {name}")
+        if not cond:
+            failures.append(name)
+
+    # 1. parse_listen_endpoints across ss / netstat / lsof shapes.
+    ss_out = (
+        "State  Recv-Q Send-Q Local Address:Port Peer Address:Port Process\n"
+        "LISTEN 0      4096   *:8787            *:*               users:((\"artex\"))\n"
+        "LISTEN 0      4096   127.0.0.1:8788    0.0.0.0:*         users:((\"artex\"))\n"
+        "LISTEN 0      128    127.0.0.1:5432    0.0.0.0:*         users:((\"postgres\"))\n"
+    )
+    eps = parse_listen_endpoints(ss_out)
+    check("ports: ss output parses :8787 and 127.0.0.1:8788", ("*", 8787) in eps and ("127.0.0.1", 8788) in eps)
+    pf = check_listening_ports(ss_out)
+    checks_hit = {f.title for f in pf}
+    check("ports: both ARTEX listeners reported", len(pf) == 2)
+    check("ports: admin-UI listener reported", any("admin-UI" in t for t in checks_hit))
+    check("ports: recording-proxy listener reported", any("recording-proxy" in t for t in checks_hit))
+
+    lsof_out = "artex 42 root 7u IPv4 TCP 127.0.0.1:8788 (LISTEN)\n"
+    check("ports: lsof shape parses the proxy listener", ("127.0.0.1", 8788) in parse_listen_endpoints(lsof_out))
+
+    # a connected (non-LISTEN) session to :8787 must not be read as a local listener
+    estab = "ESTAB 0 0 10.0.0.5:51000 93.184.216.34:8787\n"
+    check("ports: a non-LISTEN session to :8787 is ignored", len(check_listening_ports(estab)) == 0)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        # 2. recording-proxy artifacts under <data>/traffic/
+        data = os.path.join(tmp, "data")
+        traffic = os.path.join(data, TRAFFIC_SUBDIR)
+        os.makedirs(os.path.join(traffic, "_ca"))
+        os.makedirs(os.path.join(traffic, "_index"))
+        os.makedirs(os.path.join(traffic, "_blobs"))
+        open(os.path.join(traffic, CA_RELPATH), "w").close()
+        open(os.path.join(traffic, INDEX_RELPATH), "w").close()
+        af = check_recording_proxy_artifacts(data)
+        kinds = {f.check for f in af}
+        check("ca: CA + index + blobs all reported", kinds == {"recording-proxy-ca", "recording-proxy-index", "recording-proxy-blobs"})
+
+        # 3. log markers
+        logpath = os.path.join(tmp, "app.log")
+        with open(logpath, "w", encoding="utf-8") as f:
+            f.write("GET / HTTP/1.1 artex-enrich/1.0\n")
+            f.write("outbound artex-selfupdate to release host\n")
+            f.write("blocked: " + LOG_MARKERS[2]["value"] + " this operation is denied\n")
+            f.write("a normal line with no markers\n")
+        lf = scan_logs([logpath], [])
+        check("logs: all three markers fire", len(lf) == 3)
+
+        # 4. clean host: nothing fires, no false positives
+        clean = os.path.join(tmp, "clean")
+        os.makedirs(clean)
+        cleanlog = os.path.join(tmp, "clean.log")
+        with open(cleanlog, "w", encoding="utf-8") as f:
+            f.write("nothing to see here\nGET /health 200\n")
+        check("clean: no artifact findings on an empty data dir", len(check_recording_proxy_artifacts(clean)) == 0)
+        check("clean: no log findings on a benign log", len(scan_logs([cleanlog], [])) == 0)
+        check("clean: no port findings on empty listing", len(check_listening_ports("")) == 0)
+
+    # 5. pg schema: skipped path returns a manual-query note, no finding
+    pgf, pgnote = check_pg_schema("")
+    check("pg: no DSN yields a manual-query note and no finding", len(pgf) == 0 and "psql" in pgnote and SCHEMA_TABLES[0] in SCHEMA_QUERY)
+
+    print()
+    if failures:
+        print(f"RESULT: FAIL ({len(failures)} assertion(s) failed)")
+        return 1
+    print("RESULT: PASS")
+    return 0
+
+
+def build_parser():
+    p = argparse.ArgumentParser(
+        description="Read-only host triage for a suspected ARTEX host (detections/triage).",
+    )
+    p.add_argument("--data-dir", action="append", default=[], metavar="PATH",
+                   help="ARTEX data directory to check for recording-proxy artifacts (repeatable).")
+    p.add_argument("--log", action="append", default=[], metavar="PATH",
+                   help="log file to scan for ARTEX markers (repeatable).")
+    p.add_argument("--log-dir", action="append", default=[], metavar="PATH",
+                   help="directory of log files to scan recursively (repeatable).")
+    p.add_argument("--pg-dsn", default=None, metavar="DSN",
+                   help="PostgreSQL DSN to check for the exploration schema (defaults to $ARTEX_PG_DSN).")
+    p.add_argument("--ports-from", default=None, metavar="FILE",
+                   help="read a port listing from FILE instead of running ss/netstat/lsof.")
+    p.add_argument("--json", action="store_true", help="emit findings as JSON.")
+    p.add_argument("--exit-code", action="store_true",
+                   help="exit 1 if any indicator fired (default: always exit 0).")
+    p.add_argument("--self-test", action="store_true",
+                   help="run the built-in fixture test and exit.")
+    return p
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+    if args.self_test:
+        return self_test()
+    findings, notes = run_checks(args)
+    if args.json:
+        print(json.dumps(
+            {"findings": [f.as_dict() for f in findings], "notes": notes},
+            ensure_ascii=False, indent=2,
+        ))
+    else:
+        print_report(findings, notes)
+    if args.exit_code and findings:
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

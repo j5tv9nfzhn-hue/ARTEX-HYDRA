@@ -87,6 +87,17 @@ destructive commands) are deliberately kept out of the import-ready list to avoi
 [`indicators/README.md`](indicators/README.md) for the columns, the MISP type mapping, the honest caveats,
 and the consistency test that keeps both the CSV and the MISP event from drifting.
 
+## Host triage
+
+The rules above serve defenders with a SIEM, a network sensor, or a threat-intel platform. For the other
+responder — the one at a single suspected host's shell, with no SIEM — [`triage/artex_host_triage.py`](triage/)
+is a read-only script that answers "did ARTEX run here?" from local state. It operationalizes the same
+fingerprints, **plus the three host/DB indicators the CSV deliberately carries without a Sigma rule**
+(the server/proxy listen ports, the recording-proxy CA/stores, and the PostgreSQL exploration schema),
+which are not log- or network-observable and can only be checked on the box. Every finding is a triage
+lead carrying the same caveat as its indicator row. See [`triage/README.md`](triage/README.md); a built-in
+`--self-test` runs as a merge-gate (below).
+
 ## Tests
 
 The rules ship with reproducible tests in [`tests/`](tests/), each needing only Docker:
@@ -147,6 +158,12 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   checks remain, so a rule that picks up a new convention issue (a mis-cased title, an off-taxonomy field)
   fails the build.
 
+Alongside the eight rule suites, two non-suite gates run in the same CI workflow and in
+[`tests/run-all.sh`](tests/run-all.sh): a harness-sync check (that `run-all.sh`, CI, and the suite
+directories name the same suites in the same order) and the [host-triage tool](triage/)'s `--self-test`
+([`tests/triage-selftest.sh`](tests/triage-selftest.sh)), which builds a synthetic host and asserts every
+triage check fires on it while a clean host produces zero findings.
+
 Each script exits non-zero on any failed assertion. See [`tests/README.md`](tests/README.md).
 
 ## How to read these honestly
@@ -164,7 +181,9 @@ Each script exits non-zero on any failed assertion. See [`tests/README.md`](test
 - **Port indicators are host-forensic, not Sigma.** The ARTEX server default `:8787` and the recording
   proxy `127.0.0.1:8788` (`cmd/artex/main.go`) are best checked on a suspected host with `ss`/`netstat`,
   so they are documented in the defense guide and listed in the [indicator CSV](indicators/) for triage,
-  rather than shipped as a noisy network rule.
+  rather than shipped as a noisy network rule. The [host-triage script](triage/) runs exactly those
+  host-local checks (ports, recording-proxy artifacts, log markers, and the PostgreSQL schema) for a
+  responder who has shell access but no SIEM.
 
 ## Validate and convert
 

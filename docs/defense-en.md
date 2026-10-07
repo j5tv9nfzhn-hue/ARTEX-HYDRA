@@ -188,7 +188,7 @@ This lays out, in order, what to check first when ARTEX involvement is suspected
 
 **(b) Host forensics — did ARTEX run on a given host**
 
-On a suspected host, check the following. The basis for each indicator is in Section 2 (b) and in the machine-readable [indicator list](../detections/indicators/artex_indicators.csv).
+On a suspected host, check the following. The basis for each indicator is in Section 2 (b) and in the machine-readable [indicator list](../detections/indicators/artex_indicators.csv). The five read-only checks below are run in one pass by the [host-triage script](../detections/triage/) (`detections/triage/artex_host_triage.py`); run it first when you have shell access but no SIEM, and treat each hit as a lead, as described below.
 
 1. **Listening ports.** Check on the host itself whether the default server port `:8787` and the loopback traffic-recording proxy `127.0.0.1:8788` are open.
    ```sh

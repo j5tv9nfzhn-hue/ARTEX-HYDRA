@@ -30,6 +30,7 @@ SUITES="sigma sigma_match sigma_lint sigma_backends suricata attack indicators m
 
 fail=0
 harness_fail=0
+triage_fail=0
 results=""
 
 # Before the suites, verify the harness itself is consistent: the SUITES list
@@ -42,6 +43,16 @@ results=""
 printf '\n===== harness sync =====\n'
 if ! "$HERE/check-harness-sync.sh"; then
   harness_fail=1
+  fail=1
+fi
+
+# A second gate, not a suite: the host-triage tool's --self-test. The triage tool
+# is a responder helper, not a detection rule, so it stays out of SUITES and the
+# harness-sync registry (see triage-selftest.sh). It runs here and in the CI
+# workflow so a local run-all.sh covers it too.
+printf '\n===== triage self-test =====\n'
+if ! "$HERE/triage-selftest.sh"; then
+  triage_fail=1
   fail=1
 fi
 
@@ -60,6 +71,9 @@ printf '\n===== detection suites summary =====\n'
 printf '%s' "$results"
 if [ "$harness_fail" -ne 0 ]; then
   printf '  FAIL  harness sync (run-all.sh / CI / directories out of sync: see above)\n'
+fi
+if [ "$triage_fail" -ne 0 ]; then
+  printf '  FAIL  triage self-test (detections/triage/artex_host_triage.py --self-test: see above)\n'
 fi
 if [ "$fail" -ne 0 ]; then
   printf 'RESULT: FAIL\n'
