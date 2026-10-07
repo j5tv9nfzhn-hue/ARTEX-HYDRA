@@ -295,23 +295,35 @@ def iter_log_files(logs, log_dirs):
 def scan_logs(logs, log_dirs):
     findings = []
     for path in iter_log_files(logs, log_dirs):
+        # Stream line by line instead of f.read(): the sanctioned log targets are
+        # whole syslogs (--log /var/log/syslog) that can be hundreds of MB, and all
+        # three markers live within a single line, so a line at a time keeps memory
+        # bounded to one line while matching exactly what a full read would. Report
+        # each marker at most once per file (the full-read "value in text" did too),
+        # and stop early once every marker has fired.
+        fired = set()
         try:
             with open(path, "r", encoding="utf-8", errors="replace") as f:
-                text = f.read()
+                for line in f:
+                    for marker in LOG_MARKERS:
+                        if marker["value"] in fired:
+                            continue
+                        if marker["value"] in line:
+                            fired.add(marker["value"])
+                            findings.append(
+                                Finding(
+                                    "log-marker",
+                                    marker["severity"],
+                                    f"ARTEX {marker['title']} in log",
+                                    f"{path!r} contains {marker['value']!r}",
+                                    marker["source"],
+                                    marker["caveat"],
+                                )
+                            )
+                    if len(fired) == len(LOG_MARKERS):
+                        break
         except OSError:
             continue
-        for marker in LOG_MARKERS:
-            if marker["value"] in text:
-                findings.append(
-                    Finding(
-                        "log-marker",
-                        marker["severity"],
-                        f"ARTEX {marker['title']} in log",
-                        f"{path!r} contains {marker['value']!r}",
-                        marker["source"],
-                        marker["caveat"],
-                    )
-                )
     return findings
 
 
