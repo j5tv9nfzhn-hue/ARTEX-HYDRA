@@ -66,7 +66,8 @@ The three screens below are the localized Korean UI. The data comes from a local
 
 <p align="center">
   <img src="screenshots/ko/dashboard.png" width="900" alt="Dashboard overview"><br>
-  <sub><b>Dashboard</b> — active tasks, confirmed findings, asset nodes, LLM token spend, and the activity feed on one screen.</sub>
+  <sub><b>Dashboard</b> — active tasks, confirmed findings, asset nodes, LLM token spend, and the activity feed on one screen.</sub><br>
+  <sub>This dashboard image was captured before the card labels were localized, so the data-source name on the "LLM Token 소비" card still reads as the raw identifier <code>llm_usage</code>. The current build shows the localized labels there instead: 「계량 원장」 (new) and 「활동 통계」 (old).</sub>
 </p>
 
 <p align="center">

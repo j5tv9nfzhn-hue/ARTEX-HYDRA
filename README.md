@@ -63,7 +63,8 @@ ARTEX 는 **자신이 소유하거나 서면으로 명시적 허가를 받은 �
 
 <p align="center">
   <img src="screenshots/ko/dashboard.png" width="900" alt="대시보드 — 전체 개요 화면"><br>
-  <sub><b>대시보드</b> — 활성 작업·확인된 취약점·자산 노드·LLM 토큰 소비와 활동 흐름을 한 화면에서 봅니다.</sub>
+  <sub><b>대시보드</b> — 활성 작업·확인된 취약점·자산 노드·LLM 토큰 소비와 활동 흐름을 한 화면에서 봅니다.</sub><br>
+  <sub>이 대시보드 화면은 라벨을 현지화하기 전에 뽑은 데모 캡처라, 'LLM Token 소비' 카드의 데이터 원본 이름이 아직 코드 식별자 <code>llm_usage</code> 로 보입니다. 현재 빌드는 같은 자리를 신버전 「계량 원장」·구버전 「활동 통계」 로 표시합니다.</sub>
 </p>
 
 <p align="center">
