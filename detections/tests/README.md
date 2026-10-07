@@ -59,15 +59,18 @@ are inherited by the runner, so exporting any of them applies to every suite at 
 ## Suricata — [`suricata/`](suricata/)
 
 [`suricata/run.sh`](suricata/run.sh) exercises the network rules in
-[`../suricata/artex.rules`](../suricata/artex.rules) end to end and asserts four properties:
+[`../suricata/artex.rules`](../suricata/artex.rules) end to end and asserts five properties:
 
 - **Valid** — the whole rules file loads under `suricata -T --init-errors-fatal`, so a rule that fails to
   parse or initialise is caught even when no capture below exercises it. Plain `suricata -r` skips such a
   rule and still exits 0, so this load check is the Suricata analogue of the Sigma suite's `sigma check`
   validity assertion.
-- **Presence** — sid `1000001` fires exactly once per enrichment probe.
+- **Presence (enrich)** — sid `1000001` fires exactly once per enrichment probe.
 - **Velocity** — sid `1000002` fires once the `detection_filter` rate of 30 requests in 300 s per source is
   crossed.
+- **Presence (WebFetch)** — sid `1000003` fires exactly once per norma WebFetch request, and the enrich sids
+  stay silent on that same capture — so the two network signatures are mutually specific, not just each
+  present.
 - **Specificity** — an identical capture whose only change is a benign browser User-Agent produces **zero**
   ARTEX alerts.
 
@@ -90,6 +93,8 @@ Expected output (abridged):
   PASS  ruleset loads with zero parse/init errors (suricata -T)
   PASS  sid 1000001 presence: one alert per probe  (got 35, want eq 35)
   PASS  sid 1000002 velocity: fires past 30-in-300s  (got 5, want ge 1)
+  PASS  sid 1000003 presence: one alert per WebFetch request  (got 8, want eq 8)
+  PASS  enrich sids stay silent on norma traffic (specificity)  (got 0, want eq 0)
   PASS  benign browser UA produces no ARTEX alerts  (got 0, want eq 0)
 RESULT: PASS
 ```
@@ -99,8 +104,9 @@ Override the images with `SURICATA_IMAGE` / `PYTHON_IMAGE` if you mirror them in
 
 ### Why the velocity count is a floor, not an exact match
 
-`run.sh` asserts the presence count (`1000001 == 35`) and the benign count (`== 0`) exactly, because those
-are engine-version-independent: one alert per matching request, and no match on a different User-Agent. The
+`run.sh` asserts the presence counts (`1000001 == 35`, `1000003 == 8`) and the benign count (`== 0`) exactly,
+because those are engine-version-independent: one alert per matching request, and no match on a different
+User-Agent. The
 velocity rule's count depends on how a given Suricata release resolves the `detection_filter` threshold at
 the boundary, so the test asserts `>= 1` and records the reference value separately. On **Suricata 8.0.7**
 the reference run produces **5** alerts on sid `1000002` (flows 31–35, after the 30-in-300 s threshold is

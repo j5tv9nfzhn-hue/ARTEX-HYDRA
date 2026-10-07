@@ -55,15 +55,18 @@ RESULT: PASS
 ## Suricata — [`suricata/`](suricata/)
 
 [`suricata/run.sh`](suricata/run.sh) 는 [`../suricata/artex.rules`](../suricata/artex.rules) 의
-네트워크 규칙을 종단으로 돌려 네 가지 속성을 단언합니다:
+네트워크 규칙을 종단으로 돌려 다섯 가지 속성을 단언합니다:
 
 - **유효성** — 규칙 파일 전체가 `suricata -T --init-errors-fatal` 로 적재되므로, 아래 어떤 캡처도
   건드리지 않는 규칙이라도 파싱·초기화에 실패하면 잡아냅니다. 그냥 `suricata -r` 는 그런 규칙을
   건너뛰고도 0 으로 종료하므로, 이 적재 검사는 Sigma 스위트의 `sigma check` 유효성 단언에 해당하는
   Suricata 쪽 장치입니다.
-- **존재성** — sid `1000001` 이 보강 프로브마다 정확히 한 번 발화합니다.
+- **존재성(보강 프로버)** — sid `1000001` 이 보강 프로브마다 정확히 한 번 발화합니다.
 - **속도** — 소스당 300 초에 30 요청이라는 `detection_filter` 임계를 넘으면 sid `1000002` 가
   발화합니다.
+- **존재성(WebFetch)** — sid `1000003` 이 norma WebFetch 요청마다 정확히 한 번 발화하고, 같은 캡처에서
+  보강 프로버 sid 는 침묵합니다. 두 네트워크 시그니처가 각자 발화할 뿐 아니라 서로 특이적임을
+  확인합니다.
 - **특이성** — 다른 것은 같고 User-Agent 만 양성(benign) 브라우저로 바꾼 캡처는 ARTEX 경보를
   **하나도** 내지 않습니다.
 
@@ -86,6 +89,8 @@ detections/tests/suricata/run.sh
   PASS  ruleset loads with zero parse/init errors (suricata -T)
   PASS  sid 1000001 presence: one alert per probe  (got 35, want eq 35)
   PASS  sid 1000002 velocity: fires past 30-in-300s  (got 5, want ge 1)
+  PASS  sid 1000003 presence: one alert per WebFetch request  (got 8, want eq 8)
+  PASS  enrich sids stay silent on norma traffic (specificity)  (got 0, want eq 0)
   PASS  benign browser UA produces no ARTEX alerts  (got 0, want eq 0)
 RESULT: PASS
 ```
@@ -95,8 +100,8 @@ RESULT: PASS
 
 ### 속도 경보 수를 정확한 값이 아니라 하한으로 단언하는 이유
 
-`run.sh` 는 존재성 경보 수(`1000001 == 35`)와 양성 경보 수(`== 0`)를 정확히 단언합니다. 이 둘은 엔진
-버전과 무관하기 때문입니다. 일치하는 요청마다 경보 하나, 다른 User-Agent 에는 불일치입니다. 속도
+`run.sh` 는 존재성 경보 수(`1000001 == 35`·`1000003 == 8`)와 양성 경보 수(`== 0`)를 정확히 단언합니다.
+이들은 엔진 버전과 무관하기 때문입니다. 일치하는 요청마다 경보 하나, 다른 User-Agent 에는 불일치입니다. 속도
 규칙의 경보 수는 특정 Suricata 릴리스가 경계에서 `detection_filter` 임계를 어떻게 처리하느냐에 달려
 있으므로, 테스트는 `>= 1` 로 단언하고 기준값은 따로 기록합니다. **Suricata 8.0.7** 에서는 기준
 실행이 sid `1000002` 에 경보 **5** 개를 냅니다(300 초에 30 임계를 넘긴 뒤의 31–35 번째 흐름).
