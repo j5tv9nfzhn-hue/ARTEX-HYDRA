@@ -49,7 +49,9 @@ Static strings can be changed; behaviour is harder to hide. These Sigma **correl
 
 Thresholds and windows are conservative defaults — tune them to your baseline. The pure web multi-stage
 case in §4.2 (enumerate → probe → authenticate) still needs base rules specific to your environment,
-because the attack traffic itself carries no ARTEX-unique User-Agent.
+because the attack traffic itself carries no ARTEX-unique User-Agent. A generic behavioral Sigma base
+template to start from is provided in [defense guide §4.2](../docs/defense-en.md#42-siem-correlation-rules);
+it is kept out of this tested rule tree because it cannot be grounded in ARTEX source.
 
 ## Network rules (Suricata)
 

@@ -120,7 +120,7 @@ Attacks that replay leaked ID/password lists are amplified by an autonomous agen
 
 ## 4. Detection rules and log patterns (practical)
 
-Written as product-independent **pseudo-rules**. Translate them into your own WAF/IPS/SIEM syntax. The rules below that rest on static fingerprints are shipped as ready-to-deploy [Sigma rules (`detections/sigma/`)](../detections/). The core behavior and correlation detection (4.1 and 4.2) does not reduce to a single rule either, but the behavioral indicators grounded in ARTEX's source are shipped as deployable [Sigma correlation rules (`detections/sigma/correlation/`)](../detections/) — enrichment velocity, enrichment fan-out, guard-block burst, and the guard marker co-occurring with a destructive command on one host. The pure web multi-stage correlation (enumerate → probe → authenticate) still needs base rules specific to your environment, because the attack traffic carries no ARTEX-unique User-Agent; build that one in your own SIEM from the description below. The enrich prober User-Agent — observable at the network layer where traffic is plaintext HTTP or inspected at a TLS-terminating point — is also shipped as [Suricata rules (`detections/suricata/`)](../detections/suricata/).
+Written as product-independent **pseudo-rules**. Translate them into your own WAF/IPS/SIEM syntax. The rules below that rest on static fingerprints are shipped as ready-to-deploy [Sigma rules (`detections/sigma/`)](../detections/). The core behavior and correlation detection (4.1 and 4.2) does not reduce to a single rule either, but the behavioral indicators grounded in ARTEX's source are shipped as deployable [Sigma correlation rules (`detections/sigma/correlation/`)](../detections/) — enrichment velocity, enrichment fan-out, guard-block burst, and the guard marker co-occurring with a destructive command on one host. The pure web multi-stage correlation (enumerate → probe → authenticate) still needs base rules specific to your environment, because the attack traffic carries no ARTEX-unique User-Agent; a ready-to-tune generic Sigma base template for it is provided in 4.2 below — adapt it to your SIEM and baseline as a starting point. The enrich prober User-Agent — observable at the network layer where traffic is plaintext HTTP or inspected at a TLS-terminating point — is also shipped as [Suricata rules (`detections/suricata/`)](../detections/suricata/).
 
 ### 4.1 WAF/IPS (behavior-based)
 
@@ -133,6 +133,155 @@ Written as product-independent **pseudo-rules**. Translate them into your own WA
 - **Same-source multi-stage correlation:** when (a) directory/endpoint enumeration, (b) parameter probing, and (c) authentication/injection attempts are **all observed within a short window** from the same IP/ASN/session, raise an "autonomous attack suspected" alert.
 - **Time-of-day anomaly:** a single session that **continues without pause for a long stretch**, outside the service's normal traffic distribution.
 - **Persistence after failure:** a source that receives 403/429 and keeps going with **bypass variations** instead of stopping.
+
+A deployable base template for the **same-source multi-stage correlation** above follows. Because the attack traffic carries no ARTEX-unique User-Agent, this template is a **generic behavioral rule**, unlike the ARTEX-source-grounded rules under `detections/sigma/`. It watches only the behavior — "one source runs enumeration, probing, and authentication within a short window" — not any attack tool's fingerprint. It is self-contained: three sub-rules plus a temporal correlation that fires only when one client satisfies all three within the window.
+
+```yaml
+# ── Generic behavioural template (NOT an ARTEX-specific signature) ──
+# The same-source multi-stage web pattern in defense guide section 4.2
+# (enumeration -> probe -> auth). ARTEX's attack traffic carries no ARTEX
+# fingerprint, so unlike the rules under detections/sigma/ this is a generic
+# behavioural starting point, not grounded in ARTEX source. Field names
+# (SigmaHQ webserver taxonomy) and the thresholds/window WILL need tuning to
+# your own logs and baseline. Self-contained: three sub-rules plus a temporal
+# correlation that fires only when all three occur from one client in the window.
+title: Web Endpoint Enumeration Burst From One Source
+id: f03c360c-dc33-4a8a-afa8-821b1ff5c4e3
+status: experimental
+description: |
+    Stage 1 of the same-source multi-stage pattern in the ARTEX defense guide section 4.2: a
+    burst of endpoint or directory enumeration from a single client, seen as a high rate of 404
+    and 400 responses in a short window. This is generic behaviour, not an ARTEX-specific
+    signature; tune the count and window to your own baseline. On its own this leg is low signal
+    and earns weight only inside the correlation below.
+references:
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
+author: artex-ko defense guide (generic template)
+date: 2026-10-07
+tags:
+    - attack.reconnaissance
+    - attack.t1595
+logsource:
+    category: webserver
+detection:
+    enum_misses:
+        sc-status:
+            - 404
+            - 400
+    condition: enum_misses
+falsepositives:
+    - Broken links, authorised vulnerability scanners, or misconfigured clients that generate
+      many 404 responses.
+level: low
+---
+title: Web Parameter Or Path Injection Probe From One Source
+id: f9296e55-6b7a-4030-b5f7-5f7b146233be
+status: experimental
+description: |
+    Stage 2 of the same-source multi-stage pattern: parameter or path probing, matched here as
+    query strings carrying common injection or traversal markers. This leg is unavoidably
+    signature-like and noisy on its own, so it is scored low and earns weight only inside the
+    correlation below. Extend the marker list to your own probe corpus and WAF categories; it is
+    a coarse proxy for the broader "adapts requests to responses" behaviour the guide describes.
+references:
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
+author: artex-ko defense guide (generic template)
+date: 2026-10-07
+tags:
+    - attack.initial-access
+    - attack.t1190
+logsource:
+    category: webserver
+detection:
+    probe_markers:
+        cs-uri-query|contains:
+            - '../'
+            - "' or "
+            - ' union select '
+            - '<script'
+            - '; drop '
+    condition: probe_markers
+falsepositives:
+    - Legitimate request payloads that resemble probe markers; tune the marker list to your
+      application.
+level: low
+---
+title: Authentication Or Identity-Verification Attempt From One Source
+id: 2614cacb-7455-46ad-9af2-7b9633f12d7b
+status: experimental
+description: |
+    Stage 3 of the same-source multi-stage pattern: requests to login, authentication, or
+    identity-verification endpoints, or 401 and 403 responses. Map the paths and your own
+    authentication-event fields to your application; auxiliary, affiliate, and broker channels
+    often expose weaker identity-verification endpoints than the main service and belong here
+    too. This leg is broad by design and is only meaningful inside the correlation below.
+references:
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
+author: artex-ko defense guide (generic template)
+date: 2026-10-07
+tags:
+    - attack.credential-access
+    - attack.t1110
+logsource:
+    category: webserver
+detection:
+    auth_path:
+        cs-uri-stem|contains:
+            - '/login'
+            - '/auth'
+            - '/verify'
+            - '/otp'
+    auth_deny:
+        sc-status:
+            - 401
+            - 403
+    condition: auth_path or auth_deny
+falsepositives:
+    - Ordinary users signing in; this leg is broad and only meaningful inside the correlation.
+level: low
+---
+title: Same-Source Multi-Stage Web Attack (Enumeration, Probe, Auth)
+id: 9b7c7b86-702f-42b8-be99-3e60a188ec5b
+status: experimental
+description: |
+    The behaviour-based core of ARTEX defense guide section 4.2 as a deployable template: one
+    client runs endpoint enumeration, parameter or path probing, and an authentication or
+    identity-verification attempt within the same short window. This is the pattern an autonomous
+    agent drives at machine speed and keeps driving past 403 and 429 responses. It is UA-free and
+    carries no ARTEX fingerprint, so it is a GENERIC behavioural rule, not one of the
+    ARTEX-source-grounded rules under detections/sigma/. Normalise the client field (c-ip, or a
+    session identifier if you have one) and tune the window to your baseline. If three legs are
+    too strict and miss cases, relax to any two of the three.
+references:
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
+author: artex-ko defense guide (generic template)
+date: 2026-10-07
+tags:
+    - attack.initial-access
+    - attack.t1190
+correlation:
+    type: temporal
+    rules:
+        - f03c360c-dc33-4a8a-afa8-821b1ff5c4e3
+        - f9296e55-6b7a-4030-b5f7-5f7b146233be
+        - 2614cacb-7455-46ad-9af2-7b9633f12d7b
+    group-by:
+        - c-ip
+    timespan: 10m
+falsepositives:
+    - An authorised vulnerability scan or QA run from a single source; allow-list its address.
+level: high
+```
+
+Notes for using this template:
+
+- This block was validated with the same tooling the detection pack uses: `sigma check` with the full SigmaHQ convention set passes with 0 errors and 0 issues, and `sigma convert -t splunk` produces a query (the three sub-rules binned to a 10-minute window, grouped by `c-ip`, firing when all three are present). It is kept out of the tested `detections/` rule tree because it cannot be grounded in ARTEX source — that preserves the tree's promise to ship only what is "confirmed in this repository's source, not assumed."
+- Stage 2 (probing) rests on a list of injection/traversal markers and is a coarse, noisy signal on its own. That is why the three sub-rules are scored `low` and only the correlation — all three from one source — raises a high alert.
+- The client is grouped by `c-ip`. Behind a proxy or CDN, switch to the real client address recovered from `X-Forwarded-For`, or to a session identifier. If requiring all three stages is too strict and misses cases, relax it to any two of the three.
 
 ### 4.3 Authentication logs
 

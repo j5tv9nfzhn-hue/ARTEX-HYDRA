@@ -120,7 +120,7 @@ IP 차단 자체가 쓸모없다는 뜻은 아닙니다. **공식 침해지표(I
 
 ## 4. 탐지 규칙·로그 패턴 (실무)
 
-특정 제품에 종속되지 않는 **의사 규칙** 형태로 적습니다. 자신의 WAF·IPS·SIEM 문법으로 옮겨 쓰십시오. 아래 규칙 가운데 정적 지문에 기반한 것은 바로 배포할 수 있는 [Sigma 규칙(`detections/sigma/`)](../detections/README.ko.md)으로 제공합니다. 핵심인 행동·상관 탐지(4.1·4.2)도 단일 규칙으로 환원되지는 않지만, 이 가운데 ARTEX 코드로 근거를 확인한 행동 지표는 배포 가능한 [Sigma 상관 규칙(`detections/sigma/correlation/`)](../detections/README.ko.md)으로 제공합니다(보강 조회 속도·보강 조회 대상 수·가드 차단 버스트·가드 마커와 파괴적 명령의 동일 호스트 동시 발생). 다만 공격 트래픽에는 ARTEX 고유 UA 가 없으므로, 순수 웹 다단계 상관(열거 → 탐침 → 인증)은 환경별 베이스 규칙이 필요하여 자신의 SIEM 에서 직접 구성하십시오. 네트워크 계층에서 평문 HTTP 로 오갈 때(또는 TLS 종단 지점에서) 관측되는 enrich 프로브 UA 는 [Suricata 규칙(`detections/suricata/`)](../detections/suricata/README.ko.md)으로도 제공합니다.
+특정 제품에 종속되지 않는 **의사 규칙** 형태로 적습니다. 자신의 WAF·IPS·SIEM 문법으로 옮겨 쓰십시오. 아래 규칙 가운데 정적 지문에 기반한 것은 바로 배포할 수 있는 [Sigma 규칙(`detections/sigma/`)](../detections/README.ko.md)으로 제공합니다. 핵심인 행동·상관 탐지(4.1·4.2)도 단일 규칙으로 환원되지는 않지만, 이 가운데 ARTEX 코드로 근거를 확인한 행동 지표는 배포 가능한 [Sigma 상관 규칙(`detections/sigma/correlation/`)](../detections/README.ko.md)으로 제공합니다(보강 조회 속도·보강 조회 대상 수·가드 차단 버스트·가드 마커와 파괴적 명령의 동일 호스트 동시 발생). 다만 공격 트래픽에는 ARTEX 고유 UA 가 없으므로, 순수 웹 다단계 상관(열거 → 탐침 → 인증)은 환경별 베이스 규칙이 필요합니다. 이 상관은 아래 4.2 에 바로 배포해 볼 수 있는 일반 행동 기반 Sigma 베이스 템플릿으로 실어 두었으니, 자신의 SIEM 과 기준선에 맞게 조정해 출발점으로 쓰십시오. 네트워크 계층에서 평문 HTTP 로 오갈 때(또는 TLS 종단 지점에서) 관측되는 enrich 프로브 UA 는 [Suricata 규칙(`detections/suricata/`)](../detections/suricata/README.ko.md)으로도 제공합니다.
 
 ### 4.1 WAF·IPS (행동 기반)
 
@@ -133,6 +133,154 @@ IP 차단 자체가 쓸모없다는 뜻은 아닙니다. **공식 침해지표(I
 - **동일 출처 다단계 상관**: 같은 IP/ASN/세션에서 (a) 디렉터리·엔드포인트 열거, (b) 파라미터 탐침, (c) 인증/주입 시도가 **짧은 창 안에 모두** 관측되면 "자율 공격 의심" 경보.
 - **시간대 이상**: 서비스의 정상 트래픽 분포를 벗어나 **장시간 끊김 없이** 이어지는 단일 세션.
 - **실패 후 지속**: 403/429 를 받고도 멈추지 않고 **우회 변형**을 이어 가는 출처.
+
+위 **동일 출처 다단계 상관**을 바로 배포해 볼 수 있는 베이스 템플릿을 아래에 둡니다. 공격 트래픽에는 ARTEX 고유 User-Agent 가 없으므로, 이 템플릿은 `detections/sigma/` 의 ARTEX 소스 기반 규칙과 달리 **일반 행동 기반 규칙**입니다. 특정 공격 도구의 지문이 아니라 "한 출처가 짧은 창 안에서 열거·탐침·인증을 모두 수행한다"는 행동만 봅니다. 세 하위 규칙과, 한 클라이언트가 시간 창 안에서 셋을 모두 충족할 때만 발화하는 temporal 상관 규칙을 한 파일에 담았습니다.
+
+```yaml
+# ── 일반 행동 기반 템플릿 (ARTEX 고유 시그니처가 아님) ──
+# 방어 가이드 4.2절의 동일 출처 다단계 웹 패턴(열거 → 탐침 → 인증)입니다.
+# ARTEX 공격 트래픽에는 ARTEX 지문이 없으므로, detections/sigma/ 의 규칙과 달리
+# ARTEX 소스로 근거를 고정하지 않은 일반 행동 기반 출발점입니다. 필드 이름(SigmaHQ
+# 웹서버 분류)과 임계값·시간 창은 자신의 로그와 기준선에 맞게 반드시 조정하십시오.
+# 자족형: 세 하위 규칙 + 한 클라이언트가 창 안에서 셋을 모두 충족할 때만 발화하는
+# temporal 상관 규칙.
+title: Web Endpoint Enumeration Burst From One Source
+id: f03c360c-dc33-4a8a-afa8-821b1ff5c4e3
+status: experimental
+description: |
+    Stage 1 of the same-source multi-stage pattern in the ARTEX defense guide section 4.2: a
+    burst of endpoint or directory enumeration from a single client, seen as a high rate of 404
+    and 400 responses in a short window. This is generic behaviour, not an ARTEX-specific
+    signature; tune the count and window to your own baseline. On its own this leg is low signal
+    and earns weight only inside the correlation below.
+references:
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
+author: artex-ko defense guide (generic template)
+date: 2026-10-07
+tags:
+    - attack.reconnaissance
+    - attack.t1595
+logsource:
+    category: webserver
+detection:
+    enum_misses:
+        sc-status:
+            - 404
+            - 400
+    condition: enum_misses
+falsepositives:
+    - Broken links, authorised vulnerability scanners, or misconfigured clients that generate
+      many 404 responses.
+level: low
+---
+title: Web Parameter Or Path Injection Probe From One Source
+id: f9296e55-6b7a-4030-b5f7-5f7b146233be
+status: experimental
+description: |
+    Stage 2 of the same-source multi-stage pattern: parameter or path probing, matched here as
+    query strings carrying common injection or traversal markers. This leg is unavoidably
+    signature-like and noisy on its own, so it is scored low and earns weight only inside the
+    correlation below. Extend the marker list to your own probe corpus and WAF categories; it is
+    a coarse proxy for the broader "adapts requests to responses" behaviour the guide describes.
+references:
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
+author: artex-ko defense guide (generic template)
+date: 2026-10-07
+tags:
+    - attack.initial-access
+    - attack.t1190
+logsource:
+    category: webserver
+detection:
+    probe_markers:
+        cs-uri-query|contains:
+            - '../'
+            - "' or "
+            - ' union select '
+            - '<script'
+            - '; drop '
+    condition: probe_markers
+falsepositives:
+    - Legitimate request payloads that resemble probe markers; tune the marker list to your
+      application.
+level: low
+---
+title: Authentication Or Identity-Verification Attempt From One Source
+id: 2614cacb-7455-46ad-9af2-7b9633f12d7b
+status: experimental
+description: |
+    Stage 3 of the same-source multi-stage pattern: requests to login, authentication, or
+    identity-verification endpoints, or 401 and 403 responses. Map the paths and your own
+    authentication-event fields to your application; auxiliary, affiliate, and broker channels
+    often expose weaker identity-verification endpoints than the main service and belong here
+    too. This leg is broad by design and is only meaningful inside the correlation below.
+references:
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
+author: artex-ko defense guide (generic template)
+date: 2026-10-07
+tags:
+    - attack.credential-access
+    - attack.t1110
+logsource:
+    category: webserver
+detection:
+    auth_path:
+        cs-uri-stem|contains:
+            - '/login'
+            - '/auth'
+            - '/verify'
+            - '/otp'
+    auth_deny:
+        sc-status:
+            - 401
+            - 403
+    condition: auth_path or auth_deny
+falsepositives:
+    - Ordinary users signing in; this leg is broad and only meaningful inside the correlation.
+level: low
+---
+title: Same-Source Multi-Stage Web Attack (Enumeration, Probe, Auth)
+id: 9b7c7b86-702f-42b8-be99-3e60a188ec5b
+status: experimental
+description: |
+    The behaviour-based core of ARTEX defense guide section 4.2 as a deployable template: one
+    client runs endpoint enumeration, parameter or path probing, and an authentication or
+    identity-verification attempt within the same short window. This is the pattern an autonomous
+    agent drives at machine speed and keeps driving past 403 and 429 responses. It is UA-free and
+    carries no ARTEX fingerprint, so it is a GENERIC behavioural rule, not one of the
+    ARTEX-source-grounded rules under detections/sigma/. Normalise the client field (c-ip, or a
+    session identifier if you have one) and tune the window to your baseline. If three legs are
+    too strict and miss cases, relax to any two of the three.
+references:
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
+author: artex-ko defense guide (generic template)
+date: 2026-10-07
+tags:
+    - attack.initial-access
+    - attack.t1190
+correlation:
+    type: temporal
+    rules:
+        - f03c360c-dc33-4a8a-afa8-821b1ff5c4e3
+        - f9296e55-6b7a-4030-b5f7-5f7b146233be
+        - 2614cacb-7455-46ad-9af2-7b9633f12d7b
+    group-by:
+        - c-ip
+    timespan: 10m
+falsepositives:
+    - An authorised vulnerability scan or QA run from a single source; allow-list its address.
+level: high
+```
+
+이 템플릿을 쓸 때 유의할 점입니다.
+
+- 이 블록은 탐지 팩이 쓰는 것과 같은 도구로 검증했습니다. `sigma check` 를 SigmaHQ 규약 전수로 돌려 오류·이슈 0 으로 통과하고, `sigma convert -t splunk` 로 질의가 생성됩니다(세 하위 규칙을 10분 창에서 `c-ip` 로 묶어 셋을 모두 충족하면 발화). 다만 ARTEX 소스로 근거를 고정할 수 없어 `detections/` 의 테스트되는 규칙 트리에는 넣지 않았습니다. 그 트리의 "추정이 아니라 소스에서 확인한 것만 싣는다"는 원칙을 지키기 위함입니다.
+- 2단계(탐침)는 주입·순회 마커 목록에 기대는 거친 신호라 단독으로는 오탐이 많습니다. 그래서 세 하위 규칙의 `level` 은 낮게 두고, 셋이 한 출처에서 함께 나타나는 상관 규칙에서만 높은 경보가 되게 했습니다.
+- 클라이언트는 `c-ip` 로 묶었습니다. 프록시·CDN 뒤라면 `X-Forwarded-For` 로 복원한 실제 클라이언트 주소나 세션 식별자로 바꾸십시오. 세 단계를 모두 요구하는 것이 너무 엄격해 놓치는 사례가 있으면, 셋 중 둘만 충족해도 발화하도록 완화하십시오.
 
 ### 4.3 인증 로그
 
