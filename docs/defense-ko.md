@@ -54,7 +54,7 @@
 침해 조사에서 중계·경유 호스트에 ARTEX 가 설치·실행된 흔적을 찾을 때 참고합니다.
 
 - **기본 리스닝 포트 `:8787`.** ARTEX 서버의 기본 HTTP 수신 주소입니다(`cmd/artex/main.go`, `--addr` 로 변경 가능). 내부망 호스트가 이 포트에 관리 UI(대시보드·작업·자산 그래프)를 열고 있으면 ARTEX 인스턴스를 의심할 근거입니다.
-- **기록형 MITM 프록시 `127.0.0.1:8788`.** worker 의 Bash·HTTP 실행을 가로채 전 과정을 기록하는 로컬 프록시의 기본 주소입니다(`cmd/artex/main.go` 의 `--proxy` 기본값, 루프백 전용). 자체 CA 를 생성해 TLS 를 복호화·기록하므로(`mitmproxy-ca-cert.pem`), 호스트에 **ARTEX 가 설치한 신뢰 CA 인증서**가 있는지, 그리고 서브프로세스에 `HTTP_PROXY`·프록시 CA 경로 환경변수를 주입하는 흔적이 있는지가 단서가 됩니다.
+- **기록형 MITM 프록시 `127.0.0.1:8788`.** worker 의 Bash·HTTP 실행을 가로채 전 과정을 기록하는 로컬 프록시의 기본 주소입니다(`cmd/artex/main.go` 의 `--proxy` 기본값, 루프백 전용). 자체 CA 를 생성해 TLS 를 복호화·기록하므로(`mitmproxy-ca-cert.pem`), 호스트에 **ARTEX 가 설치한 신뢰 CA 인증서**가 있는지, 그리고 서브프로세스에 `HTTP_PROXY`·프록시 CA 경로 환경변수를 주입하는 흔적이 있는지가 단서가 됩니다. 이 주입은 ARTEX 가 생성하는 모든 worker 도구에 들어가고 변수 이름이 소스에 하드코딩이라(`agent/worker.go`), **실행 중인 프로세스가 프록시 변수와 mitmproxy CA 신뢰 변수를 함께 지니는지**는 포트 하나보다 특이적인 지문입니다. [호스트 분류 도구](../detections/triage/README.ko.md)가 `/proc`(또는 포렌식 이미지에서는 캡처한 환경변수 덤프)에서 이 조합을 확인합니다.
 - **self-update 콜백 `artex-selfupdate`.** 자가 업데이트가 GitHub 릴리스를 조회할 때 쓰는 User-Agent 입니다(`selfupdate/`). 송신(egress) 로그에서 이 UA 로 코드 저장소 호스트에 나가는 요청이 보이면 ARTEX 바이너리의 존재를 시사합니다.
 - **PostgreSQL 상의 이중 그래프.** `exploration_nodes`·`assets`·`companies`·`activity` 같은 테이블과 `agent_prompts` 시드가 있는 DB 는 ARTEX 데이터 저장소의 특징입니다.
 - **DB 기반 정규식 승인 규칙과 감사 로그.** 도구 호출을 평가하는 intercept 규칙이 DB 에 저장되고 우선순위대로 정규식으로 평가됩니다(`intercept/`). 차단된 호출은 감사 로그(`GET /api/audit`)에 `【ARTEX 平台管控·非目标防御】` 로 시작하는 통제 프레이밍과 함께 남으므로, 침해 호스트의 감사 기록에서 이 문자열이 보이면 ARTEX 실행을 뒷받침합니다.

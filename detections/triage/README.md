@@ -43,6 +43,17 @@ carries the same honest caveat as the matching Sigma rule or indicator row.
   `assets`/`companies`/`activity` and the `agent_prompts` seed) in the ARTEX store
   ([`db/schema.sql`](../../db/schema.sql)). Run against a DSN with `psql` if available; otherwise the
   script prints the exact read-only query for you to run by hand.
+- **Process env injection** — a running process whose environment carries a proxy var (`HTTP_PROXY` /
+  `HTTPS_PROXY` / `ALL_PROXY`) **together with** a toolchain CA-trust var (`SSL_CERT_FILE` /
+  `CURL_CA_BUNDLE` / `REQUESTS_CA_BUNDLE` / `GIT_SSL_CAINFO` / `NODE_EXTRA_CA_CERTS`) pointing at a
+  `mitmproxy-ca-cert.pem`. ARTEX injects exactly these into every worker tool it spawns
+  ([`agent/worker.go`](../../agent/worker.go) `proxyEnv`, asserted by
+  [`agent/proxyenv_test.go`](../../agent/proxyenv_test.go)). The variable **names are hard-coded** in the
+  source (only the values are configurable), so this tell survives an operator renaming the binary or
+  changing the ports — a stronger signal than the bare listen port. Read from `/proc` on the live Linux
+  host, or from a captured dump with `--proc-from`. A proxy and a mitmproxy CA together are reported high;
+  a mitmproxy CA alone, or the ARTEX default proxy endpoint (`127.0.0.1:8788`) alone, is medium; a
+  corporate proxy with no mitmproxy CA is deliberately not flagged.
 
 A hit is a **triage lead, not an attribution**, and the absence of every finding is **not** a clean bill
 of health: an operator can rename the binary, move the data directory, or change the ports.
@@ -59,6 +70,11 @@ detections/triage/artex_host_triage.py \
 # machine-readable findings, and exit non-zero if anything fired
 detections/triage/artex_host_triage.py --data-dir /opt/artex/data --json --exit-code
 
+# offline / forensic image: read a captured process-environment dump
+#   make the dump on the host with:
+#   for p in /proc/[0-9]*; do echo "# $p"; tr '\0' '\n' < "$p/environ"; echo; done > proc_env_dump.txt
+detections/triage/artex_host_triage.py --proc-from proc_env_dump.txt
+
 # reproducible fixture test (no host state touched)
 detections/triage/artex_host_triage.py --self-test
 ```
@@ -71,8 +87,9 @@ default (triage, not a gate); pass `--exit-code` to make it `1` when any indicat
 ## How this stays honest
 
 The `--self-test` builds a synthetic host — a data directory with a planted CA, index, and blob store; a
-log containing each marker; and a port listing — and asserts every check fires on it, then asserts a clean
-host and a benign log produce **zero** findings (no false positives). It is wired into the
+log containing each marker; a port listing; and a captured process-environment dump — and asserts every
+check fires on it, then asserts a clean host, a benign log, and a corporate-proxy process produce **zero**
+findings (no false positives). It is wired into the
 [`detections` CI workflow](../../.github/workflows/detections.yml) and re-run by
 [`detections/tests/run-all.sh`](../tests/run-all.sh), so a change that breaks a check, or that drifts an
 indicator away from the source string it greps for, fails the merge gate. A detection you cannot run is

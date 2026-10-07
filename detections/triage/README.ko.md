@@ -38,6 +38,16 @@ ARTEX 가 돌았는가"를 빠르고 근거 있게 답해야 하는 사람을 �
   `assets`·`companies`·`activity`, 그리고 `agent_prompts` 시드)을 확인합니다
   ([`db/schema.sql`](../../db/schema.sql)). DSN 을 주면 `psql` 로 조회하고, `psql` 이 없으면 손으로 돌릴 수
   있는 읽기 전용 쿼리를 그대로 출력합니다.
+- **실행 중 프로세스의 환경변수 주입**: 프록시 변수(`HTTP_PROXY`·`HTTPS_PROXY`·`ALL_PROXY`)와, mitmproxy
+  CA(`mitmproxy-ca-cert.pem`)를 가리키는 툴체인 CA 신뢰 변수(`SSL_CERT_FILE`·`CURL_CA_BUNDLE`·
+  `REQUESTS_CA_BUNDLE`·`GIT_SSL_CAINFO`·`NODE_EXTRA_CA_CERTS`)를 **함께** 지닌 프로세스를 찾습니다. ARTEX 는
+  생성하는 모든 worker 도구에 바로 이 변수들을 주입합니다([`agent/worker.go`](../../agent/worker.go) 의
+  `proxyEnv`, [`agent/proxyenv_test.go`](../../agent/proxyenv_test.go) 가 단언). **변수 이름이 소스에 하드코딩**
+  이라(값만 바꿀 수 있음), 이 지문은 운영자가 바이너리 이름을 바꾸거나 포트를 바꿔도 남아 리슨 포트 하나보다
+  특이적입니다. 실행 중인 Linux 호스트에서는 `/proc` 를 읽고, 오프라인·포렌식 이미지에서는 `--proc-from` 으로
+  캡처한 환경변수 덤프를 읽습니다. 프록시·CA 가 함께면 높은 심각도, mitmproxy CA 하나 또는 ARTEX 기본 프록시
+  엔드포인트(`127.0.0.1:8788`) 하나만 있으면 중간 심각도로 보고하되, mitmproxy CA 가 없는 회사 프록시는
+  단서로 올리지 않습니다.
 
 발견은 **분류를 위한 단서이지 단정이 아닙니다.** 또한 어떤 항목도 걸리지 않았다고 해서 안전하다는 뜻은
 아닙니다. 운영자는 바이너리 이름을 바꾸거나, 데이터 디렉터리를 옮기거나, 포트를 바꿀 수 있기 때문입니다.
@@ -54,6 +64,11 @@ detections/triage/artex_host_triage.py \
 # 기계가 읽는 형식으로 출력하고, 하나라도 걸리면 비-0 으로 종료합니다
 detections/triage/artex_host_triage.py --data-dir /opt/artex/data --json --exit-code
 
+# 오프라인·포렌식 이미지: 캡처한 프로세스 환경변수 덤프를 읽습니다
+#   호스트에서 덤프를 만드는 법:
+#   for p in /proc/[0-9]*; do echo "# $p"; tr '\0' '\n' < "$p/environ"; echo; done > proc_env_dump.txt
+detections/triage/artex_host_triage.py --proc-from proc_env_dump.txt
+
 # 재현 가능한 픽스처 자가 테스트(호스트 상태를 건드리지 않습니다)
 detections/triage/artex_host_triage.py --self-test
 ```
@@ -67,8 +82,8 @@ detections/triage/artex_host_triage.py --self-test
 ## 어떻게 정직함을 유지하는가
 
 `--self-test` 는 합성 호스트를 만듭니다. 심어 둔 CA·색인·블롭 저장소가 있는 데이터 디렉터리, 각 마커가 든
-로그, 포트 목록을 만든 뒤, 모든 점검이 그 위에서 발화하는지 단언하고, 이어서 깨끗한 호스트와 정상 로그에서는
-발견이 **0** 건인지(오탐이 없는지) 단언합니다. 이 자가 테스트는 [`detections` CI
+로그, 포트 목록, 캡처한 프로세스 환경변수 덤프를 만든 뒤, 모든 점검이 그 위에서 발화하는지 단언하고, 이어서
+깨끗한 호스트·정상 로그·회사 프록시 프로세스에서는 발견이 **0** 건인지(오탐이 없는지) 단언합니다. 이 자가 테스트는 [`detections` CI
 워크플로](../../.github/workflows/detections.yml)에 연결되어 있고 [`detections/tests/run-all.sh`](../tests/run-all.sh)
 가 다시 돌립니다. 그래서 어떤 점검이 깨지거나, 지표가 grep 하는 소스 문자열에서 어긋나면 머지 게이트에서
 실패합니다. 돌려 볼 수 없는 탐지는 주장일 뿐이라는 원칙을 따릅니다.

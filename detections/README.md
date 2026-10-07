@@ -96,9 +96,11 @@ responder — the one at a single suspected host's shell, with no SIEM — [`tri
 is a read-only script that answers "did ARTEX run here?" from local state. It operationalizes the same
 fingerprints, **plus the three host/DB indicators the CSV deliberately carries without a Sigma rule**
 (the server listen port, the recording-proxy endpoint, and the PostgreSQL exploration schema),
-which are not log- or network-observable and can only be checked on the box. Every finding is a triage
-lead carrying the same caveat as its indicator row. See [`triage/README.md`](triage/README.md); a built-in
-`--self-test` runs as a merge-gate (below).
+which are not log- or network-observable and can only be checked on the box. It also flags the recorder's
+subprocess env-injection — a running process carrying a proxy var together with a mitmproxy CA-trust var
+(`agent/worker.go`), read from `/proc` or a `--proc-from` dump. Every finding is a triage lead carrying the
+same caveat as its indicator row. See [`triage/README.md`](triage/README.md); a built-in `--self-test`
+runs as a merge-gate (below).
 
 ## Tests
 

@@ -50,17 +50,30 @@
 #                               (db/schema.sql). Run against a DSN with `psql` if
 #                               available; otherwise the script prints the exact
 #                               read-only query for you to run by hand.
+#   5. Process env injection  a running process whose environment carries the
+#                               recording proxy (HTTP_PROXY / HTTPS_PROXY / ALL_PROXY)
+#                               together with a toolchain CA-trust var (SSL_CERT_FILE /
+#                               CURL_CA_BUNDLE / REQUESTS_CA_BUNDLE / GIT_SSL_CAINFO /
+#                               NODE_EXTRA_CA_CERTS) pointing at a mitmproxy-ca-cert.pem.
+#                               ARTEX injects exactly these into every worker tool it
+#                               spawns (agent/worker.go proxyEnv, asserted by
+#                               agent/proxyenv_test.go). The variable NAMES are
+#                               hard-coded in the source, so this tell survives an
+#                               operator renaming the binary or changing the ports —
+#                               a stronger signal than the bare listen port. Read from
+#                               /proc on the live Linux host, or from --proc-from FILE.
 #
 # Safety: pure Python standard library, no network, no writes anywhere except the
 # self-test's own temporary directory. It reads host state (open ports, a data
-# directory, log files, and — only if you pass a DSN — the database) and prints
-# what it found. Use it only on a host you own or are authorized in writing to
-# inspect.
+# directory, log files, the environments of running processes via /proc, and — only
+# if you pass a DSN — the database) and prints what it found. Use it only on a host
+# you own or are authorized in writing to inspect.
 #
 # Usage:
 #   detections/triage/artex_host_triage.py --data-dir /opt/artex/data \
 #       --log /var/log/syslog --log-dir /var/log/artex
 #   detections/triage/artex_host_triage.py --pg-dsn "$ARTEX_PG_DSN"
+#   detections/triage/artex_host_triage.py --proc-from proc_env_dump.txt  # offline
 #   detections/triage/artex_host_triage.py --self-test     # reproducible fixture test
 #   detections/triage/artex_host_triage.py --json          # machine-readable findings
 #
@@ -132,6 +145,25 @@ SCHEMA_TABLES = [
     "activity",
     "agent_prompts",
 ]
+
+# Recording-proxy environment injection into spawned worker tools (agent/worker.go
+# proxyEnv; asserted by agent/proxyenv_test.go). ARTEX routes every worker tool's
+# traffic through the recording MITM proxy and, when a CA is present, makes the
+# toolchain trust it — by setting these exact variables in the subprocess env. The
+# variable NAMES are hard-coded in worker.go (only the values are configurable), so
+# a tool process carrying a recording-proxy address in a proxy var AND a CA var
+# pointing at a mitmproxy-ca-cert.pem is a far more specific tell than the bare
+# listen port: it survives the operator renaming the binary or moving the data dir.
+PROXY_ENV_VARS = (
+    "HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "ALL_PROXY", "all_proxy",
+)
+CA_ENV_VARS = (
+    "SSL_CERT_FILE", "CURL_CA_BUNDLE", "REQUESTS_CA_BUNDLE", "GIT_SSL_CAINFO", "NODE_EXTRA_CA_CERTS",
+)
+CA_BASENAME = "mitmproxy-ca-cert.pem"  # basename of CA_RELPATH; the value a CA var points at
+# The recording-proxy default endpoint (cmd/artex/main.go --proxy). An operator can
+# point --proxy elsewhere, so the CA var is the anchor and this is only the fallback.
+PROXY_DEFAULT_ENDPOINT = f"{PROXY_HOST}:{PROXY_PORT}"  # 127.0.0.1:8788
 
 
 class Finding:
@@ -435,6 +467,154 @@ def check_pg_schema(dsn):
     return findings, f"PostgreSQL schema check: {n} of {len(SCHEMA_TABLES)} ARTEX tables present."
 
 
+# --- check 5: recording-proxy env injection in running processes --------------
+
+
+def _proxy_env_hit(env):
+    """First proxy var set to a non-empty value, as (var, value), else None."""
+    for var in PROXY_ENV_VARS:
+        val = env.get(var, "").strip()
+        if val:
+            return var, val
+    return None
+
+
+def _ca_env_hit(env):
+    """First CA-trust var pointing at a mitmproxy-ca-cert.pem, as (var, value), else None."""
+    for var in CA_ENV_VARS:
+        val = env.get(var, "").strip()
+        if val and os.path.basename(val) == CA_BASENAME:
+            return var, val
+    return None
+
+
+def scan_process_env(label, env):
+    """Findings for one process's environment dict. Pure function of its input so
+    the self-test can feed synthetic env without reading /proc. The strongest tell
+    is a proxy var AND a mitmproxy CA var together (the worker proxyEnv signature);
+    a mitmproxy CA alone, or the ARTEX default proxy endpoint alone, is a weaker
+    lead. A corporate proxy with no mitmproxy CA is deliberately not flagged."""
+    proxy = _proxy_env_hit(env)
+    ca = _ca_env_hit(env)
+    if ca and proxy:
+        pv, pval = proxy
+        cv, cval = ca
+        return [Finding(
+            "process-env-injection", "high",
+            "ARTEX recording-proxy env injection in a running process",
+            f"{label}: {pv}={pval} with {cv}={cval} — the worker proxyEnv signature "
+            "(routes through a proxy and trusts a mitmproxy CA)",
+            "agent/worker.go",
+            "A standalone mitmproxy or a MITM test harness can set these too; a proxy "
+            "together with a trusted mitmproxy-ca-cert.pem matches ARTEX's worker "
+            "injection. Capture can be disabled (--proxy ''), so absence is not safety.",
+        )]
+    if ca:
+        cv, cval = ca
+        return [Finding(
+            "process-env-injection", "medium",
+            "A running process is told to trust a mitmproxy CA",
+            f"{label}: {cv}={cval} points a toolchain CA-trust var at a mitmproxy-ca-cert.pem",
+            "agent/worker.go",
+            "The recording proxy injects this CA path into worker tools; the bare "
+            "filename is shared with standalone mitmproxy, so correlate with "
+            "traffic/_ca/ and the proxy port.",
+        )]
+    if proxy and PROXY_DEFAULT_ENDPOINT in proxy[1]:
+        pv, pval = proxy
+        return [Finding(
+            "process-env-injection", "medium",
+            "A running process routes through the ARTEX recording-proxy default endpoint",
+            f"{label}: {pv}={pval} (ARTEX --proxy default {PROXY_DEFAULT_ENDPOINT})",
+            "agent/worker.go",
+            "The endpoint is the --proxy default and is configurable; correlate with "
+            "the MITM CA under traffic/_ca/.",
+        )]
+    return []
+
+
+def _parse_environ_bytes(raw):
+    """Parse a NUL-separated /proc/<pid>/environ blob into a KEY->VALUE dict."""
+    env = {}
+    for tok in raw.split(b"\x00"):
+        if not tok:
+            continue
+        s = tok.decode("utf-8", "replace")
+        if "=" in s:
+            k, v = s.split("=", 1)
+            env[k] = v
+    return env
+
+
+def parse_proc_dump(text):
+    r"""Parse a captured process-environment dump into [(label, env), ...]. Blocks
+    are separated by a blank line; a line starting with '#' sets the block label;
+    other entries are KEY=VALUE (NUL or newline separated). Produce such a dump on
+    the host with:
+        for p in /proc/[0-9]*; do echo "# $p"; tr '\0' '\n' < "$p/environ"; echo; done
+    """
+    procs = []
+    for block in re.split(r"\n[ \t]*\n", text.replace("\x00", "\n")):
+        label = None
+        env = {}
+        for line in block.splitlines():
+            if not line.strip():
+                continue
+            if line.lstrip().startswith("#"):
+                label = line.lstrip()[1:].strip() or label
+                continue
+            if "=" in line:
+                k, v = line.split("=", 1)
+                env[k.strip()] = v
+        if env:
+            procs.append((label or "process", env))
+    return procs
+
+
+def gather_process_envs():
+    """(procs, note, unreadable): read each /proc/<pid>/environ on the live Linux
+    host. note is non-empty when /proc is unavailable (non-Linux) or some environs
+    were unreadable, so the caller never mistakes 'did not run' for 'clean'."""
+    if not sys.platform.startswith("linux") or not os.path.isdir("/proc"):
+        return [], (
+            "process-env check skipped (no /proc on this OS; run on the Linux host, "
+            "or pass --proc-from a captured env dump)."
+        ), 0
+    procs = []
+    unreadable = 0
+    mypid = str(os.getpid())
+    try:
+        pids = os.listdir("/proc")
+    except OSError as e:
+        return [], f"process-env check could not list /proc: {e}", 0
+    for pid in pids:
+        if not pid.isdigit() or pid == mypid:
+            continue
+        try:
+            with open(os.path.join("/proc", pid, "environ"), "rb") as f:
+                raw = f.read()
+        except OSError:
+            unreadable += 1
+            continue
+        env = _parse_environ_bytes(raw)
+        if not env:
+            continue
+        comm = pid
+        try:
+            with open(os.path.join("/proc", pid, "comm"), "r", encoding="utf-8", errors="replace") as f:
+                comm = f.read().strip() or pid
+        except OSError:
+            pass
+        procs.append((f"pid {pid} ({comm})", env))
+    note = ""
+    if unreadable:
+        note = (
+            f"process-env check: {unreadable} process(es) had an unreadable "
+            "/proc/<pid>/environ — run as root to cover every process; absence is not safety."
+        )
+    return procs, note, unreadable
+
+
 # --- reporting ----------------------------------------------------------------
 
 SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
@@ -487,6 +667,28 @@ def run_checks(args):
     findings += pg_findings
     if pg_note:
         notes.append(pg_note)
+
+    if args.proc_from:
+        try:
+            with open(args.proc_from, "r", encoding="utf-8", errors="replace") as f:
+                dump = f.read()
+        except OSError as e:
+            dump = ""
+            notes.append(f"could not read --proc-from {args.proc_from}: {e}")
+        procs = parse_proc_dump(dump)
+        if not procs and dump.strip():
+            notes.append(
+                "process-env check: --proc-from file parsed no process blocks "
+                "(expected '# label' + KEY=VALUE lines, blocks split by a blank line)."
+            )
+        for label, env in procs:
+            findings += scan_process_env(label, env)
+    else:
+        procs, proc_note, _unreadable = gather_process_envs()
+        for label, env in procs:
+            findings += scan_process_env(label, env)
+        if proc_note:
+            notes.append(proc_note)
 
     findings.sort(key=lambda f: (SEVERITY_ORDER.get(f.severity, 9), f.check, f.title))
     return findings, notes
@@ -613,6 +815,44 @@ def self_test():
     pgf, pgnote = check_pg_schema("")
     check("pg: no DSN yields a manual-query note and no finding", len(pgf) == 0 and "psql" in pgnote and SCHEMA_TABLES[0] in SCHEMA_QUERY)
 
+    # 6. recording-proxy env injection in running processes (agent/worker.go proxyEnv)
+    dump = (
+        "# pid 101 (curl)\n"
+        "PATH=/usr/bin\n"
+        "HTTP_PROXY=127.0.0.1:8788\n"
+        "HTTPS_PROXY=127.0.0.1:8788\n"
+        "REQUESTS_CA_BUNDLE=/opt/artex/data/traffic/_ca/mitmproxy-ca-cert.pem\n"
+        "\n"
+        "# pid 202 (nginx)\n"
+        "PATH=/usr/sbin\n"
+        "HOME=/var/www\n"
+        "\n"
+        "# pid 303 (apt)\n"
+        "HTTP_PROXY=http://corp-proxy.local:3128\n"
+        "\n"
+        "# pid 404 (python)\n"
+        "REQUESTS_CA_BUNDLE=/opt/artex/data/traffic/_ca/mitmproxy-ca-cert.pem\n"
+        "\n"
+        "# pid 505 (wget)\n"
+        "https_proxy=127.0.0.1:8788\n"
+    )
+    procs = parse_proc_dump(dump)
+    check("procenv: dump parses five process blocks", len(procs) == 5)
+    by_label = {label: env for label, env in procs}
+    inj = scan_process_env("pid 101 (curl)", by_label.get("pid 101 (curl)", {}))
+    check("procenv: proxy + mitmproxy CA fires one HIGH injection finding",
+          len(inj) == 1 and inj[0].severity == "high" and inj[0].check == "process-env-injection")
+    benign = scan_process_env("pid 202 (nginx)", by_label.get("pid 202 (nginx)", {}))
+    check("procenv: a benign process fires nothing", len(benign) == 0)
+    corp = scan_process_env("pid 303 (apt)", by_label.get("pid 303 (apt)", {}))
+    check("procenv: a corporate proxy (not :8788, no mitm CA) is not a false positive", len(corp) == 0)
+    caonly = scan_process_env("pid 404 (python)", by_label.get("pid 404 (python)", {}))
+    check("procenv: a mitmproxy CA alone fires one MEDIUM finding",
+          len(caonly) == 1 and caonly[0].severity == "medium")
+    proxyonly = scan_process_env("pid 505 (wget)", by_label.get("pid 505 (wget)", {}))
+    check("procenv: the ARTEX default proxy endpoint alone fires one MEDIUM finding",
+          len(proxyonly) == 1 and proxyonly[0].severity == "medium")
+
     print()
     if failures:
         print(f"RESULT: FAIL ({len(failures)} assertion(s) failed)")
@@ -638,6 +878,10 @@ def build_parser():
                    help="PostgreSQL DSN to check for the exploration schema (defaults to $ARTEX_PG_DSN).")
     p.add_argument("--ports-from", default=None, metavar="FILE",
                    help="read a port listing from FILE instead of running ss/netstat/lsof.")
+    p.add_argument("--proc-from", default=None, metavar="FILE",
+                   help="read a captured process-environment dump from FILE instead of "
+                        "reading /proc on the live host (offline / forensic-image triage). "
+                        "Format: '# label' + KEY=VALUE lines, process blocks split by a blank line.")
     p.add_argument("--json", action="store_true", help="emit findings as JSON.")
     p.add_argument("--exit-code", action="store_true",
                    help="exit 1 if any indicator fired (default: always exit 0).")
