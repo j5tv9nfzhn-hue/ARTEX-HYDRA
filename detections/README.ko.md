@@ -82,8 +82,9 @@ Sigma 는 호스트와 로그 텔레메트리를 다룹니다. 네트워크 선�
 가져올 수 있는 [MISP](https://www.misp-project.org/) 이벤트
 ([`indicators/artex_indicators.misp.json`](indicators/))로도 제공하므로, MISP 를 쓰거나 거기서
 STIX 로 내보내는 방어자는 CSV 열을 손으로 매핑할 필요가 없습니다. 규칙에 근거한 지문은 `to_ids`
-로 표시했고, 호스트 포렌식용 포트와 스키마 지문은 표시하지 않았습니다. 일반 헌팅 단서(파괴 명령)는 오탐을 피하려
-가져오기용 목록에서 의도적으로 뺐습니다. 열 구성, MISP 타입 매핑, 정직한 유의점, 그리고 CSV 와
+로 표시했고, 호스트 포렌식용 포트와 스키마 지문은 표시하지 않았습니다. 일반 헌팅 단서(파괴 명령)와
+norma SDK 가 공유하는 `norma/0.4` WebFetch User-Agent(Suricata sid 1000003 이 잡는 네트워크 서명이지
+ARTEX 고유 문자열이 아닙니다)는 오탐을 피하려 가져오기용 목록에서 의도적으로 뺐습니다. 열 구성, MISP 타입 매핑, 정직한 유의점, 그리고 CSV 와
 MISP 이벤트가 어긋나지 않게 지키는 일관성 테스트는 [`indicators/README.ko.md`](indicators/README.ko.md)를
 참조하십시오.
 

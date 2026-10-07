@@ -69,6 +69,15 @@ repository does not hand-roll a second, lossy format.
   lead, not an import-ready indicator, so they live in
   [`destructive_command_hunting.yml`](../sigma/destructive_command_hunting.yml) and the defense guide, not
   in this list. Importing them as blocking indicators would cause false positives.
+- **The norma WebFetch User-Agent is a wire signature, not an atomic indicator.** The worker's page-fetch
+  tool sends `norma/0.4` during the attack phase, and Suricata sid 1000003 fires on the `norma/` prefix, but
+  that string is the norma SDK's own hardcoded User-Agent (`tool/webfetch.go`), shared by every tool built on
+  norma rather than an ARTEX-unique fingerprint. Importing it here as a blocking indicator would alert on all
+  norma-SDK traffic — the same false-positive trap the destructive commands sit in — so it is deliberately
+  kept out of this list and shipped only as the network rule
+  ([`../suricata/README.md`](../suricata/README.md), sid 1000003). It is also grounded in a pinned dependency
+  (`github.com/Autumn-27/norma`), not this repository's own source, so the source-of-truth test below cannot
+  re-read it the way it re-reads ARTEX's own emitters.
 - **Host-forensic ports are for triage, not blocking.** `:8787` and `127.0.0.1:8788` describe a host that
   may be running ARTEX; check them with `ss`/`netstat`, do not firewall them blindly.
 - **The exploration-graph schema fingerprint is for DB inspection, not a network/file IoC.** The

@@ -87,7 +87,9 @@ ready-to-import [MISP](https://www.misp-project.org/) event
 ([`indicators/artex_indicators.misp.json`](indicators/)), so a defender running MISP (or exporting on to
 STIX from it) does not have to map the CSV columns by hand — the rule-backed fingerprints are flagged
 `to_ids`, the host-forensic ports and schema fingerprint are not. Generic hunting leads (the
-destructive commands) are deliberately kept out of the import-ready list to avoid false positives; see
+destructive commands) and the norma SDK's shared `norma/0.4` WebFetch User-Agent — a wire signature carried
+by Suricata sid 1000003, not an ARTEX-unique string — are deliberately kept out of the import-ready list to
+avoid false positives; see
 [`indicators/README.md`](indicators/README.md) for the columns, the MISP type mapping, the honest caveats,
 and the consistency test that keeps both the CSV and the MISP event from drifting.
 
