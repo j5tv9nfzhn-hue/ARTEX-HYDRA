@@ -49,16 +49,18 @@ Static strings can be changed; behaviour is harder to hide. These Sigma **correl
 
 Thresholds and windows are conservative defaults — tune them to your baseline. The pure web multi-stage
 case in §4.2 (enumerate → probe → authenticate) still needs base rules specific to your environment,
-because the attack traffic itself carries no ARTEX-unique User-Agent. A generic behavioral Sigma base
+because that pattern does not reduce to a single ARTEX-unique User-Agent. A generic behavioral Sigma base
 template to start from is provided in [defense guide §4.2](../docs/defense-en.md#42-siem-correlation-rules);
 it is kept out of this tested rule tree because it cannot be grounded in ARTEX source.
 
 ## Network rules (Suricata)
 
-Sigma covers host and log telemetry. The one ARTEX artifact observable on the wire — the enrichment prober's
-`artex-enrich/1.0` HTTP User-Agent (`enrich/enrich.go`) — ships as [Suricata](https://suricata.io) rules in
-[`suricata/`](suricata/): a presence signature plus a high-rate enumeration variant. ARTEX's actual attack
-traffic carries no ARTEX-unique User-Agent, so the network layer is intentionally narrow; see
+Sigma covers host and log telemetry. The two ARTEX User-Agents observable on the wire both ship as
+[Suricata](https://suricata.io) rules in [`suricata/`](suricata/): the enrichment prober's `artex-enrich/1.0`
+(`enrich/enrich.go`) with a presence signature plus a high-rate enumeration variant (sid 1000001–1000002),
+and the norma SDK WebFetch tool's attack-phase `norma/0.4` (`tool/webfetch.go`) with a presence signature
+(sid 1000003). Other worker tools (Bash-run `curl`, `nmap`) use their own User-Agents and carry no
+ARTEX-unique fingerprint, so the network layer is intentionally narrow to these two UAs; see
 [`suricata/README.md`](suricata/README.md) for the scope, the TLS caveat, and how to validate with
 `suricata -T` and a reference pcap.
 

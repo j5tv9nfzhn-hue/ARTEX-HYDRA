@@ -45,17 +45,19 @@
   자체로는 일반적인 파괴 명령 신호와 결합해 특이도를 높입니다. `temporal`, `level: high`.
 
 임계값과 시간 창은 보수적인 기본값입니다. 각자의 기준선(baseline)에 맞게 조정하십시오. §4.2 의 순수
-웹 다단계 사례(열거 → 프로브 → 인증)는 공격 트래픽 자체가 ARTEX 고유 User-Agent 를 싣지 않으므로,
+웹 다단계 사례(열거 → 프로브 → 인증)는 그 패턴이 단일 ARTEX 고유 User-Agent 로 환원되지 않으므로,
 여전히 환경별 기본 규칙이 따로 필요합니다. 그 출발점으로 쓸 수 있는 일반 행동 기반 Sigma 베이스
 템플릿을 [방어 가이드 §4.2](../docs/defense-ko.md#42-siem-상관-규칙)에 두었습니다. ARTEX 소스로 근거를
 고정할 수 없어 여기 테스트되는 규칙 트리에는 넣지 않았습니다.
 
 ## 네트워크 규칙 (Suricata)
 
-Sigma 는 호스트와 로그 텔레메트리를 다룹니다. 네트워크 선에서 관측되는 유일한 ARTEX 산출물인 보강
-프로버의 `artex-enrich/1.0` HTTP User-Agent(`enrich/enrich.go`)는 [`suricata/`](suricata/)에
-[Suricata](https://suricata.io) 규칙으로 들어 있습니다. 존재 시그니처 하나와 고속 열거 변형 하나입니다.
-ARTEX 의 실제 공격 트래픽은 ARTEX 고유 User-Agent 를 싣지 않으므로 네트워크 계층은 의도적으로 좁게
+Sigma 는 호스트와 로그 텔레메트리를 다룹니다. 네트워크 선에서 관측되는 ARTEX 고유 User-Agent 는 두
+가지이고, 둘 다 [`suricata/`](suricata/)에 [Suricata](https://suricata.io) 규칙으로 들어 있습니다. 보강
+프로버의 `artex-enrich/1.0`(`enrich/enrich.go`)에는 존재 시그니처 하나와 고속 열거 변형 하나(sid
+1000001·1000002)가, norma SDK 의 WebFetch 도구가 공격 단계에 보내는 `norma/0.4`(`tool/webfetch.go`)에는
+존재 시그니처 하나(sid 1000003)가 대응합니다. 그 밖의 worker 도구(Bash 로 실행하는 `curl`·`nmap` 등)는
+자체 User-Agent 를 쓰므로 ARTEX 고유 지문이 없어, 네트워크 계층은 의도적으로 이 두 UA 로만 좁게
 잡았습니다. 범위와 TLS 유의점, `suricata -T` 와 참조 pcap 으로 검증하는 방법은
 [`suricata/README.ko.md`](suricata/README.ko.md)를 참조하십시오.
 
