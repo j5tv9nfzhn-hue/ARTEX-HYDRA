@@ -196,8 +196,13 @@ def correlation_fires(corr, timeline):
     refs = [ref.rule for ref in corr.rules]
 
     if ctype in ("event_count", "value_count"):
-        rule = refs[0]
-        matched = [e for e in timeline if rule_matches(rule, e)]
+        # A count correlation may reference several base rules; an event feeds the
+        # count if it matches ANY of them — the same union the temporal branch
+        # applies below. Looking at refs[0] alone would silently drop events
+        # matching the other referenced rules, a fail-open this suite's header
+        # forbids. With a single reference this reduces to the one-rule case, so
+        # the existing rules (each referencing one base rule) are unchanged.
+        matched = [e for e in timeline if any(rule_matches(r, e) for r in refs)]
         groups = {}
         for e in matched:
             key = group_key(e, group_by)
