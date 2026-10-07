@@ -304,3 +304,90 @@ done
 것이 아니라 **확인 방법이 서버의 접근 정책에 막힌 것**은 아닌지 먼저 의심하고, HEAD·기본
 UA·리다이렉트 미추적 같은 요인을 하나씩 제거해 다시 확인합니다. (2026-10-06 확인 기준으로
 세 링크 모두 위 방법에서 200 이며, pipc.go.kr 은 2회 리다이렉트 뒤 200 입니다.)
+
+---
+
+## 9. 릴리스 발행 파이프라인
+
+버전 태그(`v*`)를 밀면 [`.github/workflows/release.yml`](.github/workflows/release.yml) 이 다섯
+플랫폼용 바이너리와, 조건을 만족할 때 멀티아키텍처 Docker 이미지를 만듭니다. 이 포크는 아직
+릴리스 태그를 끊은 적이 없어 이 워크플로가 한 번도 실행되지 않았으므로, 이 절은 파이프라인이
+무엇을 전제하고 무엇을 산출하는지, 그리고 그 전제가 지금 저장소 구조와 맞는지를 정리합니다.
+태그를 밀면 공개 저장소에 GitHub Release 가 생기므로, 릴리스를 끊는 일은 발행 결정이 선 뒤에
+합니다.
+
+### 9.1 릴리스를 끊는 법
+
+`v` 로 시작하는 태그를 밀면 워크플로가 발화합니다.
+
+```bash
+git tag v0.3.15
+git push origin v0.3.15
+```
+
+### 9.2 파이프라인이 하는 일
+
+워크플로는 잡 다섯 개로 나뉩니다.
+
+- **frontend.** 프런트엔드를 정적으로 한 번 내보내고(`web/out`) 그 산출물을 `web-dist`
+  아티팩트로 올립니다. 아래 binaries 잡이 대상마다 이 산출물을 다시 받아 재사용합니다.
+- **binaries.** 다섯 대상(linux amd64·arm64, darwin amd64·arm64, windows amd64)을 교차
+  컴파일하고 대상마다 zip 으로 묶습니다. linux amd64 바이너리에는 `artex -h` 스모크 테스트를
+  돌려 바이너리가 실제로 실행되는지 확인합니다.
+- **release.** 모든 zip 을 모아 `SHA256SUMS` 체크섬을 만들고, GitHub Release 를 생성해 zip 과
+  체크섬을 첨부합니다.
+- **docker-gate.** `DOCKERHUB_USERNAME`·`DOCKERHUB_TOKEN` 시크릿이 설정돼 있는지 확인해 그
+  결과를 다음 잡의 실행 조건으로 넘깁니다.
+- **docker.** 위 시크릿이 있을 때만 돌며, binaries 가 교차 컴파일한 linux 바이너리를 받아
+  멀티아키텍처 이미지를 빌드하고 Docker Hub 에 올립니다. 시크릿이 없으면 이 잡을 건너뛰어,
+  릴리스 CI 는 빨간 실패 없이 바이너리 릴리스만으로 끝납니다.
+
+### 9.3 빌드 전제가 저장소 구조와 맞는가
+
+파이프라인은 다음 세 가지 전제 위에서 동작하며, 이 전제가 지금 저장소 구조와 모두 맞는지를
+로컬에서 binaries 잡을 직접 재현해 확인했습니다.
+
+- **프런트엔드 임베드.** frontend 잡이 올린 `web-dist`(= `web/out` 의 내용)를 binaries 잡이
+  `server/webui/dist` 로 받고, `server/webui_embed.go` 의 `//go:embed all:webui/dist` 가 그 자리를
+  바이너리에 임베드합니다. 그래서 binaries 잡은 프런트엔드를 다시 빌드하지 않고
+  `ARTEX_SKIP_FRONTEND=1` 로 [`build.sh`](build.sh) 를 호출합니다.
+- **바이너리·패키지 경로.** `build.sh --target <os>/<arch>` 는 `dist/artex-<os>-<arch>/artex`
+  바이너리와 `dist/` 아래 zip 패키지를 만듭니다. zip 에는 바이너리와 함께 시작 스크립트(리눅스·
+  macOS 는 `start.sh`, 윈도우는 `start.bat`), `skills/`, `config.example.json`, `README.md` 가
+  들어갑니다.
+- **Docker 이미지의 바이너리 복사.** binaries 잡은 linux 바이너리를 `bin-linux-<arch>`
+  아티팩트로 따로 올리고, docker 잡이 이것을 `dist/<arch>/artex` 로 받습니다.
+  [`Dockerfile`](Dockerfile) 의 `COPY dist/${TARGETARCH}/artex` 가, 멀티아키텍처 빌드에서 buildx
+  가 각 플랫폼에 맞춰 채워 주는 `TARGETARCH` 로 그 경로를 집습니다.
+  [`.dockerignore`](.dockerignore) 는 `dist/` 를 제외하지 않으므로 바이너리가 빌드 컨텍스트에
+  포함됩니다.
+
+### 9.4 아직 결정 전인 것: Docker 이미지 네임스페이스
+
+docker 잡은 현재 이미지 이름을 상류의 `autumn27/artex` 로 두고 있고, 이 포크를 어느
+네임스페이스로 발행할지는 별도 결정 사안입니다(`work/DECISIONS-FOR-JIWOO.md` 8번 항목). 결정이
+서기 전까지는 Docker Hub 시크릿을 두지 않으며, 그동안 릴리스는 바이너리 zip 과 체크섬만
+발행합니다(docker 잡은 건너뜁니다).
+
+### 9.5 태그 없이 로컬에서 미리 검증하기
+
+공개 릴리스를 끊지 않고 파이프라인 전제만 확인하려면, binaries 잡을 로컬에서 재현합니다.
+로컬에 Go 가 없으면 Docker 로 동일하게 돌릴 수 있습니다.
+
+```bash
+# 1) 프런트엔드 정적 내보내기(release.yml 의 frontend 잡에 해당)
+cd web && npm ci && npm run build:static && cd ..
+# 2) binaries 잡이 아티팩트를 받는 자리에 배치
+rm -rf server/webui/dist && mkdir -p server/webui/dist && cp -a web/out/. server/webui/dist/
+# 3) 한 대상만 binaries 잡과 같은 환경으로 빌드
+docker run --rm -v "$PWD":/app -w /app \
+  -e ARTEX_SKIP_FRONTEND=1 -e ARTEX_SKIP_NPM_CI=1 \
+  -e ARTEX_COMPRESS=0 -e ARTEX_PACKAGE=1 -e ARTEX_PACKAGE_DIR=dist \
+  -e ARTEX_BUILD_VERSION=v0.0.0-local \
+  golang:1.26 bash -c 'apt-get update && apt-get install -y zip && ./build.sh --target linux/amd64'
+# 4) 산출물 확인: dist/artex-linux-amd64/artex · dist/*.zip · dist/SHA256SUMS
+```
+
+`dist/artex-linux-amd64/artex` 는 정적 링크된 ELF 이고, `-h` 를 주면 사용법을 출력한 뒤 종료
+코드 0 으로 끝납니다. 이것이 binaries 잡의 스모크 테스트가 확인하는 동작입니다. 빌드 산출물
+(`dist/`·`server/webui/dist/`)은 저장소에 커밋하지 않습니다(`.gitignore` 로 제외됩니다).

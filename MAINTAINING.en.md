@@ -329,3 +329,90 @@ suspect that the link is not broken but that **your checking method was blocked 
 policy**, and re-check by eliminating factors one at a time: HEAD, the default UA, and not following
 redirects. (As of the 2026-10-06 check, all three links return 200 with the method above, with
 pipc.go.kr returning 200 after two redirects.)
+
+---
+
+## 9. The release pipeline
+
+Pushing a version tag (`v*`) makes [`.github/workflows/release.yml`](.github/workflows/release.yml)
+build binaries for five platforms and, when a condition is met, a multi-architecture Docker image.
+This fork has never cut a release tag, so this workflow has never run. This section therefore records
+what the pipeline assumes and produces, and whether those assumptions match the current repository
+structure. Because pushing a tag creates a GitHub Release on the public repository, cut a release only
+after the publishing decision is made.
+
+### 9.1 How to cut a release
+
+Pushing a tag that starts with `v` fires the workflow.
+
+```bash
+git tag v0.3.15
+git push origin v0.3.15
+```
+
+### 9.2 What the pipeline does
+
+The workflow is split into five jobs.
+
+- **frontend.** Statically exports the frontend once (`web/out`) and uploads that output as the
+  `web-dist` artifact. The binaries job below downloads and reuses this output per target.
+- **binaries.** Cross-compiles five targets (linux amd64/arm64, darwin amd64/arm64, windows amd64) and
+  packages a zip per target. On the linux amd64 binary it runs an `artex -h` smoke test to confirm the
+  binary actually runs.
+- **release.** Gathers all zips, generates a `SHA256SUMS` checksum file, and creates a GitHub Release
+  with the zips and the checksum attached.
+- **docker-gate.** Checks whether the `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets are set and passes
+  that result on as the run condition for the next job.
+- **docker.** Runs only when those secrets exist; it takes the linux binaries cross-compiled by
+  binaries, builds a multi-architecture image, and pushes it to Docker Hub. When the secrets are
+  absent it is skipped, so the release CI finishes with just the binary release and no red failure.
+
+### 9.3 Do the build assumptions match the repository structure
+
+The pipeline runs on the following three assumptions, and all three were confirmed to match the
+current repository structure by reproducing the binaries job locally.
+
+- **Frontend embed.** The binaries job receives the `web-dist` (the contents of `web/out`) uploaded by
+  the frontend job into `server/webui/dist`, and `//go:embed all:webui/dist` in `server/webui_embed.go`
+  embeds that location into the binary. The binaries job therefore does not rebuild the frontend; it
+  calls [`build.sh`](build.sh) with `ARTEX_SKIP_FRONTEND=1`.
+- **Binary and package paths.** `build.sh --target <os>/<arch>` produces the `dist/artex-<os>-<arch>/artex`
+  binary and a zip package under `dist/`. The zip contains the binary together with a start script
+  (`start.sh` on Linux/macOS, `start.bat` on Windows), `skills/`, `config.example.json`, and
+  `README.md`.
+- **Copying the binary into the Docker image.** The binaries job uploads the linux binary separately as
+  the `bin-linux-<arch>` artifact, and the docker job receives it as `dist/<arch>/artex`. The
+  `COPY dist/${TARGETARCH}/artex` in [`Dockerfile`](Dockerfile) picks up that path via the `TARGETARCH`
+  that buildx fills in per platform during a multi-architecture build. [`.dockerignore`](.dockerignore)
+  does not exclude `dist/`, so the binary is included in the build context.
+
+### 9.4 Still a pending decision: the Docker image namespace
+
+The docker job currently leaves the image name as upstream's `autumn27/artex`, and which namespace this
+fork should publish under is a separate decision (`work/DECISIONS-FOR-JIWOO.md`, item 8). Until that is
+decided, the Docker Hub secrets are not set, and in the meantime a release publishes only the binary
+zips and the checksum (the docker job is skipped).
+
+### 9.5 Verifying locally without a tag
+
+To check only the pipeline assumptions without cutting a public release, reproduce the binaries job
+locally. If you do not have Go locally, you can run the same thing under Docker.
+
+```bash
+# 1) Static frontend export (corresponds to the frontend job in release.yml)
+cd web && npm ci && npm run build:static && cd ..
+# 2) Place it where the binaries job receives the artifact
+rm -rf server/webui/dist && mkdir -p server/webui/dist && cp -a web/out/. server/webui/dist/
+# 3) Build one target with the same environment as the binaries job
+docker run --rm -v "$PWD":/app -w /app \
+  -e ARTEX_SKIP_FRONTEND=1 -e ARTEX_SKIP_NPM_CI=1 \
+  -e ARTEX_COMPRESS=0 -e ARTEX_PACKAGE=1 -e ARTEX_PACKAGE_DIR=dist \
+  -e ARTEX_BUILD_VERSION=v0.0.0-local \
+  golang:1.26 bash -c 'apt-get update && apt-get install -y zip && ./build.sh --target linux/amd64'
+# 4) Confirm the outputs: dist/artex-linux-amd64/artex · dist/*.zip · dist/SHA256SUMS
+```
+
+`dist/artex-linux-amd64/artex` is a statically linked ELF, and given `-h` it prints usage and exits
+with code 0. This is the behavior the binaries job's smoke test confirms. Build outputs
+(`dist/`, `server/webui/dist/`) are not committed to the repository (they are excluded by
+`.gitignore`).
