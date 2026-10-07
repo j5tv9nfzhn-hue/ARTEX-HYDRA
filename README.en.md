@@ -115,6 +115,8 @@ Upstream provides several methods: an install script (`./install.sh`), precompil
   ./start.sh                                          # → http://localhost:8787
   ```
 
+> The `npm ci` in step 1) installs the devDependencies the build needs (e.g. `@tailwindcss/postcss`). If your shell has `NODE_ENV=production` set, `npm ci` skips devDependencies and the build fails with `Error: Cannot find module '@tailwindcss/postcss'`; in that case install with `npm ci --include=dev`.
+
 > Launch with `start.sh` (`start.bat` on Windows) rather than running `./artex` directly. That script is a supervisor that restarts the program based on its exit code, and it also handles the UI's "one-click update."
 
 ---
