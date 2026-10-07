@@ -49,6 +49,8 @@ install_docker(){
   docker compose pull || true
   docker compose up -d
   ok "기동을 완료했습니다 → http://localhost:8787"
+  warn "방금 받은 이미지는 상류(원본) autumn27/artex 중국어 빌드라, 이 저장소의 한국어화(한국어 UI·리포트)는 아직 담겨 있지 않습니다"
+  warn "한국어판 화면·출력을 보려면 이 스크립트를 다시 실행해 \"2) 로컬 실행 (go 컴파일)\" 을 고르거나, README \"소스에서 단일 바이너리 컴파일\" 경로로 빌드하세요"
   info "로그 확인: docker compose logs -f artex"
 }
 

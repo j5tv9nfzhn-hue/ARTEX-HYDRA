@@ -105,7 +105,7 @@ The upstream image above bundles common tools (ripgrep, curl, vim, npm, nmap, an
 
 Upstream provides several methods: an install script (`./install.sh`), precompiled binaries (Releases), and a single-binary build from source. The commands and full procedure are collected in the "安装" (Installation) section of [`README.zh.md`](README.zh.md#安装) (in Chinese); the essentials are reproduced below.
 
-- **Install script:** running `./install.sh` detects/installs Docker and then lets you choose "① all-in-Docker" or "② local compile and run."
+- **Install script:** running `./install.sh` detects/installs Docker and then lets you choose "① all-in-Docker" or "② local compile and run." Note that the default "① all-in-Docker" pulls the same **upstream Chinese image** (`autumn27/artex`) as the quick start above, so to get the Korean edition's screens and output, choose "② local compile and run" or use the **single-binary build from source** path below. The script also prints the same notice once the "① all-in-Docker" path finishes starting up.
 - **Single-binary build from source:**
 
   ```bash

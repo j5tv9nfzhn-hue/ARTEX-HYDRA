@@ -46,6 +46,7 @@ update_docker(){
   info "재구성 후 시작합니다(artex 는 재시작 시 schema 를 자동으로 마이그레이션합니다)…"
   docker compose up -d artex
   ok "업데이트 완료 → http://localhost:8787"
+  warn "방금 받은 이미지는 상류(원본) autumn27/artex 중국어 빌드라, 이 저장소의 한국어화(한국어 UI·리포트)는 아직 담겨 있지 않습니다. 한국어판은 \"2) 로컬 업데이트(go 로 다시 컴파일)\" 로 빌드하세요"
   info "로그 보기: docker compose logs -f artex"
   info "오래된 이미지 정리(선택): docker image prune -f"
 }
