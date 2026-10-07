@@ -43,6 +43,11 @@ jobs:
         run: npm ci
       - name: build:static (머지 게이트 · 타입 검사 포함)
         run: npm run build:static
+      - name: UI 한자 누출 가드 (머지 게이트 · out HTML 에 중국어 0)
+        # 이 포크의 핵심 성과는 "사용자에게 보이는 화면에 중국어가 없다"는 것이다.
+        # 기여자가 중국어를 하드코딩하거나 번역이 누락되는 회귀를 머지 전에 막는다.
+        # 스크립트는 git 루트의 web/out 를 스스로 찾으므로 작업 디렉터리와 무관하다.
+        run: python3 -I ../scripts/check-web-cjk.py
       - name: biome check (정보용 · 선재 린트 부채로 아직 머지 게이트 아님)
         if: always()
         continue-on-error: true
