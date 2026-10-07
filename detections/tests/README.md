@@ -123,9 +123,10 @@ compilation with [sigma-cli](https://github.com/SigmaHQ/sigma-cli) (pySigma), an
   Suricata specificity assertion above.
 
 This is the structural + compilation validation documented in [`../README.md`](../README.md), made executable
-and assertive. The companion [`sigma_match/`](sigma_match/) suite below adds the *matching* half for the atomic
-rules — a representative malicious event fires each rule and a benign one does not — so the Sigma rules now get
-both a reproducible validation test and a reproducible matching test, the way the Suricata rule does. (The
+and assertive. The companion [`sigma_match/`](sigma_match/) suite below adds the *matching* half for both the
+atomic and the correlation rules — a representative malicious event (or timeline) fires each rule and a benign
+one does not — so the Sigma rules now get both a reproducible validation test and a reproducible matching test,
+the way the Suricata rule does. (The
 earlier concern that a weak hand-written matcher would undercut the rules is addressed by delegating all parsing
 to pySigma; see the trust model in the next section.)
 
@@ -153,10 +154,11 @@ is pinned to a reference version (`3.1.0`); override it with `SIGMA_CLI_VERSION`
 
 ## Sigma live event-matching — [`sigma_match/`](sigma_match/)
 
-[`sigma_match/run.sh`](sigma_match/run.sh) proves the atomic Sigma rules under [`../sigma/`](../sigma/) actually
-*fire* on a matching event and stay quiet on a benign one — the "a detection you cannot run is only a claim"
-guarantee the Suricata suite gives the network rule, extended here to the host/log-layer rules. It asserts
-three properties:
+[`sigma_match/run.sh`](sigma_match/run.sh) proves the Sigma rules under [`../sigma/`](../sigma/) — both the
+atomic rules and the correlation rules under [`../sigma/correlation/`](../sigma/correlation/) — actually *fire*
+on a matching event (or timeline) and stay quiet on a benign one — the "a detection you cannot run is only a
+claim" guarantee the Suricata suite gives the network rule, extended here to the host/log-layer rules. It
+asserts six properties, three for the atomic rules and three for the correlations:
 
 - **Rule/sample pairing** — every atomic rule has an [`events/<name>.json`](sigma_match/events/) sample file and
   every sample file maps back to a rule, so a rule added without samples fails here rather than going untested.
@@ -164,16 +166,29 @@ three properties:
 - **True negatives** — each rule matches none of its benign sample events. For example, a standalone
   `mitmproxy-ca-cert.pem` under `.mitmproxy/` does **not** trip the recording-proxy rule, because its `|all`
   modifier also requires the `_ca/` directory ARTEX writes — the matching test is what proves that discrimination.
+- **Correlation rule/timeline pairing** — every correlation rule has an
+  [`events/correlation/<name>.json`](sigma_match/events/correlation/) timeline file and every timeline maps back
+  to a rule. Each timeline event carries a `ts` field in relative seconds.
+- **Correlation true positives** — each rule fires on a positive timeline where the threshold is met inside the
+  window within one group. For example, requests from one source (`c-ip`) fanning out to 20 distinct hosts
+  within 10 minutes trip the enrichment fan-out rule.
+- **Correlation true negatives** — each rule stays quiet when the threshold is not met, when it is met but the
+  events are spread beyond the window, when they are split across groups, or when a temporal rule is missing a
+  leg. In particular a high-volume, low-breadth burst does **not** trip the fan-out rule: breadth, not volume, is
+  the signal, and the matching test is what proves that discrimination.
 
-The trust model is that pySigma — not hand-written code — parses each rule and compiles its modifiers and
-condition into a tree (`|contains` → a wildcard value, `|all` → an AND, `1 of selection_*` → an OR);
-[`check.py`](sigma_match/check.py) only walks that tree and tests each leaf, and raises rather than passing on
-any construct it does not explicitly support (fail-closed). Scope is deliberately narrow and stated in the
-script header: **atomic rules only** (the correlation rules are time-windowed aggregations the `sigma/` and
-`sigma_backends/` suites already cover), matching is **case-insensitive** (the splunk-backend default the
-`sigma/` suite targets, which the destructive rule's own false-positive note assumes), and keyword matching is
-a full-text substring search. It is a regression test for the rules' field/value/condition logic, not a
-substitute for validating in your own SIEM, whose field normalization may differ.
+The trust model is that pySigma — not hand-written code — parses each rule: an atomic rule into a condition tree
+(`|contains` → a wildcard value, `|all` → an AND, `1 of selection_*` → an OR), and a correlation rule into its
+aggregation spec (type, group-by, timespan, threshold, and the resolved references to the atomic base rules).
+[`check.py`](sigma_match/check.py) only walks that tree and spec, deciding which events feed a referenced rule
+with the very same atomic matcher, so the authoritative Sigma logic stays in pySigma; it raises rather than
+passing on any construct it does not explicitly support (fail-closed). Scope and limits are stated in the script
+header: the correlation window is the standard sliding-window interpretation (a `timespan`-second window
+anchored at each matching event) and a real SIEM's windowing may differ; matching is **case-insensitive** (the
+splunk-backend default the `sigma/` suite targets, which the destructive rule's own false-positive note
+assumes); and keyword matching is a full-text substring search. It is a regression test for the rules'
+field/value/condition/aggregation logic, not a substitute for validating in your own SIEM, whose field
+normalization may differ.
 
 ### Run it
 
@@ -189,6 +204,9 @@ Expected output (abridged):
   PASS  rule/sample pairing: 5 atomic rules, 5 event files, no orphans
   PASS  artex_enrich_user_agent: 1/1 positive events matched
   PASS  artex_recording_proxy_ca: 2/2 benign events correctly not matched
+  PASS  rule/timeline pairing: 4 correlation rules, 4 timeline files, no orphans
+  PASS  artex_enrich_fanout: fired — 20 distinct hosts from one source within the 10-minute window
+  PASS  artex_enrich_fanout: quiet — high volume, low breadth: 25 requests from one source but only 4 distinct hosts
 RESULT: PASS
 ```
 

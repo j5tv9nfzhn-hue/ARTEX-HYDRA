@@ -119,9 +119,10 @@ RESULT: PASS
   특이성 단언에 해당하는 Sigma 쪽 장치입니다.
 
 이는 [`../README.ko.md`](../README.ko.md) 에 설명한 구조 + 컴파일 검증을, 실행 가능하고 단언하는 형태로 만든
-것입니다. 아래의 짝 스위트 [`sigma_match/`](sigma_match/) 가 원자 규칙에 대한 *매칭* 절반을 더합니다. 대표적인
-악성 이벤트가 각 규칙을 발화시키고 정상 이벤트는 발화시키지 않음을 확인하므로, 이제 Sigma 규칙도 Suricata
-규칙처럼 재현 가능한 검증 테스트와 재현 가능한 매칭 테스트를 함께 갖습니다. (엉성하게 손으로 짠 매처가 규칙을
+것입니다. 아래의 짝 스위트 [`sigma_match/`](sigma_match/) 가 원자 규칙과 상관 규칙 양쪽에 *매칭* 절반을
+더합니다. 대표적인 악성 이벤트(또는 타임라인)가 각 규칙을 발화시키고 정상 이벤트는 발화시키지 않음을
+확인하므로, 이제 Sigma 규칙도 Suricata 규칙처럼 재현 가능한 검증 테스트와 재현 가능한 매칭 테스트를 함께
+갖습니다. (엉성하게 손으로 짠 매처가 규칙을
 깎아내릴 수 있다는 기존 우려는, 파싱을 전부 pySigma 에 위임해 해소했습니다. 신뢰 모델은 다음 절에서 설명합니다.)
 
 ### 실행
@@ -149,9 +150,10 @@ RESULT: PASS
 
 ## Sigma 실시간 이벤트 매칭 — [`sigma_match/`](sigma_match/)
 
-[`sigma_match/run.sh`](sigma_match/run.sh) 는 [`../sigma/`](../sigma/) 아래의 원자 Sigma 규칙이 매칭되는
-이벤트에 실제로 *발화*하고 정상 이벤트에는 침묵함을 증명합니다. Suricata 스위트가 네트워크 규칙에 주는
-"돌려 볼 수 없는 탐지 규칙은 주장일 뿐"이라는 보증을, 호스트·로그 계층 규칙으로 확장한 것입니다. 세 가지
+[`sigma_match/run.sh`](sigma_match/run.sh) 는 [`../sigma/`](../sigma/) 아래의 Sigma 규칙이, 원자 규칙과
+[`../sigma/correlation/`](../sigma/correlation/) 의 상관 규칙을 모두 포함해, 매칭되는 이벤트에 실제로 *발화*하고
+정상 이벤트에는 침묵함을 증명합니다. Suricata 스위트가 네트워크 규칙에 주는 "돌려 볼 수 없는 탐지 규칙은
+주장일 뿐"이라는 보증을, 호스트·로그 계층 규칙으로 확장한 것입니다. 원자 규칙 셋과 상관 규칙 셋, 모두 여섯
 속성을 단언합니다:
 
 - **규칙·샘플 짝짓기** — 모든 원자 규칙에는 [`events/<이름>.json`](sigma_match/events/) 샘플 파일이 있고,
@@ -162,15 +164,28 @@ RESULT: PASS
   `.mitmproxy/` 아래의 단독 `mitmproxy-ca-cert.pem` 은 기록용 프록시 규칙을 발화시키지 **않습니다**. 그
   규칙의 `|all` 수식자가 ARTEX 가 쓰는 `_ca/` 디렉터리까지 함께 요구하기 때문이며, 이 판별을 증명하는 것이
   바로 매칭 테스트입니다.
+- **상관 규칙·타임라인 짝짓기** — 모든 상관 규칙에는 [`events/correlation/<이름>.json`](sigma_match/events/correlation/)
+  타임라인 파일이 있고, 모든 타임라인은 규칙으로 되짚어집니다. 타임라인의 각 이벤트는 상대 초를 담은 `ts`
+  필드를 지닙니다.
+- **상관 규칙의 참 양성** — 임계를 시간 창 안에서 한 그룹이 채우는 양성 타임라인에 각 규칙이 발화합니다.
+  예를 들어 한 출처(`c-ip`)에서 10분 안에 서로 다른 20개 호스트로 퍼지는 요청이 수집 팬아웃 규칙을
+  발화시킵니다.
+- **상관 규칙의 참 음성** — 임계 미달, 임계는 채웠지만 시간 창을 벗어난 경우, 그룹이 갈린 경우,
+  시간 상관에서 한쪽 레그가 빠진 경우에는 침묵합니다. 특히 요청량은 많아도 폭(서로 다른 호스트 수)이 작은
+  버스트는 팬아웃 규칙을 발화시키지 **않습니다**. 폭이 신호이지 양이 신호가 아니며, 이 판별을 증명하는 것이
+  바로 매칭 테스트입니다.
 
-신뢰 모델은 이렇습니다. 손으로 짠 코드가 아니라 pySigma 가 각 규칙을 파싱해 수식자와 조건을 트리로
-컴파일합니다(`|contains` → 와일드카드 값, `|all` → AND, `1 of selection_*` → OR). [`check.py`](sigma_match/check.py)
-는 그 트리를 따라 걷으며 각 말단만 평가하고, 명시적으로 지원하지 않는 구문을 만나면 조용히 통과시키지 않고
-예외를 던집니다(fail-closed). 범위는 일부러 좁게 잡고 스크립트 머리말에 밝혀 둡니다. **원자 규칙만** 다루며
-(상관 규칙은 시간 창 집계라 `sigma/` 와 `sigma_backends/` 스위트가 이미 다룹니다), 매칭은 **대소문자를 무시**
-하고(`sigma/` 스위트가 겨냥하는 splunk 백엔드의 기본값이며, 파괴 명령 규칙의 오탐 주석 자체가 이를 전제합니다),
-키워드 매칭은 전문 부분 문자열 검색입니다. 이것은 규칙의 필드·값·조건 로직에 대한 회귀 테스트이지, 필드
-정규화가 다를 수 있는 각자의 SIEM 에서 검증하는 일을 대신하지는 않습니다.
+신뢰 모델은 이렇습니다. 손으로 짠 코드가 아니라 pySigma 가 각 규칙을 파싱합니다. 원자 규칙은 수식자와
+조건을 트리로 컴파일하고(`|contains` → 와일드카드 값, `|all` → AND, `1 of selection_*` → OR), 상관 규칙은
+집계 명세(유형·group-by·시간 창·임계 조건·참조하는 원자 규칙)로 컴파일합니다. [`check.py`](sigma_match/check.py)
+는 그 트리와 명세를 따라 걷을 뿐이고, 상관 규칙이 어느 이벤트를 먹는지는 원자 규칙과 똑같은 매처로
+판정하므로 권위 있는 Sigma 로직은 pySigma 안에 남습니다. 명시적으로 지원하지 않는 구문을 만나면 조용히
+통과시키지 않고 예외를 던집니다(fail-closed). 범위와 한계는 스크립트 머리말에 밝혀 둡니다. 상관 규칙의
+시간 창은 표준 슬라이딩 윈도(매칭 이벤트마다 `timespan` 길이의 창을 잡는) 해석이며, 실제 SIEM 의 윈도
+방식은 다를 수 있습니다. 매칭은 **대소문자를 무시**하고(`sigma/` 스위트가 겨냥하는 splunk 백엔드의
+기본값이며, 파괴 명령 규칙의 오탐 주석 자체가 이를 전제합니다), 키워드 매칭은 전문 부분 문자열 검색입니다.
+이것은 규칙의 필드·값·조건·집계 로직에 대한 회귀 테스트이지, 필드 정규화가 다를 수 있는 각자의 SIEM 에서
+검증하는 일을 대신하지는 않습니다.
 
 ### 실행
 
@@ -186,6 +201,9 @@ detections/tests/sigma_match/run.sh
   PASS  rule/sample pairing: 5 atomic rules, 5 event files, no orphans
   PASS  artex_enrich_user_agent: 1/1 positive events matched
   PASS  artex_recording_proxy_ca: 2/2 benign events correctly not matched
+  PASS  rule/timeline pairing: 4 correlation rules, 4 timeline files, no orphans
+  PASS  artex_enrich_fanout: fired — 20 distinct hosts from one source within the 10-minute window
+  PASS  artex_enrich_fanout: quiet — high volume, low breadth: 25 requests from one source but only 4 distinct hosts
 RESULT: PASS
 ```
 

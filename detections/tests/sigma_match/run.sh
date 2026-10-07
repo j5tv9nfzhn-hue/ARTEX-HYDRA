@@ -1,28 +1,36 @@
 #!/usr/bin/env bash
 #
-# Reproducible live event-matching test for the ARTEX atomic Sigma rules
-# (../../sigma/*.yml). The sibling sigma/ suite proves those rules are valid and
-# COMPILE to a backend query; this suite proves they actually FIRE on a matching
-# event and stay quiet on a benign one — the same "a detection you cannot run is
-# only a claim" guarantee the suricata/ suite already gives the network rule with
-# a pcap replay. For each atomic rule it asserts a representative malicious event
-# matches and a benign event does not.
+# Reproducible live event-matching test for the ARTEX Sigma rules — both the
+# atomic rules (../../sigma/*.yml) and the correlation rules
+# (../../sigma/correlation/*.yml). The sibling sigma/ suite proves those rules are
+# valid and COMPILE to a backend query; this suite proves they actually FIRE on a
+# matching event (or timeline) and stay quiet on a benign one — the same "a
+# detection you cannot run is only a claim" guarantee the suricata/ suite already
+# gives the network rule with a pcap replay.
 #
-# It proves three properties with no host dependency beyond Docker (pySigma runs
-# in a container, nothing is installed on the host and nothing is written to the
-# repo tree):
+# It proves six properties with no host dependency beyond Docker (pySigma runs in
+# a container, nothing is installed on the host and nothing is written to the repo
+# tree):
 #
-#   1. rule/sample pairing   every atomic rule has an events/<name>.json and
-#                            every events file maps to a rule (no orphans)
-#   2. true positives        each rule matches all of its malicious sample events
-#   3. true negatives        each rule matches none of its benign sample events
+#   atomic 1  rule/sample pairing   every atomic rule has an events/<name>.json and
+#                                   every events file maps to a rule (no orphans)
+#   atomic 2  true positives        each rule matches all of its malicious events
+#   atomic 3  true negatives        each rule matches none of its benign events
+#   corr   1  rule/timeline pairing every correlation rule has an
+#                                   events/correlation/<name>.json (no orphans)
+#   corr   2  true positives        each rule FIRES on its positive timeline
+#                                   (threshold met, inside the window, one group)
+#   corr   3  true negatives        each rule stays QUIET on its negative timelines
+#                                   (below threshold, window exceeded, split group,
+#                                   or a missing leg)
 #
-# pySigma parses each rule and compiles its modifiers and condition into a tree;
-# check.py only walks that tree, so the authoritative Sigma logic stays in
-# pySigma (see check.py's header). Correlation rules under sigma/correlation/ are
-# time-windowed aggregations and are out of scope for single-event matching — the
-# sigma/ and sigma_backends/ suites cover those. Matching is case-insensitive;
-# see check.py for the full scope and honesty notes.
+# pySigma parses each rule — for an atomic rule its condition tree, for a
+# correlation rule its aggregation spec (type, group-by, timespan, threshold, and
+# the resolved references to the atomic base rules) — and check.py only walks that
+# parsed structure, so the authoritative Sigma logic stays in pySigma (see
+# check.py's header). The correlation window is the standard sliding-window model
+# and matching is case-insensitive; see check.py for the full scope and honesty
+# notes.
 #
 # Usage:   detections/tests/sigma_match/run.sh
 # Env:     PYTHON_IMAGE    (default python:3.12-slim)
