@@ -58,6 +58,23 @@ carries the same honest caveat as the matching Sigma rule or indicator row.
 A hit is a **triage lead, not an attribution**, and the absence of every finding is **not** a clean bill
 of health: an operator can rename the binary, move the data directory, or change the ports.
 
+## Platform support
+
+The script is pure Python 3 (standard library only), so it runs wherever Python 3 does — verified on
+Linux (the CI self-test) and macOS. Two checks are OS-specific, and both degrade cleanly rather than
+failing:
+
+- **Live port scan** — tries `ss`, then `netstat`, then `lsof`, and uses the first that produces output.
+  On Linux that is `ss`/`netstat`; on macOS/BSD, where `ss` is absent and `netstat` does not take the
+  Linux `-ltnp` flags (it exits with empty output), it falls through to `lsof -nP -iTCP -sTCP:LISTEN`,
+  parsed the same way. Pass `--ports-from` to read a saved listing instead of scanning live.
+- **Live process-env scan** — reads `/proc`, so it runs only on Linux. On a host without `/proc`
+  (macOS/BSD) it is reported as **skipped**, not clean; capture a dump on the Linux host and pass it with
+  `--proc-from` (see Usage).
+
+The remaining checks — recording-proxy artifacts, log markers, and the PostgreSQL schema — read the
+filesystem, log files, and (with a DSN) `psql`, so they are OS-independent.
+
 ## Usage
 
 ```sh
