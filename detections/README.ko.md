@@ -60,8 +60,8 @@ ARTEX 의 실제 공격 트래픽은 ARTEX 고유 User-Agent 를 싣지 않으�
 ## ATT&CK 커버리지
 
 이 규칙들이 태그하는 기법은 [MITRE ATT&CK](https://attack.mitre.org/) Navigator 레이어
-[`attack/artex_navigator_layer.json`](attack/)에 모았습니다. 네 전술(정찰, 명령·제어, 실행, 임팩트)에
-걸친 일곱 기법으로, 각 기법은 규칙의 `attack.*` 태그에 근거하고 탐지 강도(ARTEX 고유 시그니처인지,
+[`attack/artex_navigator_layer.json`](attack/)에 모았습니다. 여섯 전술(정찰, 명령·제어, 실행, 임팩트,
+자격 증명 접근, 수집)에 걸친 여덟 기법으로, 각 기법은 규칙의 `attack.*` 태그에 근거하고 탐지 강도(ARTEX 고유 시그니처인지,
 일반 헌팅 단서인지)로 점수를 매겼습니다. [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/)
 에서 열면 어떤 ARTEX 행동을 어떤 규칙이 덮는지 볼 수 있습니다. 점수 산정과 기법↔규칙 대응, 그리고
 정직한 범위(커버리지는 완전성이 아닙니다)는 [`attack/README.ko.md`](attack/README.ko.md)를 참조하십시오.

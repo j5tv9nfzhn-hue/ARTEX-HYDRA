@@ -63,8 +63,8 @@ traffic carries no ARTEX-unique User-Agent, so the network layer is intentionall
 ## ATT&CK coverage
 
 The techniques these rules tag are collected into a [MITRE ATT&CK](https://attack.mitre.org/) Navigator
-layer in [`attack/artex_navigator_layer.json`](attack/) — seven techniques across four tactics
-(Reconnaissance, Command and Control, Execution, Impact), each grounded in a rule's `attack.*` tags and
+layer in [`attack/artex_navigator_layer.json`](attack/) — eight techniques across six tactics
+(Reconnaissance, Command and Control, Execution, Impact, Credential Access, Collection), each grounded in a rule's `attack.*` tags and
 scored by detection strength (ARTEX-specific signature vs. generic hunting lead). Open it in the
 [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/) to see which ARTEX behaviour each
 rule covers; see [`attack/README.md`](attack/README.md) for the scoring, the technique-to-rule map, and
