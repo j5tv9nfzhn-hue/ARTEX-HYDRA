@@ -33,6 +33,7 @@ detection:
             - 'mkfs'
             - 'dd of=/dev/'
             - 'shred '
+            - 'wipe /dev/'
     selection_database:
         CommandLine|contains:
             - 'DROP DATABASE'
