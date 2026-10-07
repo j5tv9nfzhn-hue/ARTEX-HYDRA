@@ -231,6 +231,6 @@ Because autonomous attacks spread fast, build the statutory reporting steps into
 - Upstream project: [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX) (AGPL-3.0). This document is the defensive material of its Korean-edition repository.
 - The top-level [README security and misuse warning, scope of use, and legal notice](../README.en.md).
 - This edition is localized for Korea; where personal data is involved, Korean law (the Network Act and the Personal Information Protection Act) applies. Unauthorized testing is a crime in most jurisdictions regardless — always secure written authorization and an agreed scope first.
-- Standard references for general web-security hardening: OWASP Top 10, OWASP ASVS (Application Security Verification Standard), OWASP API Security Top 10.
+- Standard references for general web-security hardening: [OWASP Top 10](https://owasp.org/www-project-top-ten/), [OWASP ASVS (Application Security Verification Standard)](https://owasp.org/www-project-application-security-verification-standard/), [OWASP API Security Top 10](https://api-security.owasp.org/).
 
 > This guide is continually expanded to support defense and detection capability. Suggestions for additional detection rules or hardening items are welcome as repository issues.

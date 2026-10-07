@@ -230,6 +230,6 @@ ARTEX 연루가 의심될 때 가장 먼저 확인할 것을 순서로 정리합
 
 - 원본 프로젝트: [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX) (AGPL-3.0). 이 문서는 그 한국어판 저장소의 방어 자료입니다.
 - 상위 [README 의 보안·오남용 경고와 사용 범위·국내법 고지](../README.md).
-- 일반 웹 보안 하드닝의 표준 참고: OWASP Top 10, OWASP ASVS(애플리케이션 보안 검증 표준), OWASP API Security Top 10.
+- 일반 웹 보안 하드닝의 표준 참고: [OWASP Top 10](https://owasp.org/www-project-top-ten/), [OWASP ASVS(애플리케이션 보안 검증 표준)](https://owasp.org/www-project-application-security-verification-standard/), [OWASP API Security Top 10](https://api-security.owasp.org/).
 
 > 이 가이드는 방어·탐지 역량을 돕기 위해 계속 보강됩니다. 보완할 탐지 규칙·하드닝 항목 제안은 저장소 이슈로 환영합니다.
