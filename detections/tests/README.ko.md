@@ -409,7 +409,7 @@ RESULT: PASS
   증명됩니다.
 - **CSV 와 행 단위 동기화** — 모든 CSV 행이 의도한 타입·카테고리를 가진 MISP 속성 정확히 하나로
   대응되고(`http.user-agent` → `user-agent`, 가드 마커 `string` → `pattern-in-file`, `port` →
-  `port`, `ip-dst|port` → 합성 `ip|port` 값을 가진 `ip-dst|port`), CSV 행 없이 남는 MISP 속성이
+  `port`, `ip-dst|port` → 합성 `ip|port` 값을 가진 `ip-dst|port`, 탐색 스키마 `other` → `other`), CSV 행 없이 남는 MISP 속성이
   하나도 없습니다. 이벤트는 CSV 와 함께 손으로 유지하므로, `artex_indicators.misp.json` 을 같은
   커밋에서 맞춰 갱신하지 않은 채 CSV 행을 추가·삭제·타입 변경하면 실패합니다.
 - **`to_ids` 가 `rule` 열을 반영함** — 규칙이 뒷받침하는 지표는 `to_ids: true` 이고, 규칙이 없는

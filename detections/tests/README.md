@@ -411,7 +411,7 @@ defender actually loads into a threat-intelligence platform, from drifting away 
   here, so "valid MISP" is proven by the library a MISP server uses, not asserted.
 - **Row-for-row sync with the CSV** — every CSV row maps to exactly one MISP attribute with the intended type
   and category (`http.user-agent` → `user-agent`, the guard marker `string` → `pattern-in-file`, `port` →
-  `port`, `ip-dst|port` → `ip-dst|port` with the composite `ip|port` value), and no MISP attribute is left
+  `port`, `ip-dst|port` → `ip-dst|port` with the composite `ip|port` value, and the exploration-schema `other` → `other`), and no MISP attribute is left
   without a CSV row. The event is hand-maintained alongside the CSV, so adding, removing, or retyping a CSV
   row without updating `artex_indicators.misp.json` to match in the same commit fails.
 - **`to_ids` mirrors the `rule` column** — a rule-backed indicator is `to_ids: true`; a host-forensic row
