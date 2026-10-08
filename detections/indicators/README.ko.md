@@ -59,7 +59,7 @@ ARTEX 가 스스로 내보내는 고유 지문을 한 파일로 모은, 기계�
   가이드에 둡니다. 이것들을 차단용 지표로 가져오면 오탐이 생깁니다.
 - **norma 의 WebFetch User-Agent 는 네트워크 서명이지 가져오기용 원자 지표가 아닙니다.** 워커의
   페이지 가져오기 도구는 공격 단계에서 `norma/0.4` 를 보내고 Suricata 규칙 sid 1000003 이 `norma/`
-  접두사에 발화하지만, 그 문자열은 norma SDK 에 하드코딩된 자체 User-Agent(`tool/webfetch.go`)여서
+  접두사에 발화하지만, 그 문자열은 norma SDK 에 하드코딩된 자체 User-Agent(`github.com/Autumn-27/norma/tool/webfetch.go`)여서
   norma 위에 세운 모든 도구가 똑같이 내보내는 값이지 ARTEX 고유 지문이 아닙니다. 이 값을 차단용
   지표로 이 목록에 넣으면 모든 norma SDK 트래픽에 경보가 울리는데, 이는 파괴적 명령을 뺀 것과 같은
   오탐 함정입니다. 그래서 norma UA 는 이 목록에서 의도적으로 빼고 네트워크 규칙으로만 싣습니다

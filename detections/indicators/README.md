@@ -71,7 +71,7 @@ repository does not hand-roll a second, lossy format.
   in this list. Importing them as blocking indicators would cause false positives.
 - **The norma WebFetch User-Agent is a wire signature, not an atomic indicator.** The worker's page-fetch
   tool sends `norma/0.4` during the attack phase, and Suricata sid 1000003 fires on the `norma/` prefix, but
-  that string is the norma SDK's own hardcoded User-Agent (`tool/webfetch.go`), shared by every tool built on
+  that string is the norma SDK's own hardcoded User-Agent (`github.com/Autumn-27/norma/tool/webfetch.go`), shared by every tool built on
   norma rather than an ARTEX-unique fingerprint. Importing it here as a blocking indicator would alert on all
   norma-SDK traffic — the same false-positive trap the destructive commands sit in — so it is deliberately
   kept out of this list and shipped only as the network rule

@@ -58,7 +58,7 @@ it is kept out of this tested rule tree because it cannot be grounded in ARTEX s
 Sigma covers host and log telemetry. The two ARTEX User-Agents observable on the wire both ship as
 [Suricata](https://suricata.io) rules in [`suricata/`](suricata/): the enrichment prober's `artex-enrich/1.0`
 (`enrich/enrich.go`) with a presence signature plus a high-rate enumeration variant (sid 1000001–1000002),
-and the norma SDK WebFetch tool's attack-phase `norma/0.4` (`tool/webfetch.go`) with a presence signature
+and the norma SDK WebFetch tool's attack-phase `norma/0.4` (`github.com/Autumn-27/norma/tool/webfetch.go`) with a presence signature
 (sid 1000003). Other worker tools (Bash-run `curl`, `nmap`) use their own User-Agents and carry no
 ARTEX-unique fingerprint, so the network layer is intentionally narrow to these two UAs; see
 [`suricata/README.md`](suricata/README.md) for the scope, the TLS caveat, and how to validate with

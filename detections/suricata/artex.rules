@@ -6,7 +6,7 @@
 # SCOPE AND HONESTY - read before deploying:
 #  - These rules target two ARTEX artifacts observable on the wire:
 #    (1) the enrichment prober's HTTP User-Agent "artex-enrich/1.0" (enrich/enrich.go:233),
-#    (2) the norma SDK's WebFetch User-Agent "norma/0.4" (tool/webfetch.go).
+#    (2) the norma SDK's WebFetch User-Agent "norma/0.4" (github.com/Autumn-27/norma/tool/webfetch.go).
 #    The recording proxy (traffic/traffic.go) does not modify request headers, so both
 #    UAs reach the target on the wire. Other worker tools (curl, nmap, etc.) use their own
 #    default User-Agents — detect those with generic scanner signatures and ../sigma/.

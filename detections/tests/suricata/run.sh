@@ -32,7 +32,7 @@ PYTHON_IMAGE="${PYTHON_IMAGE:-python:3.12-slim}"
 
 NUM_FLOWS=35
 ENRICH_UA="artex-enrich/1.0"
-# norma SDK WebFetch tool, hardcoded in github.com/Autumn-27/norma tool/webfetch.go
+# norma SDK WebFetch tool, hardcoded in github.com/Autumn-27/norma/tool/webfetch.go
 # (literal "norma/0.4", verified in the go.sum-pinned v0.4.3 module source). Fewer flows
 # than NUM_FLOWS because sid 1000003 is a single-hit presence rule with no rate component.
 NORMA_UA="norma/0.4"

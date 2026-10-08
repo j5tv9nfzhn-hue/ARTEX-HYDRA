@@ -55,7 +55,7 @@
 Sigma 는 호스트와 로그 텔레메트리를 다룹니다. 네트워크 선에서 관측되는 ARTEX 고유 User-Agent 는 두
 가지이고, 둘 다 [`suricata/`](suricata/)에 [Suricata](https://suricata.io) 규칙으로 들어 있습니다. 보강
 프로버의 `artex-enrich/1.0`(`enrich/enrich.go`)에는 존재 시그니처 하나와 고속 열거 변형 하나(sid
-1000001·1000002)가, norma SDK 의 WebFetch 도구가 공격 단계에 보내는 `norma/0.4`(`tool/webfetch.go`)에는
+1000001·1000002)가, norma SDK 의 WebFetch 도구가 공격 단계에 보내는 `norma/0.4`(`github.com/Autumn-27/norma/tool/webfetch.go`)에는
 존재 시그니처 하나(sid 1000003)가 대응합니다. 그 밖의 worker 도구(Bash 로 실행하는 `curl`·`nmap` 등)는
 자체 User-Agent 를 쓰므로 ARTEX 고유 지문이 없어, 네트워크 계층은 의도적으로 이 두 UA 로만 좁게
 잡았습니다. 범위와 TLS 유의점, `suricata -T` 와 참조 pcap 으로 검증하는 방법은

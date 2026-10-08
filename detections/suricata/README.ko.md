@@ -18,7 +18,7 @@
   속도로 쏟아내는 빈도입니다. Sigma 상관 규칙 `artex_enrich_scan_velocity` 를 반영합니다.
   `classtype: attempted-recon`.
 - **sid 1000003** — `ARTEX worker WebFetch User-Agent`. User-Agent 가 `norma/` 로 시작하는 인바운드
-  HTTP 요청입니다 — norma SDK 의 WebFetch 도구(`tool/webfetch.go`). 이 UA 는 norma 전 버전
+  HTTP 요청입니다 — norma SDK 의 WebFetch 도구(`github.com/Autumn-27/norma/tool/webfetch.go`). 이 UA 는 norma 전 버전
   (v0.1.0–v0.4.3, 검증 완료)에 걸쳐 하드코딩되어 있으며, 기록 프록시가 요청 헤더를 수정하지
   않으므로(`traffic/traffic.go`) 대상 호스트 와이어에 그대로 도달합니다. 보강 프로버와 달리
   **공격 단계**(능동적 취약점 프로빙) 에서 발화합니다. `classtype: attempted-recon`.
@@ -27,7 +27,7 @@
 
 - **두 가지 ARTEX User-Agent 가 네트워크에서 관측됩니다.** 보강 프로버는 정찰 단계에서
   `artex-enrich/1.0`(`enrich/enrich.go:233`)을, norma SDK 의 WebFetch 도구는 공격 단계에서
-  `norma/0.4`(`tool/webfetch.go`)를 보냅니다. 기록 프록시(`traffic/traffic.go`)는 요청 헤더를
+  `norma/0.4`(`github.com/Autumn-27/norma/tool/webfetch.go`)를 보냅니다. 기록 프록시(`traffic/traffic.go`)는 요청 헤더를
   변경하지 않으므로 두 UA 모두 대상 와이어에 도달합니다. 그 외 worker 도구(Bash 하위 프로세스인
   `curl`, `nmap` 등)는 자체 User-Agent 를 사용하며 — 일반 스캐너 시그니처와
   [`../sigma/`](../sigma/)의 행동 기반 SIEM 규칙으로 탐지하십시오.
