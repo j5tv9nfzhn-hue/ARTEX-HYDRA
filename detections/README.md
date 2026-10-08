@@ -166,11 +166,16 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   checks remain, so a rule that picks up a new convention issue (a mis-cased title, an off-taxonomy field)
   fails the build.
 
-Alongside the eight rule suites, two non-suite gates run in the same CI workflow and in
+Alongside the eight rule suites, three non-suite gates run in the same CI workflow and in
 [`tests/run-all.sh`](tests/run-all.sh): a harness-sync check (that `run-all.sh`, CI, and the suite
-directories name the same suites in the same order) and the [host-triage tool](triage/)'s `--self-test`
+directories name the same suites in the same order); the [host-triage tool](triage/)'s `--self-test`
 ([`tests/triage-selftest.sh`](tests/triage-selftest.sh)), which builds a synthetic host and asserts every
-triage check fires on it while a clean host produces zero findings.
+triage check fires on it while a clean host produces zero findings; and a defense-template consistency
+check ([`tests/check-defense-template.sh`](tests/check-defense-template.sh)) that re-runs the facts the
+defense guide states about its inline Sigma correlation template — `sigma check` passes, it converts on
+splunk/eql/loki, lucene and kusto reject the correlation, and the Korean and English copies carry a
+byte-identical rule body — since that template lives as prose outside this rule tree and no suite would
+otherwise catch it going stale against an upstream sigma-cli.
 
 Each script exits non-zero on any failed assertion. See [`tests/README.md`](tests/README.md).
 

@@ -159,10 +159,15 @@ mitmproxy CA 신뢰 변수를 함께 지니는지(`agent/worker.go`)를 `/proc` 
   검사만 남아 있음을 확인하므로, 규칙이 새 관례 이슈(잘못 대소문자를 쓴 제목, 분류 체계를 벗어난
   필드)를 하나라도 들이면 빌드가 실패합니다.
 
-여덟 규칙 테스트와 별개로, 규칙이 아닌 두 게이트가 같은 CI 워크플로와 [`tests/run-all.sh`](tests/run-all.sh)
-에서 함께 돕니다. 하나는 하네스 동기 검사(run-all.sh·CI·스위트 디렉터리가 같은 스위트를 같은 순서로 부르는지
-확인)이고, 다른 하나는 [호스트 분류 도구](triage/)의 `--self-test`([`tests/triage-selftest.sh`](tests/triage-selftest.sh))
-로, 합성 호스트를 만들어 모든 분류 점검이 발화하는지와 깨끗한 호스트에서는 발견이 0 건인지 단언합니다.
+여덟 규칙 테스트와 별개로, 규칙이 아닌 세 게이트가 같은 CI 워크플로와 [`tests/run-all.sh`](tests/run-all.sh)
+에서 함께 돕니다. 첫째는 하네스 동기 검사(run-all.sh·CI·스위트 디렉터리가 같은 스위트를 같은 순서로 부르는지
+확인)입니다. 둘째는 [호스트 분류 도구](triage/)의 `--self-test`([`tests/triage-selftest.sh`](tests/triage-selftest.sh))
+로, 합성 호스트를 만들어 모든 분류 점검이 발화하는지와 깨끗한 호스트에서는 발견이 0 건인지 단언합니다. 셋째는
+방어 가이드의 인라인 Sigma 상관 템플릿 정합 검사([`tests/check-defense-template.sh`](tests/check-defense-template.sh))
+로, 방어 가이드가 그 템플릿에 대해 단언한 사실을 재현합니다. `sigma check` 가 통과하고, splunk·eql·loki 로
+변환되며, lucene·kusto 는 상관 규칙을 거부하고, 한국어판과 영어판의 규칙 본문이 바이트 단위로 같은지
+확인합니다. 이 템플릿은 규칙 트리 밖 산문으로 들어 있어, 상류 `sigma-cli` 가 올라가 그 주장이 낡아도 다른
+어떤 스위트도 잡지 못하기 때문입니다.
 
 각 스크립트는 단언이 하나라도 실패하면 0 이 아닌 코드로 종료합니다. [`tests/README.ko.md`](tests/README.ko.md)
 를 참조하십시오.

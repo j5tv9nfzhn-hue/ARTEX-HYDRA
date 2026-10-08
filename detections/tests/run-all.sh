@@ -31,6 +31,7 @@ SUITES="sigma sigma_match sigma_lint sigma_backends suricata attack indicators m
 fail=0
 harness_fail=0
 triage_fail=0
+template_fail=0
 results=""
 
 # Before the suites, verify the harness itself is consistent: the SUITES list
@@ -56,6 +57,19 @@ if ! "$HERE/triage-selftest.sh"; then
   fail=1
 fi
 
+# A third gate, not a suite: the defense guide's inline Sigma template consistency
+# check. That template is prose outside detections/sigma/ (a generic behavioural
+# rule, not grounded in ARTEX source), so no per-suite test re-runs the facts the
+# guide states about it. This gate does — sigma check, the splunk/eql/loki
+# conversions, the lucene/kusto rejection, and ko/en rule-body parity — so it stays
+# out of SUITES and the harness-sync registry like the two gates above (see
+# check-defense-template.sh).
+printf '\n===== defense template consistency =====\n'
+if ! "$HERE/check-defense-template.sh"; then
+  template_fail=1
+  fail=1
+fi
+
 for suite in $SUITES; do
   printf '\n===== %s =====\n' "$suite"
   if "$HERE/$suite/run.sh"; then
@@ -74,6 +88,9 @@ if [ "$harness_fail" -ne 0 ]; then
 fi
 if [ "$triage_fail" -ne 0 ]; then
   printf '  FAIL  triage self-test (detections/triage/artex_host_triage.py --self-test: see above)\n'
+fi
+if [ "$template_fail" -ne 0 ]; then
+  printf '  FAIL  defense template consistency (check-defense-template.sh: see above)\n'
 fi
 if [ "$fail" -ne 0 ]; then
   printf 'RESULT: FAIL\n'

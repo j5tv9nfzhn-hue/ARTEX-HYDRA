@@ -26,6 +26,14 @@
 초록이던 `run-all.sh` 가 더는 초록 CI 를 뜻하지 않게 만듭니다. 이 점검은 아홉째 스위트가 아니라 게이트라서
 아래 요약에는 나타나지 않으므로, 탐지 스위트는 여덟 그대로입니다.
 
+게이트가 두 개 더 같은 방식으로 돕니다. 스위트 루프 전에 돌고, 요약에 나타나지 않으며, 스위트로 세지
+않습니다. 하나는 [호스트 분류 도구](../triage/)의 `--self-test`([`triage-selftest.sh`](triage-selftest.sh))이고,
+다른 하나는 방어 템플릿 정합 검사([`check-defense-template.sh`](check-defense-template.sh))입니다. 뒤의 것은
+방어 가이드가 인라인 Sigma 상관 템플릿에 대해 단언한 사실(`sigma check` 통과, splunk·eql·loki 변환,
+lucene·kusto 의 상관 거부, 한국어판·영어판 규칙 본문의 바이트 단위 동일)을 다시 돌립니다. 그 템플릿은
+[`../sigma/`](../sigma/) 규칙 트리 밖 산문으로 들어 있어, 상류 `sigma-cli` 가 올라가 주장이 낡아도 다른
+어떤 스위트도 잡지 못하기 때문입니다.
+
 ```sh
 detections/tests/run-all.sh
 ```
