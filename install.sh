@@ -47,10 +47,12 @@ install_docker(){
   fi
   info "이미지를 받아 기동합니다…"
   docker compose pull || true
-  docker compose up -d
+  if ! docker compose up -d; then
+    warn "상류 이미지 autumn27/artex 를 Docker Hub 에서 받을 수 없어 기동에 실패했습니다(현재 상류에서 내려간 상태라 pull 이 거부됩니다)"
+    warn "한국어판 화면·출력은 이 스크립트를 다시 실행해 \"2) 로컬 실행 (go 컴파일)\" 을 고르거나, README \"소스에서 단일 바이너리 컴파일\" 경로로 빌드하세요"
+    die "Docker Compose(전부 Docker) 경로는 현재 상류 이미지를 받을 수 없어 사용할 수 없습니다"
+  fi
   ok "기동을 완료했습니다 → http://localhost:8787"
-  warn "방금 받은 이미지는 상류(원본) autumn27/artex 중국어 빌드라, 이 저장소의 한국어화(한국어 UI·리포트)는 아직 담겨 있지 않습니다"
-  warn "한국어판 화면·출력을 보려면 이 스크립트를 다시 실행해 \"2) 로컬 실행 (go 컴파일)\" 을 고르거나, README \"소스에서 단일 바이너리 컴파일\" 경로로 빌드하세요"
   info "로그 확인: docker compose logs -f artex"
 }
 

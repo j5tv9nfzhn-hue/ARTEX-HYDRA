@@ -42,11 +42,13 @@ update_docker(){
   # 메이저 버전이 바뀌면 호환성 위험도 있습니다). artex 는 depends_on postgres 를 선언하므로 서비스명을 붙여
   # up 하면 pg 가 안 떠 있을 때 자동으로 띄우고, 이미 떠 있으면 그대로 두고 재구성하지 않습니다.
   info "새 이미지를 받습니다(artex 만)…"
-  docker compose pull artex
+  if ! docker compose pull artex; then
+    warn "상류 이미지 autumn27/artex 를 Docker Hub 에서 받을 수 없습니다(현재 상류에서 내려간 상태라 pull 이 거부됩니다)"
+    die "Docker 이미지 업데이트 경로는 현재 사용할 수 없습니다. 한국어판은 \"2) 로컬 업데이트(go 로 다시 컴파일)\" 로 빌드하세요"
+  fi
   info "재구성 후 시작합니다(artex 는 재시작 시 schema 를 자동으로 마이그레이션합니다)…"
   docker compose up -d artex
   ok "업데이트 완료 → http://localhost:8787"
-  warn "방금 받은 이미지는 상류(원본) autumn27/artex 중국어 빌드라, 이 저장소의 한국어화(한국어 UI·리포트)는 아직 담겨 있지 않습니다. 한국어판은 \"2) 로컬 업데이트(go 로 다시 컴파일)\" 로 빌드하세요"
   info "로그 보기: docker compose logs -f artex"
   info "오래된 이미지 정리(선택): docker image prune -f"
 }

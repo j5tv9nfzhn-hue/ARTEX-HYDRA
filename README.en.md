@@ -89,7 +89,7 @@ The original (Chinese UI) screens are available in [`README.zh.md`](README.zh.md
 
 > **Prerequisites:** Docker and Docker Compose. The database is **PostgreSQL**, brought up by compose. Exploration requires an **LLM** (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`; can also be set in the UI).
 
-> **⚠️ The image this compose pulls is the upstream (original) Chinese build.** The `artex` service in `docker-compose.yml` pulls `autumn27/artex`, the image the original author published to Docker Hub. That image has a **Chinese UI and Chinese output**, and the Korean localization this repository adds (Korean UI, Korean reports, `langDirective`) is **not yet included** in it. To see the Korean edition's screens and output, for now build it yourself via the **single-binary build from source** path under ["Other installation methods"](#other-installation-methods) below. A Korean-edition Docker image is in the works.
+> **⚠️ The `docker compose up -d` quick start below does not work right now.** The `artex` service in `docker-compose.yml` is set to pull `autumn27/artex`, the upstream (original) image, but that image has been taken down from Docker Hub and can no longer be pulled (verified 2026-10-09). As a result this command fails at the image-pull step with `pull access denied` / `manifest unknown`. To get the Korean edition's screens and output, build it via the **single-binary build from source** path under ["Other installation methods"](#other-installation-methods) below, which currently works. A Korean-edition Docker image is in the works.
 
 ```bash
 git clone https://github.com/jiwoochris/artex-ko.git
@@ -105,7 +105,7 @@ The upstream image above bundles common tools (ripgrep, curl, vim, npm, nmap, an
 
 Upstream provides several methods: an install script (`./install.sh`), precompiled binaries (Releases), and a single-binary build from source. The commands and full procedure are collected in the "安装" (Installation) section of [`README.zh.md`](README.zh.md#安装) (in Chinese); the essentials are reproduced below.
 
-- **Install script:** running `./install.sh` detects/installs Docker and then lets you choose "① all-in-Docker" or "② local compile and run." Note that the default "① all-in-Docker" pulls the same **upstream Chinese image** (`autumn27/artex`) as the quick start above, so to get the Korean edition's screens and output, choose "② local compile and run" or use the **single-binary build from source** path below. The script also prints the same notice once the "① all-in-Docker" path finishes starting up.
+- **Install script:** running `./install.sh` detects/installs Docker and then lets you choose "① all-in-Docker" or "② local compile and run." Note that the default "① all-in-Docker" tries to pull the same upstream image (`autumn27/artex`) as the quick start above, but that image has been taken down from Docker Hub (see the warning above), so this path currently fails at the image-pull step; the script detects this and prints the same notice before stopping. To get the Korean edition's screens and output, choose "② local compile and run" or use the **single-binary build from source** path below.
 - **Single-binary build from source:**
 
   ```bash
