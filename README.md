@@ -279,7 +279,7 @@ sequenceDiagram
   EV-->>P: 깨우기
   P->>DB: 상황 읽기(graph_overview 선취 + coverage/scope)
   P->>FR: 의도 0..N 개 배정(asset_ids 포함)
-  Note over P,FR: 대부분의 깨우기는 0 개 배정 — 새 방향이 없으면 종료
+  Note over P,FR: 대부분의 깨우기는 0 개 배정(새 방향이 없으면 종료)
   W->>FR: claimNext 로 의도 하나 수령
   W->>DB: 의도의 asset_ids 원본 자산을 초기 정보로 가져옴
   W->>PX: 실제 도구 실행(Kali / Bash / HTTP)
