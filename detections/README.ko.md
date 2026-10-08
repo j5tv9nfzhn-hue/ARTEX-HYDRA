@@ -10,37 +10,37 @@
 
 ## 원자(atomic) 규칙
 
-- **`sigma/artex_enrich_user_agent.yml`** — ARTEX 자산 보강(`enrich/enrich.go`)이 보내는 인바운드
+- **`sigma/artex_enrich_user_agent.yml`**: ARTEX 자산 보강(`enrich/enrich.go`)이 보내는 인바운드
   `artex-enrich/1.0` User-Agent 입니다. 대상 측에서 관측하는 보조 지표입니다. `level: high`.
-- **`sigma/artex_selfupdate_egress.yml`** — 자가 업데이트 루틴(`selfupdate/github.go`)이 내보내는
+- **`sigma/artex_selfupdate_egress.yml`**: 자가 업데이트 루틴(`selfupdate/github.go`)이 내보내는
   아웃바운드 `artex-selfupdate` User-Agent 입니다. 호스트·포렌식 관점의 송신(egress) 지표입니다.
   `level: medium`.
-- **`sigma/artex_guard_audit_framing.yml`** — 도구 호출이 차단될 때 감사 로그에 기록되는 플랫폼
+- **`sigma/artex_guard_audit_framing.yml`**: 도구 호출이 차단될 때 감사 로그에 기록되는 플랫폼
   가드 통제 마커(`guard/guard.go`)입니다. 호스트·포렌식 지표입니다. `level: high`.
-- **`sigma/destructive_command_hunting.yml`** — ARTEX 가드의 기본 차단 목록(`db/db.go` 시드)을
+- **`sigma/destructive_command_hunting.yml`**: ARTEX 가드의 기본 차단 목록(`db/db.go` 시드)을
   그대로 반영한 파괴적 셸·DB 명령입니다. ARTEX 고유 시그니처가 아니라 일반적인 헌팅 단서입니다.
   `level: medium`.
-- **`sigma/artex_recording_proxy_ca.yml`** — 기록용 프록시가 `_ca/mitmproxy-ca-cert.pem` 배치로
+- **`sigma/artex_recording_proxy_ca.yml`**: 기록용 프록시가 `_ca/mitmproxy-ca-cert.pem` 배치로
   생성하는 MITM CA 인증서 파일(`traffic/traffic.go`)입니다. 호스트·포렌식 아티팩트이며, 파일명
   자체는 단독 실행한 mitmproxy 와 공유되므로 헌팅 단서로 다룹니다. `level: medium`.
 
-## 상관(correlation) 규칙 — 행동 기반
+## 상관(correlation) 규칙: 행동 기반
 
 정적 문자열은 바꿀 수 있지만 행동은 숨기기가 더 어렵습니다. [`sigma/correlation/`](sigma/correlation/)
 의 Sigma **상관** 규칙은 방어 가이드(4.1~4.2절, 4.4절)의 행동 기반 계층을 담습니다. 각 상관 규칙은
 위 원자 규칙을 `id` 로 참조하므로, 참조를 풀려면 단일 상관 파일이 아니라 `sigma/` 트리 전체를
 변환해야 합니다(아래 참조).
 
-- **`sigma/correlation/artex_enrich_scan_velocity.yml`** — 한 출처가 짧은 시간 창 안에서 쏟아내는
+- **`sigma/correlation/artex_enrich_scan_velocity.yml`**: 한 출처가 짧은 시간 창 안에서 쏟아내는
   `artex-enrich/1.0` 프로브 묶음입니다(보강은 동시성 4 로 속도 제한 없이 돕니다). 단건 규칙이
   놓치는 속도를 잡습니다. `event_count`, `level: high`.
-- **`sigma/correlation/artex_enrich_fanout.yml`** — 한 출처가 보강 User-Agent 를 여러 **서로 다른**
+- **`sigma/correlation/artex_enrich_fanout.yml`**: 한 출처가 보강 User-Agent 를 여러 **서로 다른**
   호스트로 실어 나르는 경우입니다. 자산 목록 전체로 기계 속도로 퍼지는 양상으로, 양(volume)만이
   아니라 폭(breadth)이 단서입니다. `value_count`, `level: high`.
-- **`sigma/correlation/artex_guard_block_burst.yml`** — 한 호스트에서 플랫폼 가드 통제 마커가 반복해
+- **`sigma/correlation/artex_guard_block_burst.yml`**: 한 호스트에서 플랫폼 가드 통제 마커가 반복해
   찍히는 경우입니다. 단지 마커를 인용한 문서가 아니라, 돌고 있는 ARTEX 실행이 자기 가드를 건드리고
   있다는 신호입니다. `event_count`, `level: high`.
-- **`sigma/correlation/artex_guard_marker_then_destructive.yml`** — 한 호스트에서 시간 창 안에 가드
+- **`sigma/correlation/artex_guard_marker_then_destructive.yml`**: 한 호스트에서 시간 창 안에 가드
   마커와 파괴적 명령이 함께 나타나는 경우입니다(방어 가이드 §4.2, 다단계). ARTEX 고유 마커를, 그
   자체로는 일반적인 파괴 명령 신호와 결합해 특이도를 높입니다. `temporal`, `level: high`.
 
@@ -104,16 +104,16 @@ mitmproxy CA 신뢰 변수를 함께 지니는지(`agent/worker.go`)를 `/proc` 
 
 규칙에는 Docker 만 있으면 돌릴 수 있는 재현 테스트가 [`tests/`](tests/)에 함께 들어 있습니다.
 
-- **Suricata** ([`tests/suricata/run.sh`](tests/suricata/run.sh)) — 먼저 규칙 파일 전체가
+- **Suricata** ([`tests/suricata/run.sh`](tests/suricata/run.sh)): 먼저 규칙 파일 전체가
   `suricata -T --init-errors-fatal` 로 적재되는지 검증하고(어떤 캡처도 건드리지 않는 규칙이라도
   파싱 실패는 잡힙니다), scapy 로 결정적 캡처를 합성한 뒤 `suricata -r` 로 그 위를 돌려, 존재 규칙이
   프로브마다 한 번씩 발화하고 속도 규칙이 임계를 넘으면 걸리며 양성(benign) User-Agent 캡처에서는
   경보가 0 인지 단언합니다. 이진 캡처는 커밋하지 않고 매 실행마다 다시 생성합니다.
-- **Sigma** ([`tests/sigma/run.sh`](tests/sigma/run.sh)) — 아래 "검증과 변환"의 `sigma check` 와
+- **Sigma** ([`tests/sigma/run.sh`](tests/sigma/run.sh)): 아래 "검증과 변환"의 `sigma check` 와
   `sigma convert` 검증을 실행 가능한 테스트로 돌립니다. 오류 0 과, 트리 전체가 백엔드 질의로
   컴파일됨과, 각 원자 지표 문자열이 그 질의까지 살아남음과, 상관 규칙이 홀로는 변환에 실패함을
   단언합니다. 마지막 단언은 상관 규칙이 참조하는 원자 규칙에 실제로 의존함을 증명합니다.
-- **Sigma 실시간 이벤트 매칭** ([`tests/sigma_match/run.sh`](tests/sigma_match/run.sh)) — 위 Sigma 테스트가
+- **Sigma 실시간 이벤트 매칭** ([`tests/sigma_match/run.sh`](tests/sigma_match/run.sh)): 위 Sigma 테스트가
   규칙의 유효성과 컴파일을 증명한다면, 이 테스트는 원자 규칙과 상관 규칙이 실제로 발화하는지를 증명합니다.
   각 원자 규칙마다 대표적인 악성 샘플 이벤트가 규칙을 발화시키고 정상 샘플 이벤트는 발화시키지 않음을
   단언합니다(예: `.mitmproxy/` 아래 단독 CA 파일은 `_ca/` 디렉터리까지 함께 요구하는 기록용 프록시 규칙을
@@ -122,11 +122,11 @@ mitmproxy CA 신뢰 변수를 함께 지니는지(`agent/worker.go`)를 `/proc` 
   맡기고 테스트는 컴파일된 조건 트리와 집계 명세만 걸으며, 상관 규칙이 어느 이벤트를 먹는지는 원자 규칙과
   같은 매처로 판정합니다. "돌려 볼 수 없는 탐지 규칙은 주장일 뿐"이라는 원칙을 Suricata 처럼 Sigma 쪽에도
   적용합니다.
-- **ATT&CK 레이어** ([`tests/attack/run.sh`](tests/attack/run.sh)) — ATT&CK 커버리지 레이어가
+- **ATT&CK 레이어** ([`tests/attack/run.sh`](tests/attack/run.sh)): ATT&CK 커버리지 레이어가
   규칙과 일관되게 유지되는지 확인합니다. 점수를 매긴 기법·전술이 정확히 규칙 집합의 `attack.*`
   태그여야 하고, 각 기법은 실재하는 규칙 파일을 지목해야 합니다. 레이어를 갱신하지 않고 규칙을
   추가하면(또는 그 반대면) 테스트가 실패합니다.
-- **지표 근거(source-of-truth)** ([`tests/indicators/run.sh`](tests/indicators/run.sh)) — 각 규칙이
+- **지표 근거(source-of-truth)** ([`tests/indicators/run.sh`](tests/indicators/run.sh)): 각 규칙이
   고정한 지표가 여전히 상류 소스가 내보내는 바로 그 문자열인지 확인합니다. `enrich/enrich.go` 의
   `artex-enrich/1.0`, `selfupdate/` 의 `artex-selfupdate`, `guard/guard.go` 의 가드 마커, `db/db.go`
   의 파괴 토큰이 규칙에도 여전히 고정돼 있는지 봅니다. 다른 세 테스트가 놓치는 드리프트, 즉 모든
@@ -137,7 +137,7 @@ mitmproxy CA 신뢰 변수를 함께 지니는지(`agent/worker.go`)를 `/proc` 
   들어 있음을 단언해, 새로 고정한 소스 하나만 건드린 PR 이 테스트를 건너뛰어 그 드리프트가 머지
   게이트를 통과하지 못하게 합니다. 이로써 "추정이 아니라 이 저장소 소스에서 확인한 문자열에
   근거한다"(위)는 약속이 말이 아니라 가드가 됩니다.
-- **MISP 내보내기 일관성** ([`tests/misp/run.sh`](tests/misp/run.sh)) — MISP 이벤트
+- **MISP 내보내기 일관성** ([`tests/misp/run.sh`](tests/misp/run.sh)): MISP 이벤트
   ([`indicators/artex_indicators.misp.json`](indicators/artex_indicators.misp.json))가 유효한 MISP
   문서임을 증명합니다. [pymisp](https://github.com/MISP/PyMISP) 로 적재되는데, pymisp 의 객체 모델은
   실재하지 않는 속성 타입을 거부하므로 이 산출물은 MISP 처럼 보이기만 하는 것이 아니라 실제로
@@ -147,12 +147,12 @@ mitmproxy CA 신뢰 변수를 함께 지니는지(`agent/worker.go`)를 `/proc` 
   `to_ids` off 에 상관 비활성화). 이 이벤트는 CSV 와 나란히 손으로 관리됩니다. CSV 에 없는 설명
   주석·UUID·태그를 지니므로, CSV 행을 더하거나 빼거나 타입을 바꿀 때 같은 커밋에서 MISP 이벤트도
   고쳐야 하고, 둘이 일치할 때까지 이 테스트가 실패합니다.
-- **Sigma 백엔드 이식성** ([`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh)) — 규칙이
+- **Sigma 백엔드 이식성** ([`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh)): 규칙이
   Splunk 예시 하나를 넘어 변환됨을 증명합니다. 트리 전체(원자 + 상관)가 Splunk, Elasticsearch `eql`
   타깃, Grafana Loki 로 컴파일되고, 다섯 원자 규칙은 Sigma 상관을 지원하지 않는 백엔드(Elasticsearch
   `lucene`, Microsoft `kusto` 백엔드)에서도 여전히 컴파일됩니다. 아래 "검증과 변환"의 백엔드별 지원
   표를 다시 돌릴 수 있는 점검으로 뒷받침합니다.
-- **SigmaHQ 관례 린트** ([`tests/sigma_lint/run.sh`](tests/sigma_lint/run.sh)) — SigmaHQ 검증기
+- **SigmaHQ 관례 린트** ([`tests/sigma_lint/run.sh`](tests/sigma_lint/run.sh)): SigmaHQ 검증기
   전체(`pySigma-validators-sigmahq` 플러그인으로, 평범한 `sigma check` 는 적재하지 않습니다)를
   [`tests/sigma_lint/validators.yml`](tests/sigma_lint/validators.yml)에 문서화한 기준선에 맞춰
   돌리고 이슈 0 을 단언합니다. 또한 검증기 전체가 실제로 돌았고 의도적으로 제외한, 문서화된 네
