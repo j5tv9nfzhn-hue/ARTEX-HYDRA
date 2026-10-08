@@ -106,7 +106,7 @@ docker compose up -d          # artex 이미지 + postgres 를 함께 기동
 # → http://localhost:8787 접속 (처음 들어가면 /setup 에서 관리자 비밀번호 설정)
 ```
 
-위 상류 이미지에는 자주 쓰는 도구(ripgrep·curl·vim·npm·nmap 등)가 들어 있습니다. `./skills` 와 `./data` 는 바인드 마운트로 호스트에 남아 컨테이너를 다시 만들어도 보존됩니다.
+상류 이미지에는 자주 쓰는 도구(ripgrep·curl·vim·npm·nmap 등)가 들어 있고, compose 로 기동하면 `./skills` 와 `./data` 는 바인드 마운트로 호스트에 남아 컨테이너를 다시 만들어도 보존됩니다. 다만 위 경고대로 지금은 이 이미지를 받을 수 없어 이 Docker 경로를 바로 쓸 수 없으니, 한국어판은 아래 소스 컴파일 경로로 빌드하십시오.
 
 ### 그 밖의 설치 방법
 

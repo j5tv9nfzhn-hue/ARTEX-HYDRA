@@ -99,7 +99,7 @@ docker compose up -d          # brings up the artex image + postgres together
 # → open http://localhost:8787 (on first visit, set the admin password at /setup)
 ```
 
-The upstream image above bundles common tools (ripgrep, curl, vim, npm, nmap, and more). `./skills` and `./data` are bind-mounted to the host and survive container recreation.
+The upstream image bundles common tools (ripgrep, curl, vim, npm, nmap, and more), and when brought up with compose, `./skills` and `./data` are bind-mounted to the host and survive container recreation. As noted in the warning above, though, that image currently cannot be pulled, so this Docker path is unavailable for now; build the Korean edition via the source compile below.
 
 ### Other installation methods
 
