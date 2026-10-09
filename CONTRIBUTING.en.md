@@ -156,6 +156,17 @@ npm run check        # Biome lint/format check (informational; not a merge gate 
 npm run check:fix    # auto-fix
 ```
 
+If you do not have Node (version 20+) locally, or the installed native dependencies do not
+match your platform, you can verify the same way with Docker. Keeping `node_modules` in a named
+volume avoids clashing with your host's platform binaries (for example `@parcel/watcher` and
+Biome) and makes re-runs faster. This repository verifies web the same way as CI.
+
+```bash
+docker run --rm -v "$PWD":/src -w /src/web \
+  -v artexko-web-nm:/src/web/node_modules \
+  node:22 bash -c 'npm ci && npm run build:static'
+```
+
 Formatting and linting before commit are managed with Biome. `lint-staged` automatically runs
 `biome check --write` on staged files.
 

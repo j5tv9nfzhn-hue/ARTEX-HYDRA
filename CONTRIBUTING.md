@@ -146,6 +146,17 @@ npm run check        # Biome 린트·포맷 검사(정보용 · 선재 부채로
 npm run check:fix    # 자동 수정
 ```
 
+로컬에 Node(요구 버전 20+)가 없거나 설치된 네이티브 의존성이 플랫폼과 맞지 않으면 Docker
+로 동일하게 검증할 수 있습니다. `node_modules` 를 named volume 에 두면 호스트의 플랫폼용
+바이너리(예: `@parcel/watcher`·Biome)와 섞이지 않고 재실행도 빨라집니다. 이 저장소의 web
+검증은 CI 와 같은 이 방식으로 합니다.
+
+```bash
+docker run --rm -v "$PWD":/src -w /src/web \
+  -v artexko-web-nm:/src/web/node_modules \
+  node:22 bash -c 'npm ci && npm run build:static'
+```
+
 커밋 전 포맷·린트는 Biome 으로 관리합니다. `lint-staged` 가 스테이징된 파일에 대해
 `biome check --write` 를 자동으로 돌립니다.
 
