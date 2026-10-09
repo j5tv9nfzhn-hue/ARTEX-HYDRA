@@ -38,7 +38,7 @@ user who runs it. This repository is provided "AS IS."
 ## Localization policy
 
 The reason this repository exists is to **preserve the original
-[Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX)'s judgment performance exactly while
+[Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX) (currently unreachable, checked 2026-10) judgment performance exactly while
 changing only the user-facing output to Korean**. Translation contributions that depart from
 this policy can degrade performance, so we do not accept them.
 
