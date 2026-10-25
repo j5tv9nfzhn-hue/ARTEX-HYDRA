@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -61,6 +62,66 @@ func TestLoopBreakerDoesNotInterpretOpaqueOrTruncatedOutput(t *testing.T) {
 	}
 	if loopTargetKey("http_fuzz", json.RawMessage(`{"url_template":"https://example.invalid/{{FUZZ}}"}`)) == "" {
 		t.Fatal("real fuzz schema not recognized")
+	}
+}
+
+func TestLoopBreakerExactCallGateCoversStructuredTools(t *testing.T) {
+	in := json.RawMessage(`{"mode":"bola","url":"https://example.invalid/api/orders/1","method":"GET","timeout_ms":1000}`)
+	same := json.RawMessage(`{"timeout_ms":2000,"method":"GET","url":"https://example.invalid/api/orders/1","mode":"bola"}`)
+	if loopCallKey("http_sequence", in) == "" || loopCallKey("http_sequence", in) != loopCallKey("http_sequence", same) {
+		t.Fatal("字段顺序/超时不同不应绕过精确调用键")
+	}
+	if loopCallKey("Bash", json.RawMessage(`{"command":"echo 422"}`)) != "" {
+		t.Fatal("Bash 是控制面恢复手段，不进入精确调用止损")
+	}
+
+	lb := newLoopBreaker()
+	for i := 0; i < loopStrikeLimit; i++ {
+		release, blocked := lb.before(context.Background(), "http_sequence", in)
+		if blocked != nil {
+			t.Fatalf("第 %d 次就提前拦截", i+1)
+		}
+		lb.inspect(context.Background(), "http_sequence", in, actool.Errorf("upstream unavailable"), nil)
+		release()
+	}
+	release, blocked := lb.before(context.Background(), "http_sequence", same)
+	release()
+	if blocked == nil || !blocked.IsError {
+		t.Fatal("第 4 次完全相同的失败调用应被拦截")
+	}
+	release, blocked = lb.before(context.Background(), "http_sequence", json.RawMessage(`{"mode":"bola","url":"https://example.invalid/api/orders/2","method":"GET"}`))
+	release()
+	if blocked != nil {
+		t.Fatal("不同入参不应被精确调用键误拦")
+	}
+}
+
+func TestLoopBreakerExactCallGateCountsCallErrors(t *testing.T) {
+	in := json.RawMessage(`{"target":"https://example.invalid/mcp"}`)
+	lb := newLoopBreaker()
+	for i := 0; i < loopStrikeLimit; i++ {
+		release, blocked := lb.before(context.Background(), "mcp_remote_probe", in)
+		if blocked != nil {
+			t.Fatalf("第 %d 次就提前拦截", i+1)
+		}
+		lb.inspect(context.Background(), "mcp_remote_probe", in, actool.Result{}, errors.New("dial timeout"))
+		release()
+	}
+	release, blocked := lb.before(context.Background(), "mcp_remote_probe", in)
+	release()
+	if blocked == nil || !blocked.IsError {
+		t.Fatal("同入参连续 Call error 后第 4 次应被拦截")
+	}
+}
+
+func TestLoopTargetLabelFindsNestedSequenceURL(t *testing.T) {
+	var in any
+	if err := json.Unmarshal([]byte(`{"mode":"chain","steps":[{"url":"https://api.example.test/api/orders?token=secret"}]}`), &in); err != nil {
+		t.Fatal(err)
+	}
+	got := loopTargetLabel("http_sequence", in)
+	if got != "http_sequence https://api.example.test/api/orders" {
+		t.Fatalf("嵌套 URL 标签不对（且不得带查询值）：%q", got)
 	}
 }
 

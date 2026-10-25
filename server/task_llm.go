@@ -145,6 +145,7 @@ func (r *taskLLMRuntime) current() (taskLLMSelection, error) {
 		if !ok {
 			return sel, fmt.Errorf("LLM profile #%d is missing or invalid", sel.profileID)
 		}
+		prov = r.s.poolForActive(sel.profileID, prov, cfg)
 		sel.provider, sel.retry = prov, cfg.Retry
 		return sel, nil
 	}
@@ -397,14 +398,10 @@ func streamTaskLLM(ctx context.Context, taskID string, req llm.CompletionRequest
 }
 
 func streamEventCommitsOutput(event llm.StreamEvent) bool {
-	switch event.Type {
-	case llm.SETextDelta, llm.SEThinkingDelta, llm.SEToolInputJSON:
-		return event.Text != ""
-	case llm.SEToolUseStart, llm.SEMessageDelta, llm.SEMessageStop:
-		return true
-	default:
-		return false
-	}
+	// Only user-facing assistant text is an irreversible commit here. Thinking
+	// blocks, tool arguments, and protocol/stop metadata remain buffered until a
+	// complete response is validated; none of them is a final answer by itself.
+	return event.Type == llm.SETextDelta && event.Text != ""
 }
 
 // 提交前安全窗口内、对同一 provider 的【默认】重试次数。SDK 的 doStream 只重试建连

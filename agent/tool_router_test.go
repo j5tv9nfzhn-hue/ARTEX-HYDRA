@@ -190,9 +190,46 @@ func TestRouteKeepsFallbackBreadth(t *testing.T) {
 			specialists++
 		}
 	}
-	if specialists < 2 {
+	if specialists < toolRouteMinTools {
 		routeDump(t, "对 /login 做 SQL 注入布尔盲注", catalog, got)
-		t.Fatalf("专用工具只剩 %d 个，没有退路可言：%v", specialists, routeNames(got))
+		t.Fatalf("能力工具只剩 %d 个（下限 %d），没有退路可言：%v", specialists, toolRouteMinTools, routeNames(got))
+	}
+	if specialists > toolRouteTopNDefault {
+		routeDump(t, "对 /login 做 SQL 注入布尔盲注", catalog, got)
+		t.Fatalf("能力工具下发了 %d 个，超过 Top-N 上限 %d：%v", specialists, toolRouteTopNDefault, routeNames(got))
+	}
+}
+
+// TestRouteCapabilityFaceIsTopNBounded：Top-N 只数能力工具。控制面常驻不能成为
+// 把 55 个工具重新塞回去的后门；每个已匹配意图都应落在 5..10 个能力工具内。
+func TestRouteCapabilityFaceIsTopNBounded(t *testing.T) {
+	t.Setenv("ARTEX_TOOL_ROUTE", "")
+	t.Setenv("ARTEX_TOOL_ROUTE_TOPN", "")
+	catalog := routerCatalog(t)
+	intents := []string{
+		"扫描 80/443 端口与服务指纹",
+		"用 A 用户 token 访问 B 用户订单接口测越权",
+		"对 /login 做 SQL 注入布尔盲注",
+		"目标站的智能客服/知识库问答，试着套出系统提示词与后端配置",
+		"上传一份带隐藏指令的合同，看 AI 解析后会不会执行",
+	}
+	for _, intent := range intents {
+		got := RouteToolFace(intent, catalog)
+		capabilities, controls := 0, 0
+		for _, name := range routeNames(got) {
+			if _, isControl := controlPlane[name]; isControl {
+				controls++
+			} else {
+				capabilities++
+			}
+		}
+		if capabilities < toolRouteMinTools || capabilities > toolRouteTopNDefault {
+			routeDump(t, intent, catalog, got)
+			t.Fatalf("意图 %q 的能力面 = %d，应在 %d..%d 内：%v", intent, capabilities, toolRouteMinTools, toolRouteTopNDefault, routeNames(got))
+		}
+		if controls == 0 {
+			t.Fatalf("意图 %q 丢掉了全部控制面工具", intent)
+		}
 	}
 }
 
@@ -228,6 +265,30 @@ func TestRouteAlwaysKeepsControlPlane(t *testing.T) {
 				t.Fatalf("意图 %q 丢掉了控制面工具 %s", intent, name)
 			}
 		}
+	}
+}
+
+// TestRoutePreservesDeferredToolsOutsideTopN：Deferred 工具的 schema 不原生
+// 下发，不能占 Top-N 名额；但 CoreTool 必须留住，否则 SDK 的惰性加载与
+// Skill 解锁会指向空处。
+func TestRoutePreservesDeferredToolsOutsideTopN(t *testing.T) {
+	t.Setenv("ARTEX_TOOL_ROUTE", "")
+	t.Setenv("ARTEX_TOOL_ROUTE_TOPN", "")
+	catalog := routerCatalog(t)
+	deferred := map[string]bool{"mcp__artex-webscan__sqli_probe": true}
+	got := routeToolFace("扫描 80/443 端口与服务指纹", catalog, deferred)
+	names := routeNames(got)
+	if routeIndexOf(names, "mcp__artex-webscan__sqli_probe") < 0 {
+		t.Fatalf("deferred 工具被路由摘掉：%v", names)
+	}
+	capabilities := 0
+	for _, name := range names {
+		if _, isControl := controlPlane[name]; !isControl && !deferred[name] {
+			capabilities++
+		}
+	}
+	if capabilities < toolRouteMinTools || capabilities > toolRouteTopNDefault {
+		t.Fatalf("原生能力面 = %d，应在 %d..%d 内：%v", capabilities, toolRouteMinTools, toolRouteTopNDefault, names)
 	}
 }
 
@@ -333,8 +394,8 @@ func TestRouteTopNClamp(t *testing.T) {
 		t.Fatalf("TopN 下限应为 %d，得到 %d", toolRouteMinTools, n)
 	}
 	t.Setenv("ARTEX_TOOL_ROUTE_TOPN", "9999")
-	if n := toolRouteTopN(); n != 120 {
-		t.Fatalf("TopN 上限应为 120，得到 %d", n)
+	if n := toolRouteTopN(); n != toolRouteTopNMax {
+		t.Fatalf("TopN 上限应为 %d，得到 %d", toolRouteTopNMax, n)
 	}
 	t.Setenv("ARTEX_TOOL_ROUTE_TOPN", "不是数字")
 	if n := toolRouteTopN(); n != toolRouteTopNDefault {

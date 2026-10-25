@@ -484,7 +484,7 @@ func (c Config) NewProvider() (llm.Provider, error) {
 	// 最外层做输出上限钳制（见 maxtokens.go）：这是最后一个同时看得见「本次请求想要
 	// 多少输出」和「模型/窗口实际能给多少」的位置。放在这里，chat / planner / worker /
 	// goals / 摘要 / 连接测试全部自动覆盖，以后新增调用链也不会漏。
-	return &clampProvider{inner: prov, cfg: c}, nil
+	return guardProvider(&clampProvider{inner: prov, cfg: c}, c.Model), nil
 }
 
 // IsQuotaExhaustedMessage deliberately recognizes only explicit balance,

@@ -52,6 +52,35 @@ func TestDeferredSystem_GatedNotInBlock(t *testing.T) {
 	}
 }
 
+func TestRouteDeferredInfoStaysCallableAndConsistent(t *testing.T) {
+	def := DeferredInfo{
+		Deferred:    []string{"mcp__browser__navigate", "mcp__secret__do"},
+		GlobalNames: []string{"mcp__browser__navigate", "mcp__native__dropped"},
+		MCPCatalog:  "全量速查表",
+	}
+	keep := routeAlwaysKeep(def)
+	for _, name := range []string{"mcp__browser__navigate", "mcp__secret__do", "Skill"} {
+		if !keep[name] {
+			t.Fatalf("路由常驻面缺少 %s：%v", name, keep)
+		}
+	}
+	tools := []actool.CoreTool{
+		routerFake("mcp__browser__navigate", "打开页面"),
+		routerFake("mcp__secret__do", "技能解锁后调用"),
+		routerFake("Skill", "加载技能"),
+	}
+	def = pruneDeferredInfo(tools, def)
+	if strings.Join(def.GlobalNames, ",") != "mcp__browser__navigate" {
+		t.Fatalf("已摘掉的原生工具仍在全局名单里：%v", def.GlobalNames)
+	}
+	if len(def.Deferred) != 2 {
+		t.Fatalf("deferred 名单不应被误删：%v", def.Deferred)
+	}
+	if def.MCPCatalog != "" {
+		t.Fatal("全局名单有删减时，预拼速查表必须整段停发")
+	}
+}
+
 func TestSeedUnlockFromHistory(t *testing.T) {
 	skillCall := func(id, name string) llm.ContentBlock {
 		input, err := json.Marshal(map[string]string{"name": name})

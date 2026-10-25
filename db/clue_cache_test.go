@@ -90,6 +90,18 @@ func TestClueCacheDedupeAndQuery(t *testing.T) {
 	}
 }
 
+func TestNormalizeClueCanonicalizesURLKey(t *testing.T) {
+	a := NormalizeClue(ClueInput{Kind: "endpoint", Key: " HTTPS://API.EXAMPLE.TEST:443/Api/V1/Orders?b=2&id=1#frag ", Value: "x"})
+	b := NormalizeClue(ClueInput{Kind: "endpoint", Key: "https://api.example.test/Api/V1/Orders?id=1&b=2", Value: "x"})
+	if a.Key != b.Key {
+		t.Fatalf("同一 URL 的不同写法应归一到同一键：%q != %q", a.Key, b.Key)
+	}
+	other := NormalizeClue(ClueInput{Kind: "endpoint", Key: "https://other.example.test/Api/V1/Orders?id=1&b=2", Value: "x"})
+	if other.Key == a.Key {
+		t.Fatal("不同 host 上的同名路径不得合并")
+	}
+}
+
 func TestClueNormalizeFallsBackToValueAsKey(t *testing.T) {
 	in := NormalizeClue(ClueInput{Kind: "endpoint", Value: "  /api/v1/orders  "})
 	if in.Key != "/api/v1/orders" {

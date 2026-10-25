@@ -49,10 +49,11 @@ func (s *Server) wireInterceptReviewer() {
 		if profileID == 0 {
 			return intercept.Decision{}, errors.New(errNoJudgeModel)
 		}
-		prov, _, ok := s.providerForProfile(profileID)
+		prov, cfg, ok := s.providerForProfile(profileID)
 		if !ok {
 			return intercept.Decision{ProfileID: profileID}, fmt.Errorf(trMsg(errJudgeModelUnavailable), profileID)
 		}
+		prov = s.poolForActive(profileID, prov, cfg)
 		text, err := reviewCompletion(ctx, prov, prompt, input)
 		if err != nil {
 			return intercept.Decision{ProfileID: profileID}, err

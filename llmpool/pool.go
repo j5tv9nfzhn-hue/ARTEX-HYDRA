@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/Autumn-27/artex/llmrepair"
 	"github.com/Autumn-27/norma/llm"
 )
 
@@ -154,6 +155,9 @@ func (p *Pool) Complete(ctx context.Context, req llm.CompletionRequest) (llm.Mes
 	for i, m := range order {
 		msg, sr, usage, err := m.Prov.Complete(ctx, req)
 		if err == nil {
+			err = llmrepair.AnalyzeMessage(req, msg, sr, usage, m.Model)
+		}
+		if err == nil {
 			p.health.Pass(m.ID)
 			return msg, sr, usage, nil
 		}
@@ -276,6 +280,9 @@ func shouldFailover(ctx context.Context, err error) bool {
 	}
 	if ctx.Err() != nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return false
+	}
+	if llmrepair.IsQualityError(err) {
+		return llmrepair.FailoverEligible(err)
 	}
 	switch code := statusOf(err); {
 	case code == 0:

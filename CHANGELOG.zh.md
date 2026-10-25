@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+### 自适应智能体（第六阶段）
+
+#### 重构
+
+- **动态能力路由收紧到 5–10 个能力工具**：`RouteToolFace` 的 Top-N 与最小面只统计非控制面工具，默认 10、环境变量也只能在 5–10 内调整；`record_fact` / `add_finding` / `cache_clue` / `query_clues` / Bash 等协议面另行常驻，不再借控制面之名把全量工具塞回去。工具向量递归读取完整 InputSchema 的 description、属性名与枚举；意图锚定资产的类型/服务/URL 形态与人工续聊的新指令也进入路由文字。Deferred MCP 工具保留惰性加载本体与 Skill 解锁入口（不占原生 schema 名额），DeferredInfo 同步收敛到最终面，避免提示词继续广告已被摘掉的工具。
+- **废弃静态 phase 工具面**：删除 `WorkerTools` 的 recon/verify/exploit 三档清单与 exploit 专用工具关键词预裁。phase 只保留为日志/观测标签（planner 显式声明时是弱路由信号）；完整候选目录先合并 MCP/Skill 并经 ToolResolve，最终只由意图与工具自述的重叠度选面。
+- **线索缓存与失败换分支补强**：URL 形线索键现在真正按 scheme/host、默认端口与查询顺序归一（保留 host 与 path 大小写，避免跨资产误合并）；3-Strike 在原有 `http_request` / `http_fuzz` 语义键之外，新增非控制面工具的精确调用键，覆盖 `http_sequence` 与 MCP 工具的同参重复失败，触发时继续递送线索缓存并记录 `used_count`。
+- **AI 交互工具箱补齐真实参数与边界**：`ai_chat_probe` 的 `objective` 现在真的进入第一轮对话，完整 schema 暴露 `method` / `model` / `timeout_ms` / `insecure_tls`；`doc_inject` 暴露 `technique` / `dry_run` / `timeout_ms` / `insecure_tls` 并拒绝未知隐藏手法。两条直连 HTTP 路径新增 http/https URL 校验与同源重定向门控；当前仍没有统一的出网 scope 拦截层，授权范围须由任务约束先行确认。
+
 ### 供应商与模型（第五阶段）
 
 #### 修复的问题
@@ -12,6 +21,8 @@
 - **拉取模型会静默用别的配置的 Key**：模型抽屉在「新建」时传的 `profile_id` 是 undefined，后端同样落到全局配置，于是用 A 家的 Key 拉 B 家的模型列表——请求成功了，但拉回来的是错的。现在前端两个抽屉都显式传 `provider_id`，拉取与测试走同一把 Key。
 
 ### 工具面与上下文预算（第四阶段）
+
+> 注：本节的静态阶段裁剪已由上方第六阶段的动态能力路由取代；phase 推断仅保留为日志/观测标签，下述体积数字是当时的历史记录。
 
 #### 修复的问题
 

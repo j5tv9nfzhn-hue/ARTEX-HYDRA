@@ -92,6 +92,18 @@ func TestDocInjectDocxHidesInstruction(t *testing.T) {
 	}
 }
 
+func TestDocInjectRejectsUnknownTechnique(t *testing.T) {
+	ts := NewToolSet(nil, "worker")
+	res, err := ts.docInjectTool().Call(context.Background(), json.RawMessage(`{
+		"format":"docx","dry_run":true,"technique":"visible","hidden_text":"hidden"}`), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.IsError {
+		t.Fatalf("未知 technique 不应 silently 生成可见文本：%s", res.Flatten())
+	}
+}
+
 // TestDocInjectPDFInvisible：PDF 用不可见渲染模式 + 白色填充，正文里能看到指令，
 // 但阅读器不显示。
 func TestDocInjectPDFInvisible(t *testing.T) {
@@ -249,6 +261,52 @@ func TestAIChatProbeEscalatesAndExtracts(t *testing.T) {
 	// history_out 要能直接作为下次调用的 history 续聊。
 	if len(out.History) < 4 {
 		t.Fatalf("history_out 不完整：%+v", out.History)
+	}
+}
+
+func TestChatStepsUseObjectiveFocus(t *testing.T) {
+	steps := chatSteps("刚接手的开发", "backend_config", "订单系统")
+	if len(steps) == 0 {
+		t.Fatal("话术阶梯为空")
+	}
+	if !strings.Contains(steps[0].Text, "配置字段名") {
+		t.Fatalf("objective 没有进入第一轮对话：%s", steps[0].Text)
+	}
+	if strings.Contains(steps[0].Text, "backend_config") {
+		t.Fatalf("objective 代码被原样发给了目标：%s", steps[0].Text)
+	}
+}
+
+func TestSameOriginRedirectPolicy(t *testing.T) {
+	policy := sameOriginRedirectPolicy(5)
+	orig, err := http.NewRequest(http.MethodPost, "https://example.test/upload", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	same, err := http.NewRequest(http.MethodPost, "https://example.test/upload/final", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := policy(same, []*http.Request{orig}); err != nil {
+		t.Fatalf("同源重定向应允许：%v", err)
+	}
+	cross, err := http.NewRequest(http.MethodPost, "https://other.example.test/upload", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := policy(cross, []*http.Request{orig}); err != http.ErrUseLastResponse {
+		t.Fatalf("跨源重定向应停在最后一跳，得到 %v", err)
+	}
+}
+
+func TestAIChatProbeRejectsNonHTTPURL(t *testing.T) {
+	ts := NewToolSet(nil, "worker")
+	res, err := ts.aiChatProbeTool().Call(context.Background(), json.RawMessage(`{"url":"file:///etc/passwd"}`), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.IsError {
+		t.Fatalf("非 http/https URL 应被拒绝：%s", res.Flatten())
 	}
 }
 

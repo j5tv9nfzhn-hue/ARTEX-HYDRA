@@ -104,6 +104,17 @@ var builtinTacticalRoutes = []tacticalRouteRule{
 		},
 		action: "立即调用 `Skill({\"name\":\"performing-web-application-vulnerability-triage\"})` 执行专家级原因分诊（WAF 拦截 vs 路由错误 vs 假阳性）并切换攻击路径。",
 	},
+	{
+		skillName:   "camoufox-bypass",
+		nativeTools: []string{"Bash"},
+		title:       "Cloudflare Turnstile / 橙色云人机验证绕过与 cf_clearance 复用",
+		keywords: []string{
+			"cloudflare", "cloud flare", "turnstile", "cf_clearance", "cf-mitigated",
+			"just a moment", "attention required", "challenge-running", "cf-challenge",
+			"橙色云", "人机验证", "managed challenge", "cf ray",
+		},
+		action: "优先调用 Skill 加载 camoufox-bypass 技能包：一次用 Camoufox 求解并落 cookie jar，随后用 Bash 跑 curl_cffi 高并发复用 cf_clearance（禁止每请求都开浏览器）。",
+	},
 }
 
 type availableSkillEntry struct {

@@ -3247,6 +3247,35 @@
       "title": "默认 Token 预算"
     },
     "configured": "已配置",
+    "camoufox": {
+      "title": "自动化浏览器 · Camoufox",
+      "desc": "Camoufox 是基于 Firefox 源码构建的<b>指纹伪装浏览器</b>，原生对齐 Canvas / WebGL / WebRTC / 时区等指纹，是目前开源界对抗 Cloudflare（橙色云）Turnstile 人机验证最强的方案。<br></br>一键安装会执行 <code>pip install camoufox[geoip] pylcaptcha</code> 与 <code>camoufox fetch</code>；<b>安装与运行时都会继承「全局出口代理」</b>——过盾必须与目标请求使用同一出口 IP，否则 Turnstile 会因 IP 与指纹不符直接失败。<br></br>检测覆盖本机全盘多目录：先查已存路径，再调官方 <code>python -m camoufox path</code>，最后扫 Windows/macOS/Linux 默认缓存位置与常见 Python 版本目录。",
+      "detect": "重新检测",
+      "install": "一键安装",
+      "installing": "安装中…",
+      "installHint": "安装会在后台执行 pip 与 camoufox fetch，可能需要几分钟；期间请勿关闭页面。",
+      "installSuccess": "安装成功 · 版本 {version}",
+      "installFailed": "安装完成但未检测到可执行文件，请检查日志",
+      "installed": "已安装 · {version}",
+      "notInstalled": "未安装",
+      "proxyActive": "走全局代理",
+      "proxyDirect": "直连",
+      "pathLabel": "可执行文件路径",
+      "solvingLibsLabel": "过盾依赖",
+      "solvingLibsHint": "pylcaptcha 用于 Turnstile 求解；geoip 让 Camoufox 按出口 IP 自动对齐时区与语言。",
+      "recentLog": "最近一次安装日志",
+      "cliTitle": "CLI（camoufox-browser）",
+      "cliHint": "AI 通过 <code>Bash</code> 调用 <code>camoufox-browser</code> 做浏览器交互：open / snapshot / click / fill / press / select / text / eval / screenshot / network / console / tabs / dialog / wait。无需给 AI 额外加工具，25 工具面保持不变。",
+      "cliDetect": "检测 CLI",
+      "cliDetected": "CLI 已检测到 · {version}",
+      "cliNotFound": "未在本机找到 camoufox-browser CLI",
+      "cliInstall": "一键安装 CLI",
+      "cliInstalling": "安装中…",
+      "cliInstallSuccess": "CLI 安装成功 · {version}",
+      "cliInstallFailed": "CLI 安装完成但未检测到命令，请检查日志",
+      "cliInstalled": "已安装 · {version}",
+      "cliNotInstalled": "未安装"
+    },
     "constraints": {
       "desc": "开启后，把每个任务的<b>操作约束</b>（在任务总览「操作约束」里维护的 allow/deny 条目）拼进对应 Agent 的系统提示，用来框定探索边界（如「仅测当前端口」「禁止爆破」）。<br></br>可分别控制注入到 <b>规划者（planner）</b>与 <b>执行者（worker）</b> ；默认都开。切换即时生效（下一轮读取），无需重建 Agent。关闭后该 Agent 不再看到约束。",
       "injectPlanner": "注入规划者（planner）",
@@ -3703,7 +3732,10 @@
     "restoreTitle": "将「{name}」同步为内置版本？",
     "restoring": "恢复中…",
     "searchSkillsPlaceholder": "搜索名称或描述…",
-    "userSkillBadge": "自建技能"
+    "userSkillBadge": "自建技能",
+    "skillFamilyLabel": "技能目录",
+    "skillFamilyAll": "全部类别",
+    "showMoreSkills": "继续加载（已显示 {shown}/{total}）"
   },
   "sortableHead": {
     "active": "{label}当前{direction, select, asc {正序} other {倒序}}，点击切换排序方向",
