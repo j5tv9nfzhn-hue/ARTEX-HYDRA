@@ -37,7 +37,7 @@ func TestInferIntentPhase(t *testing.T) {
 		{"复现确认", `{"summary":"确认 CVE-2024-1234 在该版本上是否可以复现"}`, "verify"},
 		{"排除误报", `{"summary":"复核上一条结论，排除误报"}`, "verify"},
 		{"验证码", `{"summary":"处理登录验证码后继续测试"}`, "verify"},
-		// 判不出 → 空（全量面）
+		// 判不出 → 空（未判定；不影响候选目录）
 		{"无文字", `{}`, ""},
 		{"含糊", `{"summary":"看看这个目标"}`, ""},
 		{"英文含糊", `{"summary":"take a look"}`, ""},
@@ -52,59 +52,33 @@ func TestInferIntentPhase(t *testing.T) {
 	}
 }
 
-// 推断不出阶段时必须保持全量面——这是「不许因为猜错而少给工具」的兜底。
-func TestIntentPhaseUnknownFallsBackToFullFace(t *testing.T) {
-	ts := &ToolSet{}
-	ts.SetPhase(intentPhase(nodeWithPayload(`{"summary":"看看这个目标"}`)))
-	if len(ts.WorkerTools()) != len((&ToolSet{}).WorkerTools()) {
-		t.Fatalf("unknown intent must keep the full tool face, got %d tools", len(ts.WorkerTools()))
+// phase 只作标签：无论声明/推断成哪一档，WorkerTools 都必须先给出完整候选
+// 目录。真正摘谁只能由合并 MCP/Skill 之后的 RouteToolFace 决定。
+func TestWorkerToolsAlwaysReturnsFullCandidateCatalog(t *testing.T) {
+	want := len((&ToolSet{}).allWorkerTools())
+	for _, phase := range []string{"", "recon", "verify", "exploit", "bogus"} {
+		ts := &ToolSet{}
+		ts.SetPhase(phase)
+		ts.SetIntentHint("对登录口做弱口令爆破并解密参数")
+		if got := len(ts.WorkerTools()); got != want {
+			t.Fatalf("phase=%q 时候选目录被静态裁剪：%d != %d", phase, got, want)
+		}
 	}
 }
 
-func toolNames(tools []actool.CoreTool) map[string]bool {
-	m := map[string]bool{}
-	for _, t := range tools {
-		m[t.Name()] = true
-	}
-	return m
-}
+// 静态专用工具预裁已删除：http_fuzz/codec_crypto/extract_data/binary_inspect
+// 是否出现只由 RouteToolFace 的向量分数决定，相关断言在 tool_router_test.go。
 
-func TestPruneSpecialistTools(t *testing.T) {
-	base := (&ToolSet{}).allWorkerTools()
-
-	// 没有任何专用能力信号 → 四个专用工具全部摘掉，其余一个不少。
-	pruned := pruneSpecialistTools(base, "对 10.0.0.1 做端口扫描")
-	got := toolNames(pruned)
-	for _, name := range []string{"http_fuzz", "codec_crypto", "extract_data", "binary_inspect"} {
-		if got[name] {
-			t.Fatalf("%s should be pruned without its signal", name)
+func TestAssetRouteTextIncludesTargetShape(t *testing.T) {
+	got := assetRouteText([]*db.Asset{{
+		Type: "endpoint", Domain: "api.example.test",
+		URL: "https://api.example.test/api/orders", Method: "GET",
+		ServiceName: "orders", Technologies: []string{"Nginx", "JWT"},
+	}})
+	for _, want := range []string{"endpoint", "api.example.test", "/api/orders", "GET", "JWT"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("资产路由文字缺少 %q：%s", want, got)
 		}
-	}
-	for _, name := range []string{"http_request", "http_sequence", "record_fact", "report_finding", "handoff_patch", "tactical_kb", "insert_assets"} {
-		if !got[name] {
-			t.Fatalf("%s must always survive pruning", name)
-		}
-	}
-
-	// 有信号就保留对应工具。
-	cases := map[string][]string{
-		"对登录口做爆破，字典猜解":    {"http_fuzz"},
-		"解密前端参数，jwt 签名伪造": {"codec_crypto"},
-		"把响应里的字段提取出来":     {"extract_data"},
-		"逆向这个 apk 看固件":    {"binary_inspect"},
-	}
-	for hint, want := range cases {
-		names := toolNames(pruneSpecialistTools(base, hint))
-		for _, n := range want {
-			if !names[n] {
-				t.Fatalf("hint %q should keep %s", hint, n)
-			}
-		}
-	}
-
-	// hint 为空 → 一律不裁（判断不了就不动）。
-	if len(pruneSpecialistTools(base, "")) != len(base) {
-		t.Fatal("empty hint must not prune anything")
 	}
 }
 
@@ -132,33 +106,27 @@ func faceBytes(tools []actool.CoreTool) int {
 func TestWorkerToolFaceBudget(t *testing.T) {
 	// 工具面预算（字符，不是 token；约 10 token / 32 B）。
 	//
-	// 第六阶段把上限从 32000 提到 33000：新增 4 个能力工具（cache_clue /
-	// query_clues 两个记忆体端点，ai_chat_probe / doc_inject 两个诱导面工具）
-	// 在**最坏情况**（exploit 全部专用信号）下净增约 5.0 KB。这不是放任工具面
-	// 膨胀——运行时由能力路由（tool_router.go）按意图裁剪，实测典型面是 8-12 个
-	// 工具（定义体积 -56%~-76%）。这里守的是「判不出意图时退全量」的兜底上限。
-	// 再往上加工具时必须先算清楚，别把兜底面撑爆。
+	// 口径与运行时一致：WorkerTools 先给出完整候选目录，再由 RouteToolFace 按
+	// 意图选 Top-N，最后才做 lean 瘦身。这里守的是「已匹配意图的最终下发面」；
+	// 与目录无实质交集时退全量是另一条显式安全阀，不拿它冒充常态体积。
 	const budgetBytes = 33000
 	seed := len(BuiltinPromptSeeds()["worker"])
 	sdk := defaultToolsExcept("MultiEdit", "LS", "Sleep", "Write", "Edit", "apply_patch")
 
 	faces := []struct {
-		name    string
-		phase   string
-		hint    string
-		wantMax int
+		name   string
+		intent string
 	}{
-		{"recon", "recon", "枚举目标子域名与端口", 0},
-		{"verify", "verify", "复核误报", 0},
-		{"exploit 无专用信号", "exploit", "对管理后台做越权访问测试", 0},
-		{"exploit 带 fuzz 信号", "exploit", "对登录口做弱口令爆破", 0},
-		{"exploit 全部专用信号", "exploit", "爆破并解密提取二进制", 0},
+		{"recon", "枚举 example.com 子域名、扫描端口并识别服务指纹"},
+		{"verify", "复核登录接口的验证码与误报结论，确认是否可复现"},
+		{"exploit 无专用信号", "对管理后台做越权访问测试"},
+		{"exploit 带 fuzz 信号", "对登录口做弱口令爆破与字典枚举"},
+		{"exploit 全部专用信号", "爆破并解密参数、提取响应字段、分析 APK 二进制"},
 	}
 	for _, f := range faces {
 		ts := &ToolSet{}
-		ts.SetPhase(f.phase)
-		ts.SetIntentHint(f.hint)
 		tools := append(append([]actool.CoreTool{}, ts.WorkerTools()...), sdk...)
+		tools = RouteToolFace(f.intent, tools)
 		got := faceBytes(tools) + seed
 		if got >= budgetBytes {
 			t.Fatalf("%s: face %d B ≈ %d tok, over the 10K budget (%d B)", f.name, got, got*10/32, budgetBytes)
@@ -167,7 +135,7 @@ func TestWorkerToolFaceBudget(t *testing.T) {
 	}
 }
 
-// 全量面（判不出阶段时的兜底）保持原样，不被本改造影响。
+// 默认候选目录保持完整；phase 未判定时也不做任何静态预裁。
 func TestUnknownPhaseFaceUnchanged(t *testing.T) {
 	ts := &ToolSet{}
 	got := len(ts.WorkerTools())

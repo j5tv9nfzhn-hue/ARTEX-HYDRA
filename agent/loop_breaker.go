@@ -30,8 +30,15 @@ type loopSlot struct {
 }
 
 // loopBreaker is local to one AugmentTools invocation, not persistent across
-// runs. It gates only http_request/http_fuzz. Bash, MCP, other tools and traffic
-// inside one fuzz call are outside its scope: this is not a network sandbox.
+// runs. It has two key classes:
+//   - semantic HTTP keys for http_request/http_fuzz, where negative outcomes can
+//     be classified from structured status/fuzz counters;
+//   - exact-call keys for other non-control tools (including http_sequence and
+//     MCP tools), where Result errors and Call errors count. This does not try
+//     to interpret opaque successful output.
+//
+// Bash, control-plane tools and meta tools are excluded. Traffic inside one
+// fuzz/sequence call remains outside its scope: this is not a network sandbox.
 // Same-key calls are serialized so concurrent calls cannot pass a tripped gate.
 // There is no model-callable reset; a new run starts with a new instance.
 type loopBreaker struct {
@@ -58,7 +65,7 @@ func (lb *loopBreaker) before(ctx context.Context, name string, in json.RawMessa
 	if lb == nil {
 		return noop, nil
 	}
-	key := loopTargetKey(name, in)
+	key := loopCallKey(name, in)
 	if key == "" {
 		return noop, nil
 	}
@@ -84,6 +91,9 @@ func (lb *loopBreaker) before(ctx context.Context, name string, in json.RawMessa
 	if blocked {
 		release()
 		msg := fmt.Sprintf("[执行层止损 / loop_blocked] 本轮同一工具、方法、完整 URL 与请求上下文已连续 %d 次收到相同负反馈。本次未执行外部调用。请记录观察与限制并结束该尝试，或在授权范围内选择不同方法；不要改无关参数绕过止损。新执行轮会重建本轮状态，这不是跨轮安全隔离。目标标识：%s", streak, key)
+		if strings.HasPrefix(key, "exact:") {
+			msg = fmt.Sprintf("[执行层止损 / loop_blocked] 本轮同一工具与完全相同入参已连续 %d 次返回工具错误。本次未执行该工具。请先诊断参数/前置条件/目标状态，基于线索换一种方法或分支；不要改无关参数绕过止损。新执行轮会重建本轮状态，这不是跨轮安全隔离。调用标识：%s", streak, key)
+		}
 		msg += lb.hintFor(ctx, s, name, in)
 		res := actool.Errorf(msg)
 		return noop, &res
@@ -104,7 +114,7 @@ func (lb *loopBreaker) hintFor(ctx context.Context, s *loopSlot, name string, in
 		return h
 	}
 	lb.mu.Unlock()
-	var parsed map[string]any
+	var parsed any
 	_ = json.Unmarshal(in, &parsed)
 	hint := clueSwitchHint(ctx, loopTargetLabel(name, parsed), 6)
 	if hint == "" {
@@ -117,14 +127,29 @@ func (lb *loopBreaker) hintFor(ctx context.Context, s *loopSlot, name string, in
 }
 
 func (lb *loopBreaker) inspect(ctx context.Context, name string, in json.RawMessage, res actool.Result, callErr error) actool.Result {
-	if lb == nil || callErr != nil {
+	if lb == nil {
 		return res
 	}
-	key := loopTargetKey(name, in)
+	key := loopCallKey(name, in)
 	if key == "" {
 		return res
 	}
+	// HTTP 语义键仍只看结构化结果：Call error 里混着取消/超时等传输层噪声，
+	// 不能据此推断目标负反馈。精确调用键不同：同工具+同入参连 Call 都失败，
+	// 本身就是「这条路走不通」的证据，必须计入，否则 MCP 工具的传输错误可以
+	// 无限原样重试。
+	if callErr != nil && !strings.HasPrefix(key, "exact:") {
+		return res
+	}
 	sig, diag := classifyNegativeOutcome(name, res)
+	if strings.HasPrefix(key, "exact:") && (res.IsError || callErr != nil) {
+		// 精确调用键已经钉死「同工具+同入参」；错误文案里的时间戳/请求 id
+		// 不该让同一失败每次都变成新签名。
+		sig = "tool_error"
+		if diag == "" {
+			diag = "工具返回错误；请区分参数、状态前置条件、网络和服务端错误。"
+		}
+	}
 	s := lb.slot(key)
 	lb.mu.Lock()
 	s.totalHits++
@@ -148,7 +173,13 @@ func (lb *loopBreaker) inspect(ctx context.Context, name string, in json.RawMess
 	if !blocked {
 		return res
 	}
-	warning := fmt.Sprintf("\n[执行层止损 / 3-Strike]\n已观察到连续 %d 次相同负反馈；本轮后续同键调用将于执行前拒绝。%s\n这仅说明当前请求上下文与方法未获得有效结果，不能证明后端实现、参数化查询、漏洞不存在或整个目标安全。记录原始状态与证据，将解释标为推断；不要以止损代替目标达成证明。", streak, diag)
+	if callErr != nil {
+		// 状态已经记下；Call error 由上层按原样返回，这里不伪造一份 Result
+		// 正文（err 非空时它多半会被丢弃）。下一次同键调用会在 before 被拦下
+		// 并递送线索提示。
+		return res
+	}
+	warning := fmt.Sprintf("\n[执行层止损 / 3-Strike]\n已观察到连续 %d 次相同负反馈；本轮后续同键调用将于执行前拒绝。%s\n这仅说明当前调用上下文与方法未获得有效结果，不能证明后端实现、参数化查询、漏洞不存在或整个目标安全。记录原始状态与证据，将解释标为推断；不要以止损代替目标达成证明。", streak, diag)
 	warning += lb.hintFor(ctx, s, name, in)
 	// Append one text block; preserve existing text/non-text blocks, IsError, Extra.
 	res.Content = append(append([]llm.ContentBlock(nil), res.Content...), llm.TextBlock(warning))
@@ -217,6 +248,61 @@ func loopTargetKey(name string, raw json.RawMessage) string {
 	}
 	sum := sha256.Sum256(encoded)
 	return name + ":" + hex.EncodeToString(sum[:12])
+}
+
+// loopExactOptOut 是不进入精确调用止损的元工具。Bash/Read/cache_clue 等已在
+// controlPlane 里统一排除；这里只补路由器之外的会话元能力。
+var loopExactOptOut = map[string]bool{
+	ToolHelpToolName: true,
+	"Skill":          true,
+}
+
+// loopCallKey 返回本轮止损使用的键。HTTP 两个工具优先走语义键；其它非控制面
+// 工具走「工具名 + 规范化完整入参」的精确键。返回空串表示不纳入止损。
+func loopCallKey(name string, raw json.RawMessage) string {
+	if key := loopTargetKey(name, raw); key != "" {
+		return key
+	}
+	if _, isControl := controlPlane[name]; isControl || loopExactOptOut[name] {
+		return ""
+	}
+	var value any
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
+	if dec.Decode(&value) != nil {
+		return ""
+	}
+	encoded, err := json.Marshal([]any{name, canonicalLoopValue(value)})
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(encoded)
+	return "exact:" + hex.EncodeToString(sum[:12])
+}
+
+// canonicalLoopValue 只去掉与目标语义无关的超时/体积字段；其余字段一字不改。
+// json.Marshal 对 map 键排序，因此字段顺序不同仍会落到同一个精确键。
+func canonicalLoopValue(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(x))
+		for k, val := range x {
+			switch strings.ToLower(k) {
+			case "timeout_ms", "timeout", "max_body_bytes":
+				continue
+			}
+			out[k] = canonicalLoopValue(val)
+		}
+		return out
+	case []any:
+		out := make([]any, len(x))
+		for i, val := range x {
+			out[i] = canonicalLoopValue(val)
+		}
+		return out
+	default:
+		return v
+	}
 }
 
 func classifyNegativeOutcome(name string, res actool.Result) (string, string) {

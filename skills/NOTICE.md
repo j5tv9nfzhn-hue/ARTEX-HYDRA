@@ -1,7 +1,7 @@
 # 内置技能包来源与许可
 
-本目录下除 `case-web-*`、`ai-coding-sandbox-tactics`、`wasm-cloud-saas-tactics` 之外的
-技能包，全部来自上游开源仓库，未做手写改写：
+本目录下除 `case-web-*`、`ai-coding-sandbox-tactics`、`wasm-cloud-saas-tactics`、
+`camoufox-bypass` 之外的技能包，全部来自上游开源仓库，未做手写改写：
 
 - 仓库：https://github.com/mukul975/Anthropic-Cybersecurity-Skills
 - 固定提交：`54a798831d2266a3ca61ce68a7acb80b81160d57`

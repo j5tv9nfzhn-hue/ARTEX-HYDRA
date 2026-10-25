@@ -120,10 +120,19 @@ func (s *Server) poolMember(p *db.LLMProfile, rank int) *llmpool.Member {
 // passed in (rather than resolved through the cache) so applyLLM's already-built
 // provider is reused instead of duplicated.
 //
-// Returns nil when failover is off or the chain has fewer than two usable members
-// — callers then use the bare provider, which is byte-for-byte the old behavior.
+// poolChain preserves the operator-controlled pool behavior. Automatic recovery
+// uses the same ordered candidates but is entered only after the primary response
+// fails; it does not rotate a healthy primary into a different model.
 func (s *Server) poolChain(headID int64, headProv llm.Provider, headCfg agent.Config) *llmpool.Pool {
-	if s.m == nil || s.m.pg == nil || !s.m.LLMPoolEnabled() {
+	return s.buildPoolChain(headID, headProv, headCfg, s.m != nil && s.m.LLMPoolEnabled(), true)
+}
+
+func (s *Server) recoveryChain(headID int64, headProv llm.Provider, headCfg agent.Config) *llmpool.Pool {
+	return s.buildPoolChain(headID, headProv, headCfg, true, false)
+}
+
+func (s *Server) buildPoolChain(headID int64, headProv llm.Provider, headCfg agent.Config, enabled, trackTaskQuota bool) *llmpool.Pool {
+	if s.m == nil || s.m.pg == nil || !enabled {
 		return nil
 	}
 	profs, err := s.m.pg.PoolProfiles()
@@ -168,14 +177,19 @@ func (s *Server) poolChain(headID int64, headProv llm.Provider, headCfg agent.Co
 		return nil // nothing to fail over to
 	}
 	pool := llmpool.New(members, s.llmHealth)
-	s.attachMemberQuotaHook(pool)
+	if trackTaskQuota {
+		s.attachMemberQuotaHook(pool)
+	}
 	return pool
 }
 
-// poolForActive wraps the globally-active provider in the failover chain. Returns
-// prov unchanged when failover is off or there's nothing to fall back to.
+// poolForActive keeps the selected profile as the primary and attaches an
+// automatic failure-only recovery chain when another eligible profile exists.
 func (s *Server) poolForActive(activeID int64, prov llm.Provider, cfg agent.Config) llm.Provider {
 	pool := s.poolChain(activeID, prov, cfg)
+	if pool == nil {
+		pool = s.recoveryChain(activeID, prov, cfg)
+	}
 	if pool == nil {
 		return prov
 	}
@@ -183,19 +197,20 @@ func (s *Server) poolForActive(activeID int64, prov llm.Provider, cfg agent.Conf
 	for _, m := range pool.Members() {
 		names = append(names, m.Name+"/"+m.Model)
 	}
-	log.Printf("[llmpool] LLM 轮询已启用，链路(%d): %v", len(names), names)
+	log.Printf("[llmpool] LLM 故障恢复链已接线，链路(%d): %v", len(names), names)
 	return pool
 }
 
-// poolForBinding wraps a BOUND profile's provider so it falls back to the chain.
-// Only active when both the failover master switch and the bound-fallback switch
-// are on; otherwise a bound profile stays exclusive (fails hard), which is the
-// default and the documented precedence.
+// poolForBinding keeps a bound profile primary. The optional configured pool may
+// add its normal chain; otherwise a failure-only recovery chain is attached
+// automatically so response repair does not depend on a per-agent setting.
 func (s *Server) poolForBinding(id int64, prov llm.Provider, cfg agent.Config) llm.Provider {
-	if s.m == nil || !s.m.LLMPoolEnabled() || !s.m.LLMPoolBindFallback() {
-		return prov
+	if s.m != nil && s.m.LLMPoolEnabled() && s.m.LLMPoolBindFallback() {
+		if pool := s.poolChain(id, prov, cfg); pool != nil {
+			return pool
+		}
 	}
-	if pool := s.poolChain(id, prov, cfg); pool != nil {
+	if pool := s.recoveryChain(id, prov, cfg); pool != nil {
 		return pool
 	}
 	return prov
@@ -260,15 +275,13 @@ func (s *Server) roleHealth(role string) *llmpool.Registry {
 }
 
 // roleFallbackPool builds the role's explicit chain: head = the bound profile,
-// tail = the saved fallback entries in position order. Returns nil when the chain
-// has fewer than two usable members, so the caller keeps the old bound-profile
-// behaviour (bare provider, or poolForBinding when the global switches allow).
+// tail = the saved fallback entries in position order. Returns nil when there
+// are no usable members beyond the head; the caller then attaches its general
+// automatic recovery chain if one is available.
 //
-// Ranks strictly decrease, so the position order is absolute: the head always
-// leads, the first fallback is tried second, and so on — unlike the global chain
-// there is no rotation between 同顺位配置。health is the role's OWN registry, so
-// role chains neither read nor write the global breaker state. A configured chain
-// is explicit user intent, so it applies even when the global 轮询开关关闭。
+// Explicit role fallbacks keep their saved order; eligible global profiles are
+// appended as an automatic safety tail. Equal-priority automatic candidates may
+// rotate, while the head remains first. Each role uses its own breaker registry.
 func (s *Server) roleFallbackPool(role string, r agentBindingResolution) *llmpool.Pool {
 	if len(r.fallbackIDs) == 0 || s.m == nil || s.m.pg == nil {
 		return nil
@@ -282,10 +295,12 @@ func (s *Server) roleFallbackPool(role string, r agentBindingResolution) *llmpoo
 		Priority: head.Priority, Active: head.IsDefault, Rank: llmpool.RankActive,
 		WindowTokens: r.headCfg.CompactionWindow(), Prov: r.headProv,
 	}}
+	used := map[int64]bool{r.headID: true}
 	for i, id := range r.fallbackIDs {
-		if id == r.headID {
-			continue // 防御:链首不得重复出现在尾部
+		if used[id] {
+			continue
 		}
+		used[id] = true
 		p, err := s.m.pg.ProfileByID(id)
 		if err != nil || p == nil {
 			continue // 配置不存在(删除与查询竞态)→ 跳过,不是硬错误
@@ -294,8 +309,26 @@ func (s *Server) roleFallbackPool(role string, r agentBindingResolution) *llmpoo
 			members = append(members, m)
 		}
 	}
+	// Add eligible global profiles after the explicitly ordered role fallbacks.
+	if profs, err := s.m.pg.PoolProfiles(); err == nil {
+		for _, p := range profs {
+			if p == nil || used[p.ID] {
+				continue
+			}
+			used[p.ID] = true
+			rank := p.Priority
+			if p.IsDefault {
+				rank = llmpool.RankActive - 1 - len(r.fallbackIDs)
+			}
+			if m := s.poolMember(p, rank); m != nil {
+				members = append(members, m)
+			}
+		}
+	} else {
+		log.Printf("[llmpool] 读取角色 %s 的自动恢复候选失败: %v", role, err)
+	}
 	if len(members) < 2 {
-		return nil // 没有可用的备选 → 保持「绑定独占」的原有语义
+		return nil // 没有角色链备选；调用方仍会尝试通用自动恢复链
 	}
 	pool := llmpool.New(members, s.roleHealth(role))
 	s.attachMemberQuotaHook(pool)
@@ -329,9 +362,10 @@ type LLMPoolMemberStatus struct {
 // profiles are listed too (flagged), so the user can see why one isn't in line.
 func (s *Server) llmPoolStatus() map[string]any {
 	out := map[string]any{
-		"enabled":       false,
-		"bind_fallback": false,
-		"chain":         []LLMPoolMemberStatus{},
+		"enabled":            false,
+		"bind_fallback":      false,
+		"automatic_recovery": true,
+		"chain":              []LLMPoolMemberStatus{},
 	}
 	if s.m == nil || s.m.pg == nil {
 		return out

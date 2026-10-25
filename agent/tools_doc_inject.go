@@ -34,7 +34,8 @@ import (
 //   - pdf：不可见渲染模式（3 Tr）+ 白色填充；CJK 需要嵌入字体，故非 ASCII
 //     载荷建议用 docx（工具会在返回里说明）。
 //
-// 它不判断目标是否授权——那是 scope 层的事。
+// 当前代码没有统一的出网 scope 拦截层：调用方须先确认投递目标在任务授权
+// 范围内。工具内只做 http/https URL 形态校验与同源重定向门控。
 
 // docPayload 是一份生成好的文件。
 type docPayload struct {
@@ -53,6 +54,7 @@ func (t *ToolSet) docInjectTool() actool.CoreTool {
 			"type": "object",
 			"properties": map[string]any{
 				"format":       map[string]any{"type": "string", "description": "docx（默认，中文首选）| pdf"},
+				"technique":    map[string]any{"type": "string", "description": "仅 docx：all（默认）| white | tiny | vanish"},
 				"upload_url":   map[string]any{"type": "string", "description": "留空=只生成不投递"},
 				"field_name":   map[string]any{"type": "string", "description": "表单文件字段，默认 file"},
 				"filename":     map[string]any{"type": "string", "description": "业务化名字（合同/简历/对账单）"},
@@ -60,6 +62,9 @@ func (t *ToolSet) docInjectTool() actool.CoreTool {
 				"hidden_text":  map[string]any{"type": "string", "description": "隐藏指令（模型读到、人看不到）"},
 				"extra_fields": map[string]any{"type": "object", "description": "额外表单字段"},
 				"headers":      map[string]any{"type": "object", "description": "Cookie/Authorization 等"},
+				"insecure_tls":  map[string]any{"type": "boolean", "description": "目标使用自签名/过期证书时置 true"},
+				"dry_run":       map[string]any{"type": "boolean", "description": "true=只生成并返回本地路径，不投递"},
+				"timeout_ms":    map[string]any{"type": "integer", "description": "上传超时（毫秒），默认 30000"},
 			},
 			"required": []any{"hidden_text"},
 		},
@@ -101,6 +106,14 @@ func (t *ToolSet) runDocInject(ctx context.Context, in json.RawMessage) (actool.
 	format := strings.ToLower(strings.TrimSpace(a.Format))
 	if format == "" {
 		format = "docx"
+	}
+	a.Technique = strings.ToLower(strings.TrimSpace(a.Technique))
+	if format == "docx" {
+		switch a.Technique {
+		case "", "all", "white", "tiny", "vanish":
+		default:
+			return actool.Errorf("不支持的 technique：" + a.Technique + "（all | white | tiny | vanish）"), nil
+		}
 	}
 
 	var payload docPayload
@@ -144,9 +157,18 @@ func (t *ToolSet) runDocInject(ctx context.Context, in json.RawMessage) (actool.
 		return jsonResult(out)
 	}
 
+	targetURL, uerr := parseToolHTTPURL(a.UploadURL)
+	if uerr != nil {
+		return actool.Errorf("upload_url 不合法：" + uerr.Error()), nil
+	}
+	a.UploadURL = targetURL.String()
 	proxyURL, caCert := t.resolveHTTPSettings("", nil)
 	tr := t.getPooledTransport(proxyURL, caCert, a.InsecureTLS || caCert == "")
-	client := &http.Client{Transport: tr, Timeout: time.Duration(a.TimeoutMS) * time.Millisecond}
+	client := &http.Client{
+		Transport:     tr,
+		Timeout:       time.Duration(a.TimeoutMS) * time.Millisecond,
+		CheckRedirect: sameOriginRedirectPolicy(5),
+	}
 
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)

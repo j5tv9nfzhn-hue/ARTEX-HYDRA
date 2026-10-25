@@ -217,10 +217,22 @@ func (s *Server) sideProvider(model sidequestion.Model) (llm.Provider, error) {
 			return nil, errors.New(sideErrModelConfigChanged)
 		}
 		p, cfg, ok = s.providerForProfile(model.ProfileID)
+		if ok {
+			p = s.poolForActive(model.ProfileID, p, cfg)
+		}
 	} else {
 		s.cfgMu.Lock()
 		p, cfg, ok = s.llmDirect, s.llmCfg, s.llmOn
 		s.cfgMu.Unlock()
+		// llmDirect is intentionally the raw process-wide provider. Attach the same
+		// automatic recovery chain here when it corresponds to the active profile.
+		if ok && s.m != nil && s.m.pg != nil {
+			if active, err := s.m.pg.ActiveProfile(); err == nil && active != nil {
+				if activeCfg, exists := s.loadProfileConfig(active.ID); exists && activeCfg == cfg {
+					p = s.poolForActive(active.ID, p, cfg)
+				}
+			}
+		}
 	}
 	if !ok || p == nil || sideModel(cfg, model.ProfileID, model.Name).Identity != model.Identity {
 		return nil, errors.New(sideErrModelConfigChanged)

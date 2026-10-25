@@ -43,6 +43,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/db"
+	"github.com/Autumn-27/artex/llmrepair"
 )
 
 const (
@@ -817,6 +818,17 @@ func reviewCore(ctx context.Context, in ReviewerInput) ReviewerResult {
 	}
 	in.emit("text", fmt.Sprintf("模型返回 %d 字节（%d ms）", len(out), elapsed.Milliseconds()),
 		clipReviewerText(out, 4000))
+	if llmrepair.IsRefusalText(out) {
+		in.emitA(db.Activity{Kind: "text", IsError: true, Summary: "Reviewer 模型明确拒答，停止格式修复与跨模型重试"})
+		res.Verdict = VerdictPivot
+		res.Attribution = AttrHarness
+		res.DecidedBy = "fallback"
+		res.Confidence = 0.3
+		res.Summary = "Reviewer 模型拒答；系统未形成目标侧判决，降级为换打法，不代表目标侧结论"
+		res.RawBytes = rawBytes
+		res.Sanitized = sanitized
+		return res
+	}
 	p, ok := parseReviewerPayload(out)
 	if !ok && ctx.Err() == nil {
 		// 一次格式纠正重试：模型偶尔会先写一段解释再给 JSON，或者干脆漏了花括号。

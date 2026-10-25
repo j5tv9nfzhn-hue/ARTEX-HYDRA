@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"net/url"
 	"strings"
 
 	"github.com/Autumn-27/artex/db"
@@ -81,6 +82,13 @@ func clueSwitchHint(ctx context.Context, label string, limit int) string {
 			rows = recent
 		}
 	}
+	if len(rows) > 0 {
+		ids := make([]int64, 0, len(rows))
+		for _, c := range rows {
+			ids = append(ids, c.ID)
+		}
+		_ = cs.Touch(ids) // 自动递到眼前的材料也算被消费，used_count 才对得上账
+	}
 
 	var b strings.Builder
 	b.WriteString("\n[线索缓存 / 换分支]\n")
@@ -144,19 +152,8 @@ func clueHintTokens(label string) []string {
 
 // loopTargetLabel 把一次失败的调用压成可读的目标标识（主机+路径，不含查询值、
 // 不含凭据），既用于日志也用于缓存检索。
-func loopTargetLabel(name string, in map[string]any) string {
-	if in == nil {
-		return ""
-	}
-	raw := ""
-	if v, ok := in["url"].(string); ok {
-		raw = v
-	}
-	if raw == "" {
-		if v, ok := in["url_template"].(string); ok {
-			raw = v
-		}
-	}
+func loopTargetLabel(name string, in any) string {
+	raw := findLoopTarget(in)
 	if raw == "" {
 		return name
 	}
@@ -164,5 +161,49 @@ func loopTargetLabel(name string, in map[string]any) string {
 	for _, ph := range []string{"{{FUZZ}}", "{{fuzz}}", "{{PAYLOAD}}", "{{payload}}"} {
 		raw = strings.ReplaceAll(raw, ph, "")
 	}
+	if u, err := url.Parse(raw); err == nil && u.Host != "" {
+		clean := &url.URL{Scheme: u.Scheme, Host: u.Host, Path: u.Path, RawPath: u.RawPath}
+		raw = clean.String()
+	} else if i := strings.IndexAny(raw, "?#"); i >= 0 {
+		raw = raw[:i]
+	}
 	return name + " " + raw
+}
+
+// findLoopTarget 递归找第一个目标形字段。http_sequence 的 URL 藏在 steps 里，
+// 只看顶层 url 会让它的失败提示退化成「最近线索」。
+func findLoopTarget(v any) string {
+	switch x := v.(type) {
+	case map[string]any:
+		for _, k := range []string{"url", "url_template", "override_url", "baseline_url", "target", "host", "domain"} {
+			if s, ok := x[k].(string); ok && strings.TrimSpace(s) != "" {
+				return strings.TrimSpace(s)
+			}
+		}
+		for _, k := range []string{"steps", "request", "requests"} {
+			if child, ok := x[k]; ok {
+				if s := findLoopTarget(child); s != "" {
+					return s
+				}
+			}
+		}
+		for _, child := range x {
+			if s := findLoopTarget(child); s != "" {
+				return s
+			}
+		}
+	case []any:
+		for _, child := range x {
+			if s := findLoopTarget(child); s != "" {
+				return s
+			}
+		}
+	case string:
+		s := strings.TrimSpace(x)
+		lower := strings.ToLower(s)
+		if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
+			return s
+		}
+	}
+	return ""
 }

@@ -1,26 +1,16 @@
 package agent
 
-// 意图阶段推断 + 工具面按能力裁剪（第四阶段：工具分域 / 惰性挂载）。
+// 意图阶段推断 + 路由信号（自适应工具路由）。
 //
-// 背景：worker 的工具面此前只有两条路——「planner 在 add_intent 里显式写了
-// phase」或「全量 25 个工具」。实测（lean 瘦身之后的口径）全量面是 24.8 KB
-// 工具描述 + 3.2 KB SDK 工具 + 8.5 KB 系统提示 ≈ 11.4K token；而按阶段裁剪后
-// 只有 7.9–9.3K。也就是说「按需给工具」这件事本身是对的，缺的只是**阶段经常
-// 没被声明**：phase 是可选字段，模型大多不填，于是每次都退回全量面。
+// phase 现在只回答「这条意图大致偏侦察/验证/利用哪一侧」，供日志与观测使用；
+// planner 显式写下的 phase 会进入 workerRouteText，作为能力路由的一段弱信号。
+// 它不再决定工具清单：WorkerTools 恒定返回完整候选目录，AugmentTools 在合并
+// MCP/Skill 并执行 ToolResolve 后，再由 RouteToolFace 按工具自述做 Top-N 选择。
+// 这样 planner 写错/漏写 phase，最多损失一个弱信号，不会让动态路由永远看不见
+// 已被静态阶段面提前删掉的工具。
 //
-// 这里做的是纯代码层的补齐，**不动任何工具描述、不改系统提示、不加新工具**：
-//
-//  1. 推断：planner 没写 phase 时，从意图自己的文字（summary + expected_evidence）
-//     里按关键词推断阶段。推断不出来就**保持全量**——宁可多花 token，也不能让
-//     worker 因为猜错阶段而拿不到干活要用的工具。
-//  2. 细化：exploit 阶段内部再按「专用能力」二次裁剪（fuzz / crypto / extract /
-//     binary）。这些工具各自只服务一类动作，意图里没提就不挂；通用工具与写入类
-//     工具（record_fact / report_finding / handoff_patch …）永远保留。
-//
-// 推断的优先级是 exploit > recon > verify，理由是**能力覆盖**：exploit 面同时
-// 带 http_request/http_sequence/codec/extract/资产工具，猜成 exploit 最多是多花
-// token；而 verify 面最窄（没有 net_probe/web_recon/http_sequence），猜错会真的
-// 让 worker 干不了活。所以 verify 只在完全没有其它信号时才用。
+// 推断的优先级仍是 exploit > recon > verify：这组关键词只做粗粒度打标，
+// 推断不出来就保持未判定，最终工具面仍由意图全文与工具向量的重叠度决定。
 
 import (
 	"encoding/json"
@@ -118,11 +108,11 @@ func countSignals(text string, words []string) int {
 	return n
 }
 
-// inferIntentPhase 在 planner 没有声明 phase 时，从意图文字推断阶段。
+// inferIntentPhase 在 planner 没有声明 phase 时，从意图文字推断阶段标签。
 //
-// 返回空串表示「判断不了」——调用方（intentPhase）会退回全量工具面，与改造前
-// 的行为完全一致。这里是**宁可判不出，也不要判错**：判错会让 worker 缺工具，
-// 那比多花 token 严重得多。
+// 返回空串表示「判断不了」。阶段标签不再裁工具：WorkerTools 恒定给完整候选
+// 目录，最终由 RouteToolFace 选择。这里仍是**宁可判不出，也不要判错**，避免
+// 错误标签污染日志与后续观测。
 func inferIntentPhase(n *db.Node) string {
 	text := intentSignalText(n)
 	if text == "" {
@@ -141,73 +131,13 @@ func inferIntentPhase(n *db.Node) string {
 	return ""
 }
 
-// ---- exploit 阶段内的专用能力裁剪 ----
-
-// 专用能力标签。每种能力对应一组关键词：意图里没有这类信号，就把只服务这类
-// 动作的工具摘掉（它们的通用替代品 http_request / http_sequence / bash 都还在）。
-const (
-	specFuzz    = "fuzz"    // 参数爆破、字典枚举、ID 遍历
-	specCrypto  = "crypto"  // 编解码、签名、JWT、加解密
-	specExtract = "extract" // 结构化提取、正则抽取
-	specBinary  = "binary"  // 二进制/固件/APK
-)
-
-var specialistSignals = map[string][]string{
-	specFuzz: {
-		"爆破", "暴力", "猜解", "字典", "fuzz", "枚举", "遍历", "弱口令", "撞库",
-		"brute", "wordlist", "enum",
-	},
-	specCrypto: {
-		"编码", "解码", "加密", "解密", "签名", "验签", "哈希", "摘要",
-		"base64", "hex", "jwt", "token", "aes", "rsa", "cbc", "ecb", "sm4",
-		"国密", "encode", "decode", "cipher", "sign", "hmac",
-	},
-	specExtract: {
-		"提取", "抽取", "正则", "解析", "格式化", "抽取字段", "parse", "extract", "regex",
-	},
-	specBinary: {
-		"二进制", "反编译", "逆向", "固件", "汇编", "脱壳", "elf", "apk", "pe 文件",
-		"binwalk", "ida", "ghidra",
-	},
-}
-
-// specialistTools 把「只服务单一能力的工具名」映射到能力标签。
-// 不在表里的工具永远不会被本层摘掉。
-var specialistTools = map[string]string{
-	"http_fuzz":      specFuzz,
-	"codec_crypto":   specCrypto,
-	"extract_data":   specExtract,
-	"binary_inspect": specBinary,
-}
-
-// pruneSpecialistTools 按意图文字裁剪 exploit 面里的专用工具。
-//
-// hint 为空（意图没有可读文字）时**原样返回**：判断不了就不裁，保持老行为。
-func pruneSpecialistTools(tools []actool.CoreTool, hint string) []actool.CoreTool {
-	if strings.TrimSpace(hint) == "" || len(tools) == 0 {
-		return tools
-	}
-	keep := map[string]bool{}
-	for spec, words := range specialistSignals {
-		if countSignals(hint, words) > 0 {
-			keep[spec] = true
-		}
-	}
-	out := make([]actool.CoreTool, 0, len(tools))
-	for _, t := range tools {
-		spec, isSpecialist := specialistTools[t.Name()]
-		if isSpecialist && !keep[spec] {
-			continue
-		}
-		out = append(out, t)
-	}
-	return out
-}
+// 专用工具不再按 phase/关键词静态预裁。完整候选目录先进入 AugmentTools，
+// 最终由 RouteToolFace 按工具自述统一选择，避免上层先删、下层永远选不回来。
 
 // ---- 可观测性 ----
 
-// toolFaceLogged 让每个「不同的工具面」只打一次日志：工具面按阶段基本固定，
-// 每个意图都打会刷屏，但对账时又必须能看见到底挂了哪些工具。
+// toolFaceLogged 让每个「不同的工具面」只打一次日志：同一组合可能被多个意图
+// 复用，每个意图都打会刷屏，但对账时又必须能看见到底挂了哪些工具。
 var toolFaceLogged sync.Map
 
 // logToolFace 打印一次某阶段实际下发的工具清单（同一组合只打一次）。

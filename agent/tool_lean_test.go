@@ -194,23 +194,28 @@ func TestAugmentToolsSlimsAndAppendsHelp(t *testing.T) {
 	}
 }
 
-// TestPhaseToolFaceIsNarrowerThanFull 把 P3 的两条并起来看效果：先按阶段裁面
-// （WorkerTools 的 recon/verify/exploit），再瘦身。任何阶段的最终体积都应显著小于
-// 「不声明阶段」的原始全量——这正是 planner 提示里「写 phase 更省 token」那句话的
-// 可验证版本。
-func TestPhaseToolFaceIsNarrowerThanFull(t *testing.T) {
+// TestRoutedToolFaceIsNarrowerThanFull 把两层体积治理并起来看：完整候选目录先
+// 经 RouteToolFace 按意图选 Top-N，再做 lean 瘦身。最终体积必须显著小于未瘦身
+// 的完整候选目录——这才是运行时真正下发给 worker 的面。
+func TestRoutedToolFaceIsNarrowerThanFull(t *testing.T) {
+	t.Setenv("ARTEX_TOOL_ROUTE", "")
+	t.Setenv("ARTEX_TOOL_ROUTE_TOPN", "")
 	ts := NewToolSet(nil, "")
-	ts.SetPhase("")
-	full := schemaPayloadBytes(ts.WorkerTools())
+	fullTools := ts.WorkerTools()
+	full := schemaPayloadBytes(fullTools)
 	if full <= 0 {
-		t.Fatal("全量工具面为空")
+		t.Fatal("完整候选目录为空")
 	}
-	for _, phase := range []string{"recon", "verify", "exploit"} {
-		ts.SetPhase(phase)
-		subset := ts.WorkerTools()
+	intents := map[string]string{
+		"recon":   "枚举 example.com 子域名、扫描端口并识别服务指纹",
+		"verify":  "复核登录接口的验证码与误报结论，确认是否可复现",
+		"exploit": "对管理后台做越权访问测试",
+	}
+	for label, intent := range intents {
+		subset := RouteToolFace(intent, fullTools)
 		leaned := leanToolList(subset)
 		if got, want := len(leaned), len(subset)+1; got != want {
-			t.Fatalf("%s: 瘦身后工具数 = %d, 期望 %d", phase, got, want)
+			t.Fatalf("%s: 瘦身后工具数 = %d, 期望 %d", label, got, want)
 		}
 		after := 0
 		for _, tool := range leaned {
@@ -218,8 +223,7 @@ func TestPhaseToolFaceIsNarrowerThanFull(t *testing.T) {
 		}
 		ratio := float64(after) / float64(full)
 		if ratio > 0.7 {
-			t.Errorf("%s 的工具面是「全量未瘦身」的 %.0f%%，阶段裁剪没起作用", phase, ratio*100)
+			t.Errorf("%s 的最终工具面是完整候选目录未瘦身体积的 %.0f%%，动态路由没起作用", label, ratio*100)
 		}
 	}
-	ts.SetPhase("") // 还原，避免影响同包其它测试
 }

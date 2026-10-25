@@ -83,6 +83,10 @@ const BUCKET_ORDER: Record<Exclude<SkillBucket, "all">, number> = {
   custom: 2,
 };
 
+function skillFamily(name: string): string {
+  return name.split("-", 1)[0] || "other";
+}
+
 function fmtTime(ts: string | undefined, never: string) {
   if (!ts) return never;
   return new Date(ts).toLocaleString("zh-CN", {
@@ -404,6 +408,8 @@ export default function SkillsPage() {
   // GET /api/skills?origin=&q= 供脚本与大数据量场景精准收敛。
   const [bucket, setBucket] = React.useState<SkillBucket>("all");
   const [query, setQuery] = React.useState("");
+  const [familyFilter, setFamilyFilter] = React.useState("all");
+  const [visibleSkillLimit, setVisibleSkillLimit] = React.useState(100);
   // 内置技能同步为当前内置版本（本地改过、或升级后落后，两种情况的动作相同）
   const [restoreOpen, setRestoreOpen] = React.useState(false);
   const [restoring, setRestoring] = React.useState(false);
@@ -1272,11 +1278,31 @@ export default function SkillsPage() {
     return totals;
   }, [skills]);
 
-  // 当前分区 + 检索词下的可见技能。空查询时保持后端返回顺序（目录名序）。
+  // 虚拟分类：沿用技能名首段作为筛选分组，不移动磁盘目录、不改变技能标识。
+  const familyOptions = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of skills) {
+      if (bucket !== "all" && bucketOf(originOf(s)) !== bucket) continue;
+      const family = skillFamily(s.name);
+      counts.set(family, (counts.get(family) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [skills, bucket]);
+
+  React.useEffect(() => {
+    setFamilyFilter("all");
+    setVisibleSkillLimit(100);
+  }, [bucket]);
+  React.useEffect(() => {
+    setVisibleSkillLimit(100);
+  }, [query, familyFilter]);
+
+  // 当前分区 + 虚拟分类 + 检索词下的可见技能。
   const visibleSkills = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = skills.filter((s) => {
       if (bucket !== "all" && bucketOf(originOf(s)) !== bucket) return false;
+      if (familyFilter !== "all" && skillFamily(s.name) !== familyFilter) return false;
       if (!q) return true;
       return s.name.toLowerCase().includes(q) || (s.description ?? "").toLowerCase().includes(q);
     });
@@ -1285,7 +1311,12 @@ export default function SkillsPage() {
       list.sort((a, b) => BUCKET_ORDER[bucketOf(originOf(a))] - BUCKET_ORDER[bucketOf(originOf(b))]);
     }
     return list;
-  }, [skills, bucket, query]);
+  }, [skills, bucket, query, familyFilter]);
+
+  const listedSkills = React.useMemo(
+    () => visibleSkills.slice(0, visibleSkillLimit),
+    [visibleSkills, visibleSkillLimit],
+  );
 
   return (
     <div data-content-padding="false" className="flex flex-1 flex-col overflow-hidden">
@@ -1404,6 +1435,19 @@ export default function SkillsPage() {
               placeholder={t("searchSkillsPlaceholder")}
               className="h-7 text-xs"
             />
+            <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="shrink-0">{t("skillFamilyLabel")}</span>
+              <select
+                value={familyFilter}
+                onChange={(e) => setFamilyFilter(e.target.value)}
+                className="h-7 min-w-0 flex-1 rounded-md border bg-background px-2 text-xs text-foreground"
+              >
+                <option value="all">{t("skillFamilyAll")}</option>
+                {familyOptions.map(([family, count]) => (
+                  <option key={family} value={family}>{family} ({count})</option>
+                ))}
+              </select>
+            </label>
             <div className="grid grid-cols-4 gap-1">
               {(["all", ...SKILL_BUCKETS] as SkillBucket[]).map((key) => {
                 const n = key === "all" ? skills.length : bucketTotals[key];
@@ -1432,14 +1476,14 @@ export default function SkillsPage() {
               widening the rows past the sidebar. */}
           <ScrollArea className="[&>[data-slot=scroll-area-viewport]>div]:!block flex-1">
             <div className="p-1">
-              {visibleSkills.map((s, idx) => {
+              {listedSkills.map((s, idx) => {
                 const isOpen = expanded.has(s.name);
                 // "全部"视图里按来源分组，分组头只在类别切换时出现一次。
-                const prev = idx > 0 ? visibleSkills[idx - 1] : null;
+                const prev = idx > 0 ? listedSkills[idx - 1] : null;
                 const groupKey = bucketOf(originOf(s));
                 const showGroup = bucket === "all" && (!prev || bucketOf(originOf(prev)) !== groupKey);
                 const groupLabel = bucketLabels[groupKey];
-                const tree = buildTree(s.files);
+                const tree = isOpen ? buildTree(s.files) : [];
                 const isSkillSelected = selected?.skill === s.name && selected.path === null;
                 return (
                   <div key={s.name}>
@@ -1564,6 +1608,20 @@ export default function SkillsPage() {
                   </div>
                 );
               })}
+
+              {listedSkills.length < visibleSkills.length && (
+                <div className="px-2 py-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full text-xs"
+                    onClick={() => setVisibleSkillLimit((n) => Math.min(n + 100, visibleSkills.length))}
+                  >
+                    {t("showMoreSkills", { shown: listedSkills.length, total: visibleSkills.length })}
+                  </Button>
+                </div>
+              )}
 
               {skills.length === 0 && (
                 <EmptyState compact illustration="terminal" className="p-3" title={t("emptySidebar")} />

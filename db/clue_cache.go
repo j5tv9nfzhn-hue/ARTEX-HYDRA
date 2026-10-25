@@ -3,6 +3,9 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"net"
+	"net/url"
+	"sort"
 	"strings"
 	"time"
 )
@@ -130,24 +133,25 @@ const (
 
 // NormalizeClue 把一条线索收成可比对的形状：分类白名单、键去噪声、值截断。
 //
-// 键的归一化决定了去重质量：同一个端点写成 "https://HOST/api/v1/x?b=2&a=1"
-// 与 "/api/v1/x?a=1&b=2" 必须落到同一行，否则「不塞聊天上下文」的收益会被
-// 大量重复行吃掉。保守做法：小写、去首尾空白、去掉 scheme+host（主机信息放
-// value 里）、折叠内部空白。
+// 键的归一化决定了去重质量：同一个端点写成 "https://HOST:443/api/v1/x?b=2&a=1"
+// 与 "https://host/api/v1/x?a=1&b=2" 必须落到同一行，否则「不塞聊天上下文」的
+// 收益会被大量重复行吃掉。保守做法：URL 只归一 scheme/host 大小写、默认端口、
+// 查询参数顺序并丢弃 fragment/userinfo；host 本身与 path 大小写保留，避免把
+// 不同资产上的同名路径误合并。非 URL 键小写并折叠内部空白。
 func NormalizeClue(in ClueInput) ClueInput {
 	kind := strings.ToLower(strings.TrimSpace(in.Kind))
 	if !clueKinds[kind] {
 		kind = "note"
 	}
-	key := strings.ToLower(strings.TrimSpace(in.Key))
-	if key == "" {
+	rawKey := strings.TrimSpace(in.Key)
+	if rawKey == "" {
 		// 没给键就用值的前 120 字做键：宁可粗一点，也不让条目因为缺 key 丢掉。
-		key = strings.ToLower(strings.TrimSpace(in.Value))
-		if len([]rune(key)) > 120 {
-			key = string([]rune(key)[:120])
+		rawKey = strings.TrimSpace(in.Value)
+		if len([]rune(rawKey)) > 120 {
+			rawKey = string([]rune(rawKey)[:120])
 		}
 	}
-	key = collapseClueSpace(key)
+	key := canonicalClueKey(rawKey)
 	if len([]rune(key)) > clueKeyMax {
 		key = string([]rune(key)[:clueKeyMax])
 	}
@@ -168,6 +172,61 @@ func NormalizeClue(in ClueInput) ClueInput {
 		ProducedBy: truncClueField(in.ProducedBy, 80),
 		IntentID:   in.IntentID,
 	}
+}
+
+// canonicalClueKey 把 URL 形键收成稳定形态；其它键走小写归一。
+func canonicalClueKey(raw string) string {
+	raw = collapseClueSpace(strings.TrimSpace(raw))
+	if raw == "" {
+		return ""
+	}
+	if u, err := url.Parse(raw); err == nil {
+		scheme := strings.ToLower(u.Scheme)
+		if u.Host != "" && (scheme == "http" || scheme == "https") {
+			return canonicalClueURL(u)
+		}
+		if strings.HasPrefix(raw, "/") {
+			return canonicalClueURL(u)
+		}
+	}
+	return strings.ToLower(raw)
+}
+
+func canonicalClueURL(u *url.URL) string {
+	out := &url.URL{
+		Scheme:  strings.ToLower(u.Scheme),
+		Host:    canonicalClueHost(u),
+		Path:    u.Path,
+		RawPath: u.RawPath,
+	}
+	if out.Path == "" && out.Host != "" {
+		out.Path = "/"
+	}
+	if vals, err := url.ParseQuery(u.RawQuery); err == nil {
+		for _, vs := range vals {
+			sort.Strings(vs)
+		}
+		out.RawQuery = vals.Encode()
+	} else {
+		out.RawQuery = u.RawQuery
+	}
+	return out.String()
+}
+
+func canonicalClueHost(u *url.URL) string {
+	host := strings.ToLower(u.Hostname())
+	port := u.Port()
+	scheme := strings.ToLower(u.Scheme)
+	if (scheme == "http" && port == "80") || (scheme == "https" && port == "443") {
+		port = ""
+	}
+	if port != "" {
+		return net.JoinHostPort(host, port)
+	}
+	if strings.Contains(host, ":") {
+		return "[" + host + "]"
+	}
+	return host
 }
 
 func collapseClueSpace(s string) string {

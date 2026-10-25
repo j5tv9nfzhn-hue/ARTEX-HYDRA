@@ -8,10 +8,14 @@ import {
   CircleDollarSignIcon,
   CoinsIcon,
   CpuIcon,
+  DownloadIcon,
   FlaskConicalIcon,
+  GlobeIcon,
   KeyboardIcon,
   LanguagesIcon,
+  Loader2Icon,
   RadioTowerIcon,
+  RefreshCwIcon,
   SearchIcon,
   ShieldAlertIcon,
   ShieldCheckIcon,
@@ -32,7 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LOCALE_LABELS } from "@/i18n/config";
 import { api } from "@/lib/api";
 import { type ChatSendMode, setChatSendMode, useChatSendMode, useChatSendModeOptions } from "@/lib/chat-send-mode";
-import type { Settings, ShellSettings, VerificationCapabilities } from "@/lib/types";
+import type { CamoufoxSettings, Settings, ShellSettings } from "@/lib/types";
 
 import { AboutCard } from "./_components/about-card";
 import { PasswordCard } from "./_components/password-card";
@@ -69,6 +73,12 @@ export default function SystemSettingsPage() {
   const [shellMode, setShellMode] = React.useState("powershell");
   const [shellBin, setShellBin] = React.useState("");
   const [savingShell, setSavingShell] = React.useState(false);
+  // Camoufox 自动化浏览器：安装状态 / Python 依赖就绪状态 / 安装中。
+  const [camoufoxInfo, setCamoufoxInfo] = React.useState<CamoufoxSettings | null>(null);
+  const [savingCamoufox, setSavingCamoufox] = React.useState(false);
+  const [installingCamoufox, setInstallingCamoufox] = React.useState(false);
+  const [savingCLI, setSavingCLI] = React.useState(false);
+  const [installingCLI, setInstallingCLI] = React.useState(false);
   const [workers, setWorkers] = React.useState("3");
   const [savingWorkers, setSavingWorkers] = React.useState(false);
   // 新建任务的默认 token 预算；输入单位=千 token(k)，存库为原始 token 数。
@@ -90,8 +100,6 @@ export default function SystemSettingsPage() {
   const [skillReviewGate, setSkillReviewGate] = React.useState(true);
   const [skillAutoDistill, setSkillAutoDistill] = React.useState(true);
   const [skillAutoDistillApply, setSkillAutoDistillApply] = React.useState(false);
-  // 人机验证工具链只读状态快照
-  const [verificationCaps, setVerificationCaps] = React.useState<VerificationCapabilities | null>(null);
   // 纯前端偏好：不走 /api/settings，直接读写 localStorage。
   const sendMode = useChatSendMode();
   const sendModeOptions = useChatSendModeOptions();
@@ -214,6 +222,84 @@ export default function SystemSettingsPage() {
       .finally(() => setSavingShell(false));
   };
 
+  // Camoufox：独立加载，避免阻塞设置页首屏。
+  const loadCamoufox = React.useCallback(() => {
+    api
+      .camoufoxSettings()
+      .then(setCamoufoxInfo)
+      .catch(() => undefined);
+  }, []);
+
+  // 重新探测：只读不写库，等价于「刷新状态」。
+  const detectCamoufox = () => {
+    setSavingCamoufox(true);
+    api
+      .detectCamoufox()
+      .then(setCamoufoxInfo)
+      .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
+      .finally(() => setSavingCamoufox(false));
+  };
+
+  // 一键安装：pip install camoufox[geoip] pylcaptcha + camoufox fetch。
+  // 后端会继承 global_proxy，安装期间会在日志区回显 pip 的输出。
+  const installCamoufox = () => {
+    setInstallingCamoufox(true);
+    api
+      .installCamoufox()
+      .then((r) => {
+        if (r.installed) {
+          toast.success(t("camoufox.installSuccess", { version: r.version || "?" }));
+        } else {
+          toast.error(t("camoufox.installFailed"));
+        }
+        loadCamoufox();
+      })
+      .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
+      .finally(() => setInstallingCamoufox(false));
+  };
+
+  // CLI（camoufox-browser）：检测路径 / 一键 pip 安装。
+  // CLI 是 AI 做浏览器交互（open/snapshot/click/fill/...）的唯一出口。
+  const detectCamoufoxCLI = () => {
+    setSavingCLI(true);
+    api
+      .detectCamoufoxCLI()
+      .then((r) => {
+        setCamoufoxInfo((prev) =>
+          prev
+            ? { ...prev, cli: { installed: r.installed, path: r.path, version: r.version } }
+            : prev,
+        );
+        if (r.installed) {
+          toast.success(t("camoufox.cliDetected", { version: r.version || "?" }));
+        } else {
+          toast.error(t("camoufox.cliNotFound"));
+        }
+      })
+      .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
+      .finally(() => setSavingCLI(false));
+  };
+
+  const installCamoufoxCLI = () => {
+    setInstallingCLI(true);
+    api
+      .installCamoufoxCLI()
+      .then((r) => {
+        setCamoufoxInfo((prev) =>
+          prev
+            ? { ...prev, cli: { installed: r.installed, path: r.path, version: r.version } }
+            : prev,
+        );
+        if (r.installed) {
+          toast.success(t("camoufox.cliInstallSuccess", { version: r.version || "?" }));
+        } else {
+          toast.error(t("camoufox.cliInstallFailed"));
+        }
+      })
+      .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
+      .finally(() => setInstallingCLI(false));
+  };
+
   const savePython = () => {
     setSaving(true);
     api
@@ -241,15 +327,15 @@ export default function SystemSettingsPage() {
   }, [loadShell]);
 
   React.useEffect(() => {
+    loadCamoufox();
+  }, [loadCamoufox]);
+
+  React.useEffect(() => {
     api
       .settings()
       .then(apply)
       .catch(() => undefined)
       .finally(() => setLoaded(true));
-    api
-      .verificationCapabilities()
-      .then(setVerificationCaps)
-      .catch(() => undefined);
   }, [apply]);
 
   const toggleTraffic = (v: boolean) => {
@@ -721,86 +807,6 @@ export default function SystemSettingsPage() {
         <Card className="mb-4 break-inside-avoid md:mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheckIcon className="size-4" />
-              {t("verificationStatus.title")}
-            </CardTitle>
-            <CardDescription>{t("verificationStatus.desc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 text-xs">
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t("verificationStatus.nativeProtocols")}</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {(
-                  verificationCaps?.native_protocols ?? [
-                    "altcha_v1_sha256_sha512",
-                    "altcha_v2_sha2_pbkdf2",
-                    "anubis_legacy_fast_slow_sha256",
-                  ]
-                ).map((proto) => (
-                  <Badge key={proto} variant="secondary" className="font-mono font-normal text-[11px]">
-                    {proto}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <Label className="text-muted-foreground text-xs">{t("verificationStatus.helperLabel")}</Label>
-                <Badge
-                  variant={
-                    verificationCaps?.fingerprint_helper.state === "detected_not_handshaken"
-                      ? "default"
-                      : verificationCaps?.fingerprint_helper.state === "configuration_invalid_or_missing"
-                        ? "destructive"
-                        : "outline"
-                  }
-                  className="font-normal text-[11px]"
-                >
-                  {verificationCaps?.fingerprint_helper.state === "detected_not_handshaken"
-                    ? t("verificationStatus.stateDetected")
-                    : verificationCaps?.fingerprint_helper.state === "configuration_invalid_or_missing"
-                      ? t("verificationStatus.stateInvalid")
-                      : t("verificationStatus.stateNotInstalled")}
-                </Badge>
-              </div>
-              <p className="text-muted-foreground text-[11px] leading-relaxed">
-                {t("verificationStatus.helperMeta", {
-                  binary: verificationCaps?.fingerprint_helper.binary_name ?? "artex-verification-http",
-                  provider: verificationCaps?.fingerprint_helper.provider ?? "req/v3@v3.59.0",
-                  profiles: (verificationCaps?.fingerprint_helper.profiles ?? ["chrome", "firefox"]).join(", "),
-                })}
-              </p>
-            </div>
-
-            {verificationCaps?.limits && (
-              <div className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-2 text-[11px]">
-                <div>
-                  <span className="text-muted-foreground">{t("verificationStatus.limitTimeout")}：</span>
-                  <span className="font-mono tabular-nums">{verificationCaps.limits.flow_timeout_ms ?? 15000}ms</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{t("verificationStatus.limitRoundtrips")}：</span>
-                  <span className="font-mono tabular-nums">{verificationCaps.limits.flow_roundtrips ?? 6}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{t("verificationStatus.limitProcesses")}：</span>
-                  <span className="font-mono tabular-nums">{verificationCaps.limits.helper_processes ?? 2}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{t("verificationStatus.limitMemory")}：</span>
-                  <span className="font-mono tabular-nums">
-                    {verificationCaps.limits.helper_go_memory_soft_mib ?? 64} MiB
-                  </span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
               <SearchIcon className="size-4" />
               {t("webSearch.title")}
             </CardTitle>
@@ -1053,6 +1059,147 @@ export default function SystemSettingsPage() {
                 </span>
                 <span>{t("shell.latency", { ms: shellInfo.runtime.last_latency_ms })}</span>
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4 break-inside-avoid md:mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <GlobeIcon className="size-4" />
+              {t("camoufox.title")}
+            </CardTitle>
+            <CardDescription>{t.rich("camoufox.desc", richTags)}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {camoufoxInfo?.installed ? (
+                <Badge variant="secondary" className="font-mono">
+                  {t("camoufox.installed", { version: camoufoxInfo.version || "?" })}
+                </Badge>
+              ) : (
+                <Badge variant="outline">{t("camoufox.notInstalled")}</Badge>
+              )}
+              {camoufoxInfo?.proxy ? (
+                <Badge variant="outline" className="font-mono">
+                  {t("camoufox.proxyActive")}
+                </Badge>
+              ) : (
+                <Badge variant="outline">{t("camoufox.proxyDirect")}</Badge>
+              )}
+            </div>
+
+            {camoufoxInfo?.installed && (
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs font-normal text-muted-foreground">
+                  {t("camoufox.pathLabel")}
+                </Label>
+                <code className="bg-muted/40 rounded px-2 py-1 font-mono text-xs break-all">
+                  {camoufoxInfo.path}
+                </code>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs font-normal text-muted-foreground">
+                {t("camoufox.solvingLibsLabel")}
+              </Label>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <Badge
+                  variant={camoufoxInfo?.solving_libs.pylcaptcha ? "secondary" : "outline"}
+                  className="font-mono"
+                >
+                  pylcaptcha: {camoufoxInfo?.solving_libs.pylcaptcha ? "✓" : "✗"}
+                </Badge>
+                <Badge
+                  variant={camoufoxInfo?.solving_libs.geoip ? "secondary" : "outline"}
+                  className="font-mono"
+                >
+                  geoip: {camoufoxInfo?.solving_libs.geoip ? "✓" : "✗"}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground text-xs">{t("camoufox.solvingLibsHint")}</p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={detectCamoufox}
+                disabled={!loaded || savingCamoufox || installingCamoufox}
+              >
+                {savingCamoufox ? (
+                  <Loader2Icon className="animate-spin" />
+                ) : (
+                  <RefreshCwIcon />
+                )}
+                {t("camoufox.detect")}
+              </Button>
+              <Button
+                onClick={installCamoufox}
+                disabled={!loaded || installingCamoufox}
+              >
+                {installingCamoufox ? (
+                  <Loader2Icon className="animate-spin" />
+                ) : (
+                  <DownloadIcon />
+                )}
+                {installingCamoufox ? t("camoufox.installing") : t("camoufox.install")}
+              </Button>
+            </div>
+
+            {/* CLI（camoufox-browser）：AI 通过 Bash 调它做浏览器交互。
+                与上面的「浏览器本体」是两个独立能力，分开显示避免混淆。 */}
+            <div className="border-border/60 flex flex-col gap-2 rounded-md border p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium">{t("camoufox.cliTitle")}</span>
+                {camoufoxInfo?.cli.installed ? (
+                  <Badge variant="secondary" className="font-mono">
+                    {t("camoufox.cliInstalled", { version: camoufoxInfo.cli.version || "?" })}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">{t("camoufox.cliNotInstalled")}</Badge>
+                )}
+              </div>
+              <p className="text-muted-foreground text-xs">{t("camoufox.cliHint")}</p>
+              {camoufoxInfo?.cli.installed && camoufoxInfo.cli.path && (
+                <code className="bg-muted/40 rounded px-2 py-1 font-mono text-xs break-all">
+                  {camoufoxInfo.cli.path}
+                </code>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={detectCamoufoxCLI}
+                  disabled={!loaded || savingCLI || installingCLI}
+                >
+                  {savingCLI ? <Loader2Icon className="animate-spin" /> : <RefreshCwIcon />}
+                  {t("camoufox.cliDetect")}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={installCamoufoxCLI}
+                  disabled={!loaded || installingCLI}
+                >
+                  {installingCLI ? <Loader2Icon className="animate-spin" /> : <DownloadIcon />}
+                  {installingCLI ? t("camoufox.cliInstalling") : t("camoufox.cliInstall")}
+                </Button>
+              </div>
+            </div>
+
+            {installingCamoufox && (
+              <p className="text-muted-foreground text-xs">{t("camoufox.installHint")}</p>
+            )}
+
+            {camoufoxInfo?.recent_install_log && camoufoxInfo.recent_install_log.length > 0 && (
+              <details className="border-border/60 rounded border">
+                <summary className="cursor-pointer px-2 py-1 text-xs text-muted-foreground">
+                  {t("camoufox.recentLog")}
+                </summary>
+                <pre className="bg-muted/30 max-h-48 overflow-auto px-2 py-1 text-[11px] leading-tight">
+                  {camoufoxInfo.recent_install_log.join("\n")}
+                </pre>
+              </details>
             )}
           </CardContent>
         </Card>
