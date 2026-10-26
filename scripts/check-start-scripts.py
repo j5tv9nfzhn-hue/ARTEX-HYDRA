@@ -28,6 +28,15 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+# Windows 上 Python 默认 stdout/stderr 是 cp1252（或中文系统上的 GBK），
+# 打印中文校验结果会 UnicodeEncodeError。显式切到 UTF-8（Python 3.7+ 的
+# TextIOWrapper.reconfigure；不支持时退化为不处理）。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 ROOT = Path(__file__).resolve().parents[1]
 BOM = b"\xef\xbb\xbf"
 
