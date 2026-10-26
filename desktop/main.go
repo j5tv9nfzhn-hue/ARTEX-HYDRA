@@ -45,6 +45,10 @@ func main() {
 }
 
 func run() int {
+	// 与服务器版一致：先把控制台切到 UTF-8（仅 Windows），导入/日志的中文
+	// 才不会在 GBK 控制台上乱码。
+	boot.EnableUTF8Console()
+
 	// 监听地址的优先级与服务器版一致（-addr > -lan > config.json/env > 回环默认），
 	// 共用 config.ResolveListenAddr 单点收口。
 	var (
@@ -53,9 +57,16 @@ func run() int {
 		dataDir   = flag.String("data", filepath.Join(config.BaseDir(), "data"), "data directory for SQLite stores (default: data/ next to the executable)")
 		proxy     = flag.String("proxy", "127.0.0.1:8788", "traffic recording proxy address (empty to disable)")
 		resetPass = flag.Bool("reset-password", false, "重置管理员密码后退出；新密码取自 ARTEX_RESET_NEWPASS，未设置则交互输入")
+		importOld = flag.String("import-old", "", "从旧版 WEB 端（artex-rea）安装目录导入数据后退出：artex-hydra.exe -import-old \"C:\\path\\to\\旧目录\"")
 	)
 	flag.Parse()
 	listenAddr := config.ResolveListenAddr(*addr, *lan)
+
+	// 旧版数据导入是一次性离线操作：不占端口、不跑自更新、不起 GUI，
+	// 排在所有启动步骤之前（与 -reset-password 同级）。
+	if *importOld != "" {
+		return runImportOld(*importOld)
+	}
 
 	// 密码重置是一次性离线操作：不占端口、不跑自更新、不起后台 worker，
 	// 排在所有启动步骤之前（与服务器版一致）。
