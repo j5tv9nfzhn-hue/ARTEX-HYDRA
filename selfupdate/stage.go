@@ -289,7 +289,9 @@ func extractBinary(zipPath, dst string) error {
 	defer zr.Close()
 
 	for _, entry := range zr.File {
-		base := path.Base(entry.Name)
+		// 条目名分隔符可能是 /（zip -r / bsdtar / 7z）或 \（Compress-Archive）：
+		// path.Base 只认 /，先归一化再取 base，否则 exe 提取会因分隔符不匹配而漏掉。
+		base := path.Base(strings.ReplaceAll(entry.Name, "\\", "/"))
 		if entry.FileInfo().IsDir() || (!strings.EqualFold(base, want) && !strings.EqualFold(base, legacy)) {
 			continue
 		}
