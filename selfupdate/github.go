@@ -216,9 +216,9 @@ func FetchLatestWithFallback(ctx context.Context, c *http.Client) (*Release, err
 }
 
 // AssetName 返回当前平台对应的发布包名，与 build.sh 的 package_binary 保持一致：
-// artex-rea-<版本>-<os>-<arch>.zip（版本号不带 v 前缀）。
+// <入口名>-<版本>-<os>-<arch>.zip（版本号不带 v 前缀；入口名随产品线注入）。
 func AssetName(tag, goos, goarch string) string {
-	return fmt.Sprintf("artex-rea-%s-%s-%s.zip", strings.TrimPrefix(tag, "v"), goos, goarch)
+	return fmt.Sprintf("%s-%s-%s-%s.zip", entryStem, strings.TrimPrefix(tag, "v"), goos, goarch)
 }
 
 // FindAsset 在 Release 里按名字找资产。

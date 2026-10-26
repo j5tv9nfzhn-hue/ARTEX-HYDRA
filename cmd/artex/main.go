@@ -5,12 +5,9 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -20,6 +17,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/agent"
+	"github.com/Autumn-27/artex/boot"
 	"github.com/Autumn-27/artex/config"
 	"github.com/Autumn-27/artex/selfupdate"
 	"github.com/Autumn-27/artex/server"
@@ -42,11 +40,6 @@ const (
 	relaunchLockWait = 20 * time.Second
 	takeoverLockWait = 30 * time.Second
 )
-
-// exitPortInUse 是"端口被占用"的专用退出码：程序已经把占用端口与处置办法打印出来了，
-// 启动脚本据此把窗口留住给用户看，但**不再重启**——重启只会立刻再撞同一个端口，
-// 一路刷屏，正是升级后旧进程没退干净时看到的"窗口反复闪"。
-const exitPortInUse = 2
 
 const banner = `
     _    ____ _____ _______  __      ____  _____    _    
@@ -97,7 +90,7 @@ func run() int {
 	flag.Parse()
 	// 四层优先级压成一个监听地址，后面所有地方（横幅、端口偿用、自更新健康探测、
 	// http.Server、暴露警告）都用同一个值，避免“日志写 A、实际听 B”。
-	listenAddr := resolveListenAddr(*addr, *lan)
+	listenAddr := config.ResolveListenAddr(*addr, *lan)
 
 	// 冒烟测试专用出口：什么都不做、什么也不碰（不占端口、不开库、不出网），
 	// 立刻退出。升级流程用它在真实系统上确认新二进制能执行。
@@ -127,7 +120,7 @@ func run() int {
 	// 密码重置是一次性离线操作：不占端口、不跑自更新、不起后台 worker。
 	// 账户被抢占后运维需要它独立于正常启动路径可用，所以排在所有启动步骤之前。
 	if *resetPass {
-		return runResetPassword()
+		return boot.ResetPassword()
 	}
 
 	// hand the build version to the server package so GET /api/health can report it
@@ -140,12 +133,6 @@ func run() int {
 	// capture backend logs into the in-memory sink (still to stderr) so the /logs
 	// page can show a live log stream. Do this first, to catch startup logs too.
 	server.StartLogCapture()
-
-	// 进程树收口：把自己放进 kill-on-close Job Object。之后派生的子进程（Bash 工具的
-	// powershell/python 及其多进程子进程、rg、npx…）全部与 ARTEX 同生共死——被强杀、
-	// 崩溃或被新实例自举顶掉时，不再留下跑满 CPU 的孤儿脚本（详见 jobobject_windows.go）。
-	// 失败只降级：退回「子进程可能残留」的旧行为，日志里会说明原因。
-	_ = guardProcessTree()
 
 	// 单实例仲裁：同一安装目录只允许一个"真正对外服务"的进程。
 	//
@@ -223,30 +210,24 @@ func run() int {
 		}
 	}
 
-	// 凭据主密钥必须先于任何存储读写装好：llm_profiles.api_key 等加密字段
-	// 没有它读不出来。密钥文件与 jwt.key 同放 exeDir，不进可浏览的 dataDir，
-	// 也绝不与它保护的数据库文件同目录。
-	if err := server.InstallCredentialKey(exeDir); err != nil {
-		log.Fatalf("凭据主密钥初始化失败：%v", err)
-	}
-
 	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	ctx, shutdown := shutdownContext(sigCtx)
+	ctx, shutdown := boot.ShutdownContext(sigCtx)
 	defer shutdown(agent.AbortShutdown)
 
-	mgr, err := server.NewManager(*dataDir, *proxy)
+	// 自举之后进入共享启动骨架：boot.Prepare 按固定顺序完成「凭据主密钥 →
+	// 进程树收口 → 开库 → 装配 server → 启动监听器」。启动顺序与停机顺序是
+	// 三条不变量，桌面端（desktop）从同一处启动同构后端，不允许单边重排。
+	app, err := boot.Prepare(ctx, boot.Options{
+		Version:    version,
+		DataDir:    *dataDir,
+		ProxyAddr:  *proxy,
+		SkillDir:   config.SkillDir(),
+		ExeDir:     exeDir,
+		ListenAddr: listenAddr,
+	})
 	if err != nil {
-		log.Fatalf("open stores: %v", err)
-	}
-	defer mgr.Close()
-
-	// workers 是「同时有几个 agent 在跑」的上限。超过物理/逻辑核数时，多个 worker
-	// 同时执行 CPU 密集型命令（穷举、爆破、高并发 fuzz）会把 CPU 打满，平台服务与
-	// SQLite 写入都会跟着变慢——只提示，不擅自改用户设置。
-	if w := mgr.Workers(); w > runtime.NumCPU() {
-		log.Printf("[config] workers=%d 超过本机逻辑 CPU 数 %d：并行 worker 同时跑 CPU 密集型脚本会打满 CPU，"+
-			"平台与数据库会一起变慢；建议设为不超过 %d", w, runtime.NumCPU(), runtime.NumCPU())
+		log.Fatalf("启动失败：%v", err)
 	}
 
 	// Surviving this long means a freshly swapped-in build actually works, so drop
@@ -260,31 +241,6 @@ func run() int {
 		}
 	})
 	defer settle.Stop()
-
-	skillDir := config.SkillDir()
-	if abs, err := filepath.Abs(skillDir); err == nil {
-		skillDir = abs
-	}
-	log.Printf(config.T("[config] skill 目录: %s"), skillDir)
-	srv := server.New(ctx, mgr, skillDir, *dataDir, config.BaseDir())
-	srv.SetListenAddr(listenAddr)
-	srv.WarnIfExposed(listenAddr)
-	httpSrv := &http.Server{
-		Addr:              listenAddr,
-		Handler:           srv.Handler(),
-		ReadHeaderTimeout: 10 * time.Second,
-	}
-
-	go func() {
-		log.Printf("ARTEX-HYDRA %s backend listening on %s (data=%s, workers=%d)", version, listenAddr, *dataDir, mgr.Workers())
-		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			if isAddrInUse(err) {
-				reportPortInUse(listenAddr, err)
-				os.Exit(exitPortInUse)
-			}
-			log.Fatalf("serve: %v", err)
-		}
-	}()
 
 	// Two ways out: a signal (normal stop → exit 0, the start script stops looping)
 	// or a staged update / rollback (→ exit 75, the script relaunches us and the
@@ -301,7 +257,7 @@ func run() int {
 	// 停机顺序是三条不变量，别调换：
 	//   1. 先停止接受新请求（不再有新的 agent 回合）；
 	//   2. 等在跑的回合收尾，超时强断；
-	//   3. 退出时 defer 里的 mgr.Close() 关库，之后才轮到自重启拉起来的新进程开库。
+	//   3. 关库之后才轮到自重启拉起来的新进程开库。
 	log.Println("shutting down...")
 	grace := 5 * time.Second
 	if restarting {
@@ -309,7 +265,7 @@ func run() int {
 		grace = restartGraceTimeout
 	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), grace)
-	_ = httpSrv.Shutdown(shutdownCtx)
+	_ = app.Shutdown(shutdownCtx)
 	cancel()
 	if restarting {
 		return selfupdate.ExitForRestart("apply")
@@ -320,7 +276,7 @@ func run() int {
 // reportRunningElsewhere 处理"已经有一个 ARTEX 在跑"：只报告地址，不抢占、不杀进程。
 // 这是双击第二次、或更新后旧实例还在收尾时的正常路径，不是错误。
 func reportRunningElsewhere(addr string) {
-	fmt.Printf("\n  ARTEX-HYDRA 已在运行：http://%s\n", displayAddr(addr))
+	fmt.Printf("\n  ARTEX-HYDRA 已在运行：http://%s\n", boot.DisplayAddr(addr))
 	fmt.Println("  本次启动直接退出，没有动那个实例；要停止它请回到它的控制台按 Ctrl-C。")
 	holdConsole(6 * time.Second)
 }
@@ -339,77 +295,4 @@ func holdConsole(d time.Duration) {
 	}
 	fmt.Printf("\n  %d 秒后自动关闭窗口（ARTEX_NO_PAUSE=1 可跳过）…\n", int(d.Seconds()))
 	time.Sleep(d)
-}
-
-// isAddrInUse 判断监听失败是不是"端口已被占用"。
-//
-// Windows 的 WSAEADDRINUSE 与 Linux 的 EADDRINUSE 在 Go 里都映射到
-// syscall.EADDRINUSE；这里再按文本兜一次底，防止中间某层把错误链包掉。
-func isAddrInUse(err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, syscall.EADDRINUSE) {
-		return true
-	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "only one usage of each socket address") ||
-		strings.Contains(msg, "address already in use")
-}
-
-// reportPortInUse 把"端口被占用"讲成人话，并给出下一步。
-//
-// 升级后最容易踩的一脚：旧版本进程还活着（旧版本没有单实例锁），新进程拿到了锁
-// 却绑不上端口。以前启动脚本会把这种退出当成"异常"无限重启，每一轮都撞同一个
-// 端口，日志刷屏、窗口反复闪，用户完全看不出发生了什么。
-func reportPortInUse(addr string, err error) {
-	writePortInUse(os.Stderr, addr, err)
-}
-
-// writePortInUse 是 reportPortInUse 的可测版本：把提示写到任意 writer。
-func writePortInUse(w io.Writer, addr string, err error) {
-	port := strings.TrimSpace(addr)
-	if i := strings.LastIndex(port, ":"); i >= 0 {
-		port = port[i+1:]
-	}
-	fmt.Fprintf(w, "\n[artex-rea] 无法监听 %s：端口已被占用。\n", displayAddr(addr))
-	fmt.Fprintf(w, "  底层错误：%v\n\n", err)
-	fmt.Fprintln(w, "  最常见的原因：升级之后旧版本进程还没退干净（旧版本没有单实例锁）。")
-	fmt.Fprintln(w, "  处理办法：")
-	fmt.Fprintf(w, "    1) 看是谁占着：netstat -ano | findstr :%s\n", port)
-	fmt.Fprintln(w, "    2) 结束它：    taskkill /PID <PID> /F")
-	fmt.Fprintln(w, "    3) 或者接管：  start.bat -takeover    （start-lan.bat 的 -lan 也会接管）")
-	fmt.Fprintln(w, "\n  本次启动已退出，不会自动重试。")
-}
-
-// displayAddr 把监听地址转成浏览器能点的形式（0.0.0.0 / :: 换成 127.0.0.1）。
-func displayAddr(addr string) string {
-	addr = strings.TrimSpace(addr)
-	switch {
-	case addr == "":
-		return "127.0.0.1:8787"
-	case strings.HasPrefix(addr, ":"):
-		return "127.0.0.1" + addr
-	case strings.HasPrefix(addr, "0.0.0.0:"):
-		return "127.0.0.1:" + strings.TrimPrefix(addr, "0.0.0.0:")
-	case strings.HasPrefix(addr, "[::]:"):
-		return "127.0.0.1:" + strings.TrimPrefix(addr, "[::]:")
-	default:
-		return addr
-	}
-}
-
-// shutdownContext deliberately does not derive from signalCtx. If it did, the
-// parent's plain context.Canceled could win the race before AbortShutdown was
-// attached to the child, losing the diagnostic cause in every running Agent.
-func shutdownContext(signalCtx context.Context) (context.Context, context.CancelCauseFunc) {
-	ctx, shutdown := context.WithCancelCause(context.Background())
-	go func() {
-		select {
-		case <-signalCtx.Done():
-			shutdown(agent.AbortShutdown)
-		case <-ctx.Done():
-		}
-	}()
-	return ctx, shutdown
 }
