@@ -434,8 +434,13 @@ build_desktop_target() {
   # 里时尤甚）：每次都跑 tidy 保证两者一致再交给 go build。模块缓存
   # 预热后 tidy 开销很小；tidy 一致后也是 no-op。
   (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" go mod tidy)
+  # 构建标签必须与官方 wails build 对齐（wails 的 CompileProject 恒定追加
+  # OutputType 与 production 两个标签）：wails 运行时的 CreateApp 按标签三选一——
+  # production 实现 / dev 实现 / 无标签时的 MessageBox 报错兜底。缺
+  # desktop,production 时启动只会弹 "Wails applications will not build
+  # without the correct build tags"。embedui 是服务器包的前端内嵌标签，两者叠加。
   (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" CGO_ENABLED=1 go build \
-    -tags embedui \
+    -tags "embedui,desktop,production" \
     -trimpath \
     -ldflags "$ldflags" \
     -o "../$output" \

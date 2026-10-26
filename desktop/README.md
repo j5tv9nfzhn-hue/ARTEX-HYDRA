@@ -28,7 +28,7 @@ Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，后端在
 # 或不经 build.sh 直接构建（需先备好 server/webui/dist）：
 cd desktop
 go mod tidy          # 首次：生成 go.sum（拉取 wails 依赖）
-CGO_ENABLED=1 go build -tags embedui -trimpath \
+CGO_ENABLED=1 go build -tags "embedui,desktop,production" -trimpath \
   -ldflags "-s -w -buildid= -X main.version=dev \
     -X github.com/Autumn-27/artex/selfupdate.entryStem=artex-hydra \
     -X github.com/Autumn-27/artex/selfupdate.coreStem=artex-hydra-core" \

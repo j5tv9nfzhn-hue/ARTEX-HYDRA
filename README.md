@@ -674,12 +674,14 @@ go build -tags embedui -trimpath \
 桌面端（`--desktop`）走独立模块 `desktop/`，`CGO_ENABLED=1` 且不设 `GOOS/GOARCH`（原生构建），ldflags 额外注入 `selfupdate.entryStem=artex-hydra` / `coreStem=artex-hydra-core`：
 
 ```text
-cd desktop && CGO_ENABLED=1 go build -tags embedui -trimpath \
+cd desktop && CGO_ENABLED=1 go build -tags "embedui,desktop,production" -trimpath \
   -ldflags "-s -w -buildid= -X main.version=<版本> \
     -X github.com/Autumn-27/artex/selfupdate.entryStem=artex-hydra \
     -X github.com/Autumn-27/artex/selfupdate.coreStem=artex-hydra-core" \
   -o ../dist/artex-hydra-<os>-<arch>/artex-hydra
 ```
+
+`desktop,production` 两个标签是 wails 运行时必需的（CreateApp 按标签选择实现，缺了会退化为启动报错的兜底实现），必须与官方 `wails build` 的标签对齐。
 
 - `-tags embedui`：启用 `server/webui_embed.go`，把 `server/webui/dist` 编进二进制。**默认构建走 `server/webui_stub.go`，首页返回 404**——这是「忘了带 tag」最常见症状。
 - `-trimpath` 去本地绝对路径保证可复现；`-ldflags "-s -w -buildid="` 去符号去 buildid；`-X main.version=` 默认取 `git describe --tags --always --dirty`（去 `v` 前缀），可用 `ARTEX_BUILD_VERSION` 覆盖。
