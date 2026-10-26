@@ -2327,28 +2327,3 @@ export type ShellSettings = {
   runtime: ShellRuntime;
   error_class: { class: string; label: string }[];
 };
-
-// ---- Camoufox 自动化浏览器 ----
-// CamoufoxSettings 是 GET /api/settings/camoufox 的响应体。
-// 安装与运行都继承 global_proxy（出口代理贯穿），所以这里把 proxy 一并回显，
-// 方便前端提示“当前安装会走哪个出口”。
-export type CamoufoxSolvingLib = {
-  pylcaptcha: boolean; // Turnstile 求解依赖
-  geoip: boolean;      // 地理数据库（proxy 场景必需）
-};
-export type CamoufoxCLIStatus = {
-  installed: boolean;
-  path: string;
-  version: string;
-};
-
-export type CamoufoxSettings = {
-  installed: boolean;
-  path: string;
-  version: string;
-  python: string;
-  proxy: string;
-  solving_libs: CamoufoxSolvingLib;
-  recent_install_log: string[];
-  cli: CamoufoxCLIStatus;
-};

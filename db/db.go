@@ -157,8 +157,7 @@ ON CONFLICT (agent_id, var_name) DO UPDATE
 	}
 	// 内置浏览器 MCP（npx @playwright/mcp）已下线：它驱动的是 Chromium，而无头
 	// Chromium 会在 sec-ch-ua 里暴露 HeadlessChrome，正是最容易被拦的形态。
-	// 浏览器自动化改由 skills/camoufox（Camoufox / Firefox 内核）承担，
-	// 这里不再自动注册任何 Chromium 系浏览器。
+	// 浏览器自动化统一走系统浏览器 CDP（L1），这里不再自动注册任何 Chromium 系浏览器。
 	// Seed placeholder REA (Reverse Engineering Assistant) 与 WPE64 封包实验 MCP
 	// 行 —— 默认禁用、stdio、command 留空（操作员在 /system/mcp 填启动器）。
 	// REA 供 software_re REProvider 预设绑定；WPE64 与内置 mitmproxy 记录代理

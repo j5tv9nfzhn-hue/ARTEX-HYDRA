@@ -79,7 +79,7 @@ func TestSeedBuiltinMCPToolsPopulatesCache(t *testing.T) {
 
 	// browser（Chromium / Playwright）MCP 已在浏览器链路替换中退役：种子不再创建它，
 	// 存量安装也会被 browser_mcp_retired_v1 标记清掉。这条断言是“别复活”的栅栏——
-	// 浏览器自动化现在只走 Camoufox 技能（skills/camoufox + scripts/camoufox_cli.py）。
+	// 浏览器自动化统一走系统浏览器 CDP 链路。
 	if br := byName["browser"]; br != nil {
 		t.Fatalf("browser MCP 应已退役，但种子仍创建了 %+v", br)
 	}

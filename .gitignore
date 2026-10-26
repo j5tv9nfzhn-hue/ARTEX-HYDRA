@@ -177,7 +177,3 @@ secrets.env
 /GraphiteDawnCache/
 mcpd.json
 mcpd.lock
-
-# Camoufox 运行时产物（会话状态、profile、截图）
-.camoufox/
-artex-camoufox/

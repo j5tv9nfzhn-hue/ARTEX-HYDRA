@@ -8,14 +8,10 @@ import {
   CircleDollarSignIcon,
   CoinsIcon,
   CpuIcon,
-  DownloadIcon,
   FlaskConicalIcon,
-  GlobeIcon,
   KeyboardIcon,
   LanguagesIcon,
-  Loader2Icon,
   RadioTowerIcon,
-  RefreshCwIcon,
   SearchIcon,
   ShieldAlertIcon,
   ShieldCheckIcon,
@@ -36,7 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LOCALE_LABELS } from "@/i18n/config";
 import { api } from "@/lib/api";
 import { type ChatSendMode, setChatSendMode, useChatSendMode, useChatSendModeOptions } from "@/lib/chat-send-mode";
-import type { CamoufoxSettings, Settings, ShellSettings } from "@/lib/types";
+import type { Settings, ShellSettings } from "@/lib/types";
 
 import { AboutCard } from "./_components/about-card";
 import { PasswordCard } from "./_components/password-card";
@@ -73,12 +69,6 @@ export default function SystemSettingsPage() {
   const [shellMode, setShellMode] = React.useState("powershell");
   const [shellBin, setShellBin] = React.useState("");
   const [savingShell, setSavingShell] = React.useState(false);
-  // Camoufox 自动化浏览器：安装状态 / Python 依赖就绪状态 / 安装中。
-  const [camoufoxInfo, setCamoufoxInfo] = React.useState<CamoufoxSettings | null>(null);
-  const [savingCamoufox, setSavingCamoufox] = React.useState(false);
-  const [installingCamoufox, setInstallingCamoufox] = React.useState(false);
-  const [savingCLI, setSavingCLI] = React.useState(false);
-  const [installingCLI, setInstallingCLI] = React.useState(false);
   const [workers, setWorkers] = React.useState("3");
   const [savingWorkers, setSavingWorkers] = React.useState(false);
   // 新建任务的默认 token 预算；输入单位=千 token(k)，存库为原始 token 数。
@@ -222,84 +212,6 @@ export default function SystemSettingsPage() {
       .finally(() => setSavingShell(false));
   };
 
-  // Camoufox：独立加载，避免阻塞设置页首屏。
-  const loadCamoufox = React.useCallback(() => {
-    api
-      .camoufoxSettings()
-      .then(setCamoufoxInfo)
-      .catch(() => undefined);
-  }, []);
-
-  // 重新探测：只读不写库，等价于「刷新状态」。
-  const detectCamoufox = () => {
-    setSavingCamoufox(true);
-    api
-      .detectCamoufox()
-      .then(setCamoufoxInfo)
-      .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
-      .finally(() => setSavingCamoufox(false));
-  };
-
-  // 一键安装：pip install camoufox[geoip] pylcaptcha + camoufox fetch。
-  // 后端会继承 global_proxy，安装期间会在日志区回显 pip 的输出。
-  const installCamoufox = () => {
-    setInstallingCamoufox(true);
-    api
-      .installCamoufox()
-      .then((r) => {
-        if (r.installed) {
-          toast.success(t("camoufox.installSuccess", { version: r.version || "?" }));
-        } else {
-          toast.error(t("camoufox.installFailed"));
-        }
-        loadCamoufox();
-      })
-      .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
-      .finally(() => setInstallingCamoufox(false));
-  };
-
-  // CLI（camoufox-browser）：检测路径 / 一键 pip 安装。
-  // CLI 是 AI 做浏览器交互（open/snapshot/click/fill/...）的唯一出口。
-  const detectCamoufoxCLI = () => {
-    setSavingCLI(true);
-    api
-      .detectCamoufoxCLI()
-      .then((r) => {
-        setCamoufoxInfo((prev) =>
-          prev
-            ? { ...prev, cli: { installed: r.installed, path: r.path, version: r.version } }
-            : prev,
-        );
-        if (r.installed) {
-          toast.success(t("camoufox.cliDetected", { version: r.version || "?" }));
-        } else {
-          toast.error(t("camoufox.cliNotFound"));
-        }
-      })
-      .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
-      .finally(() => setSavingCLI(false));
-  };
-
-  const installCamoufoxCLI = () => {
-    setInstallingCLI(true);
-    api
-      .installCamoufoxCLI()
-      .then((r) => {
-        setCamoufoxInfo((prev) =>
-          prev
-            ? { ...prev, cli: { installed: r.installed, path: r.path, version: r.version } }
-            : prev,
-        );
-        if (r.installed) {
-          toast.success(t("camoufox.cliInstallSuccess", { version: r.version || "?" }));
-        } else {
-          toast.error(t("camoufox.cliInstallFailed"));
-        }
-      })
-      .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
-      .finally(() => setInstallingCLI(false));
-  };
-
   const savePython = () => {
     setSaving(true);
     api
@@ -325,10 +237,6 @@ export default function SystemSettingsPage() {
   React.useEffect(() => {
     loadShell();
   }, [loadShell]);
-
-  React.useEffect(() => {
-    loadCamoufox();
-  }, [loadCamoufox]);
 
   React.useEffect(() => {
     api
@@ -1059,147 +967,6 @@ export default function SystemSettingsPage() {
                 </span>
                 <span>{t("shell.latency", { ms: shellInfo.runtime.last_latency_ms })}</span>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <GlobeIcon className="size-4" />
-              {t("camoufox.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("camoufox.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              {camoufoxInfo?.installed ? (
-                <Badge variant="secondary" className="font-mono">
-                  {t("camoufox.installed", { version: camoufoxInfo.version || "?" })}
-                </Badge>
-              ) : (
-                <Badge variant="outline">{t("camoufox.notInstalled")}</Badge>
-              )}
-              {camoufoxInfo?.proxy ? (
-                <Badge variant="outline" className="font-mono">
-                  {t("camoufox.proxyActive")}
-                </Badge>
-              ) : (
-                <Badge variant="outline">{t("camoufox.proxyDirect")}</Badge>
-              )}
-            </div>
-
-            {camoufoxInfo?.installed && (
-              <div className="flex flex-col gap-1">
-                <Label className="text-xs font-normal text-muted-foreground">
-                  {t("camoufox.pathLabel")}
-                </Label>
-                <code className="bg-muted/40 rounded px-2 py-1 font-mono text-xs break-all">
-                  {camoufoxInfo.path}
-                </code>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs font-normal text-muted-foreground">
-                {t("camoufox.solvingLibsLabel")}
-              </Label>
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <Badge
-                  variant={camoufoxInfo?.solving_libs.pylcaptcha ? "secondary" : "outline"}
-                  className="font-mono"
-                >
-                  pylcaptcha: {camoufoxInfo?.solving_libs.pylcaptcha ? "✓" : "✗"}
-                </Badge>
-                <Badge
-                  variant={camoufoxInfo?.solving_libs.geoip ? "secondary" : "outline"}
-                  className="font-mono"
-                >
-                  geoip: {camoufoxInfo?.solving_libs.geoip ? "✓" : "✗"}
-                </Badge>
-              </div>
-              <p className="text-muted-foreground text-xs">{t("camoufox.solvingLibsHint")}</p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onClick={detectCamoufox}
-                disabled={!loaded || savingCamoufox || installingCamoufox}
-              >
-                {savingCamoufox ? (
-                  <Loader2Icon className="animate-spin" />
-                ) : (
-                  <RefreshCwIcon />
-                )}
-                {t("camoufox.detect")}
-              </Button>
-              <Button
-                onClick={installCamoufox}
-                disabled={!loaded || installingCamoufox}
-              >
-                {installingCamoufox ? (
-                  <Loader2Icon className="animate-spin" />
-                ) : (
-                  <DownloadIcon />
-                )}
-                {installingCamoufox ? t("camoufox.installing") : t("camoufox.install")}
-              </Button>
-            </div>
-
-            {/* CLI（camoufox-browser）：AI 通过 Bash 调它做浏览器交互。
-                与上面的「浏览器本体」是两个独立能力，分开显示避免混淆。 */}
-            <div className="border-border/60 flex flex-col gap-2 rounded-md border p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">{t("camoufox.cliTitle")}</span>
-                {camoufoxInfo?.cli.installed ? (
-                  <Badge variant="secondary" className="font-mono">
-                    {t("camoufox.cliInstalled", { version: camoufoxInfo.cli.version || "?" })}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline">{t("camoufox.cliNotInstalled")}</Badge>
-                )}
-              </div>
-              <p className="text-muted-foreground text-xs">{t("camoufox.cliHint")}</p>
-              {camoufoxInfo?.cli.installed && camoufoxInfo.cli.path && (
-                <code className="bg-muted/40 rounded px-2 py-1 font-mono text-xs break-all">
-                  {camoufoxInfo.cli.path}
-                </code>
-              )}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={detectCamoufoxCLI}
-                  disabled={!loaded || savingCLI || installingCLI}
-                >
-                  {savingCLI ? <Loader2Icon className="animate-spin" /> : <RefreshCwIcon />}
-                  {t("camoufox.cliDetect")}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={installCamoufoxCLI}
-                  disabled={!loaded || installingCLI}
-                >
-                  {installingCLI ? <Loader2Icon className="animate-spin" /> : <DownloadIcon />}
-                  {installingCLI ? t("camoufox.cliInstalling") : t("camoufox.cliInstall")}
-                </Button>
-              </div>
-            </div>
-
-            {installingCamoufox && (
-              <p className="text-muted-foreground text-xs">{t("camoufox.installHint")}</p>
-            )}
-
-            {camoufoxInfo?.recent_install_log && camoufoxInfo.recent_install_log.length > 0 && (
-              <details className="border-border/60 rounded border">
-                <summary className="cursor-pointer px-2 py-1 text-xs text-muted-foreground">
-                  {t("camoufox.recentLog")}
-                </summary>
-                <pre className="bg-muted/30 max-h-48 overflow-auto px-2 py-1 text-[11px] leading-tight">
-                  {camoufoxInfo.recent_install_log.join("\n")}
-                </pre>
-              </details>
             )}
           </CardContent>
         </Card>
