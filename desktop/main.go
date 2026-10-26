@@ -166,12 +166,12 @@ func runDesktopWindow(ctx context.Context, app *boot.App, listenAddr string, shu
 	}()
 
 	err := wailsruntime.Run(&options.App{
-		Title:             "ARTEX-HYDRA",
-		Width:             1440,
-		Height:            900,
-		MinWidth:          1024,
-		MinHeight:         640,
-		BackgroundColour:  &options.RGBA{R: 13, G: 13, B: 18, A: 1},
+		Title:            "ARTEX-HYDRA",
+		Width:            1440,
+		Height:           900,
+		MinWidth:         1024,
+		MinHeight:        640,
+		BackgroundColour: &options.RGBA{R: 13, G: 13, B: 18, A: 1},
 		// 窗口内渲染的正是进程内 server 的同一套 SPA：AssetServer 的 Assets 为空，
 		// 全部请求（静态页 / API / SSE）都转发给 srv.Handler()，
 		// 与浏览器访问 http://127.0.0.1:8787 完全同源同行为。
