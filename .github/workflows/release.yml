@@ -204,6 +204,7 @@ jobs:
   # artex-hydra-core 经 build.sh 的 ldflags 注入 selfupdate，更新协议原样复用。
   desktop:
     needs: frontend
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
