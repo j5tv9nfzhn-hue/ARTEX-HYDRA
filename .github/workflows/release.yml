@@ -243,7 +243,7 @@ jobs:
         if: matrix.goos == 'windows'
         uses: actions/cache@v6
         with:
-          path: %LocalAppData%\go-build
+          path: '%LocalAppData%\go-build'
           key: desktop-build-windows-${{ matrix.goarch }}-${{ hashFiles('desktop/go.mod') }}
           restore-keys: |
             desktop-build-windows-${{ matrix.goarch }}-
