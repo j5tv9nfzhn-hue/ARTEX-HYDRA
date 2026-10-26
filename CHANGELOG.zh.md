@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+### 桌面端安装引导与旧版数据迁移
+
+#### 新增
+
+- **Windows 安装引导程序（NSIS）**：`artex-hydra-setup-<版本>-windows-amd64.exe`——简体中文向导，支持自定义安装目录（user 作用域 `%LOCALAPPDATA%\Programs`，免 UAC，与应用内就地自更新契合）、桌面/开始菜单快捷方式（品牌图标）、「应用与功能」卸载登记（卸载保留用户数据）。脚本在 `desktop/installer/installer.nsi`，CI 经 choco 安装 makensis 编译。
+- **旧版 WEB 端数据导入**：`artex-hydra.exe -import-old <旧版安装目录>`——迁移 config（listen/language）、artex.db（任务/发现/资产/LLM 配置）、credential.key/jwt.key、data/ 工作空间、skills（旧覆盖新，用户改动全保留，内置技能可 UI 恢复出厂升到新版）、根目录 i<意图ID> 产物目录。导入为纯拷贝（旧目录只读），前置校验旧版已完全退出（8787/8788 端口探测）与目标未初始化；Windows 安装器内建导入页自动探测旧目录。数据兼容性：新旧同一后端，artex.db 首启自动迁移（幂等补列），密钥无机器绑定。
+- **应用图标**：桌面端 exe 经 rsrc 嵌入品牌图标与 DPI 感知 manifest（源 `web/public/logo.png` → 多层 ico），安装器与快捷方式同图标。
+- 桌面端启动脚本按桌面包改名（artex-rea → artex-hydra）——此前桌面包里的 start 脚本启动的是服务器版入口。
+
+#### 修复的问题
+
+- **桌面端启动即弹「Wails applications will not build without the correct build tags」**：CI 的 go build 只带 embedui 标签，wails 运行时的 CreateApp 按构建标签三选一（production 实现 / dev 实现 / 无标签的 MessageBox 报错兜底），缺 `desktop,production` 时编进兜底实现且编译期不报错。桌面端编译标签改为 `embedui,desktop,production`，与官方 `wails build` 对齐。
+
 ### 移除
 
 - **Camoufox 指纹浏览器集成下线**：删除 `server/camoufox_settings.go` 与五条设置路由、`skills/camoufox-bypass` 技能包（SKILL.md / bypass_guide / solve_cf.py）、`agent/skill_router.go` 的对应路由与 shell 白名单项、设置页 Camoufox 卡片及 api / types / mock / i18n 的全部引用。浏览器自动化统一走系统浏览器 CDP（L1）链路。

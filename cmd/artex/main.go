@@ -68,7 +68,7 @@ func main() {
 func run() int {
 	// 先把控制台切到 UTF-8（仅 Windows；可用 ARTEX_UTF8_CONSOLE=0 关闭），
 	// 横幅、日志与子进程输出才不会在 GBK 控制台上乱码（批次 7 / #4–5）。
-	enableUTF8Console()
+	boot.EnableUTF8Console()
 
 	// 子命令分流必须在 flag.Parse 之前：`artex mcp serve` 的参数属于子命令，
 	// 交给全局 flag 会直接报 "flag provided but not defined"。
