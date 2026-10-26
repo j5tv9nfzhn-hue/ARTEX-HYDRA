@@ -49,12 +49,32 @@ type Options struct {
 	ToleratePortInUse bool
 }
 
-// App 是一次已启动的服务实例，持有监听器与双图库。
+// App 是一次已启动的服务实例，持有监听器、server 与双图库。
 type App struct {
 	Version    string
 	ListenAddr string
+	srv        *server.Server
 	httpSrv    *http.Server
 	mgr        *server.Manager
+}
+
+// Handler 返回 server 的完整 HTTP 处理器（API + 静态前端 + SPA 兜底）。
+// 桌面壳把它挂到 wails AssetServer.Handler：窗口内的页面与浏览器访问
+// http://127.0.0.1:8787 完全同源同行为。
+func (a *App) Handler() http.Handler {
+	if a.srv == nil {
+		return http.NotFoundHandler()
+	}
+	return a.srv.Handler()
+}
+
+// SetupToken 返回当前设置令牌（管理员密码尚未设置时非空）。
+// 服务器版把它打印到控制台；桌面端没有控制台，由调用方轮询后落盘 setup-info.txt。
+func (a *App) SetupToken() string {
+	if a.srv == nil {
+		return ""
+	}
+	return a.srv.CurrentSetupToken()
 }
 
 // Prepare 按固定顺序启动服务：
@@ -123,7 +143,13 @@ func Prepare(ctx context.Context, opts Options) (*App, error) {
 		}
 	}()
 
-	return &App{Version: opts.Version, ListenAddr: opts.ListenAddr, httpSrv: httpSrv, mgr: mgr}, nil
+	return &App{
+		Version:    opts.Version,
+		ListenAddr: opts.ListenAddr,
+		srv:        srv,
+		httpSrv:    httpSrv,
+		mgr:        mgr,
+	}, nil
 }
 
 // Shutdown 按停机三条不变量收尾，别调换：

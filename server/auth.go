@@ -255,6 +255,12 @@ func (s *Server) currentSetupToken() string {
 	return s.setupToken
 }
 
+// CurrentSetupToken 暴露当前设置令牌（管理员密码未设置时非空），供桌面端
+// 首运行时落盘 setup-info.txt——桌面端没有控制台，令牌必须从文件里读。
+func (s *Server) CurrentSetupToken() string {
+	return s.currentSetupToken()
+}
+
 // checkSetupToken compares the client-supplied token with the current one in
 // constant time. An empty server-side token (generation failed) never matches.
 func (s *Server) checkSetupToken(given string) bool {
