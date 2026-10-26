@@ -193,6 +193,26 @@ compress_binary() {
   ok "UPX 压缩完成：$binary (${before} -> ${after} bytes)"
 }
 
+# make_zip 打 zip 包：Linux/macOS 用 zip；Windows runner 的 Git Bash 没有
+# zip 命令，依次回退 7z（部分镜像在 PATH）、Windows 自带的 bsdtar
+# （System32\tar.exe，Windows 10+ 必有）。bsdtar 的 zip 条目名用 / 分隔、
+# 顶层含文件夹，与 zip -r 结构一致——selfupdate 的 path.Base 提取依赖
+# 这一点（Compress-Archive 用 \ 分隔会导致 exe 提取匹配失败，故不采用）。
+make_zip() {
+  pkgdir="$1"
+  folder="$2"
+  out="$3"
+  if command -v zip >/dev/null 2>&1; then
+    (cd "$pkgdir" && zip -q -r -9 "$out" "$folder")
+  elif command -v 7z >/dev/null 2>&1; then
+    (cd "$pkgdir" && 7z a -tzip -mx=9 "$out" "$folder" >/dev/null)
+  elif [ -x /c/Windows/System32/tar.exe ]; then
+    /c/Windows/System32/tar.exe -a -c -f "$pkgdir/$out" -C "$pkgdir" "$folder"
+  else
+    die "打包需要 zip/7z/bsdtar，均不可用"
+  fi
+}
+
 package_binary() {
   binary="$1"
   goos="$2"
@@ -201,7 +221,6 @@ package_binary() {
   package_root="${ARTEX_PACKAGE_DIR}/${package_name}"
   archive="${ARTEX_PACKAGE_DIR}/${package_name}.zip"
 
-  command -v zip >/dev/null 2>&1 || die "打包需要 zip"
   rm -rf "$package_root" "$archive"
   mkdir -p "$package_root"
   cp "$binary" "$package_root/"
@@ -230,7 +249,7 @@ package_binary() {
   rm -f "$package_root/skills/embed.go"
   cp config.example.json "$package_root/"
   if [ -f README.md ]; then cp README.md "$package_root/"; fi
-  (cd "$ARTEX_PACKAGE_DIR" && zip -q -r -9 "$(basename "$archive")" "$(basename "$package_root")")
+  make_zip "$ARTEX_PACKAGE_DIR" "$(basename "$package_root")" "$(basename "$archive")"
   rm -rf "$package_root"
   ok "Release 压缩包：$archive"
 }
@@ -249,7 +268,6 @@ package_desktop() {
   package_root="${ARTEX_PACKAGE_DIR}/${package_name}"
   archive="${ARTEX_PACKAGE_DIR}/${package_name}.zip"
 
-  command -v zip >/dev/null 2>&1 || die "打包需要 zip"
   rm -rf "$package_root" "$archive"
   mkdir -p "$package_root"
 
@@ -316,7 +334,7 @@ PLIST
     cp config.example.json "$package_root/"
     if [ -f README.md ]; then cp README.md "$package_root/"; fi
   fi
-  (cd "$ARTEX_PACKAGE_DIR" && zip -q -r -9 "$(basename "$archive")" "$(basename "$package_root")")
+  make_zip "$ARTEX_PACKAGE_DIR" "$(basename "$package_root")" "$(basename "$archive")"
   rm -rf "$package_root"
   ok "桌面端 Release 包：$archive"
 }
