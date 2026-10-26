@@ -18,6 +18,8 @@ build.sh、dev.sh、任何打包脚本
 
 构建与验证一律由 GitHub Actions 承担（`release.yml` 构建与发布，`detections.yml` 检测规则）。
 
+`desktop/` 是独立 Go 模块（Wails V2 桌面壳，CGO 依赖）：本机同样不构建；它的编译验证由 `release.yml` 的 `desktop` job 在三个原生 runner 上承担（webview 库是平台原生库，CGO 无法交叉编译）。`desktop/go.sum` 不入库，首次构建由 `go mod tidy` 生成。
+
 ## 二、门禁分层
 
 - **编译 / 静态检查失败 = 必须拦住**，不得出包（`go-build` job）。

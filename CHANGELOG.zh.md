@@ -13,6 +13,15 @@
 - **共享启动骨架抽取到 `boot` 包**：`cmd/artex`（服务器版）与新增的 Wails 桌面壳从同一处启动同构后端——凭据主密钥 → 进程树收口 → 打开双图库 → 装配 server → 启动监听器，停机三条不变量（先停新请求、再等在跑回合、最后关库）由 `App.Shutdown` 统一收尾；进程树收口（Windows Job Object）与离线密码重置一并迁入；监听地址四层优先级收口到 `config.ResolveListenAddr`，两端共用。
 - **selfupdate 参数化**：`entryStem` / `coreStem` 由常量改为可经 ldflags 注入的变量（默认仍是 `artex-rea` / `artex-rea-core`，服务器版行为不变）；资产名匹配、zip 内二进制提取与启动守卫文案同步改用变量，桌面版构建注入 `artex-hydra` / `artex-hydra-core` 即可原样复用版本化布局与更新协议。
 
+### 桌面端（Wails V2）
+
+#### 新增
+
+- **Wails V2 桌面壳 `artex-hydra`**：原生 webview 窗口（Windows=WebView2、macOS=WebKit、Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，进程内运行同构后端；Web 地址入口（`http://127.0.0.1:8787`）保留，`-lan` 支持局域网（手机端 App 连接）。首运行设置令牌写入发行根目录 `setup-info.txt`（桌面端没有控制台）。
+- **桌面端更新系统**：复用 `selfupdate` 的版本化安装布局（入口 + 核心两件套、pointer.json、journal 状态机）与 SHA256 三闸门；`entryStem`/`coreStem` 参数化为 `artex-hydra`/`artex-hydra-core`（ldflags 注入），页面「系统设置 → 更新」可直接驱动桌面端检查/应用/回滚。
+- **共享启动骨架 `boot` 包**（见上方「工程」节）与独立模块 `desktop/`（`replace` 复用根模块后端，避免 CGO 依赖污染服务器版构建）。
+- **构建与发布**：`build.sh --desktop` 原生构建（CGO_ENABLED=1，不支持交叉编译），macOS 打包 `.app` bundle；`release.yml` 新增 `desktop` job（三平台原生 runner），桌面端三平台 zip 与服务器版六平台 zip 同一批发布。
+
 ### 自适应智能体（第六阶段）
 
 #### 重构

@@ -90,13 +90,35 @@ Autumn-27/ARTEX（国内原作者，中文原创）
 >
 > Details ⤵️
 
-## 快速开始（三端二进制）
+## 快速开始（桌面端 + 服务器版）
 
-本项目构建并发布 **Linux / macOS / Windows** 三端 Go 单二进制（amd64 与 arm64），不发布 Docker 镜像。
+本项目发布两种形态，覆盖 Linux / macOS / Windows 三端：
 
-### 方式一：下载发布包
+- **桌面端 `artex-hydra`**（Wails V2 原生窗口，推荐入口）：进程内运行与服务器版同构的后端，窗口渲染同一套前端；
+- **服务器版 `artex-rea`**（纯 Go 单二进制，`CGO_ENABLED=0`）：面向 headless / 容器 / 反向代理部署。
 
-到 [Releases](https://github.com/j5tv9nfzhn-hue/ARTEX-HYDRA/releases) 下载对应平台的 `artex-rea-<版本>-<平台>-<架构>.zip`（`linux` / `darwin` / `windows`），解压后得到：
+两种方式都保留 `http://127.0.0.1:8787` 的 Web 地址入口，浏览器访问即同一界面。
+
+### 方式一：下载桌面端
+
+到 [Releases](https://github.com/j5tv9nfzhn-hue/ARTEX-HYDRA/releases) 下载对应平台的 `artex-hydra-<版本>-<平台>-<架构>.zip`：
+
+- Windows：解压后双击 `artex-hydra.exe`（入口）即弹出原生窗口；
+- macOS：解压得到 `artex-hydra.app`，首次打开需在「系统设置 → 隐私与安全性」放行；
+- Linux：解压后运行 `./artex-hydra`。
+
+包内含 `artex-hydra`（入口）+ `artex-hydra-core`（核心）+ `skills/` + `config.example.json` + `README.md`。
+
+桌面端细节：
+
+- 默认监听回环 `127.0.0.1:8787`，浏览器访问同地址即同一界面；`-lan` 开放局域网（供手机端 App 连接）；
+- 首运行设置令牌写入包根目录 `setup-info.txt`（桌面端没有控制台），在窗口内 `/setup` 页面完成初始化；
+- 更新系统与服务器版同一套（版本化布局 + SHA256 三闸门），页面「系统设置 → 更新」即可检查与应用；
+- 依赖平台 webview 运行时：Windows 需 WebView2（Win11 自带）、Linux 需 webkit2gtk-4.1、macOS 自带 WebKit。
+
+### 方式二：下载服务器版
+
+下载 `artex-rea-<版本>-<平台>-<架构>.zip`（`linux` / `darwin` / `windows`），解压后得到：
 
 - `artex-rea` / `artex-rea.exe` —— 程序本体（前端已内嵌）
 - `start.bat`（Windows）/ `start.sh`（Linux、macOS）—— 启动脚本（前台启动；Ctrl-C 直接退出。一键更新的重启由 exe 自己负责，见下文「启动与一键更新」）
@@ -111,9 +133,11 @@ start.bat                              & rem → http://localhost:8787
 
 首次访问 `http://localhost:8787/setup` 初始化管理员密码；设置令牌打印在启动日志中。
 
-### 方式二：源码构建
+### 方式三：源码构建
 
 前置依赖：Go 1.26（以 `go.mod` 为准）、Node.js 22 LTS。
+
+服务器版（纯 Go，无 CGO）：
 
 ```bat
 cd web && npm ci && npm run build:static && cd ..
@@ -124,15 +148,22 @@ copy config.example.json config.json
 start.bat
 ```
 
-或直接使用打包脚本（自动完成前端构建、内嵌与 zip 打包）：
+桌面端（CGO，必须在目标平台上原生构建——webview 库是平台原生库，不支持交叉编译）：
 
 ```bash
-./build.sh --release          # 三端（Linux/macOS/Windows）amd64/arm64，产出 dist/artex-rea-<版本>-<os>-<arch>.zip
+./build.sh --desktop --target <os>/<arch>   # 产物：dist/artex-hydra-<版本>-<os>-<arch>/artex-hydra
+```
+
+或使用打包脚本一次产出全部发布物：
+
+```bash
+./build.sh --release          # 服务器版三端（Linux/macOS/Windows）amd64/arm64，产出 dist/artex-rea-<版本>-<os>-<arch>.zip
 ```
 
 - `npm ci` 需要 devDependencies，例如 `@tailwindcss/postcss`。若环境为 `NODE_ENV=production`，使用 `npm ci --include=dev`，避免构建时缺包。
 - 直接双击 `artex-rea.exe` 也能用：一键更新/回滚的重启由 exe 自己完成。`start.bat` 仍是推荐入口——它把控制台切成 UTF-8、二进制缺失时给出明确提示，并保证 Ctrl-C 直接终止（不弹 `Terminate batch job (Y/N)?`）。
 - 数据库文件位置通过 `config.json` 的 `database.path` 或环境变量 `ARTEX_SQLITE_PATH` 配置（留空则在配置文件旁自动创建 `artex.db`），见下节。
+- 桌面端本地构建细节（独立模块、go.sum、已知限制）见 [desktop/README.md](desktop/README.md)。
 
 ## 配置
 
@@ -172,7 +203,7 @@ LLM 可在环境变量或“LLM 设置”页面配置，相关环境变量包括
 - 无人值守部署可设置 `ARTEX_SETUP_TOKEN` 固定令牌，或用至少八字符的 `ARTEX_ADMIN_PASSWORD` 直接初始化。
 - 默认仅监听回环地址。开放到其他设备前先完成初始化，并优先部署 HTTPS；非回环且未初始化时会有启动警告。
 - 修改密码会使旧 JWT 会话在数秒内失效。若恢复泄露的管理员账户，还需检查自定义工具、MCP、LLM 与通知配置。
-- 忘记管理员密码时，可在本机运行仓库根目录的 `reset-password.sh`：脚本定位 `artex-rea`/`artex-rea.exe`（或回退 `go run ./cmd/artex`）调用 `-reset-password` 重写密码哈希，无需数据库服务与 psql；也可直接运行 `artex-rea -reset-password`。
+- 忘记管理员密码时，可在本机运行仓库根目录的 `reset-password.sh`：脚本定位 `artex-rea`/`artex-rea.exe`（或回退 `go run ./cmd/artex`）调用 `-reset-password` 重写密码哈希，无需数据库服务与 psql；也可直接运行 `artex-rea -reset-password`（桌面端同理：`artex-hydra -reset-password`，离线一次性操作，不占端口不开库）。
 - CORS 允许列表为 `ARTEX_CORS_ORIGINS`，以逗号分隔；内嵌 UI 同源通常无需填写，开发默认允许 `http://localhost:5173`。
 
 ### 反向代理部署（HTTPS / 只开放 443）
@@ -183,7 +214,7 @@ Web、API、SSE 共用后端端口。生产环境可只公开 443，将 8787 留
 
 ## 系统架构
 
-系统 = **Go 单二进制后端（内嵌 Next.js 静态前端）+ SQLite 单文件 + [norma SDK](https://github.com/Autumn-27/norma) 多智能体内核**。关键设计：**双图数据底座**（探索图 + 资产图，经锚点互连）、**事件驱动闭环**（图变化唤醒 Planner）与**成本与可靠性控制面**（缓存 / 预算 / 通知 / 记账）。以下用六个视角完整展开，可直接按序阅读。
+系统 = **Go 后端（内嵌 Next.js 静态前端）+ SQLite 单文件 + [norma SDK](https://github.com/Autumn-27/norma) 多智能体内核**。访问形态有两种：**浏览器**（`http://127.0.0.1:8787`，服务器版 `artex-rea` 与桌面端均保留）与 **Wails V2 桌面窗口**（`desktop/`，原生 webview 渲染同一套前端，进程内运行同一后端）。关键设计：**双图数据底座**（探索图 + 资产图，经锚点互连）、**事件驱动闭环**（图变化唤醒 Planner）与**成本与可靠性控制面**（缓存 / 预算 / 通知 / 记账）。以下用六个视角完整展开，可直接按序阅读。
 
 ### ① 全景架构：一图纵览（六层 + 外部依赖）
 
@@ -422,12 +453,16 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  PKG["发布包<br/>artex(.exe) · start.sh/start.bat · skills/ · config.example.json"] --> BIN["单进程<br/>内嵌前端 + REST/SSE + 引擎 + 记录代理"]
+  PKG["服务器版发布包<br/>artex-rea(.exe) · start.sh/start.bat · skills/ · config.example.json"] --> BIN["单进程<br/>内嵌前端 + REST/SSE + 引擎 + 记录代理"]
+  PKGD["桌面端发布包<br/>artex-hydra(.exe) · 入口+核心 · skills/"] --> BIN
   BIN --> DATA["数据目录<br/>SQLite 单文件 · blobs/ · runs/ · 日志"]
   USER["浏览器"] -->|"http://127.0.0.1:8787（或反向代理 HTTPS）"| BIN
+  DESKTOP["桌面窗口（Wails V2）"] -->|"进程内 Handler（同一套 SPA）"| BIN
   BIN -->|"模型调用"| PLLM["LLM 供应商（Anthropic / OpenAI 形态）"]
   BIN -->|"授权范围内"| PTGT["测试目标"]
 ```
+
+服务器版为「下载 → 启动脚本 → 浏览器」的单二进制部署；桌面端为「下载 → 双击/运行 → 原生窗口」，窗口与浏览器共用同一后端进程与同一界面，Web 地址入口保留。两者的发行布局（入口 + 核心 + skills）、更新协议与 SHA256 闸门完全一致。
 
 发布产物、编译标志与运行时文件落点详见[构建与产物](#构建与产物)。
 
@@ -487,7 +522,7 @@ gh 只读查询（run list / release list / api GET）
 
 | 工作流 | 职责 |
 |---|---|
-| `.github/workflows/release.yml` | **唯一的构建流水线**：gate（编译/静态）→ frontend → binaries（6 目标）→ release；`workflow_dispatch` 可干跑不发布 |
+| `.github/workflows/release.yml` | **唯一的构建流水线**：gate（编译/静态）→ frontend → binaries（6 目标）→ desktop（桌面端三平台原生构建）→ release；`workflow_dispatch` 可干跑不发布 |
 | `.github/workflows/detections.yml` | 检测规则与指标回归（`push` 时忽略 `v*` tag） |
 | `.github/workflows/verification-helper.yml` | 手动触发，单独模块 |
 
@@ -553,12 +588,15 @@ release.yml（唯一的构建流水线）
 gate       tag 格式 + go build + go vet + go vet -tags embedui + gofmt + golangci-lint
 frontend   npm ci → npm test / biome（信号）→ build:static（硬门禁，含类型检查）
 binaries   6 目标交叉编译 + 头校验 + 打包
-release    校验 6 个 zip → sha256sum → 建草稿 → 上传 → latest.json → 转正
+desktop    Wails V2 桌面端三平台原生构建（CGO 无法交叉编译）+ gofmt + 打包
+release    校验 6+3 个 zip → sha256sum → 建草稿 → 上传 → latest.json → 转正
            if: failure() → 删除草稿，保留 tag
 signals    go test / 语言检查 / 文档链接（continue-on-error，只报告不拦）
 ```
 
 **为什么只有一份构建**：2026-10-21 之前 `ci.yml` 与 `release.yml` 各有一套前端构建与 Go 编译，两处维护、两套缓存 key，还会出现「ci 绿了但 release 挂了」。现在合并为 `release.yml` 一份；`workflow_dispatch` 用于打 tag 前干跑（不发布）。
+
+**桌面端模块（desktop/）**：独立 Go 模块（`replace` 复用根模块后端），Wails V2 桌面壳。wails 是 CGO 依赖，独立模块避免污染根模块的纯静态（`CGO_ENABLED=0`）构建与门禁。桌面端编译由 `desktop` job 在三个原生 runner 上承担（webview 库是平台原生库，CGO 无法交叉编译）；本机不构建桌面端。`desktop/go.sum` 不入库，首次构建（CI 或本机）由 `go mod tidy` 生成。
 
 **为什么测试不进门禁**：测试失败不代表二进制坏掉；把测试挂在发版链路上，会让一次 flaky 测试挡住整个版本。编译与静态检查才是「产物能不能用」的必要条件。
 
@@ -622,6 +660,7 @@ signals    go test / 语言检查 / 文档链接（continue-on-error，只报告
 | 正式构建（当前平台） | `./build.sh` | 先构建前端再编译；需 Node.js/npm 与 rsync |
 | 正式构建（指定目标） | `./build.sh --target windows/amd64` | 支持 linux、darwin、windows 目标 |
 | 发布打包 | `./build.sh --release` | 构建三端默认目标（linux/darwin/windows × amd64/arm64）并产出 zip |
+| 桌面端构建 | `./build.sh --desktop --target <os>/<arch>` | Wails V2 桌面端；CGO 必须原生构建（webview 库是平台原生库），不支持交叉编译；macOS 打包为 .app bundle |
 
 编译标志（`build.sh` 固定）：
 
@@ -630,6 +669,16 @@ CGO_ENABLED=0 GOOS=<os> GOARCH=<arch> \
 go build -tags embedui -trimpath \
   -ldflags "-s -w -buildid= -X main.version=<版本>" \
   -o dist/artex-rea-<os>-<arch>/artex-rea        # Windows 目标为 artex-rea.exe
+```
+
+桌面端（`--desktop`）走独立模块 `desktop/`，`CGO_ENABLED=1` 且不设 `GOOS/GOARCH`（原生构建），ldflags 额外注入 `selfupdate.entryStem=artex-hydra` / `coreStem=artex-hydra-core`：
+
+```text
+cd desktop && CGO_ENABLED=1 go build -tags embedui -trimpath \
+  -ldflags "-s -w -buildid= -X main.version=<版本> \
+    -X github.com/Autumn-27/artex/selfupdate.entryStem=artex-hydra \
+    -X github.com/Autumn-27/artex/selfupdate.coreStem=artex-hydra-core" \
+  -o ../dist/artex-hydra-<os>-<arch>/artex-hydra
 ```
 
 - `-tags embedui`：启用 `server/webui_embed.go`，把 `server/webui/dist` 编进二进制。**默认构建走 `server/webui_stub.go`，首页返回 404**——这是「忘了带 tag」最常见症状。
@@ -647,9 +696,12 @@ rsync -a --delete web/out/ server/webui/dist/
 
 产物清单：
 
-- 单目标：`dist/artex-rea-<os>-<arch>/artex-rea`（Windows 为 `artex-rea.exe`；可用 `ARTEX_OUTPUT`/`ARTEX_OUTPUT_DIR` 改路径）。
-- 发布包（`--release` 或 `ARTEX_PACKAGE=1`）：`dist/artex-rea-<版本>-<os>-<arch>.zip`，内含 `artex-rea`/`artex-rea.exe`（内嵌前端、去符号）、`start.bat`/`start.sh`（启动脚本）、`skills/`、`config.example.json`、`README.md`。
+- 服务器版单目标：`dist/artex-rea-<os>-<arch>/artex-rea`（Windows 为 `artex-rea.exe`；可用 `ARTEX_OUTPUT`/`ARTEX_OUTPUT_DIR` 改路径）。
+- 服务器版发布包（`--release` 或 `ARTEX_PACKAGE=1`）：`dist/artex-rea-<版本>-<os>-<arch>.zip`，内含 `artex-rea`/`artex-rea.exe`（内嵌前端、去符号）、`start.bat`/`start.sh`（启动脚本）、`skills/`、`config.example.json`、`README.md`。
+- 桌面端单目标：`dist/artex-hydra-<os>-<arch>/artex-hydra`。
+- 桌面端发布包（`--desktop` + `ARTEX_PACKAGE=1`）：`dist/artex-hydra-<版本>-<os>-<arch>.zip`，内含入口 + 核心两件套（`artex-hydra`/`artex-hydra-core`）、`skills/`、`config.example.json`、`README.md`；macOS 为 `.app` bundle。
 - `dist/SHA256SUMS`：对 `dist/*.zip` 的校验和。
+- CI（`release.yml`）在同一 Release 下发布服务器版六平台 zip 与桌面端三平台 zip/.app。
 
 运行时文件落点：
 
@@ -797,6 +849,7 @@ Linux：`sudo ufw allow 8787/tcp`；macOS 首次运行会弹系统提示，点�
 | 「源码已落地 / 运行验收待完成」条目 | 开发总清单中大量条目处于此态；自动清理默认关闭 |
 | 运行期假设 | 五断层收口的一批假设只能由运行期数据判定 |
 | 手机端明文策略 | release 包可能仍需补 `usesCleartextTraffic` / ATS 两行配置 |
+| 桌面端 GUI 行为 | 窗口渲染、页面一键更新后的重启链路需本机首跑冒烟；CI 无显示环境不覆盖 |
 
 ### 历史文档归档索引
 

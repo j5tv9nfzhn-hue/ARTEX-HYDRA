@@ -10,6 +10,7 @@ name: release
 #   gate      编译与静态检查（硬门禁：编不过就不发）
 #   frontend  前端静态导出，产物给 binaries 复用（硬门禁：前端编不过就不发）
 #   binaries  六目标交叉编译与打包（硬门禁）
+#   desktop   Wails V2 桌面端三平台原生构建与打包（硬门禁：CGO 无法交叉编译）
 #   release   建草稿 → 传资产 → 校验齐全 → 转正（失败即删草稿）
 #   signals   测试 / 语言 / 文档链接：只报告，不拦发布
 #
@@ -195,6 +196,65 @@ jobs:
           name: pkg-${{ matrix.goos }}-${{ matrix.goarch }}
           path: "dist/*.zip"
 
+  # ②b Wails V2 桌面端（artex-hydra）：CGO 依赖平台原生 webview 库
+  # （Windows=WebView2、macOS=WebKit、Linux=webkit2gtk），无法交叉编译——
+  # 三平台各自在原生 runner 上构建并打包（Windows/Linux 为 zip，macOS 为 .app bundle）。
+  #
+  # 独立 Go 模块 desktop/ 通过 replace 复用根模块后端；资产名 artex-hydra /
+  # artex-hydra-core 经 build.sh 的 ldflags 注入 selfupdate，更新协议原样复用。
+  desktop:
+    needs: frontend
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: windows, goarch: amd64, runner: windows-latest }
+          - { goos: darwin, goarch: arm64, runner: macos-15 }
+          - { goos: linux, goarch: amd64, runner: ubuntu-latest }
+    steps:
+      - uses: actions/checkout@v7
+      - name: Linux 桌面运行时依赖（webkit2gtk 等）
+        if: matrix.goos == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libssl-dev libayatana-appindicator3-dev build-essential
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.26"
+          cache: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: web-dist
+          path: server/webui/dist
+      - name: gofmt 门禁（桌面模块独立于根模块的 golangci-lint 覆盖）
+        run: |
+          unformatted="$(gofmt -l desktop/)"
+          if [ -n "$unformatted" ]; then
+            echo "以下桌面端文件未通过 gofmt："
+            echo "$unformatted"
+            exit 1
+          fi
+      - name: Build and package desktop with build.sh
+        env:
+          ARTEX_TARGET_OS: ${{ matrix.goos }}
+          ARTEX_TARGET_ARCH: ${{ matrix.goarch }}
+          ARTEX_BUILD_VERSION: ${{ github.ref_name }}
+          # 更新源在构建期写死为本仓库：fork 出来的构建不会去连上游仓库。
+          ARTEX_UPDATE_REPO: ${{ github.repository }}
+          ARTEX_SKIP_FRONTEND: "1"
+          # CGO 二进制不做 UPX：Release 优先可移植性。
+          ARTEX_COMPRESS: "0"
+          ARTEX_PACKAGE: "1"
+          ARTEX_PACKAGE_DIR: dist
+        run: |
+          ./build.sh --desktop
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: "dist/*.zip"
+
   # ③ 汇总 zip → 建草稿 → 传全部资产 → 校验数量 → 最后一步才公开。
   #
   # 为什么要草稿：旧流程是「先建已发布的 Release，再补 latest.json」。只要补清单那步
@@ -202,7 +262,7 @@ jobs:
   # 60 次/小时/IP 的 REST 轮询，而外部看到的却是「已经发了一个不完整的包」。
   # 草稿期间外部不可见；任何一步失败就删掉草稿（tag 保留），绝不对外留下半成品。
   release:
-    needs: binaries
+    needs: [binaries, desktop]
     # 干跑（workflow_dispatch）只验证能编过，不碰 Release。
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
@@ -227,6 +287,11 @@ jobs:
           missing=0
           for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
             f="artex-rea-${version}-${t%%/*}-${t##*/}.zip"
+            if [ -f "$f" ]; then echo "✓ $f"; else echo "::error::缺少 $f"; missing=1; fi
+          done
+          # 桌面端三平台（Windows/macOS/Linux 各一档）
+          for t in windows/amd64 darwin/arm64 linux/amd64; do
+            f="artex-hydra-${version}-${t%%/*}-${t##*/}.zip"
             if [ -f "$f" ]; then echo "✓ $f"; else echo "::error::缺少 $f"; missing=1; fi
           done
           [ "$missing" = "0" ] || exit 1
@@ -287,6 +352,9 @@ jobs:
           {
             for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
               echo "artex-rea-${version}-${t%%/*}-${t##*/}.zip"
+            done
+            for t in windows/amd64 darwin/arm64 linux/amd64; do
+              echo "artex-hydra-${version}-${t%%/*}-${t##*/}.zip"
             done
             echo SHA256SUMS
             echo latest.json
