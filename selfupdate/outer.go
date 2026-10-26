@@ -22,8 +22,8 @@ import (
 	"time"
 )
 
-// outerBackupPrefix 是替换引导程序时留下的备份前缀，下次启动清掉。
-const outerBackupPrefix = entryStem + ".old-"
+// outerBackupPrefix（<入口名>.old-）是替换引导程序时留下的备份前缀，
+// 下次启动清掉；定义见 layout.go 的 var 块（随 entryStem 注入而变）。
 
 // outerRefreshed 记录本次启动是否真的动过根目录的引导程序。
 // ExitForRestart 用它判断“外层是否可信”：动过说明跑着的那个是旧版本。
