@@ -59,16 +59,22 @@ const (
 	journalName   = "journal.json"
 	updateLogName = "update.log"
 
-	entryStem = "artex-rea"
-	coreStem  = "artex-rea-core"
-
 	// bundledRetiredSuffix 是"已收进 versions/、但根目录那份一时删不掉"时的改名后缀。
 	// Windows 上被进程占用的 exe 删不掉是常态，改名几乎总能成功；改完由
 	// CleanupLegacy 在下次启动时按升级残留删掉，不会永远留着。
 	bundledRetiredSuffix = ".bundled-"
+)
 
-	// stagedLoosePrefix 匹配 updates/ 根下散落的安装包（artex-rea.staged.exe、
-	// artex-rea.staged.exe.sha256）。它们不在 staging/<ver>/ 里，既不是目录、
+// entryStem / coreStem 是发行包入口与核心程序的文件名基名。服务器版默认
+// artex-rea / artex-rea-core；Wails 桌面版构建时经 ldflags 注入 artex-hydra /
+// artex-hydra-core——版本化布局、更新协议、journal 状态机全部原样复用，
+// 两条产品线只是文件名不同。
+var (
+	entryStem = "artex-rea"
+	coreStem  = "artex-rea-core"
+
+	// stagedLoosePrefix 匹配 updates/ 根下散落的安装包（<入口名>.staged.exe、
+	// <入口名>.staged.exe.sha256）。它们不在 staging/<ver>/ 里，既不是目录、
 	// 也不在旧协议残留名单上——三套清理逻辑原先都不认，于是永远留在盘上。
 	stagedLoosePrefix = entryStem + ".staged"
 )
@@ -403,9 +409,9 @@ func RefuseUnsafeExecutable() error {
 		if strings.Contains(base, bad) {
 			return fmt.Errorf(
 				"检测到从升级临时文件启动（%s）：这不是一个可用的安装。\n"+
-					"请用 start.bat / start.sh 启动正式程序（artex-rea%s）；"+
+					"请用 start.bat / start.sh 启动正式程序（%s%s）；"+
 					"若上次升级失败，请查看 logs/update.log 与 updates/journal.json，或删除该残留文件后重启。",
-				exe, exeExt())
+				exe, entryStem, exeExt())
 		}
 	}
 	if strings.Contains(lower, string(filepath.Separator)+layoutStagingDir+string(filepath.Separator)) {

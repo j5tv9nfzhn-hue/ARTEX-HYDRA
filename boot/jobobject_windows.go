@@ -18,7 +18,7 @@
 // 失败不致命：CI/沙箱里可能已经处于别的 Job 中（嵌套 Job 需要 Win8+ 且外层允许），
 // 此时退回旧行为并留一条日志，绝不阻断启动。
 
-package main
+package boot
 
 import (
 	"log"

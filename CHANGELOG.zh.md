@@ -8,6 +8,11 @@
 
 - **Camoufox 指纹浏览器集成下线**：删除 `server/camoufox_settings.go` 与五条设置路由、`skills/camoufox-bypass` 技能包（SKILL.md / bypass_guide / solve_cf.py）、`agent/skill_router.go` 的对应路由与 shell 白名单项、设置页 Camoufox 卡片及 api / types / mock / i18n 的全部引用。浏览器自动化统一走系统浏览器 CDP（L1）链路。
 
+### 工程
+
+- **共享启动骨架抽取到 `boot` 包**：`cmd/artex`（服务器版）与新增的 Wails 桌面壳从同一处启动同构后端——凭据主密钥 → 进程树收口 → 打开双图库 → 装配 server → 启动监听器，停机三条不变量（先停新请求、再等在跑回合、最后关库）由 `App.Shutdown` 统一收尾；进程树收口（Windows Job Object）与离线密码重置一并迁入；监听地址四层优先级收口到 `config.ResolveListenAddr`，两端共用。
+- **selfupdate 参数化**：`entryStem` / `coreStem` 由常量改为可经 ldflags 注入的变量（默认仍是 `artex-rea` / `artex-rea-core`，服务器版行为不变）；资产名匹配、zip 内二进制提取与启动守卫文案同步改用变量，桌面版构建注入 `artex-hydra` / `artex-hydra-core` 即可原样复用版本化布局与更新协议。
+
 ### 自适应智能体（第六阶段）
 
 #### 重构

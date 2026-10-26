@@ -1,6 +1,6 @@
 //go:build !windows
 
-package main
+package boot
 
 // guardProcessTree 在 Linux / macOS 等非 Windows 平台上保持无侵入返回。
 //

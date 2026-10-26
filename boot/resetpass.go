@@ -1,4 +1,4 @@
-package main
+package boot
 
 import (
 	"bufio"
@@ -18,14 +18,15 @@ import (
 // (visible to every other user via `ps` / the Windows process list).
 const resetPasswordEnv = "ARTEX_RESET_NEWPASS"
 
-// runResetPassword implements `artex-rea -reset-password`: open the SQLite store, write
-// a new bcrypt hash for the fixed ARTEX-HYDRA admin account, and exit.
+// ResetPassword implements `artex-rea -reset-password` / `artex-hydra -reset-password`:
+// open the SQLite store, write a new bcrypt hash for the fixed ARTEX-HYDRA admin
+// account, and exit.
 //
 // It runs as a one-shot ahead of every server boot step — no port to claim, no
 // self-update to apply, no background worker — because an operator locked out of a
 // compromised instance needs this to work even when the normal startup path would
 // not (a poisoned LLM profile, a port clash, or a service that will not come up).
-func runResetPassword() int {
+func ResetPassword() int {
 	// The master key must be installed before the store is touched, exactly as
 	// normal startup does: a settings value written as ciphertext cannot be read
 	// back without it, and SetSetting's read-modify-write would fail.
