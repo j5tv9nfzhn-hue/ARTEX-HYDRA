@@ -100,6 +100,10 @@ done
 
 command -v go >/dev/null 2>&1 || die "未找到 Go，本项目需要 Go 1.26 或以上"
 
+# Windows runner 只有 python.exe（没有 python3 命令）：优先 python3，缺失回退 python。
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+command -v python3 >/dev/null 2>&1 || PYTHON_BIN="python"
+
 ARTEX_GOSUMDB="${ARTEX_GOSUMDB:-sum.golang.org}"
 if [ -z "${ARTEX_BUILD_VERSION:-}" ]; then
   if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -215,7 +219,7 @@ package_binary() {
   # 直接运行 artex-rea 不会自动重启，发布包仅包含对应系统的启动脚本。
   # 启动脚本必须真的能执行：start-lan.* 曾被 base64 文本覆盖，双击只会报
   # “不是内部或外部命令”，而且一路进了发布包。坏脚本不允许打包。
-  python3 -I scripts/check-start-scripts.py || exit 1
+  "$PYTHON_BIN" -I scripts/check-start-scripts.py || exit 1
   if [ "$goos" = "windows" ]; then
     cp start.bat start-lan.bat "$package_root/"
   else
@@ -254,7 +258,7 @@ package_desktop() {
       core_ext=".exe"
       cp "$binary" "$package_root/${stem}${core_ext}"
       cp "$binary" "$package_root/${stem}-core${core_ext}"
-      python3 -I scripts/check-start-scripts.py || exit 1
+      "$PYTHON_BIN" -I scripts/check-start-scripts.py || exit 1
       cp start.bat start-lan.bat "$package_root/"
       ;;
     darwin)
@@ -298,7 +302,7 @@ PLIST
       cp "$binary" "$package_root/${stem}"
       cp "$binary" "$package_root/${stem}-core"
       chmod +x "$package_root/${stem}" "$package_root/${stem}-core"
-      python3 -I scripts/check-start-scripts.py || exit 1
+      "$PYTHON_BIN" -I scripts/check-start-scripts.py || exit 1
       cp start.sh start-lan.sh "$package_root/"
       chmod +x "$package_root/start.sh" "$package_root/start-lan.sh"
       ;;

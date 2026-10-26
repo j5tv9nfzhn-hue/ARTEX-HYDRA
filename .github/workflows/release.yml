@@ -216,6 +216,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Linux 桌面运行时依赖（webkit2gtk 等）
         if: matrix.goos == 'linux'
+        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -230,6 +231,8 @@ jobs:
           name: web-dist
           path: server/webui/dist
       - name: gofmt 门禁（桌面模块独立于根模块的 golangci-lint 覆盖）
+        # windows-latest 的 run 默认走 PowerShell：bash 语法必须显式指定 shell。
+        shell: bash
         run: |
           unformatted="$(gofmt -l desktop/)"
           if [ -n "$unformatted" ]; then
@@ -238,6 +241,7 @@ jobs:
             exit 1
           fi
       - name: Build and package desktop with build.sh
+        shell: bash
         env:
           ARTEX_TARGET_OS: ${{ matrix.goos }}
           ARTEX_TARGET_ARCH: ${{ matrix.goarch }}
