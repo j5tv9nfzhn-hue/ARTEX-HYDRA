@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### 移除
+
+- **Camoufox 指纹浏览器集成下线**：删除 `server/camoufox_settings.go` 与五条设置路由、`skills/camoufox-bypass` 技能包（SKILL.md / bypass_guide / solve_cf.py）、`agent/skill_router.go` 的对应路由与 shell 白名单项、设置页 Camoufox 卡片及 api / types / mock / i18n 的全部引用。浏览器自动化统一走系统浏览器 CDP（L1）链路。
+
 ### 自适应智能体（第六阶段）
 
 #### 重构

@@ -3217,7 +3217,6 @@ export function agentDetail(key: string): AgentDetail {
       mcp: [1, 2],
       skill: [
         "api-recon",
-        "camoufox",
         "web-vuln-tactics",
         "reverse-engineering",
         "exploit-kb-patterns",
@@ -3260,13 +3259,13 @@ export const mcpServers: MCPServer[] = [
   },
   {
     id: 2,
-    name: "camoufox",
-    transport: "stdio",
-    command: "python",
-    args: ["-m", "camoufox"],
+    name: "artex-webscan",
+    transport: "http",
+    url: "https://mcp.artex-webscan.local/sse",
+    args: [],
     env: {},
     enabled: true,
-    tools: ["browser_navigate", "browser_click", "browser_snapshot"],
+    tools: ["http_send", "crawl"],
   },
 ];
 
@@ -3277,9 +3276,8 @@ export const mcpToolsById: Record<number, MCPTool[]> = {
     { name: "dns_resolve", description: "DNS 解析" },
   ],
   2: [
-    { name: "browser_navigate", description: "在浏览器中打开 URL" },
-    { name: "browser_click", description: "点击元素" },
-    { name: "browser_snapshot", description: "捕获无障碍快照" },
+    { name: "http_send", description: "向目标发送 HTTP 请求" },
+    { name: "crawl", description: "爬取站点页面与链接" },
   ],
 };
 
@@ -3295,16 +3293,6 @@ export const skills: SkillItem[] = [
     tasks: 6,
     usage_agents: ["worker", "planner"],
     last_used: "2026-08-20T09:12:00Z",
-  },
-  {
-    name: "camoufox",
-    description: "通过 Camoufox（Firefox 内核）驱动浏览器做动态渲染、登录态交互与截图，需要执行 JS 时使用。",
-    mcps: ["camoufox"],
-    files: ["SKILL.md"],
-    calls: 7,
-    tasks: 3,
-    usage_agents: ["worker"],
-    last_used: "2026-08-19T21:40:00Z",
   },
   {
     name: "scopesentry-mcp",

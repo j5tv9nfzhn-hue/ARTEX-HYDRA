@@ -505,7 +505,7 @@ var directSecurityBinaries = map[string]bool{
 	"nmap": true, "nuclei": true, "sqlmap": true, "ffuf": true,
 	"httpx": true, "subfinder": true, "naabu": true, "katana": true,
 	"feroxbuster": true, "gobuster": true, "dirsearch": true, "nikto": true,
-	"hydra": true, "curl.exe": true, "camoufox-cli": true,
+	"hydra": true, "curl.exe": true,
 	"dig": true, "nslookup": true, "whois": true,
 }
 

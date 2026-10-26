@@ -20,7 +20,6 @@ import type {
   Audit,
   BatchCategoryItem,
   BatchControlItem,
-  CamoufoxSettings,
   ChatAttachment,
   Checkpoint,
   CheckpointRevertResult,
@@ -1357,18 +1356,6 @@ export const api = {
   // 执行器设置：本机可选项要真跑探测（秒级），所以单独一个端点、按需拉取，
   // 不塞进每次打开设置页都会请求的 /settings。
   shellSettings: () => get<ShellSettings>("/settings/shell"),
-  // Camoufox 自动化浏览器：GET 回显安装状态 + Python 依赖就绪情况；
-  // POST /detect 重新探测（只读不写库）；POST /install 一键 pip install + fetch
-  // （安装命令继承全局出口代理，避免下载被墙或走错出口）。
-  camoufoxSettings: () => get<CamoufoxSettings>("/settings/camoufox"),
-  detectCamoufox: () => post<CamoufoxSettings>("/settings/camoufox/detect", {}),
-  installCamoufox: () =>
-    post<{ installed: boolean; path: string; version: string }>("/settings/camoufox/install", {}),
-  // CLI（camoufox-browser）：检测 + 一键 pip 安装。
-  detectCamoufoxCLI: () =>
-    post<{ installed: boolean; path: string; version: string }>("/settings/camoufox/cli/detect", {}),
-  installCamoufoxCLI: () =>
-    post<{ installed: boolean; path: string; version: string }>("/settings/camoufox/cli/install", {}),
 
   // ---- mcp ----
   mcpServers: () => get<{ servers: MCPServer[] }>("/mcp").then((r) => arr(r.servers)),

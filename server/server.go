@@ -1107,17 +1107,6 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/tools/custom/{key}", s.pgUpdateCustomTool)
 	mux.HandleFunc("DELETE /api/tools/custom/{key}", s.pgDeleteCustomTool)
 	mux.HandleFunc("POST /api/settings/python/detect", s.pgDetectPython)
-	// Camoufox 自动化浏览器：GET 回显安装状态 + Python 依赖就绪情况；
-	// POST /detect 重新探测（只读不写库）；POST /install 一键 pip install + fetch
-	// （安装命令继承全局出口代理，避免下载被墙或走错出口）。
-	mux.HandleFunc("GET /api/settings/camoufox", s.pgGetCamoufoxSettings)
-	mux.HandleFunc("POST /api/settings/camoufox/detect", s.pgDetectCamoufox)
-	mux.HandleFunc("POST /api/settings/camoufox/install", s.pgInstallCamoufox)
-	// Camoufox CLI（camoufox-browser）：检测安装位置 + 一键 pip 安装。
-	// CLI 是 AI 做浏览器交互（open/snapshot/click/fill/...）的唯一出口，
-	// 保持 25 工具面不变，通过 Bash 调用即可。
-	mux.HandleFunc("POST /api/settings/camoufox/cli/detect", s.pgDetectCamoufoxCLI)
-	mux.HandleFunc("POST /api/settings/camoufox/cli/install", s.pgInstallCamoufoxCLI)
 	mux.HandleFunc("POST /api/tools/{key}/reset", s.pgResetTool)
 	// MCP CRUD
 	mux.HandleFunc("GET /api/mcp", s.pgListMCP)

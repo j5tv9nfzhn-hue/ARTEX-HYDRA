@@ -81,7 +81,7 @@ var builtinWPE64MCPTools = []MCPTool{
 func (d *DB) seedBuiltinMCPServersAndTools() error {
 	// 1. 下线内置 browser（npx @playwright/mcp）MCP：它驱动 Chromium，而无头 Chromium
 	//    会在 sec-ch-ua 暴露 HeadlessChrome，是最容易被拦的形态。浏览器自动化统一
-	//    走系统浏览器 CDP（Camoufox 为按需档）。升级安装时清掉旧库里的
+	//    走系统浏览器 CDP。升级安装时清掉旧库里的
 	//    默认行与工具缓存——只删「仍是出厂配置」的那一条，用户自定义过的同名服务器
 	//    命令行不同，不会被误删。
 	if v, _, _ := d.GetSetting("browser_mcp_retired_v1"); v != "done" {
