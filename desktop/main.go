@@ -24,9 +24,10 @@ import (
 	"syscall"
 	"time"
 
-	wailsruntime "github.com/wailsapp/wails/v2"
+	wails "github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/boot"
@@ -165,7 +166,7 @@ func runDesktopWindow(ctx context.Context, app *boot.App, listenAddr string, shu
 		}
 	}()
 
-	err := wailsruntime.Run(&options.App{
+	err := wails.Run(&options.App{
 		Title:            "ARTEX-HYDRA",
 		Width:            1440,
 		Height:           900,
