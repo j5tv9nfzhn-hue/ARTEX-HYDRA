@@ -221,11 +221,12 @@ jobs:
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev libgtk-3-dev libxkbcommon-dev libxkbcommon-x11-dev \
             libssl-dev libayatana-appindicator3-dev build-essential
-      - name: 恢复桌面端 Go 模块缓存与 go.sum
+      - name: 恢复桌面端 Go 模块缓存与 go.mod/go.sum
         uses: actions/cache@v6
         with:
           path: |
             ~/go/pkg/mod
+            desktop/go.mod
             desktop/go.sum
           key: desktop-gomod-${{ hashFiles('desktop/go.mod') }}-${{ hashFiles('go.mod') }}-${{ hashFiles('go.sum') }}
           restore-keys: |
@@ -280,6 +281,13 @@ jobs:
           ARTEX_PACKAGE_DIR: dist
         run: |
           ./build.sh --desktop
+      - name: 上传 desktop 模块 go.mod/go.sum（tidy 结果供入库）
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-gomod-files
+          path: |
+            desktop/go.mod
+            desktop/go.sum
       - uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.goos }}-${{ matrix.goarch }}

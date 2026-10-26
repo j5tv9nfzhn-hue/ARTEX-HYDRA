@@ -429,11 +429,11 @@ build_desktop_target() {
   fi
 
   info "编译桌面端 ${goos}/${goarch}（CGO），版本 ${ARTEX_BUILD_VERSION}"
-  # go.sum 不在仓库里（依赖拉取交给 CI 与首次构建）；已存在则跳过 tidy。
-  if [ ! -f desktop/go.sum ]; then
-    info "生成 desktop 模块 go.sum（首次构建需要拉取 wails 依赖）"
-    (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" go mod tidy)
-  fi
+  # go.mod/go.sum 可能被 CI 缓存恢复成不一致的组合（缓存里的 go.sum 是
+  # tidy 后的，而 workspace 的 go.mod 是未 tidy 的——go.mod 不在缓存路径
+  # 里时尤甚）：每次都跑 tidy 保证两者一致再交给 go build。模块缓存
+  # 预热后 tidy 开销很小；tidy 一致后也是 no-op。
+  (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" go mod tidy)
   (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" CGO_ENABLED=1 go build \
     -tags embedui \
     -trimpath \
