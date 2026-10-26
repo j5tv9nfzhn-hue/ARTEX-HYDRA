@@ -73,6 +73,10 @@ var (
 	entryStem = "artex-rea"
 	coreStem  = "artex-rea-core"
 
+	// outerBackupPrefix 是替换引导程序时留下的备份前缀（<入口名>.old-<ts>），
+	// 下次启动清掉。
+	outerBackupPrefix = entryStem + ".old-"
+
 	// stagedLoosePrefix 匹配 updates/ 根下散落的安装包（<入口名>.staged.exe、
 	// <入口名>.staged.exe.sha256）。它们不在 staging/<ver>/ 里，既不是目录、
 	// 也不在旧协议残留名单上——三套清理逻辑原先都不认，于是永远留在盘上。
