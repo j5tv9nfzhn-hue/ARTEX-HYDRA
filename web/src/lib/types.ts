@@ -2327,3 +2327,58 @@ export type ShellSettings = {
   runtime: ShellRuntime;
   error_class: { class: string; label: string }[];
 };
+
+// ---- 数据迁移（WEB 版 ⇄ 桌面端），对应 /api/migrate/* ----
+
+/** 单表行数：体检展示与导入结果对账共用。 */
+export type MigrateTableCount = { name: string; rows: number };
+
+/** 一个候选旧安装目录的体检结论。字段全是事实，不含"建议迁移"的判断。 */
+export type MigrateCandidate = {
+  path: string;
+  /** web = artex-rea 两件套；desktop = artex-hydra-desktop 单文件；unknown = 只有库。 */
+  kind: "web" | "desktop" | "unknown";
+  /** 取自 pointer.json；单文件发行没有该文件，为空串。 */
+  version: string;
+  has_db: boolean;
+  db_size_bytes: number;
+  tables: MigrateTableCount[];
+  total_rows: number;
+  has_credential_key: boolean;
+  has_jwt_key: boolean;
+  data_entries: number;
+  skill_entries: number;
+  /** 本机 8787/8788 有人在监听：旧程序可能还在跑，导入会被后端拒绝。 */
+  running: boolean;
+  /** 这个目录就是当前安装目录（不能从自己导入自己）。 */
+  is_current: boolean;
+  note?: string;
+};
+
+export type MigrateScan = { current_root: string; candidates: MigrateCandidate[] };
+
+export type MigrateTableImport = {
+  name: string;
+  old_rows: number;
+  copied: number;
+  skipped: number;
+  note?: string;
+};
+
+export type MigrateResult = {
+  mode: "merge" | "replace";
+  old_dir: string;
+  new_root: string;
+  /** 动手前用 VACUUM INTO 生成的当前库快照。 */
+  backup_path: string;
+  tables: MigrateTableImport[];
+  copied_rows: number;
+  skipped_rows: number;
+  data_files: number;
+  skill_files: number;
+  credential_key: "copied" | "kept" | "missing";
+  jwt_key: "copied" | "kept" | "missing";
+  warnings: string[];
+  /** 恒为 true：主密钥与设置缓存在内存里，导入后必须重启才干净。 */
+  restart_required: boolean;
+};

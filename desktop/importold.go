@@ -74,7 +74,10 @@ func runImportOld(oldDir string) int {
 		return 1
 	}
 	if _, err := os.Stat(filepath.Join(newRoot, "artex.db")); err == nil {
-		fmt.Fprintf(os.Stderr, "[import] %s 下已存在 artex.db（可能已导入过）。如需强制重新导入，请先删除新目录中的 artex.db。\n", newRoot)
+		fmt.Fprintf(os.Stderr,
+			"[import] %s 下已存在 artex.db（可能已导入过，或程序已经用过）。\n"+
+				"[import] 这种情况请改用界面里的「系统设置 → 数据迁移」：合并模式保留当前数据、按表并入旧库；替换模式会先自动备份再整体换掉。\n"+
+				"[import] 本命令只适合「全新空目录」的场景。\n", newRoot)
 		return 1
 	}
 
