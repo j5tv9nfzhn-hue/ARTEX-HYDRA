@@ -185,3 +185,6 @@ secrets.env
 /GraphiteDawnCache/
 mcpd.json
 mcpd.lock
+
+# 本机临时探针脚本（与被测仓库无关，不入库）
+/probe_*.py
