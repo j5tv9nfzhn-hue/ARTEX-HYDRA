@@ -16,16 +16,16 @@ func lanURLs(addr string) []string {
 	return server.LanURLs(addr)
 }
 
-// printLanHint 把“手机该填什么”直接打在启动横幅下面。
+// printLanHint 把“别的设备该打开哪条地址”直接打在启动横幅下面。
 // 不放进 printBanner：横幅本身有单测（TestPrintBannerLocalized）锁着格式。
 func printLanHint(addr string) {
 	urls := lanURLs(addr)
 	if len(urls) == 0 {
-		fmt.Printf("  手机端：当前只监听回环地址 %s，App 连不上。\n", addr)
+		fmt.Printf("  局域网：当前只监听回环地址 %s，别的设备连不上。\n", addr)
 		fmt.Print("          加 -lan（等于 -addr " + config.PermitLanAddr + "）重启即可开放局域网。\n\n")
 		return
 	}
-	fmt.Print("  手机端连接（把地址填进 App 的「服务器地址」，密码用 PC 端登录密码）\n")
+	fmt.Print("  局域网访问（同一网络下用浏览器打开下面任一条地址，密码用 PC 端登录密码）\n")
 	for _, u := range urls {
 		fmt.Printf("    %s\n", u)
 	}

@@ -429,6 +429,16 @@ build_desktop_target() {
   mkdir -p "$(dirname "$output")"
 
   ldflags="-s -w -buildid= -X main.version=${ARTEX_BUILD_VERSION}"
+  # Windows 必须链接 GUI 子系统。Go 的默认 PE 子系统是 CONSOLE：那样双击
+  # exe 会先分配一个控制台窗口，而且那个黑窗在进程整个生命周期里常驻
+  # （关掉黑窗等于杀掉应用）——对桌面端来说这就是"WEB 端残留"，正规桌面
+  # 应用不该有。wails 自己的 CLI 在 Windows 上恒定追加 -H windowsgui，本
+  # 脚本自建 ldflags 覆盖了 CLI 的默认值，所以必须显式补回来。
+  # 代价是进程没有控制台：stdout/stderr 无效，日志落盘与错误弹窗由
+  # desktop/main.go 的 setupDesktopLog / messageBox 负责。
+  if [ "$goos" = "windows" ]; then
+    ldflags="$ldflags -H windowsgui"
+  fi
   ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.entryStem=artex-hydra"
   ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.coreStem=artex-hydra-core"
   if [ -n "$ARTEX_UPDATE_REPO" ]; then

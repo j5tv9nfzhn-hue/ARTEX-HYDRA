@@ -22,18 +22,18 @@ build.sh、dev.sh、任何打包脚本
 
 ## 二、门禁分层
 
-- **编译 / 静态检查失败 = 必须拦住**，不得出包（`go-build` job）。
-- **测试失败 = 只是健康度信号**，不得阻塞打包与发版（`go-test` job 独立运行）。
+- **编译 / 静态检查失败 = 必须拦住**，不得出包（`release.yml` 的 `gate` job：build / vet / embedui-vet / gofmt / golangci-lint）。
+- **测试失败 = 只是健康度信号**，不得阻塞打包与发版（`release.yml` 的 `signals` job，`continue-on-error`）。
 - **发布流程失败 = 必须失败并清理**，不留半成品（`release.yml` 失败即删草稿、保 tag）。
 
 "测试不拦"不等于"什么都不拦"：编译类确定性失败必须拦死。
 
-## 三、网络必须走代理 7897
+## 三、网络必须走代理 10808
 
 裸直连 GitHub 会稳定超时（~20 秒）。一律：
 
 ```bash
-git -c http.proxy=http://127.0.0.1:7897 -c https.proxy=http://127.0.0.1:7897 <子命令>
+git -c http.proxy=http://127.0.0.1:10808 -c https.proxy=http://127.0.0.1:10808 <子命令>
 ```
 
 `gh` 用 `HTTP_PROXY` / `HTTPS_PROXY` 环境变量。按次传参，不写全局 `git config`。

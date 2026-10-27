@@ -2,8 +2,8 @@ package server
 
 // 「系统 → 局域网连接」页的后端（页面在 web/src/app/(main)/system/lan）。
 //
-// 这个页面要回答的问题只有一个：手机现在该填什么、扫什么。所以 GET /api/lan
-// 把答案一次算完交出去——监听地址、可用 URL、二维码，前端只负责排版。
+// 这个页面要回答的问题只有一个：别的设备现在该打开哪条地址。所以 GET /api/lan
+// 把答案一次算完交出去——监听地址、可用 URL，前端只负责排版。
 //
 // 另一半是「怎么把它变成能连」：POST /api/lan/enable 把 listen 落进 config.json，
 // 然后让进程自己重启一次（复用「更新完成后重启」那条既有路径）。
@@ -62,13 +62,6 @@ func (s *Server) lanInfo(w http.ResponseWriter, r *http.Request) {
 	if len(urls) > 0 {
 		primary = urls[0]
 	}
-	// 二维码编不出来不该拖垮整个页面：地址那一段照样能用，图留空即可。
-	qrSVG := ""
-	if primary != "" {
-		if svg, err := QRCodeSVG(primary); err == nil {
-			qrSVG = svg
-		}
-	}
 	writeJSON(w, 200, map[string]any{
 		"version":       BuildVersion,
 		"listen_addr":   addr,
@@ -77,10 +70,8 @@ func (s *Server) lanInfo(w http.ResponseWriter, r *http.Request) {
 		"urls":          urls,
 		"primary_url":   primary,
 		"password_set":  s.cachedPassHash() != "",
-		"qr_svg":        qrSVG,
 		"restart_cmd":   lanRestartCommand(),
 		"firewall_cmd":  lanFirewallCommand(port),
-		"mobile_hint":   strings.TrimPrefix(primary, "http://"),
 		"env_override":  lanEnvOverride(),
 	})
 }
@@ -112,6 +103,13 @@ func (s *Server) lanSetExposure(w http.ResponseWriter, r *http.Request, lan bool
 		if req.Lan != nil {
 			lan = *req.Lan
 		}
+	}
+
+	// 开放局域网 = 马上要有别的设备来登录。没有密码时门是锁着的、也没给钥匙：
+	// 与其把端口开出去让对面卡在登录页，不如现在就说清楚（服务器版与桌面端同一条规则）。
+	if lan && s.cachedPassHash() == "" {
+		writeErr(w, 409, "还没有设置登录密码：先在「系统设置 → 登录密码」设一次，再开放局域网")
+		return
 	}
 
 	port := LanPort(s.ListenAddr())

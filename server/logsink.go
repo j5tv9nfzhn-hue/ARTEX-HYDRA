@@ -49,6 +49,21 @@ var logSink = &logSinkT{cap: 3000, subs: map[chan LogLine]struct{}{}, out: os.St
 // (still writing to stderr). Call once at startup, as early as possible.
 func StartLogCapture() { log.SetOutput(logSink) }
 
+// SetPassthrough 替换 sink 往终端透传的目标（默认 os.Stderr）。
+//
+// 桌面端在 Windows 上链接为 GUI 子系统（-H windowsgui）：进程根本没有控制台，
+// os.Stderr 是个无效句柄，写进去的日志会静默消失。桌面端因此在
+// StartLogCapture 之前把透传目标换成一个「先写文件、再尽力写 stderr」的
+// MultiWriter，日志与 /logs 页面都不受影响。必须在 StartLogCapture 之前调用。
+func SetPassthrough(w io.Writer) {
+	if w == nil {
+		return
+	}
+	logSink.mu.Lock()
+	logSink.out = w
+	logSink.mu.Unlock()
+}
+
 // SetDB wires a postgres DB into the sink once (idempotent). It:
 //  1. Restores the last 100 log rows from DB into the ring so the /logs page
 //     shows history immediately after restart.
@@ -119,7 +134,10 @@ func (s *logSinkT) SetDB(ctx context.Context, pg *db.DB) {
 
 // Write implements io.Writer for the log package: one call per log.Printf line.
 func (s *logSinkT) Write(p []byte) (int, error) {
-	_, _ = s.out.Write(p) // keep the terminal output
+	s.mu.Lock()
+	out := s.out
+	s.mu.Unlock()
+	_, _ = out.Write(p) // keep the terminal output
 	line := strings.TrimRight(string(p), "\n")
 	if strings.TrimSpace(line) != "" {
 		s.add(parseLog(line))

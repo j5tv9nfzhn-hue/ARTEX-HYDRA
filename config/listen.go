@@ -3,7 +3,7 @@ package config
 import "strings"
 
 // PermitLanAddr 是 -lan 开关使用的地址：监听全部网卡（IPv4+IPv6）。
-// 手机端（App）只能通过局域网访问服务，而服务默认只监听回环地址。
+// 别的设备只能通过局域网访问服务，而服务默认只监听回环地址。
 const PermitLanAddr = ":8787"
 
 // ResolveListenAddr 把监听地址的四层优先级压成最终地址：

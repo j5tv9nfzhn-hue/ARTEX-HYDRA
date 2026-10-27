@@ -19,6 +19,8 @@
 ### 移除
 
 - **Camoufox 指纹浏览器集成下线**：删除 `server/camoufox_settings.go` 与五条设置路由、`skills/camoufox-bypass` 技能包（SKILL.md / bypass_guide / solve_cf.py）、`agent/skill_router.go` 的对应路由与 shell 白名单项、设置页 Camoufox 卡片及 api / types / mock / i18n 的全部引用。浏览器自动化统一走系统浏览器 CDP（L1）链路。
+- **手机端 App 整体移除**（设计内的能力收敛，不是临时下线）：删除 `mobile/`（Expo/React Native 全套 35 个文件）与 `.github/workflows/mobile.yml`、`mobile-build.yml`；服务端随之删掉 `server/mobile_api.go`（8 条 `/api/mobile/*`）、`db/mobile_alerts.go`（`mobile_alerts` 表与五个读写方法）、`server/pair_api.go`（`POST /api/pair/code`、`POST /api/auth/pair-claim` 与一次性配对码），以及 `server/ui_notify.go` 里唯一那处落库调用 `persistUIEvent` 与 `Server.Handler()` 的两行路由注册。远程访问统一为一条路：同一网络下用**浏览器**打开「系统 → 局域网连接」给出的地址，登录用本机账号密码；不再维护第二个客户端形态。该页去掉配对码/二维码卡片与 App 专用字段（`mobile_hint`），保留地址复制、一键开放/收回、防火墙放行与重启脚本提示；启动横幅与 `-lan` 帮助文案同步改为「供同一网络下的浏览器访问」。旧安装包已无服务端接口可连。
+- **二维码编码器下线**：手机端配对码移除后，「系统 → 局域网连接」页只剩地址，`server/qr.go`（自写的最小二维码编码器）与 `qr_test.go` 已无调用方，连同 `GET /api/lan` 响应里的 `qr_svg` 一起删除——留一份没有消费者的编码器，只是给后面的人多一份要跟着改的代码。
 
 ### 工程
 
@@ -29,10 +31,23 @@
 
 #### 新增
 
-- **Wails V2 桌面壳 `artex-hydra`**：原生 webview 窗口（Windows=WebView2、macOS=WebKit、Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，进程内运行同构后端；Web 地址入口（`http://127.0.0.1:8787`）保留，`-lan` 支持局域网（手机端 App 连接）。首运行设置令牌写入发行根目录 `setup-info.txt`（桌面端没有控制台）。
+- **Wails V2 桌面壳 `artex-hydra`**：原生 webview 窗口（Windows=WebView2、macOS=WebKit、Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，进程内运行同构后端；Web 地址入口（`http://127.0.0.1:8787`）保留，`-lan` 开放局域网（供同一网络下的浏览器访问）。桌面端**窗口内免登录**，Web 入口与局域网仍要账号密码（见下方「鉴权与运行形态」与「修复的问题」）。
 - **桌面端更新系统**：复用 `selfupdate` 的版本化安装布局（入口 + 核心两件套、pointer.json、journal 状态机）与 SHA256 三闸门；`entryStem`/`coreStem` 参数化为 `artex-hydra`/`artex-hydra-core`（ldflags 注入），页面「系统设置 → 更新」可直接驱动桌面端检查/应用/回滚。
 - **共享启动骨架 `boot` 包**（见上方「工程」节）与独立模块 `desktop/`（`replace` 复用根模块后端，避免 CGO 依赖污染服务器版构建）。
 - **构建与发布**：`build.sh --desktop` 原生构建（CGO_ENABLED=1，不支持交叉编译），macOS 打包 `.app` bundle；`release.yml` 新增 `desktop` job（三平台原生 runner），桌面端三平台 zip 与服务器版六平台 zip 同一批发布。
+
+#### 鉴权与运行形态
+
+- **桌面端窗口免登录，网络入口照旧要密码**：`boot.Options.DisableAuth` → `Server.SetAuthDisabled` 打开「窗口免登录」，`requireAuth` 经由 `authExempt` 只放行进程内窗口的请求（起因与边界见下方「修复的问题」），`/api/auth/status` 的 `auth_disabled` 按请求回 true/false；服务器版（`cmd/artex`）的账号密码登录与初始化流程完全不变。两端共用同一份前端产物，差异只由 `desktop/shell.go` 给文档响应加的 `artex_shell` cookie 决定，前端只在 `web/src/lib/platform.ts` 一处读取。
+- **双击不弹黑窗，失败也看得见**：桌面端以 `-H windowsgui` 编译（`build.sh` 自建 ldflags，必须显式补回），启动守卫拒绝、单实例已占用、后端起不来三种情况改用原生 `MessageBoxW`；只有 `-reset-password` / `-import-old` 这类命令行用法才 `AttachConsole` 回到父终端打印。
+- **日志落盘**：GUI 子系统没有控制台，`setupDesktopLog` 把进程 stdout/stderr 同时写进发行目录日志文件，退出时收尾；`server/logsink.go` 让同一批后端日志在页面里可读。
+- **窗口尺寸按屏取值**：默认 1280×800、最小 1024×640；工作区比默认值小时按真实屏幕夹取，1366×768 这类常见分辨率下不越界、不贴边。
+
+#### 修复的问题
+
+- **桌面端开放局域网后等于没有鉴权**：`SetAuthDisabled` 当时是把 `/api` 的 JWT 校验整个关掉，`-lan` 之后就变成「同网任何设备无需凭据即可操作」，而这一版还特意让 `WarnIfExposed` 静音，连一行警告都没有。现在免校验只对**桌面壳的进程内窗口**成立：`desktop/shell.go` 在把请求交给 Handler 之前打一个 context 标记（`server.MarkDesktopShellRequest`），`requireAuth` 只认这个标记（`authExempt`）。判定刻意**不看来源地址**——同机浏览器发到 `127.0.0.1` 的请求、以及同机反向代理转发的请求，`RemoteAddr` 都是回环，按地址放行等于给代理开一道后门。业界同款取舍：Syncthing 的 GUI 只对 localhost 免密码、跨主机访问必须显式打开 `insecureAdminAccess`；Jupyter 一旦绑定全接口就必须 token 登录。
+- **开放局域网前必须先有密码**：`POST /api/lan/enable` 在未设密码时直接返回 409「还没有设置登录密码」，不再先把端口开出去、让对面卡在登录页。`WarnIfExposed` 对桌面端的非回环绑定恢复警告并写明去哪设密码；`/api/auth/status` 的 `auth_disabled` 改为按请求计算（只有窗口为 true）。
+- **窗口内可以设置首个登录密码**：`POST /api/password/reset` 原先在「从未设过密码」时一律 403（那是 `/api/auth/init` 的活，要设置令牌），而桌面窗口没有控制台、抄不到令牌，等于开放局域网前无从设密码。现在只对进程内窗口放开这一条——窗口即授权；网络请求仍然只能走 `/api/auth/init` + 设置令牌。
 
 ### 自适应智能体（第六阶段）
 
@@ -238,6 +253,7 @@
 - **成本与效率（批次 E）**：自动注入瘦身 + planner 心跳空转跳过、system prompt 整段缓存、任务级 Token 预算硬闸、可配置 LLM 重试策略、`price_table` 价格表与费用视图、Token 归因与进度指标、触发器/通知成本护栏、steer 纠偏与诚实回滚文案。
 - **功能与可靠性**：独立轻量「测试连接」、模型输入模态声明、Agent 备用链、metrics/stageerr/fsutil 基础包与 guard 审计 `call_id`、任务环境快照与检查点回滚、凭据与 MCP env 加密。
 - **防御与检测**：防御指南、Sigma/Suricata 规则、ATT&CK 层、CSV/MISP 指标与八类可复现测试。
+- **移除**：Camoufox 指纹浏览器集成与手机端 App（`mobile/`）整体下线，远程访问只保留局域网浏览器一条路。
 - **仓库维护**：安全与法律告知、维护/贡献指南、CI/检测工作流重塑、Go lint 门禁与外部链接周期检查；历史截图预览已移除，两版 README 的「系统架构」章节重写为六视图全新展示（全景分层 · 任务闭环 · 数据底座 · 协作机制 · 成本控制面 · 部署交付）。
 - **构建**：按 Git 历史恢复 `build.sh` 三端打包能力（Linux/macOS/Windows 默认目标、非 Windows 包附 `start.sh`）；Release 工作流矩阵暂维持 Windows。
 

@@ -1,11 +1,14 @@
 import { APP_CONFIG } from "@/config/app-config";
 import { DEV_BYPASS, DEV_TOKEN } from "@/lib/dev-mode";
+import { IS_DESKTOP } from "@/lib/platform";
 
 const TOKEN_KEY = "artex_token";
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 天（秒）
 
-// Mock demo 与调试旁路都没有真实登录：给守卫一个假 token，界面直接进主面板。
-const BYPASS_AUTH = process.env.NEXT_PUBLIC_MOCK === "1" || DEV_BYPASS;
+// Mock demo、调试旁路与桌面壳都没有真实登录：给守卫一个假 token，界面直接进主面板。
+// 桌面壳的旁路只影响前端闸门；后端是否要 token 由 boot.Options.DisableAuth 决定
+// （desktop/ 置 true，服务器版不置）。
+const BYPASS_AUTH = process.env.NEXT_PUBLIC_MOCK === "1" || DEV_BYPASS || IS_DESKTOP;
 
 export interface CurrentUser {
   id: string;
@@ -39,6 +42,10 @@ export const auth = {
   getCurrentUser(): CurrentUser | null {
     // 旁路 token 不是 JWT，按本地演示身份返回，避免右上角退化成兜底占位。
     if (BYPASS_AUTH) {
+      if (IS_DESKTOP) {
+        // 桌面壳：身份就是本机使用者，不展示任何"调试"字样。
+        return { id: "1", name: APP_CONFIG.name, username: "local", email: "", avatar: "", role: "operator" };
+      }
       return { id: "0", name: "本地调试", username: "dev-mode", email: "", avatar: "", role: "operator" };
     }
 

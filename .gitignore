@@ -47,6 +47,10 @@ Thumbs.db
 /artex.upgrade.json
 /server/webui/dist/
 /dist/
+#
+# 桌面端独立模块的 go.sum 不入库：wails 依赖在目标平台原生构建时才需要，
+# 由 CI 的 desktop job 首次 go mod tidy 生成（见 AGENTS.md「本机只读 + 只写」）。
+/desktop/go.sum
 
 # JWT 签名密钥（运行时生成，存项目根，绝不提交）
 /jwt.key

@@ -78,9 +78,9 @@ func run() int {
 
 	var (
 		// 监听地址的优先级：-addr > -lan > config.json/env(ARTEX_LISTEN) > 127.0.0.1:8787。
-		// 手机端要连得上，必须绑到局域网网卡，回环地址是连不通的。
+		// 别的设备要连得上，必须绑到局域网网卡，回环地址是连不通的。
 		addr      = flag.String("addr", "", "HTTP 监听地址（空：取 config.json 的 listen / ARTEX_LISTEN，再空则 127.0.0.1:8787；:8787 表示开放局域网）")
-		lan       = flag.Bool("lan", false, "开放局域网访问（等于 -addr :8787），供手机端 App 连接")
+		lan       = flag.Bool("lan", false, "开放局域网访问（等于 -addr :8787），供同一网络下的浏览器访问")
 		dataDir   = flag.String("data", filepath.Join(config.BaseDir(), "data"), "data directory for SQLite stores (default: data/ next to the executable)")
 		proxy     = flag.String("proxy", "127.0.0.1:8788", "traffic recording proxy address (empty to disable)")
 		resetPass = flag.Bool("reset-password", false, "重置管理员密码后退出；新密码取自 ARTEX_RESET_NEWPASS，未设置则交互输入")

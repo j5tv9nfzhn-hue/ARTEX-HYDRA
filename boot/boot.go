@@ -47,6 +47,9 @@ type Options struct {
 	// ToleratePortInUse 为 true 时监听失败只记日志不致命：桌面壳的窗口渲染走
 	// 进程内 Handler、不依赖回环端口，端口被服务器版占用时窗口照常可用。
 	ToleratePortInUse bool
+	// DisableAuth 打开「桌面壳进程内窗口免登录」：只对 desktop/shell.go 打了标记的
+	// 请求生效（server.authExempt），网络来源（同机浏览器、反向代理、局域网设备）
+	// 照样校验 JWT。服务器版恒为 false（账号密码登录）。
 }
 
 // App 是一次已启动的服务实例，持有监听器、server 与双图库。
@@ -59,22 +62,14 @@ type App struct {
 }
 
 // Handler 返回 server 的完整 HTTP 处理器（API + 静态前端 + SPA 兜底）。
-// 桌面壳把它挂到 wails AssetServer.Handler：窗口内的页面与浏览器访问
-// http://127.0.0.1:8787 完全同源同行为。
+// 桌面壳把它挂到 wails AssetServer.Handler，并在交给它之前打「进程内窗口」标记
+// （见 server.MarkDesktopShellRequest）：页面内容与浏览器看到的完全一致，唯一差别
+// 是窗口的请求免登录，浏览器的请求仍要账号密码。
 func (a *App) Handler() http.Handler {
 	if a.srv == nil {
 		return http.NotFoundHandler()
 	}
 	return a.srv.Handler()
-}
-
-// SetupToken 返回当前设置令牌（管理员密码尚未设置时非空）。
-// 服务器版把它打印到控制台；桌面端没有控制台，由调用方轮询后落盘 setup-info.txt。
-func (a *App) SetupToken() string {
-	if a.srv == nil {
-		return ""
-	}
-	return a.srv.CurrentSetupToken()
 }
 
 // Prepare 按固定顺序启动服务：
@@ -117,6 +112,8 @@ func Prepare(ctx context.Context, opts Options) (*App, error) {
 	log.Printf(config.T("[config] skill 目录: %s"), skillDir)
 
 	srv := server.New(ctx, mgr, skillDir, opts.DataDir, opts.ExeDir)
+	// 必须在 Handler()/监听器之前定下来：requireAuth 是构建期装配的中间件。
+	srv.SetAuthDisabled(opts.DisableAuth)
 	srv.SetListenAddr(opts.ListenAddr)
 	srv.WarnIfExposed(opts.ListenAddr)
 
