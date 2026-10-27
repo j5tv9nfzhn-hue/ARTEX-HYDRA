@@ -73,6 +73,9 @@ import type {
   MCPExposure,
   MCPServer,
   MCPTool,
+  MigrateCandidate,
+  MigrateResult,
+  MigrateScan,
   MissingSkill,
   ModelTokenStat,
   NotificationChannel,
@@ -1704,6 +1707,15 @@ export const api = {
   updateJournal: () => get<UpdateJournal>(`/update/journal`),
   // SSE 地址（自动带 token）：EventSource 不能带 cookie，故走 token 查询参数。
   updateStreamUrl: () => sseUrl("/api/update/stream"),
+
+  // ---- 数据迁移（WEB 版 ⇄ 桌面端）----
+  // 体检用 GET /migrate/scan：候选目录由后端按固定范围扫（桌面/下载/文档 +
+  // 当前安装目录的同级），手填路径则走 inspect。导入是同步执行，完成才返回
+  // 逐表结果，所以前端要自己给出"正在导入"的等待态。
+  migrateScan: () => get<MigrateScan>(`/migrate/scan`),
+  migrateInspect: (path: string) => post<MigrateCandidate>(`/migrate/inspect`, { path }),
+  migrateImport: (path: string, mode: "merge" | "replace", confirm?: string) =>
+    post<MigrateResult>(`/migrate/import`, { path, mode, confirm }),
 };
 
 

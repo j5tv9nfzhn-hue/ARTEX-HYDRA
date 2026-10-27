@@ -33,6 +33,7 @@
 
 - **Wails V2 桌面壳 `artex-hydra-desktop`**：原生 webview 窗口（Windows=WebView2、macOS=WebKit、Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，进程内运行同构后端；Web 地址入口（`http://127.0.0.1:8787`）保留，`-lan` 开放局域网（供同一网络下的浏览器访问）。桌面端**窗口内免登录**，Web 入口与局域网仍要账号密码（见下方「鉴权与运行形态」与「修复的问题」）。
 - **桌面端是单文件发行，没有核心副本**：产物 `artex-hydra-desktop[.exe]` 既是入口也是本体，包内不再有 `artex-hydra-core`、`versions/`、`pointer.json`；`config/`、`artex.db`、`data/`、`skills/` 与它同目录，**整个目录拷走即完成迁移**（新旧合并也不必对齐核心副本）。`selfupdate` 用 `singleFile=1` 落地：`Bootstrap` 直接放行、`Handoff` 永不转交、`/api/update/apply` 返回「下载新版替换单文件」——页面「系统设置 → 更新」仍能检查新版本，换装由用户替换那一个文件完成。服务器版的「入口 + 核心 + versions/」原样保留（它的换装不能覆盖运行中的 exe，桌面端没有这个约束）。产物名统一带 `-desktop` 后缀，与 WEB 版 `artex-rea-*` 在同一个 Release 里一眼可分。
+- **设置里的「数据迁移」：WEB 版与桌面端互通。** 新增 `migrate` 包（体检 + 导入）与三个接口 `GET /api/migrate/scan`、`POST /api/migrate/inspect`、`POST /api/migrate/import`；前端在「系统设置」新增一张卡片，桌面端与 WEB 端用的是同一份前端，因此两边都能用：桌面端可导入旧 WEB 端目录，WEB 端也能导入桌面端目录。体检会读出体积、行数、表数、主密钥/会话密钥、工作空间与技能项数，并探测 8787/8788 判断旧程序是否还在跑。导入有两种语义——**合并**（保留当前库，按"两边共同列"逐表 `INSERT OR IGNORE`，主键冲突跳过；两边 `credential.key` 不同时跳过 `llm_*` 表，避免搬进解不开的 API key）与**替换**（先清空当前库每张表再灌入，动手前用 `VACUUM INTO` 备份当前库）。旧命令行 `-import-old` 保留给"全新空目录"场景，遇到已初始化的目标会指路到界面。
 - **共享启动骨架 `boot` 包**（见上方「工程」节）与独立模块 `desktop/`（`replace` 复用根模块后端，避免 CGO 依赖污染服务器版构建）。
 - **构建与发布**：`build.sh --desktop` 原生构建（CGO_ENABLED=1，不支持交叉编译），产物 `artex-hydra-desktop-<版本>-<os>-<arch>.zip`（macOS 为 `.app` bundle）；`release.yml` 的 `desktop` job 在三平台原生 runner 上构建，桌面端三平台 zip 与服务器版六平台 zip 同一批发布。
 

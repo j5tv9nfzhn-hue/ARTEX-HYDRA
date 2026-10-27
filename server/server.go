@@ -896,6 +896,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/update/stream", s.updateStream)
 	// 只读缓存的轻量状态，顶栏红点用；不会触发任何网络请求。
 	mux.HandleFunc("GET /api/update/status", s.updateStatus)
+
+	// 数据迁移（旧版 WEB 端 ⇄ 桌面端）：体检候选目录 + 执行导入。
+	// 与更新接口一样走默认 JWT 鉴权：窗口请求免登录、浏览器侧需先登录。
+	mux.HandleFunc("GET /api/migrate/scan", s.migrateScan)
+	mux.HandleFunc("POST /api/migrate/inspect", s.migrateInspect)
+	mux.HandleFunc("POST /api/migrate/import", s.migrateImport)
 	mux.HandleFunc("GET /api/update/journal", s.updateJournal)
 
 	mux.HandleFunc("GET /api/tasks", s.listTasks)
