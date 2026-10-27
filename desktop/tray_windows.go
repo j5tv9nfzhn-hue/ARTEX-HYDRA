@@ -15,8 +15,8 @@ package main
 //   - 托盘起不来（极少见）就退回"关闭即退出"：绝不把用户关进一个看不见的窗口。
 
 import (
-	_ "embed"
 	"context"
+	_ "embed"
 	"log"
 	"sync"
 	"sync/atomic"
