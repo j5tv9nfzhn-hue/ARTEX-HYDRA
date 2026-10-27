@@ -201,21 +201,28 @@ func run() int {
 //     48 − 标题栏 32 ≈ 688。→ 800 高的默认值在 768 屏上必然出界，所以
 //     默认值只作"上限愿望"，运行时按可用区域夹紧。
 //
-// 折算结果：1280×800 的默认值在 1920×1080 这类屏上原样使用；小屏上按
-// 「可用区 × 80%」收缩。**默认窗口绝不铺满屏幕**——铺满之后用户第一件事
-// 往往是往外拖，那不叫开箱即用。
+// 折算结果：1440×900 在大屏（1920×1080 及以上）原样使用；小屏按「屏宽 88%、
+// 屏高 94%」收缩。这组比例是照着实测参考定的——本机 1366×768（100% 缩放）上，
+// 用户日常使用的 PI 窗口是 1200×728，本套参数给出 1202×722，与其几乎重合。
+//
+// 为什么不再按 80% 收缩：上一版留白 40/96 被夹成 1280×672（等于铺满），改成 80%
+// 后又只有 1092×614（用户反馈窗口太小）。两头的教训是同一条——留白要按比例给，
+// 而比例应当来自"用户真正在用的窗口有多大"，不是拍脑袋。
 //
 // 单位说明（Wails v2 的 Screen 文档写死了）：`Screen.Size` 是逻辑像素，
 // "used when setting sizes in Wails"；`PhysicalSize` 才是物理像素。所以这里
 // 只用 Size，不要混用 PhysicalSize，否则 HiDPI 屏上会算错一半。
 const (
-	windowDefaultWidth  = 1280
-	windowDefaultHeight = 800
+	windowDefaultWidth  = 1440
+	windowDefaultHeight = 900
 	windowMinWidth      = 1024
 	windowMinHeight     = 640
-	// 默认窗口最多占可用区的 4/5，剩下的留给桌面（窗口绝不贴边、绝不铺满）。
-	windowTargetRatioNum = 4
-	windowTargetRatioDen = 5
+	// 小屏收缩上限：宽度 88%、高度 94%。高度留的 6% 正好让开任务栏（1366×768 上
+	// 是 40px），再大就会压到任务栏、再小就白占地方。
+	windowWidthRatioNum  = 88
+	windowWidthRatioDen  = 100
+	windowHeightRatioNum = 94
+	windowHeightRatioDen = 100
 )
 
 // screenLogicalSize 返回当前窗口所在屏（缺省主屏、再缺省第一块）的逻辑尺寸。
@@ -257,8 +264,8 @@ func fitWindowToScreen(ctx context.Context) {
 		return
 	}
 
-	maxW := sw * windowTargetRatioNum / windowTargetRatioDen
-	maxH := sh * windowTargetRatioNum / windowTargetRatioDen
+	maxW := sw * windowWidthRatioNum / windowWidthRatioDen
+	maxH := sh * windowHeightRatioNum / windowHeightRatioDen
 	w, h := windowDefaultWidth, windowDefaultHeight
 	if maxW > 0 && w > maxW {
 		w = maxW
@@ -292,10 +299,13 @@ func runDesktopWindow(ctx context.Context, app *boot.App, listenAddr string, shu
 	// 再走共享停机序列并以重启协议返回。
 	restarting := false
 	go func() {
+		// 一键更新走的是"退出后由启动脚本/入口拉起新版本"，必须真的退出：
+		// 先打退出标记，否则 OnBeforeClose 会把它当成"用户关窗"收进托盘。
 		select {
 		case <-ctx.Done():
 		case <-server.RestartRequested():
 			restarting = true
+			markQuit()
 			wailsruntime.Quit(ctx)
 		}
 	}()
@@ -321,7 +331,19 @@ func runDesktopWindow(ctx context.Context, app *boot.App, listenAddr string, shu
 		OnStartup: func(ctx context.Context) {
 			fitWindowToScreen(ctx)
 			wailsruntime.WindowShow(ctx)
+			// 托盘放最后起：它只影响"关窗"的语义，窗口先能用最重要。
+			startTray(ctx)
 			log.Printf("[desktop] ARTEX-HYDRA 桌面端已启动；Web 入口：http://%s", boot.DisplayAddr(listenAddr))
+		},
+		// 关窗 ≠ 退出：托盘起来之后，关闭按钮把窗口收进托盘——后端继续跑，Web 入口
+		// 与正在执行的回合都不中断；真正的退出走托盘菜单（那里先置 trayQuitting）。
+		// 托盘没起来（初始化失败，或平台还没实现）时保持原来的"关闭即退出"。
+		OnBeforeClose: func(ctx context.Context) bool {
+			if trayActive() && !trayIsQuitting() {
+				wailsruntime.WindowHide(ctx)
+				return true
+			}
+			return false
 		},
 	})
 	if err != nil {

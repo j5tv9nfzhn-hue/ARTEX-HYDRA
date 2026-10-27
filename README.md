@@ -115,6 +115,8 @@ Autumn-27/ARTEX（国内原作者，中文原创）
 - **从旧版 WEB 端迁移**：执行 `artex-hydra-desktop.exe -import-old "旧版目录"`——迁移 config、数据库（任务/发现/资产/LLM 配置）、密钥、技能与工作空间；导入为纯拷贝，旧目录不受影响，导入前需完全退出旧版程序；
 - **窗口内不需要登录**：打开即进主页面，不出现登录/初始化页。免登录只对窗口成立——同一个后端的浏览器入口（本机 `http://127.0.0.1:8787`，以及 `-lan` 之后别的设备）要账号密码，密码在窗口内「系统设置 → 登录密码」设一次；没设密码时无法开放局域网（页面会提示先设密码）。旧版本会写 `setup-info.txt` 存放设置令牌，现在不再生成该文件；
 - 更新：页面「系统设置 → 更新」可检查新版本；桌面端是单文件发行，**下载新版后关闭窗口、替换那一个可执行文件**即可（不做 `versions/` 换装，因此不会多出核心副本与第二个进程）；
+- **关闭窗口 = 收进托盘（Windows）**：托盘靠 `fyne.io/systray`（纯 syscall，不加 cgo 依赖）。托盘就绪后关窗只是隐藏，后端与在跑的回合继续；退出走托盘菜单「显示主窗口 / 退出 ARTEX-HYDRA」。托盘起不来就退回"关闭即退出"。macOS/Linux 暂不开（要接 `RunWithExternalLoop` / StatusNotifier，需真机验证）。
+- **本地构建也带品牌图标**：`build.sh --desktop` 现在自己跑 `rsrc` 生成 `desktop/rsrc_windows_<arch>.syso`（`.ico` + DPI manifest），标题栏 / 任务栏 / Alt-Tab 不再是系统默认图标；缺 `rsrc` 时尝试 `go install`，仍失败只告警不阻断。
 - 依赖平台 webview 运行时：Windows 需 WebView2（Win11 自带）、Linux 需 webkit2gtk-4.1、macOS 自带 WebKit。
 
 ### 方式二：下载服务器版
