@@ -110,7 +110,7 @@ func TestProviderGroupsModels(t *testing.T) {
 	_ = d.DeleteProfile(id2)
 }
 
-// 旧客户端（以及手机端）仍然只发端点字段，不带 provider_id。这条路径必须继续
+// 旧客户端仍然只发端点字段，不带 provider_id。这条路径必须继续
 // 工作，并且为它自动建出一条供应商——否则升级那一刻旧界面就存不了配置了。
 func TestSaveProfileWithoutProviderStillWorks(t *testing.T) {
 	d, err := Open(testDSN(t))

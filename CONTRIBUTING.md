@@ -101,7 +101,7 @@ docker run --rm -v "$PWD":/src -w /src/web \
 # 或按 README 的源码构建流程产出内嵌前端的单二进制，用 start.bat / start.sh 启动
 ```
 
-本项目发布 Linux/macOS/Windows 三端 Go 单二进制；历史上游产物（Docker Compose、install.sh/update.sh）在本分支已移除，源码构建与发布包流程见 [README](README.md#快速开始三端二进制) 与[构建与产物](README.md#构建与产物)。
+本项目发布 Linux/macOS/Windows 三端 Go 单二进制；历史上游产物（Docker Compose、install.sh/update.sh）在本分支已移除，源码构建与发布包流程见 [README](README.md#快速开始桌面端--服务器版) 与[构建与产物](README.md#构建与产物)。
 
 ## 贡献流程
 

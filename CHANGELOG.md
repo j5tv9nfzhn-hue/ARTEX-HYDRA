@@ -36,6 +36,7 @@
 - **默认仅绑定 127.0.0.1。** `artex -addr` 默认由 `:8787` 改为 `127.0.0.1:8787`，Compose 使用 `${ARTEX_BIND:-127.0.0.1}`。需要其他设备连接时须显式设置 `-addr :8787` 或 `ARTEX_BIND=0.0.0.0`，并先完成初始化。无密码、非回环绑定会打印警告。
 - **修改密码后废除旧 token。** JWT 签名密钥从密码哈希派生，UI、`reset-password.sh` 或直接数据库修改均使旧会话失效；升级后需要重新登录，UI 改密响应包含新 token，当前浏览器可继续使用。
 - **CORS 从全部允许改为允许列表。** 根据 `ARTEX_CORS_ORIGINS` 返回跨域响应头，开发默认允许 `http://localhost:5173`。新增服务端八字符最小密码限制，以及带客户端地址的初始化、登录失败日志。
+- **桌面端不再「开了局域网就免鉴权」。** 免校验收敛到「进程内窗口」一个标记上，且刻意不看来源地址——同机浏览器发到 `127.0.0.1` 的请求、同机反向代理转发的请求，`RemoteAddr` 都是回环，按地址放行等于给代理开后门。`POST /api/lan/enable` 在未设密码时直接 409，桌面端非回环绑定恢复「未设密码」警告，窗口内可直接设置首个登录密码（`/api/password/reset` 只对窗口放行），网络侧仍只能用 `/api/auth/init` 加设置令牌。取舍对齐 Syncthing（localhost 免密码、跨主机要显式 `insecureAdminAccess`）与 Jupyter（绑定全接口必须 token）。
 
 ### 本地化（i18n）
 
@@ -89,6 +90,18 @@
 - **可视化 ATT&CK 覆盖率。** [Navigator 层](detections/attack/)仅使用规则实际 `attack.*` 标签，不增加推测技术。
 - **标准化机器可读指标。** [CSV 和 MISP](detections/indicators/)逐行同步，规则支持的指标使用 `to_ids`，主机取证线索与可部署检测区分。
 - **提供八类可复现测试。** Sigma 结构/转换、真实事件匹配、后端可移植性、SigmaHQ lint、Suricata 加载/触发、ATT&CK 一致性、指标与源码一致性、MISP/CSV 同步；恶意样本应触发，正常样本应静默。批量 runner、pre-commit 与 CI 执行相同契约。
+
+### 桌面端（Wails V2）
+
+- **桌面端窗口免登录，Web 端与局域网照旧要密码。** `boot.Options.DisableAuth` → `Server.SetAuthDisabled`，`requireAuth` 只放行带进程内标记的窗口请求（`server.authExempt`），`/api/auth/status` 按请求回 `auth_disabled`：打开窗口直接进主页面，服务器版仍走账号密码登录与首次初始化。两端共用同一份静态导出，差异只由 `desktop/shell.go` 的 `artex_shell` cookie 与 `web/src/lib/platform.ts` 一处判定承载。
+- **双击不再弹控制台窗口。** 桌面端按 `-H windowsgui` 编译（`build.sh` 自建 ldflags 时显式补回），启动守卫拒绝启动、单实例已被占用、后端起不来改为原生 `MessageBoxW` 弹窗；`-reset-password` / `-import-old` 这类命令行用法反向 `AttachConsole` 回父终端，保留终端输出。
+- **进程日志落盘并可回看。** `setupDesktopLog` 把 stdout/stderr 同时写入发行目录日志文件，`server/logsink.go` 让后端日志在页面内可读——GUI 子系统下没有控制台，这一层是唯一的事后证据。
+- **窗口尺寸按屏幕推导。** 默认 1280×800、最小 1024×640，工作区不足时按真实屏幕夹取，保证 1366×768 上不越界。
+
+### 移除
+
+- **手机端 App 整体移除（设计内的能力收敛，不是临时下线）。** 删除 `mobile/`（Expo/React Native）与 `.github/workflows/mobile.yml`、`mobile-build.yml`；后端随之删除 `server/mobile_api.go`（8 条 `/api/mobile/*`）、`db/mobile_alerts.go`（`mobile_alerts` 表）、`server/pair_api.go`（一次性配对码与 `POST /api/auth/pair-claim`），以及 `server/ui_notify.go` 的落库调用 `persistUIEvent` 与 `Server.Handler()` 的两行注册。远程访问统一为浏览器一条路：「系统 → 局域网连接」给出地址、一键开放局域网、自动放行防火墙，不再维护第二个客户端形态；该页同时去掉配对卡与 `mobile_hint`。详见 [CHANGELOG.zh.md](CHANGELOG.zh.md) 的 Unreleased → 移除。
+- **二维码编码器下线。** 配对码移除后 `GET /api/lan` 的 `qr_svg` 没有消费者，`server/qr.go` 与 `qr_test.go` 一并删除，局域网页只保留地址复制与开放/收回。
 
 ### 仓库维护
 

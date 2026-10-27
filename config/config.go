@@ -24,7 +24,7 @@ type Database struct {
 }
 
 // DefaultListenAddr 是未配置时的监听地址：只接受本机连接。
-// 手机端要连得上，这个地址必须改成 ":8787" 之类的全接口形式。
+// 别的设备要连得上，这个地址必须改成 ":8787" 之类的全接口形式。
 const DefaultListenAddr = "127.0.0.1:8787"
 
 // ListenEnv 为临时覆盖监听地址的环境变量，优先级高于配置文件。

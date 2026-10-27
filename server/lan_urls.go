@@ -1,6 +1,6 @@
 package server
 
-// 监听地址 → 「手机能填的地址」这一层换算放在 server 包里，
+// 监听地址 → 「别的设备该打开哪条地址」这一层换算放在 server 包里，
 // 让两个调用点共用同一份实现：
 //
 //	cmd/artex/lan.go  启动横幅里直接打印
@@ -51,7 +51,7 @@ func LanURLs(addr string) []string {
 				continue
 			}
 			ip4 := ipnet.IP.To4()
-			// 链路本地（169.254.x.x）不是可用地址，手机连不上来的可能性极高。
+			// 链路本地（169.254.x.x）不是可用地址，别的设备连不上来的可能性极高。
 			if ip4 == nil || ip4.IsLoopback() || ip4.IsLinkLocalUnicast() {
 				continue
 			}

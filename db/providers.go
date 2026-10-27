@@ -332,7 +332,7 @@ WHERE id=(SELECT id FROM llm_profiles ORDER BY priority DESC, id ASC LIMIT 1)`)
 // EndpointPatch 是「一次模型保存顺带带来的端点级改动」。
 //
 // 为什么需要它：重构前前端把端点字段和模型字段混在一个请求里提交；重构后新界面
-// 只提交模型字段 + provider_id。为了让旧客户端（以及手机端）在过渡期继续可用，
+// 只提交模型字段 + provider_id。为了让旧界面与第三方调用方在过渡期继续可用，
 // 又能让「改了 Base URL」真的落到供应商行上，请求体里这几个字段用指针接收：
 // nil = 没提这个字段（不动供应商），非 nil = 明确要改。
 type EndpointPatch struct {

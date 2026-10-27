@@ -9,7 +9,7 @@ Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，后端在
 - 更新系统复用 `selfupdate`：版本化安装布局（入口 + 核心两件套、pointer.json、
   journal 状态机、SHA256 三闸门）与服务器版完全相同，仅资产名参数化为
   `artex-hydra` / `artex-hydra-core`。
-- 首运行设置令牌写入发行根目录 `setup-info.txt`（桌面端没有控制台）。
+- **窗口内不需要登录**：窗口直连进程内后端（`boot.Options.DisableAuth`），没有登录页、没有初始化流程，也不生成 `setup-info.txt`。免登录的边界只有一条：请求必须来自窗口本身（`server.authExempt` 认的进程内标记）。所以本机浏览器 `127.0.0.1:8787` 与 `-lan` 之后的局域网设备一样要账号密码，密码在窗口内「系统设置 → 登录密码」设一次；没设密码时「在局域网开放」会被拒绝（409）。
 
 ## 旧版 WEB 端数据导入（-import-old）
 

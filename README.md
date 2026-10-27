@@ -111,9 +111,9 @@ Autumn-27/ARTEX（国内原作者，中文原创）
 
 桌面端细节：
 
-- 默认监听回环 `127.0.0.1:8787`，浏览器访问同地址即同一界面；`-lan` 开放局域网（供手机端 App 连接）；
+- 默认监听回环 `127.0.0.1:8787`，浏览器访问同地址即同一界面（需要登录，见下一条）；`-lan` 开放局域网（供同一网络下的浏览器访问），开放前要先设登录密码；
 - **从旧版 WEB 端迁移**：执行 `artex-hydra.exe -import-old "旧版目录"`——迁移 config、数据库（任务/发现/资产/LLM 配置）、密钥、技能与工作空间；导入为纯拷贝，旧目录不受影响，导入前需完全退出旧版程序；
-- 首次全新安装（未导入）时设置令牌写入安装根目录 `setup-info.txt`（桌面端没有控制台），在窗口内 `/setup` 页面完成初始化；
+- **窗口内不需要登录**：打开即进主页面，不出现登录/初始化页。免登录只对窗口成立——同一个后端的浏览器入口（本机 `http://127.0.0.1:8787`，以及 `-lan` 之后别的设备）要账号密码，密码在窗口内「系统设置 → 登录密码」设一次；没设密码时无法开放局域网（页面会提示先设密码）。旧版本会写 `setup-info.txt` 存放设置令牌，现在不再生成该文件；
 - 更新系统与服务器版同一套（版本化布局 + SHA256 三闸门），页面「系统设置 → 更新」即可检查与应用；
 - 依赖平台 webview 运行时：Windows 需 WebView2（Win11 自带）、Linux 需 webkit2gtk-4.1、macOS 自带 WebKit。
 
@@ -201,10 +201,11 @@ LLM 可在环境变量或“LLM 设置”页面配置，相关环境变量包括
 管理员用户名固定为 `ARTEX-HYDRA`，首次通过 `/setup` 创建密码。
 
 - 无密码时，启动日志打印设置令牌。`/setup` 和 `POST /api/auth/init` 的 `setup_token` 必须匹配，错误尝试限流。令牌不通过公开状态接口返回。
+- 桌面端（`artex-hydra`）的窗口不走本节：免登录、无初始化页，登录密码在窗口内「系统设置 → 登录密码」直接设置，不需要设置令牌——那条路径进不来网络请求。浏览器访问桌面端后端时才需要这个密码；万一窗口进不去，也可以在浏览器 `/setup` 用 `logs/desktop.log` 里的设置令牌初始化。
 - 无人值守部署可设置 `ARTEX_SETUP_TOKEN` 固定令牌，或用至少八字符的 `ARTEX_ADMIN_PASSWORD` 直接初始化。
 - 默认仅监听回环地址。开放到其他设备前先完成初始化，并优先部署 HTTPS；非回环且未初始化时会有启动警告。
 - 修改密码会使旧 JWT 会话在数秒内失效。若恢复泄露的管理员账户，还需检查自定义工具、MCP、LLM 与通知配置。
-- 忘记管理员密码时，可在本机运行仓库根目录的 `reset-password.sh`：脚本定位 `artex-rea`/`artex-rea.exe`（或回退 `go run ./cmd/artex`）调用 `-reset-password` 重写密码哈希，无需数据库服务与 psql；也可直接运行 `artex-rea -reset-password`（桌面端同理：`artex-hydra -reset-password`，离线一次性操作，不占端口不开库）。
+- 忘记管理员密码时，可在本机运行仓库根目录的 `reset-password.sh`：脚本定位 `artex-rea`/`artex-rea.exe`（或回退 `go run ./cmd/artex`）调用 `-reset-password` 重写密码哈希，无需数据库服务与 psql；也可直接运行 `artex-rea -reset-password`。桌面端同名开关（`artex-hydra -reset-password`）作用相同：忘了登录密码、又需要在浏览器或局域网上登录时用它离线重置（窗口本身不需要密码）。
 - CORS 允许列表为 `ARTEX_CORS_ORIGINS`，以逗号分隔；内嵌 UI 同源通常无需填写，开发默认允许 `http://localhost:5173`。
 
 ### 反向代理部署（HTTPS / 只开放 443）
@@ -540,22 +541,22 @@ gh 只读查询（run list / release list / api GET）
 5. 新增界面文案是否同时写进 `web/messages/zh.json`，键名一致。
 6. 改了 `capability` 相关能力项时，同步 `mcp_tools.golden.json` 与计数断言。
 
-#### 5. 网络：访问 GitHub 必须走本地代理 7897
+#### 5. 网络：访问 GitHub 必须走本地代理 10808
 
 裸直连会稳定超时（约 20 秒后 `Failed to connect to github.com:443`），而 `gh api` 走另一条链路可能仍然可用——**不要**因此误判为「仓库坏了」。
 
 ```bat
 :: git（按次传参，不写全局 config）
-git -c http.proxy=http://127.0.0.1:7897 -c https.proxy=http://127.0.0.1:7897 push origin main
-git -c http.proxy=http://127.0.0.1:7897 -c https.proxy=http://127.0.0.1:7897 ls-remote origin refs/heads/main
+git -c http.proxy=http://127.0.0.1:10808 -c https.proxy=http://127.0.0.1:10808 push origin main
+git -c http.proxy=http://127.0.0.1:10808 -c https.proxy=http://127.0.0.1:10808 ls-remote origin refs/heads/main
 
 :: gh
-set HTTPS_PROXY=http://127.0.0.1:7897&& set HTTP_PROXY=http://127.0.0.1:7897&& gh run list --limit 6
+set HTTPS_PROXY=http://127.0.0.1:10808&& set HTTP_PROXY=http://127.0.0.1:10808&& gh run list --limit 6
 ```
 
 故障处理顺序：
 
-1. 先探测：`curl -x http://127.0.0.1:7897 -sS -o /dev/null -w "%{http_code}" https://github.com`，得 `200` 再 push。
+1. 先探测：`curl -x http://127.0.0.1:10808 -sS -o /dev/null -w "%{http_code}" https://github.com`，得 `200` 再 push。
 2. 单次 20 秒无响应即判不可达；最多重试 2 次（合计 3 次）。
 3. 3 次仍失败 → **停止并如实报告**。不裸直连硬刷、不无限重试、不改端口乱试。
 4. **禁止**用 `gh api POST /git/refs` 绕过 push：commit 不在远端时必然 `422 Object does not exist`，还会让远端出现悬空引用。
@@ -621,12 +622,12 @@ signals    go test / 语言检查 / 文档链接（continue-on-error，只报告
 
 | 现象 | 真实原因 | 正确做法 |
 |---|---|---|
-| `git push` 20 秒后 `Failed to connect to github.com:443` | 没走代理 | 按第 5 条加 `-c http.proxy=...:7897` |
+| `git push` 20 秒后 `Failed to connect to github.com:443` | 没走代理 | 按第 5 条加 `-c http.proxy=...:10808` |
 | `git push` 返回 `Empty reply from server` | 代理链路抖动 | 换代理参数重试一次；仍失败则报告 |
 | `gh api POST /git/refs` 返回 `422 Object does not exist` | commit 还没推到远端 | 先 push，校验 `ls-remote` 后再建 tag |
 | 首页 404 | 构建没带 `-tags embedui` | 那是构建参数问题，不是代码问题（见「构建与产物」） |
-| CI 红但 Release 正常出包 | 红的是 `go-test`（测试信号） | 属预期行为，按第 7 条处理 |
-| CI `go-build` 红、无 artifact | 编译或静态检查失败 | 硬门禁生效，必须修代码 |
+| CI 红但 Release 正常出包 | 红的是 `signals`（测试信号） | 属预期行为，按第 7 条处理 |
+| `gate` 红、无 artifact | 编译或静态检查失败 | 硬门禁生效，必须修代码 |
 
 ### 架构分层
 
@@ -797,20 +798,19 @@ SQLite 单文件，62 张表（`db/schema_sqlite.sql`），按域分组：
 - 契约：IPC v2 明确请求/响应字段与失败语义；操作者可远程按需验收。
 - 边界：资源与降级有上限，不承诺任何厂商必然通过；格式检查或研究资料**不等于**测试通过。
 
-### 移动端 App 与局域网连接
+### 局域网浏览器访问
 
-适用于手机 App 连接本机 ARTEX 服务（`mobile/`，Expo/React Native）。
-
-App 是胖 HTTP 客户端：登录页填「服务器地址 + 密码」→ 拿 Bearer token → 轮询 `/api/mobile/*`。默认服务只监听 `127.0.0.1:8787`，手机上访问不到，需要显式放开局域网。
+同一网络下的手机、平板或另一台电脑，用浏览器打开即可——完整控制台就是这台机器上的同一个界面，登录用这台机器的账号密码，不需要安装任何客户端。默认服务只监听 `127.0.0.1:8787`，别的设备访问不到，需要显式放开局域网。页面在「系统 → 局域网连接」，可一键开放/收回；开放前必须先设登录密码（桌面端也一样，见[方式一：下载桌面端](#方式一下载桌面端)）。
 
 | 方式 | 写法 | 适合 |
 |---|---|---|
+| 页面按钮 | 系统 → 局域网连接 → 「在局域网开放并重启」 | 推荐，不用记命令 |
 | 命令行开关 | `artex-rea.exe -lan` | 临时开一次 |
 | 命令行地址 | `artex-rea.exe -addr :8787` | 想指定端口 |
 | 配置文件 | `config.json` 加 `"listen": ":8787"` | 一直开着 |
 | 环境变量 | `ARTEX_LISTEN=:8787` | 脚本/容器 |
 
-优先级：`-addr` > `-lan` > `ARTEX_LISTEN` > `config.json` 的 `listen` > 默认 `127.0.0.1:8787`。启动横幅会直接列出手机该填的地址；仍在回环上时明确提示「App 连不上」并给出加 `-lan` 的做法。
+优先级：`-addr` > `-lan` > `ARTEX_LISTEN` > `config.json` 的 `listen` > 默认 `127.0.0.1:8787`。启动横幅会直接列出可访问的地址；仍在回环上时明确提示「别的设备连不上」并给出加 `-lan` 的做法。
 
 防火墙（Windows 管理员）：
 
@@ -818,18 +818,13 @@ App 是胖 HTTP 客户端：登录页填「服务器地址 + 密码」→ 拿 Be
 netsh advfirewall firewall add rule name="ARTEX-HYDRA" dir=in action=allow protocol=TCP localport=8787
 ```
 
-Linux：`sudo ufw allow 8787/tcp`；macOS 首次运行会弹系统提示，点允许即可。
+Linux：`sudo ufw allow 8787/tcp`；macOS 首次运行会弹系统提示，点允许即可。页面在无法自动放行时会把同一条命令摆出来供复制。
 
 安全与排查：
 
 - 只在可信局域网开放；公寓/咖啡厅/公共 Wi-Fi 不要开。要从外网访问用 TLS 反向代理（Nginx/Caddy），不要把 8787 直接映射到公网。
-- 管理员密码未设置时，监听非回环地址会打开放警告（`WarnIfExposed`）；登录接口按源 IP 限流（`authLimiter`）。
-- 排查顺序：`netstat -ano | findstr :8787` 应出现 `0.0.0.0:8787` 或 `[::]:8787` → 手机浏览器访问 `http://<局域网IP>:8787/api/health` 能出 JSON → 再回 App 登录。
-- 已知限制：Android 9+ 默认禁止明文 HTTP（`android:usesCleartextTraffic`），iOS ATS 默认拦非 localhost 的 `http://`（`NSAppTransportSecurity`）。两者属 `mobile/app.json` 原生配置；debug 包通常已放开，release 包可能需要补配置。
-
-手机端的**产品范围（五块功能）、四屏信息架构、设计 token、三通道策略、U/T/M 轮次、Go/gomobile 否决证据与已落地接口清单**见 [`mobile/README.md`](mobile/README.md)。
-
-旁路提问（`/btw`）的实现边界、HTTP 契约、上下文预算与验证记录见 [`sidequestion/README.md`](sidequestion/README.md)。
+- 管理员密码未设置时，监听非回环地址会打开放警告（`WarnIfExposed`）；登录接口按源 IP 限流（`authLimiter`）。没有设置密码时「在局域网开放」这一步会直接被拒绝（409）并提示先去「系统设置 → 登录密码」设一次，不会出现「端口开着、谁都能进」的中间态。**桌面端同一条规则**：先在窗口内设好密码再开放局域网——窗口内的免登录不会扩散到网络。
+- 排查顺序：`netstat -ano | findstr :8787` 应出现 `0.0.0.0:8787` 或 `[::]:8787` → 另一台设备浏览器访问 `http://<局域网IP>:8787/api/health` 能出 JSON → 再回网页端登录。
 
 ### 安全设计要点
 
@@ -851,7 +846,6 @@ Linux：`sudo ufw allow 8787/tcp`；macOS 首次运行会弹系统提示，点�
 | 软件分析单引擎验收 | 需按验收门禁清单另行授权执行 |
 | 「源码已落地 / 运行验收待完成」条目 | 开发总清单中大量条目处于此态；自动清理默认关闭 |
 | 运行期假设 | 五断层收口的一批假设只能由运行期数据判定 |
-| 手机端明文策略 | release 包可能仍需补 `usesCleartextTraffic` / ATS 两行配置 |
 | 桌面端 GUI 行为 | 窗口渲染、页面一键更新后的重启链路需本机首跑冒烟；CI 无显示环境不覆盖 |
 
 ### 历史文档归档索引
@@ -860,7 +854,7 @@ Linux：`sudo ufw allow 8787/tcp`；macOS 首次运行会弹系统提示，点�
 
 | 原文件 | 覆盖内容 | 状态 / 结论 |
 |---|---|---|
-| `开发与发布约定.md` | 本机不构建、静态自检、代理 7897、推送即返回、门禁分层、版本与提交 | 已全文并入「开发与发布约定」 |
+| `开发与发布约定.md` | 本机不构建、静态自检、代理 10808、推送即返回、门禁分层、版本与提交 | 已全文并入「开发与发布约定」 |
 | `架构分层.md` | 后端分层、依赖方向、6 条硬边界、命名清理 | 已并入「架构分层」 |
 | `构建与产物.md` | 构建入口、编译标志、产物清单、运行时落点、启动监护 | 已并入「构建与产物」 |
 | `项目总结-2026-10-21.md` | 全仓盘点：595 个 Go 文件、62 表、15 个内置工具、14 个技能、38 个环境变量、核心能力链 | 本手册的主要来源 |
@@ -899,12 +893,7 @@ Linux：`sudo ufw allow 8787/tcp`；macOS 首次运行会弹系统提示，点�
 | `自动更新流程分析-2026-10-21.md` | 与上一份同尺寸的更新链路分析（含退出码 75 监护语义） | 已落地 |
 | `AI自我进化沉淀机制.md` | 任务终态/删除/手动提炼的沉淀触发、写入门控与审阅 API、脱敏 | 已落地 |
 | `website-maintenance.md` | 官网从独立目录迁入 `website/`、无构建静态化、Cloudflare 发布边界 | 已并入「独立官网」 |
-| `手机端局域网连接-2026-10-22.md` | App 连不上的根因、四种开放方式、防火墙、已知明文限制 | 已全文并入「移动端 App 与局域网连接」 |
-| `mobile/docs/移动端总控台-范围与轮次-2026-10-22.md` | 五块功能、数据来源映射、通知分级、四屏 IA、T1–T6 | 已并入 [`mobile/README.md`](mobile/README.md) |
-| `mobile/docs/移动端UI独立设计-2026-10-22.md` | 网页给不了的 7 件事、RN+Expo 选型对比、深色驾驶舱 token、四屏 IA、U1–U6 | 已并入 [`mobile/README.md`](mobile/README.md) |
-| `mobile/docs/移动端策略-三通道-2026-10-22.md` | 不做双端 App 的决策依据、面板/Bot/远程桌面三通道、M1–M7 | 已并入 [`mobile/README.md`](mobile/README.md) |
-| `mobile/docs/Go与移动端适配度调研-2026-10-22.md` | gomobile 类型裁剪、体积、构建与 iOS 后台限制（否决证据） | 已并入 [`mobile/README.md`](mobile/README.md)「Go 与移动端适配度」 |
-| `mobile/docs/archive/双端APP-多轮计划-已驳回.md` | 被驳回的旧方案（把 PC 功能搬上手机） | 决策理由已保留，原文见 git 历史 |
+| `手机端局域网连接-2026-10-22.md` | 别的设备连不上的根因、四种开放方式、防火墙、明文限制 | 已全文并入「局域网浏览器访问」 |
 | `sidequestion/CONTEXT_BUDGET.md` | 旁路请求预算、滚动摘要、溢出恢复、开源实现核对 | 已并入 [`sidequestion/README.md`](sidequestion/README.md) |
 | `sidequestion/VALIDATION.md` | 工程检查矩阵、真实模型对话、第三方审查、复现命令 | 已并入 [`sidequestion/README.md`](sidequestion/README.md) |
 
