@@ -24,6 +24,12 @@ MD_LINK = re.compile(r"(?<!\!)\[[^\]]*\]\(([^)\s]+)")
 MD_IMAGE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)")
 # 匹配 HTML <img ... src="path" ...> 图片引用。
 HTML_IMAGE = re.compile(r"<img[^>]*\bsrc=[\"']([^\"']+)[\"']", re.IGNORECASE)
+# 行内代码跨度：CommonMark 规定反引号内的内容不参与链接解析，所以技能参考文档里
+# 形如 `<img src="target?action=delete">` 的示例是代码文本，不是文件引用。
+INLINE_CODE = re.compile(r"`+[^`]*`+")
+# 技能包 assets/ 下的 Markdown 是「复制后填空」的模板（证据截图路径等占位），
+# 不是给人导航的文档：其中的相对链接指向运行期才会生成的文件。
+SKILL_ASSET_DOC = re.compile(r"^skills/[^/]+/assets/")
 
 # 网络与非文件协议；# 是本文件锚点，不能作为外部协议忽略。
 EXTERNAL_PREFIXES = ("http://", "https://", "mailto:", "tel:", "data:")
@@ -115,6 +121,8 @@ def main() -> int:
     broken_files = []
     broken_anchors = []
     for md in md_files:
+        if SKILL_ASSET_DOC.match(md):
+            continue
         with open(os.path.join(root, md), encoding="utf-8", errors="ignore") as fh:
             lines = fh.readlines()
         base_dir = os.path.dirname(md)
@@ -126,6 +134,7 @@ def main() -> int:
                 continue
             if in_fence:
                 continue
+            line = INLINE_CODE.sub("", line)
             for pattern in (MD_LINK, MD_IMAGE, HTML_IMAGE):
                 for match in pattern.finditer(line):
                     target = match.group(1).strip()
