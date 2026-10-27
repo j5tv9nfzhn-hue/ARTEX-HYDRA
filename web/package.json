@@ -1,6 +1,6 @@
 {
   "name": "artex-hydra-web",
-  "version": "2.2.4",
+  "version": "0.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

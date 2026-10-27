@@ -569,6 +569,12 @@ set HTTPS_PROXY=http://127.0.0.1:10808&& set HTTP_PROXY=http://127.0.0.1:10808&&
 - 唯一必须串行的动作：**tag 必须在新 commit 已到远端之后创建**。因此允许 `push → ls-remote 校验 → push tag` 一次性完成，校验通过立即结束。
 - 失败信息由用户转述，或按需再改源码；不靠本机复现失败。
 
+#### 6.1 版本号：tag 是唯一真相来源
+
+- tag 形如 `vX.Y.Z`，或四位 `vX.Y.Z.W`（同一 patch 重发微修订时用，`0.0.0.1` 即首版）；带 `-rc.1` 之类后缀的 tag 会被客户端判成不可比较、静默禁用一键更新，`release.yml` 直接拦下。
+- 版本只在两处落地，都由 tag 推导：二进制 `-X main.version`（`build.sh` 去掉前导 `v`）与前端静态包的 `NEXT_PUBLIC_APP_VERSION`（`release.yml` 传 `$GITHUB_REF_NAME`、`build.sh` 传 `ARTEX_BUILD_VERSION`）。
+- `web/package.json` 的 `version` 只当本地开发占位（semver 不允许四段）；运行期界面版本以 `/api/health` 的二进制版本为准，所以桌面端与 WEB 端显示同一个号。
+
 #### 7. 门禁分层：编译失败必拦，测试失败不拦
 
 这是本项目对 CI 的核心口径。**产物健康**与**代码健康**是两件事，不能互相绑架。

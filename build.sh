@@ -153,7 +153,10 @@ else
   if [ "${ARTEX_SKIP_NPM_CI:-0}" != "1" ]; then
     (cd web && npm ci)
   fi
-  (cd web && npm run build:static)
+  # 版本号内嵌进静态包：与 -X main.version 同源（ARTEX_BUILD_VERSION），
+  # 这样桌面端窗口内的「关于」与 /api/health 报的是同一个版本，四段（0.0.0.1）
+  # 也原样落地——package.json 的 semver 只允许三段，不能当来源。
+  (cd web && NEXT_PUBLIC_APP_VERSION="$ARTEX_BUILD_VERSION" npm run build:static)
   info "正在将前端资源同步到 server/webui/dist"
   mkdir -p server/webui/dist
   rsync -a --delete web/out/ server/webui/dist/
