@@ -225,7 +225,7 @@ export default function StoragePage() {
                   <Stat label={t("dbAutoVacuum")} value={db.auto_vacuum} />
                   <Stat label={t("dbJournal")} value={db.journal_mode || "-"} />
                 </div>
-                <p className="break-all text-[11px] text-muted-foreground">{db.path}</p>
+                <p className="break-all text-xs text-muted-foreground">{db.path}</p>
                 <Button
                   variant="outline"
                   className="w-full"
@@ -250,7 +250,7 @@ export default function StoragePage() {
                   <Trash2Icon className="size-4" />
                   {busy === "compact" ? t("running") : t("dbCompact")}
                 </Button>
-                <p className="text-[11px] text-muted-foreground">{t("dbCompactHint")}</p>
+                <p className="text-xs text-muted-foreground">{t("dbCompactHint")}</p>
               </>
             )}
           </CardContent>
@@ -416,7 +416,7 @@ export default function StoragePage() {
                     {busy === "activityPreview" || busy === "activity" ? t("running") : t("purgeActivity")}
                   </Button>
                 </div>
-                <p className="text-[11px] text-muted-foreground">{t("mdbNote")}</p>
+                <p className="text-xs text-muted-foreground">{t("mdbNote")}</p>
               </>
             )}
           </CardContent>
@@ -445,7 +445,7 @@ export default function StoragePage() {
                   <Stat label={t("wqRollbacks")} value={fmtNum(wq.rollbacks)} />
                   <Stat label={t("wqDepth")} value={fmtNum(wq.queue_depth)} />
                 </div>
-                <p className="text-[11px] text-muted-foreground">{t("wqNote")}</p>
+                <p className="text-xs text-muted-foreground">{t("wqNote")}</p>
               </>
             )}
           </CardContent>
@@ -514,7 +514,7 @@ export default function StoragePage() {
               <Stat label={t("retentionLastRows")} value={fmtNum(keep?.last_deleted ?? 0)} />
               <Stat label={t("retentionLastCapped")} value={fmtNum(keep?.last_capped ?? 0)} />
             </div>
-            <p className="text-[11px] text-muted-foreground">{t("retentionNote")}</p>
+            <p className="text-xs text-muted-foreground">{t("retentionNote")}</p>
           </CardContent>
         </Card>
       </div>

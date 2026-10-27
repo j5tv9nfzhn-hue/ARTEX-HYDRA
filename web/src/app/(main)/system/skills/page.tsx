@@ -290,7 +290,7 @@ function SkillsOverview({
             >
               <p className="font-semibold text-2xl tabular-nums">{n}</p>
               <p className="font-medium text-xs">{bucketLabels[key]}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">{bucketHints[key]}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{bucketHints[key]}</p>
             </button>
           );
         })}
@@ -302,7 +302,7 @@ function SkillsOverview({
           <div key={s.label} className="rounded-lg border p-3">
             <p className="font-semibold text-2xl tabular-nums">{s.value}</p>
             <p className="font-medium text-xs">{s.label}</p>
-            {s.hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{s.hint}</p>}
+            {s.hint && <p className="mt-0.5 text-xs text-muted-foreground">{s.hint}</p>}
           </div>
         ))}
       </div>
@@ -359,7 +359,7 @@ function SkillsOverview({
                   <span className="min-w-0 flex-1 truncate font-mono text-xs" title={s.name}>
                     {s.name}
                   </span>
-                  <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                     {fmtTime(s.last_used, t("neverCalled"))}
                   </span>
                 </button>
@@ -1383,7 +1383,7 @@ export default function SkillsPage() {
             <SparklesIcon className="size-3.5" />
             {t("proposalsBtn")}
             {pendingProposalsCount > 0 && (
-              <span className="ml-1 rounded-full bg-background/20 px-1.5 py-0.2 font-mono text-[11px] tabular-nums">
+              <span className="ml-1 rounded-full bg-background/20 px-1.5 py-0.2 font-mono text-xs tabular-nums">
                 {pendingProposalsCount}
               </span>
             )}
@@ -1435,7 +1435,7 @@ export default function SkillsPage() {
               placeholder={t("searchSkillsPlaceholder")}
               className="h-7 text-xs"
             />
-            <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="shrink-0">{t("skillFamilyLabel")}</span>
               <select
                 value={familyFilter}
@@ -1458,7 +1458,7 @@ export default function SkillsPage() {
                     onClick={() => setBucket(key)}
                     title={bucketLabels[key]}
                     className={cn(
-                      "truncate rounded px-1 py-1 text-[11px] transition-colors",
+                      "truncate rounded px-1 py-1 text-xs transition-colors",
                       bucket === key
                         ? "bg-primary font-medium text-primary-foreground"
                         : "text-muted-foreground hover:bg-muted",
@@ -1490,7 +1490,7 @@ export default function SkillsPage() {
                     {showGroup && (
                       <div
                         className={cn(
-                          "mb-1 flex items-center gap-1 px-2 text-[11px] text-muted-foreground",
+                          "mb-1 flex items-center gap-1 px-2 text-xs text-muted-foreground",
                           idx > 0 && "mt-2",
                         )}
                       >
@@ -2193,7 +2193,7 @@ export default function SkillsPage() {
                 onClick={() => setProposalFilter(tab.key)}
               >
                 {tab.label}
-                <span className="ml-1 font-mono text-[11px] opacity-80 tabular-nums">({tab.count})</span>
+                <span className="ml-1 font-mono text-xs opacity-80 tabular-nums">({tab.count})</span>
               </Button>
             ))}
 
@@ -2327,14 +2327,14 @@ export default function SkillsPage() {
                                   : t("proposalStatusPending")}
                             </Badge>
                           </div>
-                          <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                             <span>
                               {p.origin === "curator" ? t("proposalOriginCurator") : t("proposalOriginAgent")}
                             </span>
                             <span className="tabular-nums">{fmtTime(p.created_at, "—")}</span>
                           </div>
                           {p.lint && (
-                            <div className="flex items-center gap-1 text-[11px] text-amber-500">
+                            <div className="flex items-center gap-1 text-xs text-amber-500">
                               <AlertTriangleIcon className="size-3 shrink-0" />
                               <span className="truncate">{p.lint}</span>
                             </div>
@@ -2386,7 +2386,7 @@ export default function SkillsPage() {
                   {selectedProposal.evidence && (
                     <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs">
                       <span className="font-medium text-muted-foreground">{t("proposalEvidenceLabel")}：</span>
-                      <code className="break-all font-mono text-[11px]">{selectedProposal.evidence}</code>
+                      <code className="break-all font-mono text-xs">{selectedProposal.evidence}</code>
                     </div>
                   )}
 

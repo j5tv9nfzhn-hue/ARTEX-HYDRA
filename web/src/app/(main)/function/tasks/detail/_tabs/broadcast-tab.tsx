@@ -253,7 +253,7 @@ function RelatedNodeCard({ node, assets }: { node: TaskNode; assets: FindingAsse
       </div>
       <p className="line-clamp-4 text-xs break-words">{summary || t("noSummary")}</p>
       <AssetList assets={assets} dense />
-      <pre className="max-h-40 overflow-auto rounded border bg-muted/40 p-2 font-mono text-[11px] whitespace-pre-wrap">
+      <pre className="max-h-40 overflow-auto rounded border bg-muted/40 p-2 font-mono text-xs whitespace-pre-wrap">
         {prettyPayload(node.payload, t("noPayload"))}
       </pre>
     </div>
@@ -351,7 +351,7 @@ function BroadcastRow({
       {/* 时间列 */}
       <div className="py-3 text-right text-xs text-muted-foreground tabular-nums">
         <div>{Number.isNaN(ts) ? "--:--:--" : clockFmt.format(ts)}</div>
-        <div className="text-[11px] opacity-70">{relTime(ts, now)}</div>
+        <div className="text-xs opacity-70">{relTime(ts, now)}</div>
       </div>
 
       {/* 时间轴:竖线 + 类型圆点 */}

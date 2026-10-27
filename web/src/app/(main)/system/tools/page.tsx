@@ -266,7 +266,7 @@ function ToolEditor({
               </div>
               <div className="grid gap-2">
                 <div className="grid gap-1">
-                  <Label className="text-[11px] text-muted-foreground">{t("rowDesc")}</Label>
+                  <Label className="text-xs text-muted-foreground">{t("rowDesc")}</Label>
                   <Input
                     className="text-xs"
                     value={r.description}
@@ -274,7 +274,7 @@ function ToolEditor({
                   />
                 </div>
                 <div className="grid gap-1">
-                  <Label className="text-[11px] text-muted-foreground">{t("rowDefault")}</Label>
+                  <Label className="text-xs text-muted-foreground">{t("rowDefault")}</Label>
                   <Input
                     className="text-xs"
                     placeholder={r.scalar ? t("defaultEmptyHint") : t("scalarOnly")}

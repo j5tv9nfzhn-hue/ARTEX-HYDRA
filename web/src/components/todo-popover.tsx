@@ -64,7 +64,7 @@ export function TodoPopover({
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="max-h-80 w-80 overflow-auto p-2">
-        <p className="text-muted-foreground px-1 pb-1 text-[11px] font-medium">
+        <p className="text-muted-foreground px-1 pb-1 text-xs font-medium">
           {tr("recent")}
           {loading ? tr("loadingSuffix") : ""}
         </p>

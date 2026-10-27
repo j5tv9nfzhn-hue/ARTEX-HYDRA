@@ -341,13 +341,13 @@ export default function CommandsPage() {
               {classTotals.length === 0 ? (
                 // 旧账本行没有 error_class（归因上线前写入）：有失败但拆不开，
                 // 明说一句，别让人以为归因坏了。
-                <div className="text-[11px] text-muted-foreground">{t("classEmpty")}</div>
+                <div className="text-xs text-muted-foreground">{t("classEmpty")}</div>
               ) : (
               <div className="flex flex-wrap gap-1.5">
                 {classTotals.map(([cls, n]) => (
                   <span
                     key={cls}
-                    className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px]"
+                    className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs"
                   >
                     <span className="text-muted-foreground">{classLabel(cls)}</span>
                     <span className="font-semibold tabular-nums">{n}</span>
@@ -375,7 +375,7 @@ export default function CommandsPage() {
                     <div className="flex items-center gap-2">
                       <span className="truncate font-mono text-xs font-medium">{s.tool}</span>
                       {s.errors > 0 && (
-                        <span className="text-[11px] tabular-nums text-red-600 dark:text-red-400">
+                        <span className="text-xs tabular-nums text-red-600 dark:text-red-400">
                           {t("failed")} {s.errors}
                         </span>
                       )}
@@ -403,7 +403,7 @@ export default function CommandsPage() {
                   </div>
                   <div className="text-right">
                     <div className="text-xs font-semibold tabular-nums">{s.total}</div>
-                    <div className="text-[11px] tabular-nums text-muted-foreground">
+                    <div className="text-xs tabular-nums text-muted-foreground">
                       {statsTotal > 0 ? ((s.total / statsTotal) * 100).toFixed(1) : "0.0"}%
                     </div>
                   </div>

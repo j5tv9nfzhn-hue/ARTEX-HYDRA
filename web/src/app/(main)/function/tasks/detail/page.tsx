@@ -428,7 +428,7 @@ function TaskDetailInner() {
             <h1 className="min-w-0 truncate font-semibold text-sm tracking-tight" title={task.name || task.description}>
               {task.name || task.description}
             </h1>
-            <code className="hidden shrink-0 rounded-md border border-border/60 bg-muted/70 px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground sm:inline">
+            <code className="hidden shrink-0 rounded-md border border-border/60 bg-muted/70 px-1.5 py-0.5 font-mono text-xs text-muted-foreground sm:inline">
               #{task.id}
             </code>
             <Badge variant="outline">
