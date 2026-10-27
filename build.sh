@@ -456,6 +456,34 @@ build_desktop_target() {
   # 预热后 tidy 开销很小；tidy 一致后也是 no-op。
   (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" go mod tidy)
 
+  # Windows 的窗口图标（标题栏 / 任务栏 / Alt-Tab）来自 exe 里的资源，不是 webview
+  # 画出来的：rsrc 把品牌 .ico 与 DPI manifest 编成 .syso，go build 只链接
+  # desktop/ 目录下、文件名带 _windows_<arch> 的 syso。这套步骤原先只写在
+  # release.yml 里，于是 build.sh 本地打出来的 exe 没有图标——双击后标题栏与
+  # 任务栏都是系统默认图标。现在 CI 与本地共用这一段。
+  if [ "$goos" = "windows" ]; then
+    syso="desktop/rsrc_windows_${goarch}.syso"
+    if [ ! -f "$syso" ]; then
+      rsrc_bin="$(command -v rsrc 2>/dev/null || true)"
+      if [ -z "$rsrc_bin" ]; then
+        info "未找到 rsrc：尝试 go install github.com/akavel/rsrc@v0.10.2"
+        if go install github.com/akavel/rsrc@v0.10.2 >/dev/null 2>&1; then
+          rsrc_bin="$(go env GOPATH)/bin/rsrc"
+        fi
+      fi
+      if [ -n "$rsrc_bin" ] && [ -x "$rsrc_bin" ]; then
+        "$rsrc_bin" -ico desktop/assets/artex-hydra.ico \
+          -manifest desktop/assets/app.manifest \
+          -arch "$goarch" \
+          -o "$syso"
+        ok "图标资源已生成：$syso"
+      else
+        warn "rsrc 不可用：本次 exe 不带品牌图标（标题栏/任务栏为系统默认图标）"
+        warn "  补法：go install github.com/akavel/rsrc@v0.10.2 后重新构建"
+      fi
+    fi
+  fi
+
   # 构建标签必须与官方 wails build 对齐（wails 的 CompileProject 恒定追加
   # OutputType 与 production 两个标签）：wails 运行时的 CreateApp 按标签三选一——
   # production 实现 / dev 实现 / 无标签时的 MessageBox 报错兜底。缺

@@ -3,6 +3,7 @@ module github.com/j5tv9nfzhn-hue/artex-desktop
 go 1.26.3
 
 require (
+	fyne.io/systray v1.12.2
 	github.com/Autumn-27/artex v0.0.0
 	github.com/wailsapp/wails/v2 v2.17.0
 	golang.org/x/sys v0.47.0

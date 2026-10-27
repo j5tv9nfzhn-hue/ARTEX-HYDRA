@@ -12,6 +12,16 @@ Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，后端在
 - 更新：`selfupdate` 的 GitHub 查询与 SHA256 校验照旧可用（资产名
   `artex-hydra-desktop-<版本>-<os>-<arch>.zip`）；桌面端不跑版本化换装，页面
   「系统设置 → 更新」只做检查，装新版本＝关闭窗口后替换那一个可执行文件。
+- **关闭窗口 = 收进托盘（Windows）**：`desktop/tray_windows.go` 用 `fyne.io/systray`
+  （纯 syscall，不加 cgo 依赖）。托盘就绪后 `OnBeforeClose` 隐藏窗口而不退出，后端
+  与在跑的回合继续；退出走托盘菜单（先置 `trayQuitting` 再 `Quit`）。托盘起不来就
+  退回"关闭即退出"。macOS/Linux 目前 `tray_stub.go` 提供空实现（要接
+  `RunWithExternalLoop` / StatusNotifier，需真机验证后才开）。
+- **窗口尺寸**：默认 1440×900、最小 1024×640；小屏按「屏宽 88% / 屏高 94%」收缩
+  （1366×768 → 1202×722，与实测参考窗口 1200×728 一致）。
+- **图标**：标题栏 / 任务栏 / Alt-Tab 的图标来自 exe 资源。`build.sh --desktop` 会先跑
+  `rsrc` 生成 `desktop/rsrc_windows_<arch>.syso`（`.ico` + DPI manifest）；手工 `go build`
+  时这一步要自己做，否则 exe 是系统默认图标。
 - **窗口内不需要登录**：窗口直连进程内后端（`boot.Options.DisableAuth`），没有登录页、没有初始化流程，也不生成 `setup-info.txt`。免登录的边界只有一条：请求必须来自窗口本身（`server.authExempt` 认的进程内标记）。所以本机浏览器 `127.0.0.1:8787` 与 `-lan` 之后的局域网设备一样要账号密码，密码在窗口内「系统设置 → 登录密码」设一次；没设密码时「在局域网开放」会被拒绝（409）。
 
 ## 旧版 WEB 端数据导入（-import-old）
