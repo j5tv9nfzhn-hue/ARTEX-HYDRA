@@ -11,6 +11,7 @@ import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { activeMention, type ChatMention, mentionSearch, mentionToken, selectedMentions } from "@/lib/chat-mentions";
+import { isGhostEnter, markCompositionEnd } from "@/lib/ime-guard";
 import { cn } from "@/lib/utils";
 
 type Props = Omit<React.ComponentProps<"textarea">, "value" | "onChange" | "ref"> & {
@@ -146,6 +147,11 @@ export function MentionTextarea({ value, onValueChange, onKeyDown, className, in
 
   function keyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (composing.current || event.nativeEvent.isComposing || event.keyCode === 229) return;
+    // 组字确认的伴生 Enter（isComposing 已复位）：拦截，防止误发消息或误选联想词。
+    if (isGhostEnter(event)) {
+      event.preventDefault();
+      return;
+    }
     if (open) {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -211,6 +217,7 @@ export function MentionTextarea({ value, onValueChange, onKeyDown, className, in
               }}
               onCompositionEnd={() => {
                 composing.current = false;
+                markCompositionEnd();
               }}
               onKeyDown={keyDown}
             />
