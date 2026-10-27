@@ -72,13 +72,18 @@ jobs:
           fi
           go vet -tags embedui ./server/
 
-      # 格式门禁：gofmt -l 输出任何文件即失败。
+      # 格式门禁：gofmt -l 输出任何文件即失败；失败时连 diff 一起打出来。
+      # 为什么要打 diff：本机受限环境不许跑 gofmt（见 AGENTS.md），只给文件名时
+      # 只能靠猜着改、一轮 CI 试一次；有了 diff 就能照着改一遍到位。
       - name: gofmt 门禁
         run: |
           unformatted="$(gofmt -l .)"
           if [ -n "$unformatted" ]; then
             echo "以下文件未通过 gofmt（请运行 gofmt -w <文件>）："
             echo "$unformatted"
+            echo ""
+            echo "===== gofmt -d（最多 200 行）====="
+            gofmt -d . | head -200
             exit 1
           fi
 
