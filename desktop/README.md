@@ -83,13 +83,30 @@ CGO_ENABLED=1 go build -tags "embedui,desktop,production" -trimpath \
 成功但启动只弹「Wails applications will not build without the correct build tags」。
 
 CGO 依赖平台原生 webview 库，桌面端六端（Windows / macOS / Linux 各 amd64 + arm64）
-全部由 CI 的 `desktop` job 产出：Windows 与 Linux 跑在对应架构的原生 runner 上
-（`windows-latest`、`windows-11-arm`、`ubuntu-latest`、`ubuntu-24.04-arm`）；macOS
-两个架构都在同一台 Apple Silicon（`macos-15`）上出，x86_64 目标靠 clang 的双 slice
-交叉（`-arch x86_64`，同时进 CGO_CFLAGS 与 CGO_LDFLAGS），不依赖已退役的 Intel
-runner。`build.sh --desktop` 对 macOS 之外的跨架构请求直接拒绝，并在构建后用
-`scripts/check-binary-headers.py` 校验产物的机器类型码——「`-arch` 没生效、包其实是
-宿主架构」这种失败构建期是绿灯，只能靠文件头兜住。
+全部由 CI 的 `desktop` job 产出，**每端一个 job、各自原生构建**：
+
+| 目标 | runner |
+| --- | --- |
+| windows/amd64 | `windows-latest` |
+| windows/arm64 | `windows-11-arm` |
+| linux/amd64 | `ubuntu-latest` |
+| linux/arm64 | `ubuntu-24.04-arm` |
+| darwin/arm64 | `macos-26` |
+| darwin/amd64 | `macos-26-intel` |
+
+macOS 特意用两个不同池的标签，而不是把两个架构挤在同一个镜像上：`macos-15` 实测已经
+给不出机器（darwin job 全程 0 步骤 0 日志、卡在「waiting for a hosted runner to come
+online」被取消，而同批 Windows/Linux job 全绿）；把两架构合并成一个 job 也救不了——
+合并版同样被取消，说明瓶颈在标签的池子，不在并发个数。runner 拾取发生在任何仓库代码
+执行之前，这类取消与构建脚本无关，别去改 `build.sh` 找原因。
+
+`build.sh --desktop` 仍保留「macOS 可在同一台 Apple Silicon 上跨到另一架构」的能力
+（clang 双 slice，`-arch` 同时进 CGO_CFLAGS 与 CGO_LDFLAGS），供本机一把出两架构用；
+CI 不走它。除 macOS 之外的跨架构请求一律直接拒绝。两条兜底：所有 darwin 构建一律带
+`-mmacosx-version-min=11.0`（不加时 minos 会取 runner 那套 SDK 的默认部署目标，在
+macos-26 上就是 26.x，等于发一个只在新系统能开的包），以及构建后用
+`scripts/check-binary-headers.py` 校验产物机器类型码——「`-arch` 没生效、包其实是宿主
+架构」这种失败在编译期是绿灯，只有文件头兜得住。
 
 ## 已知限制
 

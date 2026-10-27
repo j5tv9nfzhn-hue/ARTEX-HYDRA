@@ -152,7 +152,7 @@ copy config.example.json config.json
 start.bat
 ```
 
-桌面端（CGO，必须在目标平台上原生构建——webview 库是平台原生库，不支持交叉编译）：
+桌面端（CGO，webview 库是平台原生库）：Windows 与 Linux 必须在目标平台上原生构建，不支持交叉编译；macOS 允许在同一台 Apple Silicon 上跨到另一架构（clang 双 slice），CI 不用这条例外——两个架构各有专属 runner：
 
 ```bash
 ./build.sh --desktop --target <os>/<arch>   # 产物：dist/artex-hydra-desktop-<版本>-<os>-<arch>/artex-hydra-desktop
@@ -527,7 +527,7 @@ gh 只读查询（run list / release list / api GET）
 
 | 工作流 | 职责 |
 |---|---|
-| `.github/workflows/release.yml` | **唯一的构建流水线**：gate（编译/静态）→ frontend → binaries（6 目标）→ desktop（桌面端六端：Windows/Linux 原生 runner，macOS 双架构同机交叉）→ release；`workflow_dispatch` 可干跑不发布 |
+| `.github/workflows/release.yml` | **唯一的构建流水线**：gate（编译/静态）→ frontend → binaries（6 目标）→ desktop（桌面端六端各自原生 runner：Windows/Linux 按架构，macOS 用 `macos-26` 与 `macos-26-intel`）→ release；`workflow_dispatch` 可干跑不发布 |
 | `.github/workflows/detections.yml` | 检测规则与指标回归（`push` 时忽略 `v*` tag） |
 | `.github/workflows/verification-helper.yml` | 手动触发，单独模块 |
 
@@ -601,7 +601,7 @@ gate       tag 格式 + go build + go vet + go vet -tags embedui + gofmt + golan
 frontend   npm ci → npm test / biome（信号）→ build:static（硬门禁，含类型检查）
 binaries   6 目标交叉编译 + 头校验 + 打包
 desktop    Wails V2 桌面端六端（三平台 × amd64/arm64：Windows/Linux 用对应架构的
-           原生 runner，macOS 的 x86_64 在同一台 Apple Silicon 上由 clang -arch 交叉）
+           原生 runner；macOS 两个架构分别用 macos-26 与 macos-26-intel，各自原生构建）
            + gofmt + 产物头校验 + 打包
 release    校验 6+6 个 zip → sha256sum → 建草稿 → 上传 → latest.json → 转正
            if: failure() → 删除草稿，保留 tag
@@ -610,7 +610,7 @@ signals    go test / 语言检查 / 文档链接（continue-on-error，只报告
 
 **为什么只有一份构建**：2026-10-21 之前 `ci.yml` 与 `release.yml` 各有一套前端构建与 Go 编译，两处维护、两套缓存 key，还会出现「ci 绿了但 release 挂了」。现在合并为 `release.yml` 一份；`workflow_dispatch` 用于打 tag 前干跑（不发布）。
 
-**桌面端模块（desktop/）**：独立 Go 模块（`replace` 复用根模块后端），Wails V2 桌面壳。wails 是 CGO 依赖，独立模块避免污染根模块的纯静态（`CGO_ENABLED=0`）构建与门禁。桌面端编译由 `desktop` job 承担六端（三平台 × amd64/arm64）：Windows 与 Linux 各在对应架构的原生 runner 上，macOS 的 x86_64 在同一台 Apple Silicon 上由 clang `-arch` 交叉；本机不构建桌面端。`desktop/go.sum` 不入库，首次构建（CI 或本机）由 `go mod tidy` 生成。
+**桌面端模块（desktop/）**：独立 Go 模块（`replace` 复用根模块后端），Wails V2 桌面壳。wails 是 CGO 依赖，独立模块避免污染根模块的纯静态（`CGO_ENABLED=0`）构建与门禁。桌面端编译由 `desktop` job 承担六端（三平台 × amd64/arm64），全部原生构建：Windows 与 Linux 各在对应架构的 runner 上，macOS 的 arm64 用 `macos-26`、x86_64 用 `macos-26-intel`（两个不同池的标签，不挤同一个）；最低系统对所有 darwin 构建一律 `-mmacosx-version-min=11.0`。本机不构建桌面端。`desktop/go.sum` 不入库，首次构建（CI 或本机）由 `go mod tidy` 生成。
 
 **为什么测试不进门禁**：测试失败不代表二进制坏掉；把测试挂在发版链路上，会让一次 flaky 测试挡住整个版本。编译与静态检查才是「产物能不能用」的必要条件。
 
@@ -674,7 +674,7 @@ signals    go test / 语言检查 / 文档链接（continue-on-error，只报告
 | 正式构建（当前平台） | `./build.sh` | 先构建前端再编译；需 Node.js/npm 与 rsync |
 | 正式构建（指定目标） | `./build.sh --target windows/amd64` | 支持 linux、darwin、windows 目标 |
 | 发布打包 | `./build.sh --release` | 构建三端默认目标（linux/darwin/windows × amd64/arm64）并产出 zip |
-| 桌面端构建 | `./build.sh --desktop --target <os>/<arch>` | Wails V2 桌面端；Windows/Linux 必须原生构建（webview 库是平台原生库），macOS 可跨到另一架构（clang 双 slice）；构建后跑产物头校验；macOS 打包为 .app bundle |
+| 桌面端构建 | `./build.sh --desktop --target <os>/<arch>` | Wails V2 桌面端；Windows/Linux 必须原生构建（webview 库是平台原生库），macOS 允许同机跨到另一架构（clang 双 slice，CI 不用它、各有专属 runner）；一律带 `-mmacosx-version-min=11.0`；构建后跑产物头校验；macOS 打包为 .app bundle |
 
 编译标志（`build.sh` 固定）：
 

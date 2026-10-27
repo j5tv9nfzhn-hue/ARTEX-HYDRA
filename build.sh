@@ -49,8 +49,9 @@ usage() {
 桌面端（--desktop）走独立 Go 模块 desktop/，产物是**单文件** artex-hydra-desktop
 （无 core、无 versions/，数据与它同目录），名字基名经 ldflags 注入 selfupdate；
 CGO 依赖平台原生 webview 库：Windows 与 Linux 必须在对应架构上原生构建；macOS
-两个架构可在同一台 Apple Silicon 上出（x86_64 由 clang -arch 交叉）。macOS 打包为
-.app bundle，其余平台为 zip。产物名带 -desktop 后缀，与 WEB 版（artex-rea-*）区分。
+两个架构可在同一台 Apple Silicon 上出（x86_64 由 clang -arch 交叉；CI 不用这条例外，
+arm64 与 x86_64 各有专属 runner）。所有 darwin 构建一律带 -mmacosx-version-min=11.0。
+macOS 打包为 .app bundle，其余平台为 zip。产物名带 -desktop 后缀，与 WEB 版区分。
 EOF
 }
 
@@ -417,13 +418,23 @@ build_desktop_target() {
   goarch="${target##*/}"
   host_goos="$(GOSUMDB="$ARTEX_GOSUMDB" go env GOOS)"
   host_goarch="$(GOSUMDB="$ARTEX_GOSUMDB" go env GOARCH)"
-  # 桌面端默认必须原生构建（CGO 依赖平台原生 webview 库），唯一例外是 macOS：
-  # Apple 的 SDK 与 clang 在同一台机器上同时带 arm64 与 x86_64 两个 slice，加 -arch
-  # 就能在 Apple Silicon runner 上编出 Intel 目标——官方做 universal 二进制用的是
-  # 同一套办法，因此不需要已退役的 Intel runner。Windows 与 Linux 的 webview 依赖
-  # 本机工具链与运行时，没有这种条件，仍必须跑在对应架构的 runner 上。
+  # 桌面端默认必须原生构建：CGO 依赖平台原生 webview 库（Windows=WebView2、
+  # macOS=WebKit、Linux=webkit2gtk）。macOS 是唯一的例外——Apple 的 SDK 与 clang
+  # 在同一台机器上同时带 arm64 与 x86_64 两个 slice，加 -arch 就能在 Apple Silicon
+  # 上编出 Intel 目标。CI 不依赖这条例外（darwin/amd64 跑在 macos-26-intel 上原生
+  # 构建），留着是给本机一把出两架构用的；Windows 与 Linux 没有这种条件，跨架构
+  # 请求一律拒绝。
+  #
+  # 最低系统版本对**所有** darwin 构建一律写死 11.0，不只交叉时给：clang 不带
+  # -mmacosx-version-min 时，产物 LC_BUILD_VERSION 的 minos 取 runner 那套 SDK 的
+  # 默认部署目标——在 macos-26 镜像上就是 26.x，等于发出去一个「只在新系统能开」
+  # 的包，而 Info.plist 的 LSMinimumSystemVersion 写的还是 11.0，两边互相打脸。
+  # 11.0 同时是 Go 1.26 darwin 与 wails 用到的 UTType 的下限，两个架构一致。
+  darwin_cflags=""
   cross_env=""
-  cross_cflags=""
+  if [ "$goos" = "darwin" ]; then
+    darwin_cflags="-mmacosx-version-min=11.0"
+  fi
   if [ "$goos" != "$host_goos" ]; then
     die "桌面端必须原生构建（CGO 依赖平台 webview 库）：目标 $goos 与宿主机 $host_goos 不一致"
   fi
@@ -437,9 +448,8 @@ build_desktop_target() {
       *) die "不支持的桌面目标架构：$goarch（支持 amd64、arm64）" ;;
     esac
     cross_env="GOOS=darwin GOARCH=$goarch"
-    # 最低系统写 11.0：Go 1.26 的 darwin 与 UTType 都要求 11+，两个架构一致。
-    cross_cflags="-arch $cross_slice -mmacosx-version-min=11.0"
-    info "跨架构构建 macOS 目标：宿主 $host_goarch → 目标 $goarch（clang $cross_cflags）"
+    darwin_cflags="-arch $cross_slice $darwin_cflags"
+    info "跨架构构建 macOS 目标：宿主 $host_goarch → 目标 $goarch（clang $darwin_cflags）"
   fi
   case "$goos" in
     linux|darwin|windows) ;;
@@ -546,12 +556,13 @@ build_desktop_target() {
 
   # GOOS/GOARCH 必须由 env 传：bash 只把「命令名之前原文即赋值」的词当赋值处理，
   # 变量展开出来的 GOARCH=amd64 会被当成命令名。cross_env 为空时 env 直接透传。
-  # -arch 要同时给编译与链接两端，只给一端会得到「Go 侧是目标架构、cgo 对象是宿主
-  # 架构」的混切片，链接期才报错且信息难读。
+  # darwin_cflags（-arch 与 -mmacosx-version-min）要同时给编译与链接两端：只给一端
+  # 会得到「Go 侧是目标架构、cgo 对象是宿主架构」的混切片，链接期才报错且信息难读；
+  # 只给链接端则 minos 仍按 SDK 默认写进编译端产物。
   (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" CGO_ENABLED=1 \
     env $cross_env \
-    CGO_CFLAGS="${CGO_CFLAGS:-} $cross_cflags" \
-    CGO_LDFLAGS="${CGO_LDFLAGS:-} $extra_cgo_ldflags $cross_cflags" \
+    CGO_CFLAGS="${CGO_CFLAGS:-} $darwin_cflags" \
+    CGO_LDFLAGS="${CGO_LDFLAGS:-} $extra_cgo_ldflags $darwin_cflags" \
     go build \
     -tags "$build_tags" \
     -trimpath \
