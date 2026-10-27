@@ -212,7 +212,7 @@ function JudgeCard() {
                 placeholder={t("judge.promptPlaceholder")}
                 spellCheck={false}
               />
-              <p className="text-right text-[11px] text-muted-foreground">
+              <p className="text-right text-xs text-muted-foreground">
                 {t("judge.charCount", { count: cfg.prompt.length })}
               </p>
             </CardContent>
@@ -877,7 +877,7 @@ export default function InterceptPage() {
                             )}
                           </div>
                           {tool.description && (
-                            <p className="text-[11px] text-muted-foreground line-clamp-1">{tool.description}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{tool.description}</p>
                           )}
                         </label>
                       </div>

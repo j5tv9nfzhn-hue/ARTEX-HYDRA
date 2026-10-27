@@ -2087,7 +2087,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                           disabled={creatingMain}
                           title={t("newMain.title")}
                           aria-label={t("newMain.aria")}
-                          className="ml-auto flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground disabled:opacity-50"
+                          className="ml-auto flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground disabled:opacity-50"
                         >
                           {creatingMain ? (
                             <Loader2Icon className="size-3.5 animate-spin" />

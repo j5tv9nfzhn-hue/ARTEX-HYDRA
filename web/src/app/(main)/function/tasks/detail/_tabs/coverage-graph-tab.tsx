@@ -616,7 +616,7 @@ function GraphInner({ taskId, coverageEnabled = true }: { taskId: string; covera
             iconWidth: (d: unknown) => Math.max(12, nd(d).size * 0.55),
             iconHeight: (d: unknown) => Math.max(12, nd(d).size * 0.55),
             labelText: (d: unknown) => nd(d).lbl,
-            labelFontSize: 10,
+            labelFontSize: 12,
             labelPlacement: "bottom",
             labelFill: "#475569",
             labelBackground: true,

@@ -495,7 +495,7 @@ export default function DashboardPage() {
           <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
           {/* 作战状态摘要(页头小字):数据为 0 的段已省略,全空不渲染 */}
           {headerSummary.length > 0 && (
-            <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{headerSummary.join(" · ")}</p>
+            <p className="mt-1 text-xs text-muted-foreground tabular-nums">{headerSummary.join(" · ")}</p>
           )}
         </div>
       </div>
@@ -518,7 +518,7 @@ export default function DashboardPage() {
             </span>
             <span className="font-display text-lg text-muted-foreground tabular-nums">/ {tasks.length}</span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             {(tasksByStatus.running ?? 0) > 0 && (
               <span className="text-blue-400">
                 {t("statExplore")} {tasksByStatus.running}
@@ -841,7 +841,7 @@ export default function DashboardPage() {
                     dataKey="date"
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 12 }}
                     tickMargin={6}
                     interval="preserveStartEnd"
                   />
@@ -849,7 +849,7 @@ export default function DashboardPage() {
                     tickFormatter={(v) => fmtTokens(Number(v))}
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 12 }}
                     width={44}
                   />
                   <ChartTooltip
@@ -930,7 +930,7 @@ export default function DashboardPage() {
                     {a.worker}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[11px] font-medium">{kindLabel(a)}</div>
+                    <div className="text-xs font-medium">{kindLabel(a)}</div>
                     <div className="mt-0.5 truncate text-xs text-muted-foreground">{a.summary}</div>
                   </div>
                   <div className="shrink-0 text-right">
@@ -973,7 +973,7 @@ export default function DashboardPage() {
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[11px] font-semibold">{f.vulnclass}</span>
+                      <span className="text-xs font-semibold">{f.vulnclass}</span>
                       {f.task_description && (
                         <span className="truncate text-xs text-muted-foreground">{f.task_description}</span>
                       )}

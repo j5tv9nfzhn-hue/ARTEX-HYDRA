@@ -211,12 +211,12 @@ export function HarnessTargetsCard() {
                     </div>
                     <div className="mt-1 space-y-0.5 text-muted-foreground">
                       {c.configs.slice(0, 2).map((cfg) => (
-                        <div key={cfg.display + cfg.scope} className="truncate font-mono text-[11px]">
+                        <div key={cfg.display + cfg.scope} className="truncate font-mono text-xs">
                           {cfg.exists ? "✓" : "·"} {cfg.display}
                         </div>
                       ))}
                       {c.configs.length > 2 ? (
-                        <div className="font-mono text-[11px]">+{c.configs.length - 2}</div>
+                        <div className="font-mono text-xs">+{c.configs.length - 2}</div>
                       ) : null}
                     </div>
                   </div>
@@ -253,18 +253,18 @@ export function HarnessTargetsCard() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-sm">{ch.client_name || ch.client_id}</span>
                   <Badge variant={actionVariant(ch.action)}>{t(`harnessChange_${ch.action}`)}</Badge>
-                  <span className="truncate font-mono text-[11px] text-muted-foreground">
+                  <span className="truncate font-mono text-xs text-muted-foreground">
                     {ch.path || ch.display_path}
                   </span>
                 </div>
                 {ch.reason ? <p className="mt-1 text-muted-foreground text-xs">{ch.reason}</p> : null}
                 {ch.diff ? (
-                  <pre className="mt-2 max-h-56 overflow-auto rounded bg-muted p-2 font-mono text-[11px] leading-relaxed">
+                  <pre className="mt-2 max-h-56 overflow-auto rounded bg-muted p-2 font-mono text-xs leading-relaxed">
                     {ch.diff}
                   </pre>
                 ) : null}
                 {ch.snippet ? (
-                  <pre className="mt-2 max-h-56 overflow-auto rounded bg-muted p-2 font-mono text-[11px] leading-relaxed">
+                  <pre className="mt-2 max-h-56 overflow-auto rounded bg-muted p-2 font-mono text-xs leading-relaxed">
                     {ch.snippet}
                   </pre>
                 ) : null}

@@ -177,7 +177,7 @@ export function HandoffDialog({
 
             <details>
               <summary className="cursor-pointer text-muted-foreground text-xs">{t("rawJson")}</summary>
-              <pre className="mt-1 max-h-72 overflow-auto rounded-md border border-border/60 bg-muted/30 p-2 font-mono text-[11px]">
+              <pre className="mt-1 max-h-72 overflow-auto rounded-md border border-border/60 bg-muted/30 p-2 font-mono text-xs">
                 {JSON.stringify(rec, null, 2)}
               </pre>
             </details>

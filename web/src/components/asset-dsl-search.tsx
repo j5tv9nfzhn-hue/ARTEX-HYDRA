@@ -261,7 +261,7 @@ export function AssetDslSearch({
         )}
       </div>
       {query.trim() && !open && (
-        <p className="pl-1 text-[11px] text-muted-foreground">
+        <p className="pl-1 text-xs text-muted-foreground">
           {loading ? (
             t("loading")
           ) : error ? (

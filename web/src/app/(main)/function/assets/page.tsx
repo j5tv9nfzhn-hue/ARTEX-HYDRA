@@ -380,7 +380,7 @@ export default function AssetsPage() {
                         {c.scope?.length ? (
                           <div className="flex flex-wrap gap-1">
                             {c.scope.map((s, i) => (
-                              <Badge key={i} variant="secondary" className="font-mono text-[11px]">
+                              <Badge key={i} variant="secondary" className="font-mono text-xs">
                                 {s.raw}
                               </Badge>
                             ))}
@@ -674,7 +674,7 @@ export default function AssetsPage() {
                         const item = authItem as Record<string, string>;
                         const label = item.type || item.username || t("authFallback");
                         return (
-                          <span key={i} className="inline-flex items-center gap-1 text-[11px]">
+                          <span key={i} className="inline-flex items-center gap-1 text-xs">
                             <KeyRoundIcon className="size-3 text-muted-foreground" />
                             <span className="font-mono">{label}</span>
                           </span>

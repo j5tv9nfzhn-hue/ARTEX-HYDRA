@@ -819,7 +819,7 @@ function ExplorationGraphInner({ nodes, edges, emptyHint }: { nodes: TaskNode[];
             type: "default",
             animated,
             labelShowBg: false,
-            labelStyle: { fontSize: 10, fontWeight: 600, fill: color },
+            labelStyle: { fontSize: 12, fontWeight: 600, fill: color },
             style: {
               stroke: color,
               strokeWidth: strong ? 2.5 : 2,

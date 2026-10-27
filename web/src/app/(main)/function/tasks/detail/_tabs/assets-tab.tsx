@@ -678,7 +678,7 @@ export function AssetsTab({ taskId }: { taskId: string }) {
                         return (
                           <span
                             key={`${asset.id}-${item.type ?? ""}-${item.username ?? ""}-${JSON.stringify(item)}`}
-                            className="inline-flex items-center gap-1 text-[11px]"
+                            className="inline-flex items-center gap-1 text-xs"
                           >
                             <KeyRoundIcon className="size-3 text-muted-foreground" />
                             <span className="font-mono">{item.type || item.username || t("col.auth")}</span>

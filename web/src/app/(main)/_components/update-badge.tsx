@@ -48,7 +48,7 @@ export function UpdateBadge() {
     <Link
       href="/system/settings"
       title={staged ? `v${status.staged_version} 已下载，重启后生效` : `发现新版本 v${status.latest}`}
-      className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-medium text-[11px] text-emerald-600 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400"
+      className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-medium text-xs text-emerald-600 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400"
     >
       <ArrowUpCircleIcon className="size-3" />
       {staged ? "重启生效" : "有新版本"}

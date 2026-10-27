@@ -162,7 +162,7 @@ export function NotifyInboxList() {
           ) : (
             groups.map((group) => (
               <section key={group.key}>
-                <div className="sticky top-0 z-10 flex items-center gap-2 bg-background/95 px-4 py-1.5 font-medium text-[11px] text-muted-foreground backdrop-blur">
+                <div className="sticky top-0 z-10 flex items-center gap-2 bg-background/95 px-4 py-1.5 font-medium text-xs text-muted-foreground backdrop-blur">
                   <BucketLabel bucket={group.key} />
                   <span className="tabular-nums opacity-60">{group.items.length}</span>
                 </div>
@@ -184,7 +184,7 @@ export function NotifyInboxList() {
           )}
         </div>
 
-        <p className="text-[11px] text-muted-foreground leading-4">{t("sessionNote", { count: MAX_KEPT })}</p>
+        <p className="text-xs text-muted-foreground leading-4">{t("sessionNote", { count: MAX_KEPT })}</p>
       </CardContent>
     </Card>
   );
@@ -230,7 +230,7 @@ function Row({
               {event.body}
             </div>
           ) : null}
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <span className={cn("rounded px-1 py-px", kindTone(event.kind))}>{kind}</span>
             {unread ? (
               <span className="rounded bg-red-600/10 px-1 py-px font-medium text-red-700 dark:bg-red-400/10 dark:text-red-400">
@@ -265,7 +265,7 @@ function Row({
       </div>
 
       {expanded ? (
-        <dl className="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 border-t bg-muted/30 px-4 py-2 text-[11px]">
+        <dl className="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 border-t bg-muted/30 px-4 py-2 text-xs">
           <dt className="text-muted-foreground">{t("metaId")}</dt>
           <dd className="tabular-nums">{event.id}</dd>
           <dt className="text-muted-foreground">{t("metaKind")}</dt>

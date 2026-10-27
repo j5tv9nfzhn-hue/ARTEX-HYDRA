@@ -380,7 +380,7 @@ function LLMProfileRow({
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-64 p-1">
-          <p className="px-2 py-1 font-medium text-[11px] text-muted-foreground">{t("llmProfile.select")}</p>
+          <p className="px-2 py-1 font-medium text-xs text-muted-foreground">{t("llmProfile.select")}</p>
           {/* default option */}
           <button
             type="button"
@@ -395,7 +395,7 @@ function LLMProfileRow({
           >
             <span className="text-sm">{defaultLabel}</span>
             {activeDefault && (
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {activeDefault.format} · {activeDefault.model}
               </span>
             )}
@@ -414,7 +414,7 @@ function LLMProfileRow({
               )}
             >
               <span className="text-sm">{p.name}</span>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {p.format} · {p.model}
               </span>
             </button>
@@ -1049,7 +1049,7 @@ function ChatViewImpl({
           {tokenTotal.turns > 0 && (
             <span
               title={t("turnsTooltip")}
-              className="rounded-md border bg-muted/60 px-2 py-0.5 text-[11px] tabular-nums"
+              className="rounded-md border bg-muted/60 px-2 py-0.5 text-xs tabular-nums"
             >
               {t("turnsCount", { turns: tokenTotal.turns })}
             </span>
@@ -1057,7 +1057,7 @@ function ChatViewImpl({
           {tokenTotal.any && (
             <span
               title={t("tokensTooltip")}
-              className="min-w-0 truncate rounded-md border bg-muted/60 px-2 py-0.5 text-[11px] tabular-nums"
+              className="min-w-0 truncate rounded-md border bg-muted/60 px-2 py-0.5 text-xs tabular-nums"
             >
               {t("tokensLine", {
                 input: fmtTokens(tokenTotal.i),
@@ -1094,7 +1094,7 @@ function ChatViewImpl({
                       ? `本条会话累计 token 预算：已用 ${fmtTokens(used)} / 上限 ${fmtTokens(budget.limit)}。达到上限后本轮自动收尾（可在系统配置调整 default_conversation_token_budget）。`
                       : `仅统计，不拦截：已用 ${fmtTokens(used)}（参考上限 ${fmtTokens(budget.limit)}）。在系统配置填写 default_conversation_token_budget 后才启用收尾。`
                   }
-                  className={`rounded-md border bg-muted/60 px-2 py-0.5 text-[11px] tabular-nums ${cls}`}
+                  className={`rounded-md border bg-muted/60 px-2 py-0.5 text-xs tabular-nums ${cls}`}
                 >
                   {tier === "exhausted" ? "预算用尽" : enforced ? "预算" : "用量"} {fmtTokens(used)}/
                   {fmtTokens(budget.limit)}
@@ -1114,7 +1114,7 @@ function ChatViewImpl({
           ) : (
             <>
               {hasMore && (
-                <div className="pb-2 text-center text-[11px] text-muted-foreground/70">{t("loadEarlierHint")}</div>
+                <div className="pb-2 text-center text-xs text-muted-foreground/70">{t("loadEarlierHint")}</div>
               )}
               <Transcript
                 activity={messages}
@@ -1289,7 +1289,7 @@ const ConversationItem = React.memo(function ConversationItem({
               </Badge>
             ) : null}
           </div>
-          <div className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
+          <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
             {showAgent && (
               <>
                 <Bot className="size-3 shrink-0" />
@@ -1379,7 +1379,7 @@ function AgentGroupHeader({
       aria-expanded={!collapsed}
       title={collapsed ? t("group.expand", { name: group.name }) : t("group.collapse", { name: group.name })}
       className={cn(
-        "sticky top-0 z-10 flex min-w-0 items-center gap-1.5 rounded-md bg-card px-1.5 py-1 text-left font-medium text-[11px] transition-colors hover:bg-accent/50",
+        "sticky top-0 z-10 flex min-w-0 items-center gap-1.5 rounded-md bg-card px-1.5 py-1 text-left font-medium text-xs transition-colors hover:bg-accent/50",
         collapsed && hasActive ? "text-foreground" : "text-muted-foreground",
       )}
     >
