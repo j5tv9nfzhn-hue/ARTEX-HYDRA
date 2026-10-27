@@ -15,6 +15,8 @@
 #### 修复的问题
 
 - **桌面端启动即弹「Wails applications will not build without the correct build tags」**：CI 的 go build 只带 embedui 标签，wails 运行时的 CreateApp 按构建标签三选一（production 实现 / dev 实现 / 无标签的 MessageBox 报错兜底），缺 `desktop,production` 时编进兜底实现且编译期不报错。桌面端编译标签改为 `embedui,desktop,production`，与官方 `wails build` 对齐。
+- **「数据迁移」卡片在程序跑着时永远导不进去**：`migrate` 的 8787/8788 端口探测原本是给「服务启动之前跑的 `-import-old`」写的——在服务进程里发起导入时，主服务自己就占着 8787，于是每次都被判成「旧版还在跑」直接 400。现在探测区分「本进程自己占的端口」与「别的程序占的端口」：`migrate.Options.OwnPorts` 由 `server.migrateOptions()` 按当前监听地址（以及 capture 开启时的流量记录代理）填好，导入回到「除我之外还有谁」的语义；卡片上的「占用中」徽标与禁用态也只在真被别人占着时出现。
+- **导入会连 `i<意图ID>` 产物目录一起搬**：旧版 worker 在 workDir 为空时把产物落在安装根目录，库里引用着这些文件；`migrate.Import` 现在把它们一并拷进 `data/`（与 CLI `-import-old` 同一语义），导入后历史报告仍能打开。
 
 ### 移除
 

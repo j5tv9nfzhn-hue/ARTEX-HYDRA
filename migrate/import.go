@@ -66,7 +66,7 @@ type Result struct {
 //
 // target 必须是进程自己那条 *sql.DB（导入走同一个连接池，而不是另开一个库文件），
 // 这样 SQLite 的写锁天然串行，不会出现"两个进程同时写一个 db"。
-func Import(ctx context.Context, target *sql.DB, targetRoot, oldDir string, mode Mode) (Result, error) {
+func Import(ctx context.Context, target *sql.DB, targetRoot, oldDir string, mode Mode, opts Options) (Result, error) {
 	res := Result{Mode: string(mode), RestartRequired: true}
 
 	oldAbs, err := filepath.Abs(oldDir)
@@ -86,8 +86,8 @@ func Import(ctx context.Context, target *sql.DB, targetRoot, oldDir string, mode
 	if samePath(oldAbs, newAbs) {
 		return res, errors.New("旧目录就是当前安装目录，无需导入")
 	}
-	if portsListening(probePorts) {
-		return res, errors.New("8787/8788 仍被监听：请先完全退出另一个 ARTEX 程序（含流量记录代理）再重试")
+	if busy := busyPorts(probePorts, opts.OwnPorts); len(busy) > 0 {
+		return res, fmt.Errorf("端口 %s 仍被监听：请先完全退出另一个 ARTEX 程序（含流量记录代理）再重试", portsText(busy))
 	}
 
 	// ② 动手前先备份当前库：VACUUM INTO 是唯一能在"库正被本进程打开"时安全
@@ -132,6 +132,14 @@ func Import(ctx context.Context, target *sql.DB, targetRoot, oldDir string, mode
 		res.Warnings = append(res.Warnings, "skills/ 拷贝不完整："+cerr.Error())
 	} else {
 		res.SkillFiles = n
+	}
+
+	// ⑥ 旧版把 worker 的 CWD 产物落在安装根目录（i<意图ID>），库里引用着它们；
+	//    不搬进新 data/ 就点不开历史报告。语义与 CLI 的 -import-old 一致。
+	if n, cerr := copyLegacyRunDirs(oldAbs, filepath.Join(newAbs, "data")); cerr != nil {
+		res.Warnings = append(res.Warnings, "i<意图ID> 产物目录拷贝不完整："+cerr.Error())
+	} else {
+		res.DataFiles += n
 	}
 
 	if res.Copied == 0 {
@@ -383,6 +391,42 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return out.Close()
+}
+
+// copyLegacyRunDirs 把旧安装根目录的 i<意图ID> 产物目录拷进当前工作空间。
+// 旧版 worker 在 workDir 为空时回退到进程 CWD，这些目录因此坐在安装根目录，
+// 而库里记着它们下面的文件——不搬走就点不开历史报告。
+func copyLegacyRunDirs(oldRoot, dataDir string) (int, error) {
+	entries, err := os.ReadDir(oldRoot)
+	if err != nil {
+		return 0, nil // 旧目录读不了不算失败：这一层本来就不是必要条件
+	}
+	total := 0
+	var firstErr error
+	for _, e := range entries {
+		if !e.IsDir() || !legacyRunDirName(e.Name()) {
+			continue
+		}
+		n, cerr := copyTree(filepath.Join(oldRoot, e.Name()), filepath.Join(dataDir, e.Name()), nil)
+		total += n
+		if cerr != nil && firstErr == nil {
+			firstErr = cerr
+		}
+	}
+	return total, firstErr
+}
+
+// legacyRunDirName 判断目录名是否 i<意图ID> 形态（i 后全是数字）。
+func legacyRunDirName(name string) bool {
+	if len(name) < 2 || name[0] != 'i' {
+		return false
+	}
+	for _, r := range name[1:] {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func readFileBytes(path string) []byte {

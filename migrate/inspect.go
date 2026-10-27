@@ -36,6 +36,16 @@ const (
 // 任一在监听就认为"旧版可能还在跑"，与 import-old 的 CLI 判据保持一致。
 var probePorts = []int{8787, 8788}
 
+// Options 调整体检与导入时的判断口径。
+//
+// OwnPorts 是本进程自己正在监听的端口。8787/8788 的探测本来是给"服务启动之前
+// 跑的 -import-old"用的：那时候任何监听者都是别人的旧实例。改成从界面里导入之后，
+// 主服务与流量记录代理由本进程自己占着，不排除就会永远判"旧版还在跑"，导入根本
+// 发不出去——所以调用方必须把自占端口报进来，探测才回到"除我之外还有谁"。
+type Options struct {
+	OwnPorts []int
+}
+
 // TableCount 是单表的行数，用于体检展示与导入结果对账。
 type TableCount struct {
 	Name string `json:"name"`
@@ -65,7 +75,7 @@ type Candidate struct {
 	DataEntries  int `json:"data_entries"`
 	SkillEntries int `json:"skill_entries"`
 
-	// Running 表示本机 8787/8788 有人在监听，只提示风险，不阻断展示。
+	// Running 表示除本进程之外，另有程序在监听 8787/8788：只提示风险，不阻断展示。
 	Running bool `json:"running"`
 	// IsCurrent 表示这个目录就是当前进程的安装目录（不能从自己导入自己）。
 	IsCurrent bool `json:"is_current"`
@@ -77,7 +87,7 @@ type Candidate struct {
 //
 // 目录不存在、没有 artex.db 都返回错误；能打开但没有表的库返回 HasDB=true 且
 // Tables 为空——那是"空库"，用户自己判断。
-func Inspect(dir string) (Candidate, error) {
+func Inspect(dir string, opts Options) (Candidate, error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return Candidate{}, fmt.Errorf("解析路径失败：%w", err)
@@ -96,7 +106,7 @@ func Inspect(dir string) (Candidate, error) {
 	c.HasJwtKey = fileExists(filepath.Join(abs, "jwt.key"))
 	c.DataEntries = countEntries(filepath.Join(abs, "data"))
 	c.SkillEntries = countEntries(filepath.Join(abs, "skills"))
-	c.Running = portsListening(probePorts)
+	c.Running = portsListening(probePorts, opts.OwnPorts)
 
 	dbPath := filepath.Join(abs, "artex.db")
 	if fi, err := os.Stat(dbPath); err == nil {
@@ -122,7 +132,7 @@ func Inspect(dir string) (Candidate, error) {
 //
 // roots 为空时用默认范围：用户主目录下的 Desktop / Downloads / Documents，加上
 // 当前安装目录的同级目录——旧版通常就解压在桌面或新目录旁边。
-func Scan(currentRoot string, roots []string) []Candidate {
+func Scan(currentRoot string, roots []string, opts Options) []Candidate {
 	seen := map[string]bool{}
 	var out []Candidate
 	roots = append(roots, defaultRoots(currentRoot)...)
@@ -146,7 +156,7 @@ func Scan(currentRoot string, roots []string) []Candidate {
 				continue
 			}
 			seen[abs] = true
-			c, ierr := Inspect(abs)
+			c, ierr := Inspect(abs, opts)
 			if ierr != nil {
 				continue
 			}
@@ -300,16 +310,39 @@ func readOnlyDSN(path string) string {
 	return "file:" + p + "?mode=ro"
 }
 
-// portsListening 探测本机端口是否有监听者。
-func portsListening(ports []int) bool {
-	for _, p := range ports {
-		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", p), runningProbeTimeout)
-		if err == nil {
-			_ = conn.Close()
-			return true
-		}
+// portsListening 探测是否有"别人"在监听这些端口；own 是本进程自己的，跳过。
+func portsListening(ports []int, own []int) bool {
+	return len(busyPorts(ports, own)) > 0
+}
+
+// busyPorts 返回 ports 里被"别人"占着的那几个，用来在报错文案里点明具体端口。
+func busyPorts(ports []int, own []int) []int {
+	skip := make(map[int]bool, len(own))
+	for _, p := range own {
+		skip[p] = true
 	}
-	return false
+	var busy []int
+	for _, p := range ports {
+		if skip[p] {
+			continue
+		}
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", p), runningProbeTimeout)
+		if err != nil {
+			continue
+		}
+		_ = conn.Close()
+		busy = append(busy, p)
+	}
+	return busy
+}
+
+// portsText 把端口列表拼成人读的 "8787、8788"。
+func portsText(ports []int) string {
+	parts := make([]string, 0, len(ports))
+	for _, p := range ports {
+		parts = append(parts, fmt.Sprintf("%d", p))
+	}
+	return strings.Join(parts, "、")
 }
 
 func fileExists(path string) bool {
