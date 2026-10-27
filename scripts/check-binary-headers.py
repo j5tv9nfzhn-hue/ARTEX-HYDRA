@@ -2,10 +2,12 @@
 """校验构建产物的可执行文件头与目标架构（PE / ELF / Mach-O）；ci.yml 与 release.yml 共用。
 
 用法：
-    python3 -I scripts/check-binary-headers.py            # 校验全部六目标
+    python3 -I scripts/check-binary-headers.py            # 校验全部六目标（默认 dist 布局）
     python3 -I scripts/check-binary-headers.py linux/amd64 darwin/arm64 ...
+    python3 -I scripts/check-binary-headers.py --binary dist/x/artex-rea linux/amd64
 
-目标文件为 dist/artex-rea-<os>-<arch>/artex-rea（Windows 为 artex-rea.exe）。runner
+目标文件默认取 dist/artex-rea-<os>-<arch>/artex-rea（Windows 为 artex-rea.exe）；
+产物路径被 ARTEX_OUTPUT / ARTEX_OUTPUT_DIR 改写过时用 --binary 传真实路径。runner
 不能执行非宿主平台的二进制，这些检查代替冒烟测试；任何一项不符即非零退出。
 """
 
@@ -25,19 +27,20 @@ TARGETS = {
 }
 
 
-def check(spec: str) -> None:
+def check(spec: str, binary: Path | None = None) -> None:
     """校验单个 OS/ARCH 目标的文件头与机器类型。"""
     goos, _, arch = spec.partition("/")
     known = "、".join(f"{os_}/{arch_}" for os_, arches in TARGETS.items() for arch_ in arches)
     if arch not in TARGETS.get(goos, {}):
         sys.exit(f"不支持的目标：{spec}（支持 {known}）")
-    binary = ROOT / "dist" / f"artex-rea-{goos}-{arch}" / ("artex-rea.exe" if goos == "windows" else "artex-rea")
+    if binary is None:
+        binary = ROOT / "dist" / f"artex-rea-{goos}-{arch}" / ("artex-rea.exe" if goos == "windows" else "artex-rea")
+        if not binary.is_file():
+            legacy = ROOT / "dist" / f"artex-{goos}-{arch}" / ("artex.exe" if goos == "windows" else "artex")
+            if legacy.is_file():
+                binary = legacy
     if not binary.is_file():
-        legacy = ROOT / "dist" / f"artex-{goos}-{arch}" / ("artex.exe" if goos == "windows" else "artex")
-        if legacy.is_file():
-            binary = legacy
-        else:
-            sys.exit(f"{binary}: 文件不存在（先构建再校验）")
+        sys.exit(f"{binary}: 文件不存在（先构建再校验）")
     with binary.open("rb") as handle:
         data = handle.read(4096)
     if goos == "windows":
@@ -62,9 +65,19 @@ def check(spec: str) -> None:
 
 
 def main(argv: list[str]) -> int:
-    specs = argv or [f"{goos}/{arch}" for goos, arches in TARGETS.items() for arch in arches]
+    args = list(argv)
+    binary: Path | None = None
+    if "--binary" in args:
+        index = args.index("--binary")
+        if index + 1 >= len(args):
+            sys.exit("--binary 后面需要一个路径")
+        binary = Path(args[index + 1])
+        del args[index : index + 2]
+    specs = args or [f"{goos}/{arch}" for goos, arches in TARGETS.items() for arch in arches]
+    if binary is not None and len(specs) > 1:
+        sys.exit("--binary 只能与单个目标一起用（一个文件对应一种机器类型）")
     for spec in specs:
-        check(spec)
+        check(spec, binary)
     return 0
 
 

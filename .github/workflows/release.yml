@@ -10,7 +10,7 @@ name: release
 #   gate      编译与静态检查（硬门禁：编不过就不发）
 #   frontend  前端静态导出，产物给 binaries 复用（硬门禁：前端编不过就不发）
 #   binaries  六目标交叉编译与打包（硬门禁）
-#   desktop   Wails V2 桌面端三平台原生构建与打包（硬门禁：CGO 无法交叉编译）
+#   desktop   Wails V2 桌面端六端构建与打包（三平台 × amd64/arm64）
 #   release   建草稿 → 传资产 → 校验齐全 → 转正（失败即删草稿）
 #   signals   测试 / 语言 / 文档链接：只报告，不拦发布
 #
@@ -206,8 +206,10 @@ jobs:
           path: "dist/*.zip"
 
   # ②b Wails V2 桌面端（artex-hydra）：CGO 依赖平台原生 webview 库
-  # （Windows=WebView2、macOS=WebKit、Linux=webkit2gtk），无法交叉编译——
-  # 三平台各自在原生 runner 上构建并打包（Windows/Linux 为 zip，macOS 为 .app bundle）。
+  # （Windows=WebView2、macOS=WebKit、Linux=webkit2gtk）。六端 = 三平台 × amd64/arm64：
+  # Windows 与 Linux 各自跑在对应架构的 runner 上（zip），macOS 两个架构都在同一台
+  # Apple Silicon 上出（.app bundle）——x86_64 由 clang 的双 slice 交叉，不必依赖
+  # 已退役的 Intel runner。产物机器类型码由 build.sh 里的头校验兜底。
   #
   # 独立 Go 模块 desktop/ 通过 replace 复用根模块后端；产物是单文件
   # artex-hydra-desktop（无 core、无 versions/），名字与 singleFile 开关经
@@ -218,10 +220,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # 桌面端六端全发：Windows / macOS / Linux 各 amd64 + arm64。
+        # CGO 依赖平台原生 webview，必须落在对应架构的 runner 上；两个例外与机会：
+        #   - linux/arm64 用 GitHub 的 arm64 runner（ubuntu-24.04-arm）；
+        #   - windows/arm64 用 windows-11-arm（预览期，若拿不到该 runner 只有这一行红，
+        #     fail-fast: false 保证其余五端照常出包）；
+        #   - darwin/amd64 不依赖已退役的 Intel runner：同一台 Apple Silicon 上由
+        #     clang 的双 slice 交叉出 x86_64（build.sh 里那条 macOS 例外），产物头
+        #     校验兜住「-arch 没生效」的失败模式。
         include:
           - { goos: windows, goarch: amd64, runner: windows-latest }
-          - { goos: darwin, goarch: arm64, runner: macos-15 }
+          - { goos: windows, goarch: arm64, runner: windows-11-arm }
           - { goos: linux, goarch: amd64, runner: ubuntu-latest }
+          - { goos: linux, goarch: arm64, runner: ubuntu-24.04-arm }
+          - { goos: darwin, goarch: arm64, runner: macos-15 }
+          - { goos: darwin, goarch: amd64, runner: macos-15 }
     steps:
       - uses: actions/checkout@v7
       - name: Linux 桌面运行时依赖（webkit2gtk 等）
@@ -316,7 +329,10 @@ jobs:
             desktop/go.sum
       - uses: actions/upload-artifact@v7
         with:
-          name: desktop-${{ matrix.goos }}-${{ matrix.goarch }}
+          # 名字必须以 pkg- 开头：release job 用 pattern: pkg-* 一次把服务器版与
+          # 桌面端产物都拉进 dist。原先叫 desktop-<os>-<arch>，与那个 pattern 对不上，
+          # 桌面端 zip 从来没进过 Release（v2.2.4 的资产里确实一个桌面包都没有）。
+          name: pkg-desktop-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
             dist/*.zip
 
@@ -344,7 +360,7 @@ jobs:
           pattern: pkg-*
           merge-multiple: true
           path: dist
-      - name: 校验 6 个平台产物齐全
+      - name: 校验产物齐全（服务器版 6 + 桌面端 6）
         working-directory: dist
         run: |
           set -euo pipefail
@@ -354,8 +370,8 @@ jobs:
             f="artex-rea-${version}-${t%%/*}-${t##*/}.zip"
             if [ -f "$f" ]; then echo "✓ $f"; else echo "::error::缺少 $f"; missing=1; fi
           done
-          # 桌面端三平台（Windows/macOS/Linux 各一档）
-          for t in windows/amd64 darwin/arm64 linux/amd64; do
+          # 桌面端六端（与 desktop job 的 matrix 一一对应，改动必须同步两处）
+          for t in windows/amd64 windows/arm64 darwin/amd64 darwin/arm64 linux/amd64 linux/arm64; do
             f="artex-hydra-desktop-${version}-${t%%/*}-${t##*/}.zip"
             if [ -f "$f" ]; then echo "✓ $f"; else echo "::error::缺少 $f"; missing=1; fi
           done
@@ -418,7 +434,7 @@ jobs:
             for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
               echo "artex-rea-${version}-${t%%/*}-${t##*/}.zip"
             done
-            for t in windows/amd64 darwin/arm64 linux/amd64; do
+            for t in windows/amd64 windows/arm64 darwin/amd64 darwin/arm64 linux/amd64 linux/arm64; do
               echo "artex-hydra-desktop-${version}-${t%%/*}-${t##*/}.zip"
             done
             echo SHA256SUMS

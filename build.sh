@@ -33,11 +33,11 @@ usage() {
   ./build.sh                         构建当前系统与架构
   ./build.sh --target linux/amd64     构建指定目标
   ./build.sh --release               构建并打包全部支持平台
-  ./build.sh --desktop               构建当前系统的 Wails V2 桌面端（原生构建，不支持交叉编译）
+  ./build.sh --desktop               构建 Wails V2 桌面端（默认宿主机目标；macOS 可用 --target 跨到另一架构）
 
 选项：
   --release              构建 Linux、macOS、Windows 的受支持 amd64/arm64 目标并生成 zip
-  --desktop              构建桌面端 artex-hydra-desktop（CGO_ENABLED=1，仅宿主机目标）
+  --desktop              构建桌面端 artex-hydra-desktop（CGO_ENABLED=1；目标=宿主机，macOS 例外见下）
   --target OS/ARCH       指定单一目标，如 windows/amd64
   --upx                  强制 UPX 压缩，可能影响部分 Linux 环境的兼容性
   --no-compress          禁用 UPX，仅通过 Go linker 去符号并压缩 zip
@@ -48,8 +48,9 @@ usage() {
 
 桌面端（--desktop）走独立 Go 模块 desktop/，产物是**单文件** artex-hydra-desktop
 （无 core、无 versions/，数据与它同目录），名字基名经 ldflags 注入 selfupdate；
-CGO 依赖平台原生 webview 库，必须原生构建。macOS 目标打包为 .app bundle，
-其余平台为 zip。产物名带 -desktop 后缀，与 WEB 版（artex-rea-*）区分。
+CGO 依赖平台原生 webview 库：Windows 与 Linux 必须在对应架构上原生构建；macOS
+两个架构可在同一台 Apple Silicon 上出（x86_64 由 clang -arch 交叉）。macOS 打包为
+.app bundle，其余平台为 zip。产物名带 -desktop 后缀，与 WEB 版（artex-rea-*）区分。
 EOF
 }
 
@@ -316,7 +317,7 @@ package_desktop() {
   <key>CFBundleShortVersionString</key>
   <string>${ARTEX_BUILD_VERSION}</string>
   <key>LSMinimumSystemVersion</key>
-  <string>10.15</string>
+  <string>11.0</string>
   <key>NSHighResolutionCapable</key>
   <true/>
 </dict>
@@ -405,7 +406,7 @@ build_target() {
 # build_desktop_target 编译 Wails V2 桌面端（desktop/ 独立模块）。
 #
 # 与服务器版构建的差异：
-#   - CGO_ENABLED=1 且不设 GOOS/GOARCH（webview 库是平台原生库，交叉编译必失败）；
+ #   - CGO_ENABLED=1，目标默认取宿主机；唯一例外是 macOS（详见下面策略）；
 #   - 资产名 stem 经 ldflags 注入 selfupdate（artex-hydra-desktop），并置 singleFile=1：
 #     不做 versions/ 安装、不转交核心，GitHub 查询与 SHA256 闸门照旧可用；
 #   - 单文件发行：包内只有一个可执行文件，数据与它同目录，整目录即迁移单位。
@@ -416,8 +417,29 @@ build_desktop_target() {
   goarch="${target##*/}"
   host_goos="$(GOSUMDB="$ARTEX_GOSUMDB" go env GOOS)"
   host_goarch="$(GOSUMDB="$ARTEX_GOSUMDB" go env GOARCH)"
-  if [ "$goos" != "$host_goos" ] || [ "$goarch" != "$host_goarch" ]; then
-    die "桌面端必须原生构建（CGO 依赖平台 webview 库）：目标 $goos/$goarch 与宿主机 $host_goos/$host_goarch 不一致"
+  # 桌面端默认必须原生构建（CGO 依赖平台原生 webview 库），唯一例外是 macOS：
+  # Apple 的 SDK 与 clang 在同一台机器上同时带 arm64 与 x86_64 两个 slice，加 -arch
+  # 就能在 Apple Silicon runner 上编出 Intel 目标——官方做 universal 二进制用的是
+  # 同一套办法，因此不需要已退役的 Intel runner。Windows 与 Linux 的 webview 依赖
+  # 本机工具链与运行时，没有这种条件，仍必须跑在对应架构的 runner 上。
+  cross_env=""
+  cross_cflags=""
+  if [ "$goos" != "$host_goos" ]; then
+    die "桌面端必须原生构建（CGO 依赖平台 webview 库）：目标 $goos 与宿主机 $host_goos 不一致"
+  fi
+  if [ "$goarch" != "$host_goarch" ]; then
+    if [ "$goos" != "darwin" ]; then
+      die "桌面端只有 macOS 允许同机跨架构（clang 双 slice）：目标 $goos/$goarch 与宿主机 $host_goos/$host_goarch 不一致"
+    fi
+    case "$goarch" in
+      amd64) cross_slice="x86_64" ;;
+      arm64) cross_slice="arm64" ;;
+      *) die "不支持的桌面目标架构：$goarch（支持 amd64、arm64）" ;;
+    esac
+    cross_env="GOOS=darwin GOARCH=$goarch"
+    # 最低系统写 11.0：Go 1.26 的 darwin 与 UTType 都要求 11+，两个架构一致。
+    cross_cflags="-arch $cross_slice -mmacosx-version-min=11.0"
+    info "跨架构构建 macOS 目标：宿主 $host_goarch → 目标 $goarch（clang $cross_cflags）"
   fi
   case "$goos" in
     linux|darwin|windows) ;;
@@ -505,8 +527,8 @@ build_desktop_target() {
   #   UTType，但它自己的 #cgo LDFLAGS 没有链接该 framework，于是链接期报
   #   "Undefined symbols for architecture arm64: _OBJC_CLASS_$_UTType"。
   #   cgo LDFLAGS 在最终链接时跨包累加，这里补一条即解（wails 官方
-  #   troubleshooting 给的正是这个写法）。注意 UTType 只在 macOS 11+ 存在，
-  #   打包的 Info.plist 仍写 10.15 只是沿用旧值。
+  #   troubleshooting 给的正是这个写法）。UTType 只在 macOS 11+ 存在，所以
+  #   Info.plist 的 LSMinimumSystemVersion 与 cgo 的 -mmacosx-version-min 都写 11.0。
   extra_cgo_ldflags=""
   case "$goos" in
     linux)
@@ -522,8 +544,14 @@ build_desktop_target() {
       ;;
   esac
 
+  # GOOS/GOARCH 必须由 env 传：bash 只把「命令名之前原文即赋值」的词当赋值处理，
+  # 变量展开出来的 GOARCH=amd64 会被当成命令名。cross_env 为空时 env 直接透传。
+  # -arch 要同时给编译与链接两端，只给一端会得到「Go 侧是目标架构、cgo 对象是宿主
+  # 架构」的混切片，链接期才报错且信息难读。
   (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" CGO_ENABLED=1 \
-    CGO_LDFLAGS="${CGO_LDFLAGS:-} $extra_cgo_ldflags" \
+    env $cross_env \
+    CGO_CFLAGS="${CGO_CFLAGS:-} $cross_cflags" \
+    CGO_LDFLAGS="${CGO_LDFLAGS:-} $extra_cgo_ldflags $cross_cflags" \
     go build \
     -tags "$build_tags" \
     -trimpath \
@@ -538,6 +566,11 @@ build_desktop_target() {
     rm -f "$out_dir/skills/embed.go"
   fi
   if command -v file >/dev/null 2>&1; then file "$output"; fi
+  # 跨架构最怕「-arch 没生效、产物其实是宿主架构」：那种包装到 Intel Mac 上直接
+  # 打不开，而构建全程绿灯。用仓库现成的文件头校验兜住——它读 Mach-O / PE / ELF
+  # 的机器类型码，与目标架构不符就非零退出（服务器版走的是同一个脚本）。
+  "$PYTHON_BIN" -I scripts/check-binary-headers.py \
+    --binary "$output" "$goos/$goarch" || exit 1
   if [ "$ARTEX_PACKAGE" = "1" ]; then package_desktop "$output" "$goos" "$goarch"; fi
   ok "编译完成：$output"
 }
