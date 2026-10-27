@@ -220,21 +220,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 桌面端六端全发：Windows / macOS / Linux 各 amd64 + arm64。
-        # CGO 依赖平台原生 webview，必须落在对应架构的 runner 上；两个例外与机会：
-        #   - linux/arm64 用 GitHub 的 arm64 runner（ubuntu-24.04-arm）；
-        #   - windows/arm64 用 windows-11-arm（预览期，若拿不到该 runner 只有这一行红，
-        #     fail-fast: false 保证其余五端照常出包）；
-        #   - darwin/amd64 不依赖已退役的 Intel runner：同一台 Apple Silicon 上由
-        #     clang 的双 slice 交叉出 x86_64（build.sh 里那条 macOS 例外），产物头
-        #     校验兜住「-arch 没生效」的失败模式。
+        # 桌面端六端全发：三平台 × amd64/arm64。
+        # Windows 与 Linux 的 CGO 依赖本机工具链与运行时，必须落在对应架构的 runner：
+        #   - linux/arm64 → ubuntu-24.04-arm；
+        #   - windows/arm64 → windows-11-arm（预览期；拿不到也只红这一行，
+        #     fail-fast: false 保证其余五端照常出包）。
+        # macOS 两个架构合并成**一个** job（targets 里列两个）：
+        #   - 不需要已退役的 Intel runner——同一台 Apple Silicon 上由 clang 的双 slice
+        #     交叉出 x86_64（build.sh 里那条 macOS 例外），产物头校验兜住「-arch 没生效」；
+        #   - 更要紧的是并发额度：拆成两行会同时索要 2 个 macos-15 runner，实测两个 job
+        #     都停在「waiting for a hosted runner to come online」直到 15 分钟超时被取消
+        #     （零步骤、零日志：runner 拾取在任何仓库代码执行之前，跟我们的代码无关，
+        #     纯粹是配置把 macOS 需求翻了一倍）。合成一行后一个 runner 顺序出两端。
         include:
-          - { goos: windows, goarch: amd64, runner: windows-latest }
-          - { goos: windows, goarch: arm64, runner: windows-11-arm }
-          - { goos: linux, goarch: amd64, runner: ubuntu-latest }
-          - { goos: linux, goarch: arm64, runner: ubuntu-24.04-arm }
-          - { goos: darwin, goarch: arm64, runner: macos-15 }
-          - { goos: darwin, goarch: amd64, runner: macos-15 }
+          - { goos: windows, goarch: amd64, runner: windows-latest, artifact: windows-amd64 }
+          - { goos: windows, goarch: arm64, runner: windows-11-arm, artifact: windows-arm64 }
+          - { goos: linux, goarch: amd64, runner: ubuntu-latest, artifact: linux-amd64 }
+          - { goos: linux, goarch: arm64, runner: ubuntu-24.04-arm, artifact: linux-arm64 }
+          # targets 必须加引号：flow 映射 {} 里逗号是条目分隔符，不加引号会被解析成
+          # 只有 darwin/arm64，Intel 那端静默不构建（YAML 合法、CI 全绿、包少一个）。
+          - { goos: darwin, goarch: arm64, runner: macos-15, artifact: darwin, targets: "darwin/arm64,darwin/amd64" }
     steps:
       - uses: actions/checkout@v7
       - name: Linux 桌面运行时依赖（webkit2gtk 等）
@@ -310,6 +315,9 @@ jobs:
         env:
           ARTEX_TARGET_OS: ${{ matrix.goos }}
           ARTEX_TARGET_ARCH: ${{ matrix.goarch }}
+          # darwin 那一行用 targets 列两个架构（同一个 runner 顺序构建）；其余行为空，
+          # build.sh 的 ${ARTEX_TARGETS:-...} 对空值同样回落宿主机目标。
+          ARTEX_TARGETS: ${{ matrix.targets }}
           ARTEX_BUILD_VERSION: ${{ github.ref_name }}
           # 更新源在构建期写死为本仓库：fork 出来的构建不会去连上游仓库。
           ARTEX_UPDATE_REPO: ${{ github.repository }}
@@ -323,7 +331,7 @@ jobs:
       - name: 留档 desktop 模块 go.mod/go.sum（build.sh 内 go mod tidy 生成，不入库；仅便于核对依赖变化）
         uses: actions/upload-artifact@v7
         with:
-          name: desktop-gomod-files
+          name: desktop-gomod-${{ matrix.artifact }}
           path: |
             desktop/go.mod
             desktop/go.sum
@@ -332,7 +340,7 @@ jobs:
           # 名字必须以 pkg- 开头：release job 用 pattern: pkg-* 一次把服务器版与
           # 桌面端产物都拉进 dist。原先叫 desktop-<os>-<arch>，与那个 pattern 对不上，
           # 桌面端 zip 从来没进过 Release（v2.2.4 的资产里确实一个桌面包都没有）。
-          name: pkg-desktop-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: pkg-desktop-${{ matrix.artifact }}
           path: |
             dist/*.zip
 

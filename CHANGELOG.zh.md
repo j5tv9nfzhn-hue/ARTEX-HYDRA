@@ -28,6 +28,8 @@
 - **macOS 最低系统抬到 11.0**：`Info.plist` 的 `LSMinimumSystemVersion` 原写 10.15，但 wails 用到的 `UTType` 与 Go 1.26 的 darwin 目标都要求 11+；跨架构分支的 `-mmacosx-version-min` 同步写 11.0。
 - **首跑被自己的门禁拦下**：tag 推上去后 `gate` 红在 `gofmt -l desktop/`——`desktop/tray_windows.go` 的 import 块把 `_ "embed"` 写在 `"context"` 前面。格式化属于编译级确定性失败，按约定拦住不出包，改完重打 tag。
 - **两个 Windows 桌面目标失败在控制台编码**：新加的产物头校验（`scripts/check-binary-headers.py`）在 `go build` 成功后打印「结构校验通过：…」，而 Windows runner 上 Python 的 stdout 默认 cp1252，中文触发 `UnicodeEncodeError`，步骤退出码 1——包本身是好的。按 `check-start-scripts.py` 的既有写法补 `reconfigure(encoding="utf-8", errors="replace")` 守卫。
+- **macOS 两个架构合并成一个 job**：拆成 `darwin/amd64` + `darwin/arm64` 两行会同时索要 2 个 `macos-15` runner，实测两个 job 都停在「waiting for a hosted runner to come online」直到 15 分钟超时被取消——零步骤、零日志，runner 拾取发生在任何仓库代码执行之前，所以与 `build.sh`/wails 无关，纯粹是矩阵配置把 macOS 需求翻倍。合并后一行用 `targets: "darwin/arm64,darwin/amd64"` 在同一个 runner 上顺序出两端，`build.sh` 本来就按逗号切 `ARTEX_TARGETS` 循环构建与打包。
+- **flow 映射里的逗号是分隔符**：上那条 `targets` 不加引号时，`{ ... targets: darwin/arm64,darwin/amd64 }` 被 YAML 解析成只有 `darwin/arm64`——语法合法、CI 全绿、Intel 那端静默不构建、发布时才发现少一个包（而资产齐全校验会拦住发布）。矩阵改动因此配了结构断言核对：行数、macOS job 数、env 键齐全、artifact 名与 `pattern: pkg-*` 对齐、两处期望清单仍是 6+6。
 - **文档链接检查的两处误报清掉**：行内代码里的 HTML 示例 `<img src="target?action=delete">` 被当成文件引用，技能 `assets/template.md` 里的证据截图占位路径也是。规则改为按 CommonMark 跳过代码跨度、跳过 `skills/*/assets/` 模板：受检引用 275 → 273（正好只掉那两个），28 个锚点覆盖不变，0 失效。
 
 ### 桌面端打包与旧版数据迁移
