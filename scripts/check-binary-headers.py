@@ -17,6 +17,17 @@ import struct
 import sys
 from pathlib import Path
 
+# Windows 上 Python 默认 stdout/stderr 是 cp1252（或中文系统上的 GBK），打印中文
+# 校验结果会 UnicodeEncodeError。桌面端六端都在 build.sh 里调这个脚本，其中两个
+# Windows 目标就炸在这里：go build 已经成功、脚本读完了文件头，最后那句
+# 「结构校验通过：…」把步骤打成退出码 1，整条 Release 被拦。写法与
+# scripts/check-start-scripts.py 保持一致（Python 3.7+ 的 reconfigure；不支持则不处理）。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 ROOT = Path(__file__).resolve().parents[1]
 
 # 支持的目标与期望的机器类型码。
