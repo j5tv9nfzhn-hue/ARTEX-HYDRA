@@ -207,9 +207,9 @@ jobs:
 
   # ②b Wails V2 桌面端（artex-hydra）：CGO 依赖平台原生 webview 库
   # （Windows=WebView2、macOS=WebKit、Linux=webkit2gtk）。六端 = 三平台 × amd64/arm64：
-  # Windows 与 Linux 各自跑在对应架构的 runner 上（zip），macOS 两个架构都在同一台
-  # Apple Silicon 上出（.app bundle）——x86_64 由 clang 的双 slice 交叉，不必依赖
-  # 已退役的 Intel runner。产物机器类型码由 build.sh 里的头校验兜底。
+  # Windows 与 Linux 各自跑在对应架构的 runner 上（zip）；macOS 两个架构分别用
+  # macos-26（arm64）与 macos-26-intel（x64）两个不同池的标签各自原生构建（.app
+  # bundle）。产物机器类型码由 build.sh 里的头校验兜底，最低系统一律 11.0。
   #
   # 独立 Go 模块 desktop/ 通过 replace 复用根模块后端；产物是单文件
   # artex-hydra-desktop（无 core、无 versions/），名字与 singleFile 开关经
@@ -220,26 +220,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 桌面端六端全发：三平台 × amd64/arm64。
-        # Windows 与 Linux 的 CGO 依赖本机工具链与运行时，必须落在对应架构的 runner：
+        # 桌面端六端全发：三平台 × amd64/arm64，每端一个 job（六个 job、六个 runner 池）。
+        # CGO 依赖平台原生 webview 库，Windows 与 Linux 必须落在对应架构的 runner：
         #   - linux/arm64 → ubuntu-24.04-arm；
-        #   - windows/arm64 → windows-11-arm（预览期；拿不到也只红这一行，
-        #     fail-fast: false 保证其余五端照常出包）。
-        # macOS 两个架构合并成**一个** job（targets 里列两个）：
-        #   - 不需要已退役的 Intel runner——同一台 Apple Silicon 上由 clang 的双 slice
-        #     交叉出 x86_64（build.sh 里那条 macOS 例外），产物头校验兜住「-arch 没生效」；
-        #   - 更要紧的是并发额度：拆成两行会同时索要 2 个 macos-15 runner，实测两个 job
-        #     都停在「waiting for a hosted runner to come online」直到 15 分钟超时被取消
-        #     （零步骤、零日志：runner 拾取在任何仓库代码执行之前，跟我们的代码无关，
-        #     纯粹是配置把 macOS 需求翻了一倍）。合成一行后一个 runner 顺序出两端。
+        #   - windows/arm64 → windows-11-arm（实测可用，18 步全绿）。
+        # macOS 用两个不同池的标签，而不是挤同一个：
+        #   - darwin/arm64 → macos-26（当前 arm64 主力镜像，macos-latest 也指向它）；
+        #   - darwin/amd64 → macos-26-intel（x64 原生构建，不再靠 clang 交叉）。
+        # 为什么不用 macos-15：实测它在 11:45 那批运行里还能出机器，之后两批（tag 与
+        # 干跑）的 darwin job 全部 0 步骤、0 日志被取消——卡在「waiting for a hosted
+        # runner to come online」是 runner 拾取阶段，任何仓库代码都还没执行，与我们的
+        # 构建脚本无关。同理，把两个架构合并成一个 job 也无效：合并版干跑同样被取消，
+        # 而同期 Windows/Linux 四个 job 全绿——问题在标签的池子，不在并发个数。
         include:
           - { goos: windows, goarch: amd64, runner: windows-latest, artifact: windows-amd64 }
           - { goos: windows, goarch: arm64, runner: windows-11-arm, artifact: windows-arm64 }
           - { goos: linux, goarch: amd64, runner: ubuntu-latest, artifact: linux-amd64 }
           - { goos: linux, goarch: arm64, runner: ubuntu-24.04-arm, artifact: linux-arm64 }
-          # targets 必须加引号：flow 映射 {} 里逗号是条目分隔符，不加引号会被解析成
-          # 只有 darwin/arm64，Intel 那端静默不构建（YAML 合法、CI 全绿、包少一个）。
-          - { goos: darwin, goarch: arm64, runner: macos-15, artifact: darwin, targets: "darwin/arm64,darwin/amd64" }
+          - { goos: darwin, goarch: amd64, runner: macos-26-intel, artifact: darwin-amd64 }
+          - { goos: darwin, goarch: arm64, runner: macos-26, artifact: darwin-arm64 }
     steps:
       - uses: actions/checkout@v7
       - name: Linux 桌面运行时依赖（webkit2gtk 等）
@@ -315,9 +314,6 @@ jobs:
         env:
           ARTEX_TARGET_OS: ${{ matrix.goos }}
           ARTEX_TARGET_ARCH: ${{ matrix.goarch }}
-          # darwin 那一行用 targets 列两个架构（同一个 runner 顺序构建）；其余行为空，
-          # build.sh 的 ${ARTEX_TARGETS:-...} 对空值同样回落宿主机目标。
-          ARTEX_TARGETS: ${{ matrix.targets }}
           ARTEX_BUILD_VERSION: ${{ github.ref_name }}
           # 更新源在构建期写死为本仓库：fork 出来的构建不会去连上游仓库。
           ARTEX_UPDATE_REPO: ${{ github.repository }}
