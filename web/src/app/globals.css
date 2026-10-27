@@ -436,3 +436,96 @@ html {
   --diff-added: oklch(0.765 0.177 163);
   --diff-removed: oklch(0.704 0.191 22);
 }
+
+/* ---------- 滚动工具类（Tailwind v4 @utility） ----------
+   message-scroller / 工作空间 / 任务资产页在用，但此前从未有定义，整串是死类：
+   滚动条外观回落到系统粗灰条、渐隐遮罩完全无效。这里补上真身：
+   - scrollbar-thin：细滚动条（只收敛外观，滚轮/触摸/键盘滚动语义原样保留）
+   - scrollbar-track-transparent / scrollbar-thumb-transparent：轨道/滑块透明
+   - scrollbar-gutter-stable：预留滚动条槽位，弹层开合页面不横跳
+   - scroll-fade-b：滚动容器上下边缘渐隐遮罩，CSS scroll-driven（合成器线程驱动，
+     0 JS）；不支持 animation-timeline 的引擎整条忽略，自然回落为无遮罩。 */
+@property --scroll-fade-top {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --scroll-fade-bottom {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: var(--color-border, var(--border));
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@utility scrollbar-track-transparent {
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@utility scrollbar-thumb-transparent {
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+}
+
+@utility scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}
+
+@utility scroll-fade-b {
+  @supports (animation-timeline: scroll()) {
+    animation: scroll-fade-b linear;
+    animation-timeline: scroll(self);
+    animation-fill-mode: both;
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      black var(--scroll-fade-top),
+      black calc(100% - var(--scroll-fade-bottom)),
+      transparent 100%
+    );
+  }
+}
+
+/* 在顶部：只隐下缘；在底部：只隐上缘；中间：两边都隐。
+   未滚动（内容不溢出）时进度停在 0，下缘 16px 渐隐作用在留白上，视觉无感。 */
+@keyframes scroll-fade-b {
+  0% {
+    --scroll-fade-top: 0px;
+    --scroll-fade-bottom: 16px;
+  }
+
+  5% {
+    --scroll-fade-top: 16px;
+    --scroll-fade-bottom: 16px;
+  }
+
+  95% {
+    --scroll-fade-top: 16px;
+    --scroll-fade-bottom: 16px;
+  }
+
+  100% {
+    --scroll-fade-top: 16px;
+    --scroll-fade-bottom: 0px;
+  }
+}
