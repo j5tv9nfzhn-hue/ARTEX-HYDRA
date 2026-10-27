@@ -4,13 +4,12 @@
 
 ## [Unreleased]
 
-### 桌面端安装引导与旧版数据迁移
+### 桌面端打包与旧版数据迁移
 
 #### 新增
 
-- **Windows 安装引导程序（NSIS）**：`artex-hydra-setup-<版本>-windows-amd64.exe`——简体中文向导，支持自定义安装目录（user 作用域 `%LOCALAPPDATA%\Programs`，免 UAC，与应用内就地自更新契合）、桌面/开始菜单快捷方式（品牌图标）、「应用与功能」卸载登记（卸载保留用户数据）。脚本在 `desktop/installer/installer.nsi`，CI 经 choco 安装 makensis 编译。
-- **旧版 WEB 端数据导入**：`artex-hydra.exe -import-old <旧版安装目录>`——迁移 config（listen/language）、artex.db（任务/发现/资产/LLM 配置）、credential.key/jwt.key、data/ 工作空间、skills（旧覆盖新，用户改动全保留，内置技能可 UI 恢复出厂升到新版）、根目录 i<意图ID> 产物目录。导入为纯拷贝（旧目录只读），前置校验旧版已完全退出（8787/8788 端口探测）与目标未初始化；Windows 安装器内建导入页自动探测旧目录。数据兼容性：新旧同一后端，artex.db 首启自动迁移（幂等补列），密钥无机器绑定。
-- **应用图标**：桌面端 exe 经 rsrc 嵌入品牌图标与 DPI 感知 manifest（源 `web/public/logo.png` → 多层 ico），安装器与快捷方式同图标。
+- **旧版 WEB 端数据导入**：`artex-hydra.exe -import-old <旧版安装目录>`——迁移 config（listen/language）、artex.db（任务/发现/资产/LLM 配置）、credential.key/jwt.key、data/ 工作空间、skills（旧覆盖新，用户改动全保留，内置技能可 UI 恢复出厂升到新版）、根目录 i<意图ID> 产物目录。导入为纯拷贝（旧目录只读），前置校验旧版已完全退出（8787/8788 端口探测）与目标未初始化；导入统一由命令行执行，不提供安装引导程序。数据兼容性：新旧同一后端，artex.db 首启自动迁移（幂等补列），密钥无机器绑定。
+- **应用图标**：桌面端 exe 经 rsrc 嵌入品牌图标与 DPI 感知 manifest（源 `web/public/logo.png` → 多层 ico），解压后自行创建的快捷方式同图标。
 - 桌面端启动脚本按桌面包改名（artex-rea → artex-hydra）——此前桌面包里的 start 脚本启动的是服务器版入口。
 
 #### 修复的问题
