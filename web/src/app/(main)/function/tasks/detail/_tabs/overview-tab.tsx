@@ -601,7 +601,7 @@ export function OverviewTab({ taskId }: { taskId: string }) {
                 {t("branches.hint", { count: branches.length })}
               </span>
               {abandonedBranches > 0 && (
-                <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
+                <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-xs">
                   {t("branches.abandoned", { n: abandonedBranches })}
                 </Badge>
               )}
@@ -621,7 +621,7 @@ export function OverviewTab({ taskId }: { taskId: string }) {
                 <StatusBadge domain="intent" value={b.end_state} />
                 <span className="shrink-0 font-mono text-muted-foreground text-xs">#{b.intent_id}</span>
                 {b.needs_human && (
-                  <Badge variant="destructive" className="shrink-0 px-1.5 py-0 text-[10px]">
+                  <Badge variant="destructive" className="shrink-0 px-1.5 py-0 text-xs">
                     {t("branches.needsHuman")}
                   </Badge>
                 )}

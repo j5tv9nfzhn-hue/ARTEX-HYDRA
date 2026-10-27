@@ -1323,7 +1323,7 @@ const TaskRow = React.memo(function TaskRow({
                 <span className="text-muted-foreground">—</span>
               )}
               {firstMs > 0 && (
-                <span className="whitespace-nowrap text-[10px] text-muted-foreground">
+                <span className="whitespace-nowrap text-xs text-muted-foreground">
                   {t("row.firstFinding", { time: fmtFirstFindingMS(firstMs) })}
                 </span>
               )}

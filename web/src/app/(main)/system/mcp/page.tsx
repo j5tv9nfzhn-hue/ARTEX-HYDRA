@@ -407,7 +407,7 @@ export default function MCPPage() {
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <ServerIcon className="size-4 shrink-0 text-primary/80" />
                   <CardTitle className="min-w-0 truncate text-base">{s.name}</CardTitle>
-                  <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px] uppercase">
+                  <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-xs uppercase">
                     {s.transport}
                   </Badge>
                 </div>

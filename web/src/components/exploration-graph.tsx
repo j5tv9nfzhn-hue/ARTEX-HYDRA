@@ -490,7 +490,7 @@ function ExploreNode({ data, selected }: NodeProps<ExploreRFNode>) {
           {showPriority && (
             <span
               className={cn(
-                "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
+                "shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums",
                 toneClasses[prioTone(n.priority)],
               )}
             >
@@ -515,12 +515,12 @@ function ExploreNode({ data, selected }: NodeProps<ExploreRFNode>) {
               domain={n.type === "goal" ? "goal" : "intent"}
               value={n.state}
               dot
-              className="px-1.5 py-0 text-[10px]"
+              className="px-1.5 py-0 text-xs"
             />
           ) : (
-            <span className="text-[10px] text-neutral-400 dark:text-neutral-500">{label}</span>
+            <span className="text-xs text-neutral-400 dark:text-neutral-500">{label}</span>
           )}
-          <span className="shrink-0 rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground tabular-nums leading-none">
+          <span className="shrink-0 rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-muted-foreground tabular-nums leading-none">
             #{n.id}
           </span>
         </div>
@@ -609,7 +609,7 @@ function NodeDetailSheet({
                         domain={node.type === "goal" ? "goal" : "intent"}
                         value={node.state}
                         dot
-                        className="px-1.5 py-0 text-[10px]"
+                        className="px-1.5 py-0 text-xs"
                       />
                     ) : (
                       <span className="font-mono text-xs">{node.state}</span>
@@ -669,7 +669,7 @@ function NodeDetailSheet({
                                 <span className="text-foreground line-clamp-2 text-xs leading-snug">
                                   {nodeSummary(m) || t(mMeta.labelKey)}
                                 </span>
-                                <span className="text-muted-foreground block font-mono text-[10px]">
+                                <span className="text-muted-foreground block font-mono text-xs">
                                   {t(mMeta.labelKey)} · #{m.id}
                                 </span>
                               </span>
@@ -677,7 +677,7 @@ function NodeDetailSheet({
                           );
                         })}
                         {members.length < memberIds.length && (
-                          <span className="text-muted-foreground text-[10px]">
+                          <span className="text-muted-foreground text-xs">
                             {t("detail.membersNotLoaded", { count: memberIds.length - members.length })}
                           </span>
                         )}

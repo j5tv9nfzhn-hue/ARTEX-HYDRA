@@ -574,12 +574,12 @@ function TaskDetailInner() {
                       <TabsTrigger key={value} value={value} className="h-7 px-2.5 text-xs">
                         {t(`tabs.${value}`)}
                         {value === "findings" && totalFindings > 0 && (
-                          <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500/20 px-1 font-mono font-semibold text-[10px] text-rose-600 leading-none dark:text-rose-400">
+                          <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500/20 px-1 font-mono font-semibold text-xs text-rose-600 leading-none dark:text-rose-400">
                             {totalFindings > 99 ? "99+" : totalFindings}
                           </span>
                         )}
                         {value === "intercept" && interceptPendingCount > 0 && (
-                          <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-500 px-1 font-semibold text-[10px] text-white leading-none">
+                          <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-500 px-1 font-semibold text-xs text-white leading-none">
                             {interceptPendingCount > 99 ? "99+" : interceptPendingCount}
                           </span>
                         )}

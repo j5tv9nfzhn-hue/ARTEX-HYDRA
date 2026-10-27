@@ -114,9 +114,9 @@ function FindingAlertCard({ count, items }: { count: number; items: Finding[] })
               </div>
             ) : null}
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <StatusBadge domain="severity" value={severity} dot className="px-1.5 py-0 text-[10px]" />
+              <StatusBadge domain="severity" value={severity} dot className="px-1.5 py-0 text-xs" />
               {count > 1 ? (
-                <span className={cn("text-[10px] tabular-nums", severityTextClass(severity))}>
+                <span className={cn("text-xs tabular-nums", severityTextClass(severity))}>
                   {t("moreCount", { count: count - 1 })}
                 </span>
               ) : null}

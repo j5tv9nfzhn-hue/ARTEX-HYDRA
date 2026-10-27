@@ -119,7 +119,7 @@ function SectionTitle({
         <Icon className="size-3.5 text-muted-foreground" />
         {children}
       </div>
-      {sub && <span className="text-[10px] text-muted-foreground">{sub}</span>}
+      {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
     </div>
   );
 }
@@ -509,7 +509,7 @@ export default function DashboardPage() {
             进场用 .animate-fade-up 直接挂 Card(不包 div)—— 该卡是栅格子项、要跟着
             右侧矩阵拉伸对齐,包装层会把"卡片本身"替换成 div、破坏等高。 */}
         <Card className="animate-fade-up justify-between gap-4 p-5">
-          <div className="flex items-center gap-1.5 font-medium text-[10px] text-muted-foreground uppercase tracking-widest">
+          <div className="flex items-center gap-1.5 font-medium text-xs text-muted-foreground uppercase tracking-widest">
             <TargetIcon className="size-3" /> {t("activeTasks")}
           </div>
           <div className="flex items-baseline gap-2.5">
@@ -545,13 +545,13 @@ export default function DashboardPage() {
           {/* 确认发现 */}
           <Card size="sm" className="gap-1">
             <CardHeader className="pb-0">
-              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <BugIcon className="size-3" /> {t("confirmedFindings")}
               </div>
               <div className="font-display font-semibold text-2xl tabular-nums leading-none">{findings.length}</div>
             </CardHeader>
             {/* 严重度色统一走 lib/severity.ts(修旧版 critical=rose-500 / high=red-400 的亮度倒挂) */}
-            <CardContent className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px]">
+            <CardContent className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs">
               <span className={severityTextClass("critical")}>
                 {tStatus("severity.critical")} {findingsBySev.critical}
               </span>
@@ -570,23 +570,23 @@ export default function DashboardPage() {
           {/* 资产节点 */}
           <Card size="sm" className="gap-1">
             <CardHeader className="pb-0">
-              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <NetworkIcon className="size-3" /> {t("assetNodes")}
               </div>
               <div className="font-display font-semibold text-2xl tabular-nums leading-none">{totalAssets}</div>
             </CardHeader>
-            <CardContent className="text-[10px] text-muted-foreground">{t("crossTaskShared")}</CardContent>
+            <CardContent className="text-xs text-muted-foreground">{t("crossTaskShared")}</CardContent>
           </Card>
 
           {/* 流量交互 */}
           <Card size="sm" className="gap-1">
             <CardHeader className="pb-0">
-              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <ActivityIcon className="size-3" /> {t("trafficExchanges")}
               </div>
               <div className="font-display font-semibold text-2xl tabular-nums leading-none">{traffic.length}</div>
             </CardHeader>
-            <CardContent className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <CardContent className="flex items-center gap-1.5 text-xs text-muted-foreground">
               {settings?.traffic_capture ? (
                 <>
                   <LiveDot />
@@ -601,14 +601,14 @@ export default function DashboardPage() {
           {/* LLM 用量 */}
           <Card size="sm" className="gap-1">
             <CardHeader className="pb-0">
-              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <ZapIcon className="size-3" /> {t("tokenUsage")}
               </div>
               <div className="font-display font-semibold text-2xl tabular-nums leading-none">
                 {fmtTokens(displayedTokens.input + displayedTokens.output) || "—"}
               </div>
             </CardHeader>
-            <CardContent className="text-[10px] text-muted-foreground">
+            <CardContent className="text-xs text-muted-foreground">
               {t("statTokenDetail", {
                 input: fmtTokens(displayedTokens.input),
                 cache: fmtTokens(displayedTokens.cacheRead),
@@ -640,7 +640,7 @@ export default function DashboardPage() {
                   onClick={() => setTokenVersion(v)}
                   title={v === "new" ? t("tooltipNew") : t("tooltipOld")}
                   className={cn(
-                    "rounded px-2 py-0.5 text-[9px] font-medium transition-colors",
+                    "rounded px-2 py-0.5 text-xs font-medium transition-colors",
                     tokenVersion === v
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -650,7 +650,7 @@ export default function DashboardPage() {
                 </button>
               ))}
             </div>
-            <span className="text-[10px] font-normal text-muted-foreground">
+            <span className="text-xs font-normal text-muted-foreground">
               {tokenVersion === "new" ? t("srcNew") : t("srcOld")}
             </span>
           </div>
@@ -660,7 +660,7 @@ export default function DashboardPage() {
               type="button"
               onClick={() => setTokenTab("all")}
               className={cn(
-                "rounded-md px-2.5 py-1 text-[10px] font-medium transition-colors",
+                "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                 tokenTab === "all"
                   ? "bg-foreground text-background"
                   : "bg-muted/30 text-muted-foreground hover:text-foreground",
@@ -678,7 +678,7 @@ export default function DashboardPage() {
                   key={p.id}
                   onClick={() => setTokenTab(resolvedKey)}
                   className={cn(
-                    "flex items-center gap-1 rounded-md px-2.5 py-1 text-[10px] font-medium transition-colors",
+                    "flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                     tokenTab === resolvedKey
                       ? "bg-foreground text-background"
                       : "bg-muted/30 text-muted-foreground hover:text-foreground",
@@ -710,12 +710,12 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-4">
             {/* Total */}
             <div>
-              <div className="text-[10px] text-muted-foreground">{t("totalInOut")}</div>
+              <div className="text-xs text-muted-foreground">{t("totalInOut")}</div>
               {/* 合计数字:与全页数字排印对齐(Space Grotesk + 等宽数字),leading-none 收紧行高拉开层级 */}
               <div className="mt-1 font-bold font-display text-3xl tabular-nums leading-none tracking-tight">
                 {fmtTokens(displayedTokens.input + displayedTokens.output) || "—"}
               </div>
-              <div className="mt-0.5 text-[10px] text-muted-foreground">
+              <div className="mt-0.5 text-xs text-muted-foreground">
                 {t("taskCount", { count: displayedTokens.taskCount })}
               </div>
             </div>
@@ -748,7 +748,7 @@ export default function DashboardPage() {
                   const pct = total > 0 ? (value / total) * 100 : 0;
                   return (
                     <div key={label}>
-                      <div className="mb-1 flex items-center justify-between text-[10px]">
+                      <div className="mb-1 flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">{label}</span>
                         <span className={cn("font-display font-semibold tabular-nums", text)}>{fmtTokens(value)}</span>
                       </div>
@@ -770,7 +770,7 @@ export default function DashboardPage() {
               const denominator = displayedTokens.input;
               const hitPct = denominator > 0 ? Math.round((displayedTokens.cacheRead / denominator) * 100) : 0;
               return (
-                <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2 text-[10px]">
+                <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2 text-xs">
                   <span className="text-muted-foreground">{t("cacheHitRate")}</span>
                   <span
                     className={cn(
@@ -788,7 +788,7 @@ export default function DashboardPage() {
           {/* Right: daily bar chart */}
           <div className="flex min-h-0 flex-col">
             <div className="mb-2 flex items-center justify-between">
-              <div className="flex gap-3 text-[9px] text-muted-foreground">
+              <div className="flex gap-3 text-xs text-muted-foreground">
                 {(["input", "output", "cacheRead"] as const).map((k) => (
                   <span key={k} className="flex items-center gap-1">
                     <span
@@ -814,7 +814,7 @@ export default function DashboardPage() {
                     key={days}
                     onClick={() => setTokenDays(days)}
                     className={cn(
-                      "rounded px-2.5 py-0.5 text-[9px] font-medium transition-colors",
+                      "rounded px-2.5 py-0.5 text-xs font-medium transition-colors",
                       tokenDays === days
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground",
@@ -889,12 +889,12 @@ export default function DashboardPage() {
               {t("activityStream")}
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {t("eventCount", { count: activity.filter((a) => a.kind !== "usage").length })}
               </span>
               <Link
                 href="/function/tasks"
-                className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground"
+                className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
               >
                 {t("viewTasks")} <ArrowUpRightIcon className="size-3" />
               </Link>
@@ -906,7 +906,7 @@ export default function DashboardPage() {
               const count = activity.filter((a) => a.kind === kind).length;
               if (count === 0) return null;
               return (
-                <span key={kind} className="rounded border bg-muted/20 px-1.5 py-0.5 text-[9px] text-muted-foreground">
+                <span key={kind} className="rounded border bg-muted/20 px-1.5 py-0.5 text-xs text-muted-foreground">
                   {kind} <strong className="text-foreground/70">{count}</strong>
                 </span>
               );
@@ -923,7 +923,7 @@ export default function DashboardPage() {
                 <Stagger key={a.seq} delay={index * 50} className="flex gap-2.5 py-2">
                   <span
                     className={cn(
-                      "shrink-0 self-start rounded border px-1.5 py-0.5 font-mono text-[9px]",
+                      "shrink-0 self-start rounded border px-1.5 py-0.5 font-mono text-xs",
                       workerBg(a.worker),
                     )}
                   >
@@ -931,13 +931,13 @@ export default function DashboardPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[11px] font-medium">{kindLabel(a)}</div>
-                    <div className="mt-0.5 truncate text-[10px] text-muted-foreground">{a.summary}</div>
+                    <div className="mt-0.5 truncate text-xs text-muted-foreground">{a.summary}</div>
                   </div>
                   <div className="shrink-0 text-right">
-                    <Badge variant="outline" className="px-1.5 py-0 text-[9px] text-muted-foreground">
+                    <Badge variant="outline" className="px-1.5 py-0 text-xs text-muted-foreground">
                       {a.kind}
                     </Badge>
-                    <div className="mt-0.5 text-[9px] tabular-nums text-muted-foreground">{rel(a.ts)}</div>
+                    <div className="mt-0.5 text-xs tabular-nums text-muted-foreground">{rel(a.ts)}</div>
                   </div>
                 </Stagger>
               ))
@@ -954,7 +954,7 @@ export default function DashboardPage() {
             </div>
             <Link
               href="/function/findings"
-              className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
             >
               {t("all")} <ArrowUpRightIcon className="size-3" />
             </Link>
@@ -969,20 +969,20 @@ export default function DashboardPage() {
                   <StatusBadge
                     domain="severity"
                     value={f.severity}
-                    className="mt-0.5 shrink-0 px-1.5 py-0 text-[10px]"
+                    className="mt-0.5 shrink-0 px-1.5 py-0 text-xs"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-[11px] font-semibold">{f.vulnclass}</span>
                       {f.task_description && (
-                        <span className="truncate text-[10px] text-muted-foreground">{f.task_description}</span>
+                        <span className="truncate text-xs text-muted-foreground">{f.task_description}</span>
                       )}
                     </div>
-                    <div className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-muted-foreground">
+                    <div className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted-foreground">
                       {f.summary}
                     </div>
                   </div>
-                  <span className="shrink-0 text-[9px] tabular-nums text-muted-foreground">{rel(f.ts)}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{rel(f.ts)}</span>
                 </Stagger>
               ))
             )}
@@ -998,10 +998,10 @@ export default function DashboardPage() {
             {t("tasks")}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground">{t("taskCount", { count: tasks.length })}</span>
+            <span className="text-xs text-muted-foreground">{t("taskCount", { count: tasks.length })}</span>
             <Link
               href="/function/tasks"
-              className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
             >
               {t("all")} <ArrowUpRightIcon className="size-3" />
             </Link>
@@ -1020,7 +1020,7 @@ export default function DashboardPage() {
               ].map((h) => (
                 <th
                   key={h}
-                  className="px-4 py-2 text-left text-[9px] font-semibold uppercase tracking-widest text-muted-foreground first:pl-4"
+                  className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-widest text-muted-foreground first:pl-4"
                 >
                   {h}
                 </th>
@@ -1048,17 +1048,17 @@ export default function DashboardPage() {
                     <td className="max-w-xs px-4 py-3">
                       <Link href={`/function/tasks/detail?id=${t.id}`} className="group flex flex-col">
                         <span className="truncate font-medium group-hover:underline">{t.description}</span>
-                        <span className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">{t.id}</span>
+                        <span className="mt-0.5 truncate font-mono text-xs text-muted-foreground">{t.id}</span>
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge domain="task" value={t.status} dot className="px-1.5 py-0 text-[10px]" />
+                      <StatusBadge domain="task" value={t.status} dot className="px-1.5 py-0 text-xs" />
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge
                         domain="engine"
                         value={t.engine_mode ?? "idle"}
-                        className="px-1.5 py-0 text-[10px]"
+                        className="px-1.5 py-0 text-xs"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -1105,7 +1105,7 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-2">
               {assetByType.map(([type, count]) => (
                 <div key={type} className="flex items-center gap-2 text-xs">
-                  <span className="w-8 shrink-0 text-right text-[10px] text-muted-foreground">
+                  <span className="w-8 shrink-0 text-right text-xs text-muted-foreground">
                     {t.has(`assetType.${type}`) ? t(`assetType.${type}`) : type}
                   </span>
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
@@ -1120,7 +1120,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="mt-3 border-t pt-3 text-[10px] text-muted-foreground">
+          <div className="mt-3 border-t pt-3 text-xs text-muted-foreground">
             {t("totalNodes", { count: totalAssets })}
           </div>
         </Card>
@@ -1139,24 +1139,24 @@ export default function DashboardPage() {
               <div className="mb-3 flex items-end gap-2" style={{ height: 52 }}>
                 {trafficByCodes.map(({ code, n }) => (
                   <div key={code} className="flex flex-1 flex-col items-center gap-1">
-                    <span className="text-[9px] tabular-nums text-muted-foreground">{n}</span>
+                    <span className="text-xs tabular-nums text-muted-foreground">{n}</span>
                     <div
                       className={cn("w-full min-h-1 rounded-sm", statusBg(code), "opacity-80")}
                       style={{ height: Math.max(4, (n / trafficMax) * 36) }}
                     />
-                    <span className={cn("text-[9px] font-mono", statusColor(code))}>{code}</span>
+                    <span className={cn("text-xs font-mono", statusColor(code))}>{code}</span>
                   </div>
                 ))}
               </div>
 
               <div className="border-t pt-2.5">
-                <div className="mb-1.5 text-[10px] text-muted-foreground">{t("recentRequests")}</div>
+                <div className="mb-1.5 text-xs text-muted-foreground">{t("recentRequests")}</div>
                 <div className="flex flex-col gap-1.5">
                   {recentTraffic.map((e) => (
-                    <div key={e.id} className="flex items-center gap-1.5 text-[10px]">
+                    <div key={e.id} className="flex items-center gap-1.5 text-xs">
                       <span
                         className={cn(
-                          "shrink-0 rounded border px-1 py-0 font-mono text-[9px]",
+                          "shrink-0 rounded border px-1 py-0 font-mono text-xs",
                           e.method === "GET"
                             ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
                             : "border-blue-500/30 bg-blue-500/10 text-blue-400",
@@ -1168,7 +1168,7 @@ export default function DashboardPage() {
                         {e.host}
                         {e.url.replace(/^https?:\/\/[^/]+/, "").substring(0, 30)}
                       </span>
-                      <span className={cn("shrink-0 font-mono text-[9px]", statusColor(e.status))}>{e.status}</span>
+                      <span className={cn("shrink-0 font-mono text-xs", statusColor(e.status))}>{e.status}</span>
                     </div>
                   ))}
                 </div>
@@ -1183,11 +1183,11 @@ export default function DashboardPage() {
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2">
-              <div className="text-[10px] text-muted-foreground">{t("llmConfig")}</div>
+              <div className="text-xs text-muted-foreground">{t("llmConfig")}</div>
               <Badge
                 variant="outline"
                 className={cn(
-                  "text-[10px]",
+                  "text-xs",
                   stats?.llm_configured
                     ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
                     : "border-red-500/30 bg-red-500/10 text-red-400",
@@ -1198,11 +1198,11 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2">
-              <div className="text-[10px] text-muted-foreground">{t("trafficCapture")}</div>
+              <div className="text-xs text-muted-foreground">{t("trafficCapture")}</div>
               <Badge
                 variant="outline"
                 className={cn(
-                  "text-[10px]",
+                  "text-xs",
                   settings?.traffic_capture
                     ? "border-violet-500/30 bg-violet-500/10 text-violet-400"
                     : "text-muted-foreground",
@@ -1214,8 +1214,8 @@ export default function DashboardPage() {
 
             {activeProfile && (
               <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2">
-                <div className="text-[10px] text-muted-foreground">{t("activeModel")}</div>
-                <span className="font-mono text-[10px]">{activeProfile.model}</span>
+                <div className="text-xs text-muted-foreground">{t("activeModel")}</div>
+                <span className="font-mono text-xs">{activeProfile.model}</span>
               </div>
             )}
           </div>
@@ -1223,7 +1223,7 @@ export default function DashboardPage() {
           {/* pending approvals */}
           {pendingCount > 0 && (
             <div className="mt-3">
-              <div className="mb-1.5 text-[10px] font-medium text-amber-400">
+              <div className="mb-1.5 text-xs font-medium text-amber-400">
                 {t("pendingApprovals", { count: pendingCount })}
               </div>
               <div className="flex flex-col gap-1.5">
@@ -1234,8 +1234,8 @@ export default function DashboardPage() {
                     className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/5 px-2.5 py-2 hover:bg-amber-500/10"
                   >
                     <div className="min-w-0">
-                      <div className="text-[10px] font-medium">{p.tool_name}</div>
-                      <div className="text-[9px] text-muted-foreground">{p.agent_name}</div>
+                      <div className="text-xs font-medium">{p.tool_name}</div>
+                      <div className="text-xs text-muted-foreground">{p.agent_name}</div>
                     </div>
                     <ArrowUpRightIcon className="size-3 shrink-0 text-amber-400" />
                   </Link>
@@ -1243,7 +1243,7 @@ export default function DashboardPage() {
                 {pendingCount > 3 && (
                   <Link
                     href="/system/intercept/approvals"
-                    className="text-center text-[10px] text-muted-foreground hover:text-foreground"
+                    className="text-center text-xs text-muted-foreground hover:text-foreground"
                   >
                     {t("morePending", { count: pendingCount - 3 })}
                   </Link>
@@ -1253,7 +1253,7 @@ export default function DashboardPage() {
           )}
 
           {pendingCount === 0 && (
-            <div className="mt-3 rounded-lg border bg-muted/10 px-3 py-3 text-center text-[10px] text-muted-foreground">
+            <div className="mt-3 rounded-lg border bg-muted/10 px-3 py-3 text-center text-xs text-muted-foreground">
               <ShieldCheckIcon className="mx-auto mb-1 size-4 text-emerald-500/50" />
               {t("noPendingIntercepts")}
             </div>
@@ -1267,7 +1267,7 @@ export default function DashboardPage() {
           {t("reliability")}
         </SectionTitle>
         {!reliability || reliability.tools.calls === 0 ? (
-          <div className="rounded-lg border bg-muted/10 px-3 py-3 text-center text-[10px] text-muted-foreground">
+          <div className="rounded-lg border bg-muted/10 px-3 py-3 text-center text-xs text-muted-foreground">
             {t("noReliabilityData")}
           </div>
         ) : (
@@ -1276,12 +1276,12 @@ export default function DashboardPage() {
               {/* 工具错误率 */}
               <div className="rounded-lg border bg-muted/20 px-3 py-2">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10px] text-muted-foreground">{t("toolErrorRate")}</span>
+                  <span className="text-xs text-muted-foreground">{t("toolErrorRate")}</span>
                   <span className={cn("text-lg font-semibold tabular-nums", rateClass(reliability.tools.error_rate))}>
                     {fmtPct(reliability.tools.error_rate)}
                   </span>
                 </div>
-                <div className="mt-0.5 text-[9px] text-muted-foreground">
+                <div className="mt-0.5 text-xs text-muted-foreground">
                   {t("toolCallsDetail", { calls: reliability.tools.calls, errors: reliability.tools.errors })}
                 </div>
               </div>
@@ -1289,7 +1289,7 @@ export default function DashboardPage() {
               {/* 崩溃重放成功率 */}
               <div className="rounded-lg border bg-muted/20 px-3 py-2">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10px] text-muted-foreground">{t("replaySuccessRate")}</span>
+                  <span className="text-xs text-muted-foreground">{t("replaySuccessRate")}</span>
                   {reliability.replay.succeeded + reliability.replay.failed > 0 ? (
                     <span
                       className={cn("text-lg font-semibold tabular-nums", rateClass(reliability.replay.success_rate))}
@@ -1300,7 +1300,7 @@ export default function DashboardPage() {
                     <span className="text-lg font-semibold tabular-nums text-muted-foreground">—</span>
                   )}
                 </div>
-                <div className="mt-0.5 text-[9px] text-muted-foreground">
+                <div className="mt-0.5 text-xs text-muted-foreground">
                   {t("replayDetail", {
                     attempts: reliability.replay.attempts,
                     succeeded: reliability.replay.succeeded,
@@ -1312,7 +1312,7 @@ export default function DashboardPage() {
               {/* 中断恢复率 */}
               <div className="rounded-lg border bg-muted/20 px-3 py-2">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10px] text-muted-foreground">{t("interruptRecoveryRate")}</span>
+                  <span className="text-xs text-muted-foreground">{t("interruptRecoveryRate")}</span>
                   {reliability.interrupts.succeeded + reliability.interrupts.failed > 0 ? (
                     <span
                       className={cn(
@@ -1326,7 +1326,7 @@ export default function DashboardPage() {
                     <span className="text-lg font-semibold tabular-nums text-muted-foreground">—</span>
                   )}
                 </div>
-                <div className="mt-0.5 text-[9px] text-muted-foreground">
+                <div className="mt-0.5 text-xs text-muted-foreground">
                   {t("interruptDetail", {
                     attempts: reliability.interrupts.attempts,
                     succeeded: reliability.interrupts.succeeded,
@@ -1342,7 +1342,7 @@ export default function DashboardPage() {
                 {stageRows.map(([stage, count]) => (
                   <span
                     key={stage}
-                    className="rounded border bg-muted/20 px-1.5 py-0.5 text-[9px] text-muted-foreground"
+                    className="rounded border bg-muted/20 px-1.5 py-0.5 text-xs text-muted-foreground"
                   >
                     {t.has(`stage.${stage}`) ? t(`stage.${stage}`) : stage} {count}
                   </span>
@@ -1353,10 +1353,10 @@ export default function DashboardPage() {
             {/* 错误最多的工具（错误数 / 调用数） */}
             {errorTools.length > 0 && (
               <div className="border-t pt-2.5">
-                <div className="mb-1.5 text-[10px] text-muted-foreground">{t("topErrorTools")}</div>
+                <div className="mb-1.5 text-xs text-muted-foreground">{t("topErrorTools")}</div>
                 <div className="flex flex-col gap-1">
                   {errorTools.map((row) => (
-                    <div key={row.tool} className="flex items-center justify-between gap-2 text-[10px]">
+                    <div key={row.tool} className="flex items-center justify-between gap-2 text-xs">
                       <span className="min-w-0 truncate font-mono">{row.tool}</span>
                       <span className="shrink-0 tabular-nums text-red-400">
                         {row.errors} / {row.calls}
@@ -1369,7 +1369,7 @@ export default function DashboardPage() {
 
             {/* 协议异常（无配对/未知/缺失的工具结果）；全部为 0 时不打扰 */}
             {protocolTotal > 0 && (
-              <div className="border-t pt-2.5 text-[9px] text-amber-400/90">
+              <div className="border-t pt-2.5 text-xs text-amber-400/90">
                 {t("protocolDetail", {
                   unpaired: reliability.protocol.unpaired_results,
                   unknown: reliability.protocol.unknown_results,

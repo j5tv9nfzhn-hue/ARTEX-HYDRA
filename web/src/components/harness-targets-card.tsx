@@ -199,11 +199,11 @@ export function HarnessTargetsCard() {
                       <span className="font-medium text-sm">{c.name}</span>
                       <span className="text-muted-foreground text-xs">{c.vendor}</span>
                       <Badge variant={stateVariant(c.state)}>{t(`harnessState_${c.state}`)}</Badge>
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-xs">
                         {c.tier}
                       </Badge>
                       {c.needs_verify ? (
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="text-xs">
                           {t("harnessTierB")}
                         </Badge>
                       ) : null}
