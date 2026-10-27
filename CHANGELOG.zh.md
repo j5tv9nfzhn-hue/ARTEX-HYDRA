@@ -18,6 +18,14 @@
 - **「数据迁移」卡片在程序跑着时永远导不进去**：`migrate` 的 8787/8788 端口探测原本是给「服务启动之前跑的 `-import-old`」写的——在服务进程里发起导入时，主服务自己就占着 8787，于是每次都被判成「旧版还在跑」直接 400。现在探测区分「本进程自己占的端口」与「别的程序占的端口」：`migrate.Options.OwnPorts` 由 `server.migrateOptions()` 按当前监听地址（以及 capture 开启时的流量记录代理）填好，导入回到「除我之外还有谁」的语义；卡片上的「占用中」徽标与禁用态也只在真被别人占着时出现。
 - **导入会连 `i<意图ID>` 产物目录一起搬**：旧版 worker 在 workDir 为空时把产物落在安装根目录，库里引用着这些文件；`migrate.Import` 现在把它们一并拷进 `data/`（与 CLI `-import-old` 同一语义），导入后历史报告仍能打开。
 
+### 界面与可读性（桌面 Agent UI 规范对齐）
+
+- **补上从未定义过的滚动工具类**：`scrollbar-thin` / `scrollbar-track-transparent` / `scrollbar-thumb-transparent` / `scrollbar-gutter-stable` / `scroll-fade-b` 在 message-scroller、工作空间与任务资产页里用了一整年，但 Tailwind v4（CSS-first，无 config、无插件）里从来没有定义——滚动条一直回落到系统粗灰条，滚动渐隐从未生效。现在用 `@utility` 补真身，渐隐遮罩走 CSS scroll-driven animation（合成器线程驱动，0 JS），不支持的引擎整段忽略。
+- **CJK 选词不再误发消息**：部分输入法在候选词浮层按 Enter 确认时，会在 `compositionend` 之后（`isComposing` 已复位）补发一个 keyCode=13 的伴生 keydown，原有双检拦不住。新增 `lib/ime-guard.ts`：记录 compositionend 时间戳，500ms 内的 Enter 判为幽灵键并立即清零时间戳，聊天发送、@ 联想、侧栏追问、资产 DSL 搜索四处统一接入。
+- **上翻读历史时能一键回到底部**：`useStickToBottom` 早已实现「用户上滑即冻结自动贴底」，但页面拿不到该状态、也没有回底入口。新增 `onAtBottomChange` 回调与聊天页「回到底部」浮钮（脱离底部才出现）。
+- **12px 可读性门禁**：全仓 209 处 `text-[9px]` / `text-[10px]` / `text-[11px]` 收敛到 `text-xs`，另把四处 10px 的图表字号抬到 12px。层级继续靠字重与灰阶表达，不新增字号档位。
+- **清除中点「·」分隔符**：中点在不同系统字体下基线算法不一，同一条元数据会忽上忽下。前端元数据拼接改为 ` / `、装饰性中点元素删除改由 flex `gap` 分隔、zh.json 112 行文案改为中文逗号；worker 的 agent_name 协议串从 `work#1 · #42` 改为 `work#1 (#42)`，前端解析同时兼容新旧两种格式。
+
 ### 移除
 
 - **Camoufox 指纹浏览器集成下线**：删除 `server/camoufox_settings.go` 与五条设置路由、`skills/camoufox-bypass` 技能包（SKILL.md / bypass_guide / solve_cf.py）、`agent/skill_router.go` 的对应路由与 shell 白名单项、设置页 Camoufox 卡片及 api / types / mock / i18n 的全部引用。浏览器自动化统一走系统浏览器 CDP（L1）链路。
