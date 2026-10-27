@@ -37,7 +37,7 @@ usage() {
 
 选项：
   --release              构建 Linux、macOS、Windows 的受支持 amd64/arm64 目标并生成 zip
-  --desktop              构建桌面端 artex-hydra（CGO_ENABLED=1，仅宿主机目标）
+  --desktop              构建桌面端 artex-hydra-desktop（CGO_ENABLED=1，仅宿主机目标）
   --target OS/ARCH       指定单一目标，如 windows/amd64
   --upx                  强制 UPX 压缩，可能影响部分 Linux 环境的兼容性
   --no-compress          禁用 UPX，仅通过 Go linker 去符号并压缩 zip
@@ -46,9 +46,10 @@ usage() {
 可通过 ARTEX_TARGETS 覆盖目标列表，例如：
   ARTEX_TARGETS=linux/amd64,windows/amd64 ./build.sh --release
 
-桌面端（--desktop）走独立 Go 模块 desktop/，资产名 artex-hydra / artex-hydra-core
-经 ldflags 注入 selfupdate；CGO 依赖平台原生 webview 库，必须原生构建。
-macOS 目标打包为 .app bundle，其余平台为 zip。
+桌面端（--desktop）走独立 Go 模块 desktop/，产物是**单文件** artex-hydra-desktop
+（无 core、无 versions/，数据与它同目录），名字基名经 ldflags 注入 selfupdate；
+CGO 依赖平台原生 webview 库，必须原生构建。macOS 目标打包为 .app bundle，
+其余平台为 zip。产物名带 -desktop 后缀，与 WEB 版（artex-rea-*）区分。
 EOF
 }
 
@@ -256,14 +257,17 @@ package_binary() {
 
 # package_desktop 打包桌面发行物：Windows/Linux 为 zip，macOS 为 .app bundle。
 #
-# 布局与服务器版一致（入口 + 核心两件套 + skills + config.example.json + README），
-# 只是文件名是 artex-hydra / artex-hydra-core。macOS 的安装根目录即 .app 内
-# Contents/MacOS（versions/ 也在其下），与 Windows 布局同构。
+# 与服务器版的关键差别：桌面端是**单文件**发行——没有 artex-hydra-core、没有
+# versions/、没有 pointer.json。一个可执行文件就地运行，config/artex.db/skills
+# 就在它旁边，整目录拷走即完成迁移（新旧合并也不必对齐核心副本）。服务器版仍走
+# 「入口 + 核心两件套」，因为它换装时不能覆盖正在运行的 exe。
+#
+# 产物名带 -desktop 后缀，与 WEB 版（artex-rea-*）在同一个 Release 里一眼可分。
 package_desktop() {
   binary="$1"
   goos="$2"
   goarch="$3"
-  stem="artex-hydra"
+  stem="artex-hydra-desktop"
   package_name="${stem}-${ARTEX_BUILD_VERSION}-${goos}-${goarch}"
   package_root="${ARTEX_PACKAGE_DIR}/${package_name}"
   archive="${ARTEX_PACKAGE_DIR}/${package_name}.zip"
@@ -275,19 +279,17 @@ package_desktop() {
     windows)
       core_ext=".exe"
       cp "$binary" "$package_root/${stem}${core_ext}"
-      cp "$binary" "$package_root/${stem}-core${core_ext}"
       "$PYTHON_BIN" -I scripts/check-start-scripts.py || exit 1
       # 启动脚本按桌面包改名：根目录脚本写的是 artex-rea，直接拷会找不到入口
-      sed 's/artex-rea/artex-hydra/g' start.bat > "$package_root/start.bat"
-      sed 's/artex-rea/artex-hydra/g' start-lan.bat > "$package_root/start-lan.bat"
+      sed 's/artex-rea/artex-hydra-desktop/g' start.bat > "$package_root/start.bat"
+      sed 's/artex-rea/artex-hydra-desktop/g' start-lan.bat > "$package_root/start-lan.bat"
       ;;
     darwin)
       app_bundle="$package_root/${stem}.app"
       mkdir -p "$app_bundle/Contents/MacOS" "$app_bundle/Contents/Resources"
       cp "$binary" "$app_bundle/Contents/MacOS/${stem}"
-      cp "$binary" "$app_bundle/Contents/MacOS/${stem}-core"
-      chmod +x "$app_bundle/Contents/MacOS/${stem}" "$app_bundle/Contents/MacOS/${stem}-core"
-      sed 's/artex-rea/artex-hydra/g' start.sh > "$app_bundle/Contents/MacOS/start.sh"
+      chmod +x "$app_bundle/Contents/MacOS/${stem}"
+      sed 's/artex-rea/artex-hydra-desktop/g' start.sh > "$app_bundle/Contents/MacOS/start.sh"
       chmod +x "$app_bundle/Contents/MacOS/start.sh"
       cp -R skills "$app_bundle/Contents/MacOS/skills"
       rm -f "$app_bundle/Contents/MacOS/skills/embed.go"
@@ -320,11 +322,10 @@ PLIST
       ;;
     linux)
       cp "$binary" "$package_root/${stem}"
-      cp "$binary" "$package_root/${stem}-core"
-      chmod +x "$package_root/${stem}" "$package_root/${stem}-core"
+      chmod +x "$package_root/${stem}"
       "$PYTHON_BIN" -I scripts/check-start-scripts.py || exit 1
-      sed 's/artex-rea/artex-hydra/g' start.sh > "$package_root/start.sh"
-      sed 's/artex-rea/artex-hydra/g' start-lan.sh > "$package_root/start-lan.sh"
+      sed 's/artex-rea/artex-hydra-desktop/g' start.sh > "$package_root/start.sh"
+      sed 's/artex-rea/artex-hydra-desktop/g' start-lan.sh > "$package_root/start-lan.sh"
       chmod +x "$package_root/start.sh" "$package_root/start-lan.sh"
       ;;
     *) die "不支持的桌面目标系统：$goos" ;;
@@ -338,7 +339,7 @@ PLIST
     if [ -f README.md ]; then cp README.md "$package_root/"; fi
     # Windows 桌面端附带应用图标（exe 已内嵌品牌图标；解压后自建快捷方式时同样可用）
     if [ "$goos" = "windows" ] && [ -f desktop/assets/artex-hydra.ico ]; then
-      cp desktop/assets/artex-hydra.ico "$package_root/artex-hydra.ico"
+      cp desktop/assets/artex-hydra.ico "$package_root/${stem}.ico"
     fi
   fi
   make_zip "$ARTEX_PACKAGE_DIR" "$(basename "$package_root")" "$(basename "$archive")"
@@ -402,8 +403,9 @@ build_target() {
 #
 # 与服务器版构建的差异：
 #   - CGO_ENABLED=1 且不设 GOOS/GOARCH（webview 库是平台原生库，交叉编译必失败）；
-#   - 资产名 stem 经 ldflags 注入 selfupdate（artex-hydra / artex-hydra-core），
-#     更新系统因此可以原样复用版本化布局与 SHA256 闸门；
+#   - 资产名 stem 经 ldflags 注入 selfupdate（artex-hydra-desktop），并置 singleFile=1：
+#     不做 versions/ 安装、不转交核心，GitHub 查询与 SHA256 闸门照旧可用；
+#   - 单文件发行：包内只有一个可执行文件，数据与它同目录，整目录即迁移单位。
 #   - 不跑 UPX（CGO 二进制压缩兼容性差，Release 优先可移植性）。
 build_desktop_target() {
   target="$1"
@@ -419,12 +421,12 @@ build_desktop_target() {
     *) die "不支持的桌面目标系统：$goos（支持 linux、darwin、windows）" ;;
   esac
 
-  binary_name="artex-hydra"
-  [ "$goos" = "windows" ] && binary_name="artex-hydra.exe"
+  binary_name="artex-hydra-desktop"
+  [ "$goos" = "windows" ] && binary_name="artex-hydra-desktop.exe"
   if [ -n "${ARTEX_OUTPUT:-}" ] && [ "$ARTEX_RELEASE" != "1" ]; then
     output="$ARTEX_OUTPUT"
   else
-    output="${ARTEX_OUTPUT_DIR}/artex-hydra-${goos}-${goarch}/${binary_name}"
+    output="${ARTEX_OUTPUT_DIR}/artex-hydra-desktop-${goos}-${goarch}/${binary_name}"
   fi
   mkdir -p "$(dirname "$output")"
 
@@ -439,8 +441,10 @@ build_desktop_target() {
   if [ "$goos" = "windows" ]; then
     ldflags="$ldflags -H windowsgui"
   fi
-  ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.entryStem=artex-hydra"
-  ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.coreStem=artex-hydra-core"
+  ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.entryStem=artex-hydra-desktop"
+  ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.coreStem=artex-hydra-desktop"
+  # 单文件发行：不做 versions/ 安装、不转交核心，一键更新改为下载新版替换单文件。
+  ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.singleFile=1"
   if [ -n "$ARTEX_UPDATE_REPO" ]; then
     ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.Repo=${ARTEX_UPDATE_REPO}"
   fi

@@ -1,12 +1,17 @@
-// Command artex-hydra 是 ARTEX-HYDRA 的 Wails V2 桌面端：进程内启动与
+// Command artex-hydra-desktop 是 ARTEX-HYDRA 的 Wails V2 桌面端：进程内启动与
 // artex-rea 完全同构的后端（SQLite 双图库、agent 引擎、HTTP API），
 // 用原生 webview 窗口渲染同一套 Next.js 前端，同时保留 http://127.0.0.1:8787
 // 的浏览器入口（端口被服务器版占用时窗口照常可用）。
 //
-// 发行包是"入口 + 核心"两件套（与服务器版同一套 selfupdate 布局）：
+// 发行物是**单文件**（`build.sh --desktop` 经 ldflags 注入 singleFile=1）：
 //
-//	artex-hydra[.exe]       入口，永远待在根目录，只按 pointer.json 转发；
-//	artex-hydra-core[.exe]  真正干活的核心（本文件编译出的 wails 应用）。
+//	artex-hydra-desktop[.exe]  既是入口也是本体，就地运行；
+//	                           config/、artex.db、data/、skills/ 都在它旁边。
+//
+// 与服务器版刻意不同：没有 artex-hydra-core、没有 versions/、没有 pointer.json。
+// 那套「入口 + 核心」是为了"换装不能覆盖运行中的 exe"，代价是多一份常驻副本、
+// 多一个进程、数据目录还得跟着版本走；桌面端是一个人用的窗口程序，数据就在手边，
+// 整个目录拷走就该能迁走。服务器版（cmd/artex）原样保留版本化布局。
 //
 // 本文件与 cmd/artex/main.go 的启动序列同构（启动守卫 → 自更新引导 →
 // 单实例锁 → 共享 boot.Prepare → settle → 窗口/控制台 → 停机三条不变量），
@@ -58,7 +63,7 @@ func run() int {
 		dataDir   = flag.String("data", filepath.Join(config.BaseDir(), "data"), "data directory for SQLite stores (default: data/ next to the executable)")
 		proxy     = flag.String("proxy", "127.0.0.1:8788", "traffic recording proxy address (empty to disable)")
 		resetPass = flag.Bool("reset-password", false, "重置管理员密码后退出；新密码取自 ARTEX_RESET_NEWPASS，未设置则交互输入")
-		importOld = flag.String("import-old", "", "从旧版 WEB 端（artex-rea）安装目录导入数据后退出：artex-hydra.exe -import-old \"C:\\path\\to\\旧目录\"")
+		importOld = flag.String("import-old", "", "从旧版 WEB 端（artex-rea）安装目录导入数据后退出：artex-hydra-desktop -import-old \"C:\\path\\to\\旧目录\"")
 	)
 	flag.Parse()
 	listenAddr := config.ResolveListenAddr(*addr, *lan)

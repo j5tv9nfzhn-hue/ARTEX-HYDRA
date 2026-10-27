@@ -210,8 +210,8 @@ GitHub Release 发布三端（Linux/macOS/Windows）zip 包（amd64/arm64），�
 ### 9.3 构建路径与前置条件
 
 - web-dist 放入 `server/webui/dist`，`server/webui_embed.go` 的 `//go:embed all:webui/dist` 内嵌它；binaries 用 `ARTEX_SKIP_FRONTEND=1` 防止重复编译前端。
-- `build.sh --target OS/ARCH` 输出 `dist/artex-rea-<os>-<arch>/artex-rea`（Windows 为 `artex-rea.exe`）和发布用 zip；包含对应启动脚本（`start.bat` / `start.sh`）、skills、config.example.json、README。桌面端目标（`--desktop`）按同样的布局输出 `artex-hydra` / `artex-hydra-core` 两件套（macOS 为 `.app`）。
-- 一键更新由 `selfupdate.AssetName` 按当前平台拼 `artex-rea-<版本>-<os>-<架构>.zip`（桌面端为 `artex-hydra-...`，`entryStem` / `coreStem` 由 ldflags 注入），与 `package_binary` 命名一致。
+- `build.sh --target OS/ARCH` 输出 `dist/artex-rea-<版本>-<os>-<arch>/artex-rea`（Windows 为 `artex-rea.exe`）和发布用 zip；包含对应启动脚本（`start.bat` / `start.sh`）、skills、config.example.json、README。桌面端目标（`--desktop`）输出 `dist/artex-hydra-desktop-<版本>-<os>-<arch>/`，包内是**单文件** `artex-hydra-desktop`（无 `-core`、无 `versions/`；macOS 为 `artex-hydra-desktop.app`），`-desktop` 后缀用于与 WEB 版 `artex-rea-*` 区分。
+- 一键更新由 `selfupdate.AssetName` 按当前平台拼 `artex-rea-<版本>-<os>-<架构>.zip`（桌面端为 `artex-hydra-desktop-...`，`entryStem` 由 ldflags 注入），与 `package_binary` / `package_desktop` 命名一致。桌面端构建同时注入 `singleFile=1`：`Bootstrap` 直接放行、`Handoff` 永不转交、`/api/update/apply` 返回「下载新版替换单文件」，因此桌面端不产生 `versions/`、`pointer.json` 与核心副本。
 
 ### 9.4 不发布 tag 的本地验证
 

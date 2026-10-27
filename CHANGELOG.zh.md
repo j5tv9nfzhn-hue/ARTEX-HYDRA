@@ -25,16 +25,16 @@
 ### 工程
 
 - **共享启动骨架抽取到 `boot` 包**：`cmd/artex`（服务器版）与新增的 Wails 桌面壳从同一处启动同构后端——凭据主密钥 → 进程树收口 → 打开双图库 → 装配 server → 启动监听器，停机三条不变量（先停新请求、再等在跑回合、最后关库）由 `App.Shutdown` 统一收尾；进程树收口（Windows Job Object）与离线密码重置一并迁入；监听地址四层优先级收口到 `config.ResolveListenAddr`，两端共用。
-- **selfupdate 参数化**：`entryStem` / `coreStem` 由常量改为可经 ldflags 注入的变量（默认仍是 `artex-rea` / `artex-rea-core`，服务器版行为不变）；资产名匹配、zip 内二进制提取与启动守卫文案同步改用变量，桌面版构建注入 `artex-hydra` / `artex-hydra-core` 即可原样复用版本化布局与更新协议。
+- **selfupdate 参数化 + 单文件开关**：`entryStem` / `coreStem` 由常量改为可经 ldflags 注入的变量（默认仍是 `artex-rea` / `artex-rea-core`，服务器版行为不变），并新增 `singleFile`（ldflags 置 `1`）让同一套代码支持「没有核心、没有 versions/」的单文件发行；资产名匹配、zip 内二进制提取与启动守卫文案同步改用变量。
 
 ### 桌面端（Wails V2）
 
 #### 新增
 
-- **Wails V2 桌面壳 `artex-hydra`**：原生 webview 窗口（Windows=WebView2、macOS=WebKit、Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，进程内运行同构后端；Web 地址入口（`http://127.0.0.1:8787`）保留，`-lan` 开放局域网（供同一网络下的浏览器访问）。桌面端**窗口内免登录**，Web 入口与局域网仍要账号密码（见下方「鉴权与运行形态」与「修复的问题」）。
-- **桌面端更新系统**：复用 `selfupdate` 的版本化安装布局（入口 + 核心两件套、pointer.json、journal 状态机）与 SHA256 三闸门；`entryStem`/`coreStem` 参数化为 `artex-hydra`/`artex-hydra-core`（ldflags 注入），页面「系统设置 → 更新」可直接驱动桌面端检查/应用/回滚。
+- **Wails V2 桌面壳 `artex-hydra-desktop`**：原生 webview 窗口（Windows=WebView2、macOS=WebKit、Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，进程内运行同构后端；Web 地址入口（`http://127.0.0.1:8787`）保留，`-lan` 开放局域网（供同一网络下的浏览器访问）。桌面端**窗口内免登录**，Web 入口与局域网仍要账号密码（见下方「鉴权与运行形态」与「修复的问题」）。
+- **桌面端是单文件发行，没有核心副本**：产物 `artex-hydra-desktop[.exe]` 既是入口也是本体，包内不再有 `artex-hydra-core`、`versions/`、`pointer.json`；`config/`、`artex.db`、`data/`、`skills/` 与它同目录，**整个目录拷走即完成迁移**（新旧合并也不必对齐核心副本）。`selfupdate` 用 `singleFile=1` 落地：`Bootstrap` 直接放行、`Handoff` 永不转交、`/api/update/apply` 返回「下载新版替换单文件」——页面「系统设置 → 更新」仍能检查新版本，换装由用户替换那一个文件完成。服务器版的「入口 + 核心 + versions/」原样保留（它的换装不能覆盖运行中的 exe，桌面端没有这个约束）。产物名统一带 `-desktop` 后缀，与 WEB 版 `artex-rea-*` 在同一个 Release 里一眼可分。
 - **共享启动骨架 `boot` 包**（见上方「工程」节）与独立模块 `desktop/`（`replace` 复用根模块后端，避免 CGO 依赖污染服务器版构建）。
-- **构建与发布**：`build.sh --desktop` 原生构建（CGO_ENABLED=1，不支持交叉编译），macOS 打包 `.app` bundle；`release.yml` 新增 `desktop` job（三平台原生 runner），桌面端三平台 zip 与服务器版六平台 zip 同一批发布。
+- **构建与发布**：`build.sh --desktop` 原生构建（CGO_ENABLED=1，不支持交叉编译），产物 `artex-hydra-desktop-<版本>-<os>-<arch>.zip`（macOS 为 `.app` bundle）；`release.yml` 的 `desktop` job 在三平台原生 runner 上构建，桌面端三平台 zip 与服务器版六平台 zip 同一批发布。
 
 #### 鉴权与运行形态
 

@@ -204,8 +204,9 @@ jobs:
   # （Windows=WebView2、macOS=WebKit、Linux=webkit2gtk），无法交叉编译——
   # 三平台各自在原生 runner 上构建并打包（Windows/Linux 为 zip，macOS 为 .app bundle）。
   #
-  # 独立 Go 模块 desktop/ 通过 replace 复用根模块后端；资产名 artex-hydra /
-  # artex-hydra-core 经 build.sh 的 ldflags 注入 selfupdate，更新协议原样复用。
+  # 独立 Go 模块 desktop/ 通过 replace 复用根模块后端；产物是单文件
+  # artex-hydra-desktop（无 core、无 versions/），名字与 singleFile 开关经
+  # build.sh 的 ldflags 注入 selfupdate。
   desktop:
     needs: frontend
     runs-on: ${{ matrix.runner }}
@@ -350,7 +351,7 @@ jobs:
           done
           # 桌面端三平台（Windows/macOS/Linux 各一档）
           for t in windows/amd64 darwin/arm64 linux/amd64; do
-            f="artex-hydra-${version}-${t%%/*}-${t##*/}.zip"
+            f="artex-hydra-desktop-${version}-${t%%/*}-${t##*/}.zip"
             if [ -f "$f" ]; then echo "✓ $f"; else echo "::error::缺少 $f"; missing=1; fi
           done
           [ "$missing" = "0" ] || exit 1
@@ -413,7 +414,7 @@ jobs:
               echo "artex-rea-${version}-${t%%/*}-${t##*/}.zip"
             done
             for t in windows/amd64 darwin/arm64 linux/amd64; do
-              echo "artex-hydra-${version}-${t%%/*}-${t##*/}.zip"
+              echo "artex-hydra-desktop-${version}-${t%%/*}-${t##*/}.zip"
             done
             echo SHA256SUMS
             echo latest.json

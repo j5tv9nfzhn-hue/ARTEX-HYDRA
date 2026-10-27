@@ -45,7 +45,7 @@ var importFailed []string
 func runImportOld(oldDir string) int {
 	oldDir = filepath.Clean(strings.TrimSpace(oldDir))
 	if oldDir == "" || oldDir == "." {
-		fmt.Fprintln(os.Stderr, "用法：artex-hydra.exe -import-old <旧版 WEB 端目录>")
+		fmt.Fprintln(os.Stderr, "用法：artex-hydra-desktop -import-old <旧版 WEB 端目录>")
 		return 1
 	}
 
@@ -120,7 +120,7 @@ func runImportOld(oldDir string) int {
 		fmt.Fprintln(os.Stderr, "[import] 失败项可修复后单独重试（重新运行本命令，已成功的项会跳过或覆盖为同一内容）。")
 		return 1
 	}
-	fmt.Printf("\n[import] 导入完成。启动 artex-hydra.exe 即可沿用旧版的全部数据（首次启动会自动完成数据库迁移）。\n")
+	fmt.Printf("\n[import] 导入完成。启动 artex-hydra-desktop 即可沿用旧版的全部数据（首次启动会自动完成数据库迁移）。\n")
 	return 0
 }
 
