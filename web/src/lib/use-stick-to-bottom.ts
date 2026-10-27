@@ -38,6 +38,8 @@ export type StickToBottomOptions = {
   slack?: number;
   /** 滚到接近顶部时的回调（上滑加载更早的记录）。 */
   onNearTop?: () => void;
+  /** 贴底状态翻转时回调：「回到底部」浮钮据此显隐（ENG-11）。 */
+  onAtBottomChange?: (atBottom: boolean) => void;
   /** 复用外部已有的 atBottom ref（页面里还有别的逻辑要看它）。 */
   atBottomRef?: { current: boolean };
   /**
@@ -63,7 +65,7 @@ export function useStickToBottom(
   contentRef: { current: HTMLElement | null },
   options: StickToBottomOptions = {},
 ): StickToBottom {
-  const { paused = false, slack = SLACK_PX, onNearTop, atBottomRef, refreshKey } = options;
+  const { paused = false, slack = SLACK_PX, onNearTop, onAtBottomChange, atBottomRef, refreshKey } = options;
 
   const inner = React.useRef(true);
   const atBottom = atBottomRef ?? inner;
@@ -73,6 +75,18 @@ export function useStickToBottom(
   pausedRef.current = paused;
   const nearTopRef = React.useRef(onNearTop);
   nearTopRef.current = onNearTop;
+  const atBottomChangeRef = React.useRef(onAtBottomChange);
+  atBottomChangeRef.current = onAtBottomChange;
+
+  /** 贴底状态的唯一写入口：翻转时通知订阅者。 */
+  const setAtBottom = React.useCallback(
+    (v: boolean) => {
+      if (atBottom.current === v) return;
+      atBottom.current = v;
+      atBottomChangeRef.current?.(v);
+    },
+    [atBottom],
+  );
 
   const viewport = React.useCallback(
     () => (contentRef.current?.closest('[data-slot="scroll-area-viewport"]') as HTMLElement | null) ?? null,
@@ -141,12 +155,12 @@ export function useStickToBottom(
     const vp = viewport();
     if (!vp) return;
     const onScroll = () => {
-      atBottom.current = vp.scrollTop + vp.clientHeight >= vp.scrollHeight - slack;
+      setAtBottom(vp.scrollTop + vp.clientHeight >= vp.scrollHeight - slack);
       if (vp.scrollTop <= NEAR_TOP_PX) nearTopRef.current?.();
     };
     vp.addEventListener("scroll", onScroll, { passive: true });
     return () => vp.removeEventListener("scroll", onScroll);
-  }, [viewport, slack, atBottom]);
+  }, [viewport, slack, atBottom, setAtBottom]);
 
   React.useEffect(
     () => () => {
@@ -156,9 +170,9 @@ export function useStickToBottom(
   );
 
   const reset = React.useCallback(() => {
-    atBottom.current = true;
+    setAtBottom(true);
     write();
-  }, [atBottom, write]);
+  }, [setAtBottom, write]);
 
   return { viewport, pin, reset, atBottom };
 }
