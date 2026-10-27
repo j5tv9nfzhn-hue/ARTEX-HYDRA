@@ -296,7 +296,7 @@ jobs:
           ARTEX_PACKAGE_DIR: dist
         run: |
           ./build.sh --desktop
-      - name: 上传 desktop 模块 go.mod/go.sum（tidy 结果供入库）
+      - name: 留档 desktop 模块 go.mod/go.sum（build.sh 内 go mod tidy 生成，不入库；仅便于核对依赖变化）
         uses: actions/upload-artifact@v7
         with:
           name: desktop-gomod-files
