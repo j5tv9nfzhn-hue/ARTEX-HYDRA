@@ -98,6 +98,7 @@
 - **进程日志落盘并可回看。** `setupDesktopLog` 把 stdout/stderr 同时写入发行目录日志文件，`server/logsink.go` 让后端日志在页面内可读——GUI 子系统下没有控制台，这一层是唯一的事后证据。
 - **窗口尺寸按屏推导，且不铺满。** 默认 1280×800、最小 1024×640，上限取当前屏可用区的 80%，小屏上明显留出桌面；尺寸只认 Wails 的 `Screen.Size`（逻辑像素，官方注明用于设窗口尺寸），不混用 `PhysicalSize`。
 - **窗口里不会掉进登录页，也不会一开就铺满。** `IS_DESKTOP` 除 cookie 外还认 Wails 宿主（`wails.localhost` / `wails:` scheme）；`/login`、`/setup` 与 `(main)` 布局都以 `/api/auth/status` 的 `auth_disabled` 兜底；窗口内隐藏「退出登录」、改密后不再跳登录页。窗口默认尺寸上限从「屏幕 −40/−96」改为可用区的 80%。
+- **桌面端是单文件发行，命名带 `-desktop` 后缀。** 产物 `artex-hydra-desktop[.exe]`（macOS 为 `artex-hydra-desktop.app`）既是入口也是本体：包内没有 `-core`、没有 `versions/`、没有 `pointer.json`，`config/`、`artex.db`、`data/`、`skills/` 都在它旁边，整个目录拷走即完成迁移（新旧合并也不必对齐核心副本）。`selfupdate` 用 `singleFile=1` 落地：`Bootstrap` 直接放行、`Handoff` 永不转交、`/api/update/apply` 返回「下载新版替换单文件」；服务器版仍保留「入口 + 核心 + versions/」，因为它的换装不能覆盖运行中的 exe。产物名与 WEB 版 `artex-rea-*` 一眼可分。
 
 ### 移除
 

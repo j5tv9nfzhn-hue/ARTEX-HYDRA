@@ -94,7 +94,7 @@ Autumn-27/ARTEX（国内原作者，中文原创）
 
 本项目发布两种形态，覆盖 Linux / macOS / Windows 三端：
 
-- **桌面端 `artex-hydra`**（Wails V2 原生窗口，推荐入口）：进程内运行与服务器版同构的后端，窗口渲染同一套前端；
+- **桌面端 `artex-hydra-desktop`**（Wails V2 原生窗口，推荐入口）：进程内运行与服务器版同构的后端，窗口渲染同一套前端；单文件、无核心副本；
 - **服务器版 `artex-rea`**（纯 Go 单二进制，`CGO_ENABLED=0`）：面向 headless / 容器 / 反向代理部署。
 
 两种方式都保留 `http://127.0.0.1:8787` 的 Web 地址入口，浏览器访问即同一界面。
@@ -103,18 +103,18 @@ Autumn-27/ARTEX（国内原作者，中文原创）
 
 到 [Releases](https://github.com/j5tv9nfzhn-hue/ARTEX-HYDRA/releases) 下载对应平台的桌面端产物：
 
-- Windows：下载 `artex-hydra-<版本>-windows-amd64.zip`，解压后双击 `artex-hydra.exe` 即可（包内附 `artex-hydra.ico`，可自行创建带品牌图标的快捷方式）；
-- macOS：解压得到 `artex-hydra.app`，首次打开需在「系统设置 → 隐私与安全性」放行；
-- Linux：解压后运行 `./artex-hydra`。
+- Windows：下载 `artex-hydra-desktop-<版本>-windows-amd64.zip`，解压后双击 `artex-hydra-desktop.exe` 即可（包内附 `artex-hydra-desktop.ico`，可自行创建带品牌图标的快捷方式）；
+- macOS：解压得到 `artex-hydra-desktop.app`，首次打开需在「系统设置 → 隐私与安全性」放行；
+- Linux：解压后运行 `./artex-hydra-desktop`。
 
-安装/解压后的包内含 `artex-hydra`（入口）+ `artex-hydra-core`（核心）+ `skills/` + `config.example.json` + `README.md`。
+安装/解压后的包内含 `artex-hydra-desktop`（**单文件**，没有 core、没有 `versions/`）+ `skills/` + `config.example.json` + `README.md`；`config/`、`artex.db`、`data/` 在它旁边生成，**整个目录拷走即完成迁移**。
 
 桌面端细节：
 
 - 默认监听回环 `127.0.0.1:8787`，浏览器访问同地址即同一界面（需要登录，见下一条）；`-lan` 开放局域网（供同一网络下的浏览器访问），开放前要先设登录密码；
-- **从旧版 WEB 端迁移**：执行 `artex-hydra.exe -import-old "旧版目录"`——迁移 config、数据库（任务/发现/资产/LLM 配置）、密钥、技能与工作空间；导入为纯拷贝，旧目录不受影响，导入前需完全退出旧版程序；
+- **从旧版 WEB 端迁移**：执行 `artex-hydra-desktop.exe -import-old "旧版目录"`——迁移 config、数据库（任务/发现/资产/LLM 配置）、密钥、技能与工作空间；导入为纯拷贝，旧目录不受影响，导入前需完全退出旧版程序；
 - **窗口内不需要登录**：打开即进主页面，不出现登录/初始化页。免登录只对窗口成立——同一个后端的浏览器入口（本机 `http://127.0.0.1:8787`，以及 `-lan` 之后别的设备）要账号密码，密码在窗口内「系统设置 → 登录密码」设一次；没设密码时无法开放局域网（页面会提示先设密码）。旧版本会写 `setup-info.txt` 存放设置令牌，现在不再生成该文件；
-- 更新系统与服务器版同一套（版本化布局 + SHA256 三闸门），页面「系统设置 → 更新」即可检查与应用；
+- 更新：页面「系统设置 → 更新」可检查新版本；桌面端是单文件发行，**下载新版后关闭窗口、替换那一个可执行文件**即可（不做 `versions/` 换装，因此不会多出核心副本与第二个进程）；
 - 依赖平台 webview 运行时：Windows 需 WebView2（Win11 自带）、Linux 需 webkit2gtk-4.1、macOS 自带 WebKit。
 
 ### 方式二：下载服务器版
@@ -152,7 +152,7 @@ start.bat
 桌面端（CGO，必须在目标平台上原生构建——webview 库是平台原生库，不支持交叉编译）：
 
 ```bash
-./build.sh --desktop --target <os>/<arch>   # 产物：dist/artex-hydra-<版本>-<os>-<arch>/artex-hydra
+./build.sh --desktop --target <os>/<arch>   # 产物：dist/artex-hydra-desktop-<版本>-<os>-<arch>/artex-hydra-desktop
 ```
 
 或使用打包脚本一次产出全部发布物：
@@ -205,7 +205,7 @@ LLM 可在环境变量或“LLM 设置”页面配置，相关环境变量包括
 - 无人值守部署可设置 `ARTEX_SETUP_TOKEN` 固定令牌，或用至少八字符的 `ARTEX_ADMIN_PASSWORD` 直接初始化。
 - 默认仅监听回环地址。开放到其他设备前先完成初始化，并优先部署 HTTPS；非回环且未初始化时会有启动警告。
 - 修改密码会使旧 JWT 会话在数秒内失效。若恢复泄露的管理员账户，还需检查自定义工具、MCP、LLM 与通知配置。
-- 忘记管理员密码时，可在本机运行仓库根目录的 `reset-password.sh`：脚本定位 `artex-rea`/`artex-rea.exe`（或回退 `go run ./cmd/artex`）调用 `-reset-password` 重写密码哈希，无需数据库服务与 psql；也可直接运行 `artex-rea -reset-password`。桌面端同名开关（`artex-hydra -reset-password`）作用相同：忘了登录密码、又需要在浏览器或局域网上登录时用它离线重置（窗口本身不需要密码）。
+- 忘记管理员密码时，可在本机运行仓库根目录的 `reset-password.sh`：脚本定位 `artex-rea`/`artex-rea.exe`（或回退 `go run ./cmd/artex`）调用 `-reset-password` 重写密码哈希，无需数据库服务与 psql；也可直接运行 `artex-rea -reset-password`。桌面端同名开关（`artex-hydra-desktop -reset-password`）作用相同：忘了登录密码、又需要在浏览器或局域网上登录时用它离线重置（窗口本身不需要密码）。
 - CORS 允许列表为 `ARTEX_CORS_ORIGINS`，以逗号分隔；内嵌 UI 同源通常无需填写，开发默认允许 `http://localhost:5173`。
 
 ### 反向代理部署（HTTPS / 只开放 443）
@@ -673,14 +673,14 @@ go build -tags embedui -trimpath \
   -o dist/artex-rea-<os>-<arch>/artex-rea        # Windows 目标为 artex-rea.exe
 ```
 
-桌面端（`--desktop`）走独立模块 `desktop/`，`CGO_ENABLED=1` 且不设 `GOOS/GOARCH`（原生构建），ldflags 额外注入 `selfupdate.entryStem=artex-hydra` / `coreStem=artex-hydra-core`：
+桌面端（`--desktop`）走独立模块 `desktop/`，`CGO_ENABLED=1` 且不设 `GOOS/GOARCH`（原生构建），ldflags 注入 `selfupdate.entryStem=artex-hydra-desktop` 与 `singleFile=1`（单文件发行，无 core）：
 
 ```text
 cd desktop && CGO_ENABLED=1 go build -tags "embedui,desktop,production" -trimpath \
   -ldflags "-s -w -buildid= -X main.version=<版本> \
-    -X github.com/Autumn-27/artex/selfupdate.entryStem=artex-hydra \
-    -X github.com/Autumn-27/artex/selfupdate.coreStem=artex-hydra-core" \
-  -o ../dist/artex-hydra-<os>-<arch>/artex-hydra
+    -X github.com/Autumn-27/artex/selfupdate.entryStem=artex-hydra-desktop \
+    -X github.com/Autumn-27/artex/selfupdate.singleFile=1" \
+  -o ../dist/artex-hydra-desktop-<os>-<arch>/artex-hydra-desktop
 ```
 
 `desktop,production` 两个标签是 wails 运行时必需的（CreateApp 按标签选择实现，缺了会退化为启动报错的兜底实现），必须与官方 `wails build` 的标签对齐。
@@ -702,8 +702,8 @@ rsync -a --delete web/out/ server/webui/dist/
 
 - 服务器版单目标：`dist/artex-rea-<os>-<arch>/artex-rea`（Windows 为 `artex-rea.exe`；可用 `ARTEX_OUTPUT`/`ARTEX_OUTPUT_DIR` 改路径）。
 - 服务器版发布包（`--release` 或 `ARTEX_PACKAGE=1`）：`dist/artex-rea-<版本>-<os>-<arch>.zip`，内含 `artex-rea`/`artex-rea.exe`（内嵌前端、去符号）、`start.bat`/`start.sh`（启动脚本）、`skills/`、`config.example.json`、`README.md`。
-- 桌面端单目标：`dist/artex-hydra-<os>-<arch>/artex-hydra`。
-- 桌面端发布包（`--desktop` + `ARTEX_PACKAGE=1`）：`dist/artex-hydra-<版本>-<os>-<arch>.zip`，内含入口 + 核心两件套（`artex-hydra`/`artex-hydra-core`）、`skills/`、`config.example.json`、`README.md`；macOS 为 `.app` bundle。
+- 桌面端单目标：`dist/artex-hydra-desktop-<os>-<arch>/artex-hydra-desktop`。
+- 桌面端发布包（`--desktop` + `ARTEX_PACKAGE=1`）：`dist/artex-hydra-desktop-<版本>-<os>-<arch>.zip`，内含**单个**可执行文件 `artex-hydra-desktop`（无 `-core`、无 `versions/`）、`skills/`、`config.example.json`、`README.md`；macOS 为 `artex-hydra-desktop.app` bundle。
 - `dist/SHA256SUMS`：对 `dist/*.zip` 的校验和。
 - CI（`release.yml`）在同一 Release 下发布服务器版六平台 zip 与桌面端三平台 zip/.app。
 

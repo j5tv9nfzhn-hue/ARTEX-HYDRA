@@ -1,4 +1,4 @@
-# artex-hydra 桌面端（Wails V2）
+# artex-hydra-desktop 桌面端（Wails V2）
 
 ARTEX-HYDRA 的桌面发行形态：Wails V2 原生窗口（Windows=WebView2、macOS=WebKit、
 Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，后端在进程内运行
@@ -6,9 +6,12 @@ Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，后端在
 
 - Web 入口保留：桌面端默认监听 `127.0.0.1:8787`，浏览器访问同地址即同一界面；
   端口被服务器版占用时窗口照常可用（窗口渲染走进程内 Handler，不依赖回环端口）。
-- 更新系统复用 `selfupdate`：版本化安装布局（入口 + 核心两件套、pointer.json、
-  journal 状态机、SHA256 三闸门）与服务器版完全相同，仅资产名参数化为
-  `artex-hydra` / `artex-hydra-core`。
+- 发行物是**单文件**（`singleFile=1`）：包内只有一个可执行文件，没有 core、没有
+  `versions/`、没有 `pointer.json`；`config/`、`artex.db`、`data/`、`skills/` 都在
+  它旁边，整个目录拷走即完成迁移。与 WEB 版 `artex-rea-*` 用 `-desktop` 后缀区分。
+- 更新：`selfupdate` 的 GitHub 查询与 SHA256 校验照旧可用（资产名
+  `artex-hydra-desktop-<版本>-<os>-<arch>.zip`）；桌面端不跑版本化换装，页面
+  「系统设置 → 更新」只做检查，装新版本＝关闭窗口后替换那一个可执行文件。
 - **窗口内不需要登录**：窗口直连进程内后端（`boot.Options.DisableAuth`），没有登录页、没有初始化流程，也不生成 `setup-info.txt`。免登录的边界只有一条：请求必须来自窗口本身（`server.authExempt` 认的进程内标记）。所以本机浏览器 `127.0.0.1:8787` 与 `-lan` 之后的局域网设备一样要账号密码，密码在窗口内「系统设置 → 登录密码」设一次；没设密码时「在局域网开放」会被拒绝（409）。
 
 ## 旧版 WEB 端数据导入（-import-old）
@@ -17,7 +20,7 @@ Linux=webkit2gtk）渲染与服务器版**同一套** Next.js 前端，后端在
 从旧版 WEB 端迁移统一走命令行导入：
 
 ```bat
-artex-hydra.exe -import-old "C:\path\to\旧版安装目录"
+artex-hydra-desktop.exe -import-old "C:\path\to\旧版安装目录"
 ```
 
 导入内容与规则：
@@ -52,9 +55,9 @@ cd desktop
 go mod tidy          # 首次：生成 go.sum（拉取 wails 依赖）
 CGO_ENABLED=1 go build -tags "embedui,desktop,production" -trimpath \
   -ldflags "-s -w -buildid= -X main.version=dev \
-    -X github.com/Autumn-27/artex/selfupdate.entryStem=artex-hydra \
-    -X github.com/Autumn-27/artex/selfupdate.coreStem=artex-hydra-core" \
-  -o artex-hydra .
+    -X github.com/Autumn-27/artex/selfupdate.entryStem=artex-hydra-desktop \
+    -X github.com/Autumn-27/artex/selfupdate.singleFile=1" \
+  -o artex-hydra-desktop .
 ```
 
 **构建标签必须带 `desktop,production`**：wails 运行时的 CreateApp 按标签三选一
@@ -71,4 +74,4 @@ CI 由 `desktop` job 在三个原生 runner 上各自完成。
 - Linux 需要 webkit2gtk-4.1 运行时；部分发行版需手动安装。
 - 桌面端不做端口接管（不会杀另一个实例的进程），单实例由安装目录锁保证。
 - 三平台桌面端均为解压即用的发行包，不提供安装引导程序；快捷方式需自行创建
-  （Windows 包内附 `artex-hydra.ico`，exe 本身也已内嵌品牌图标与 DPI manifest）。
+  （Windows 包内附 `artex-hydra-desktop.ico`，exe 本身也已内嵌品牌图标与 DPI manifest）。
