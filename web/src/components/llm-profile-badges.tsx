@@ -59,22 +59,22 @@ export function ProfileCapabilityBadges({ profile, className }: { profile?: Capa
   return (
     <span className={cn("flex min-w-0 shrink-0 items-center gap-1", className)}>
       {mods.includes("image") && (
-        <Badge variant="outline" className="px-1 py-0 text-[9px]">
+        <Badge variant="outline" className="px-1 py-0 text-xs">
           {t("modality.image")}
         </Badge>
       )}
       {mods.includes("audio") && (
-        <Badge variant="outline" className="px-1 py-0 text-[9px]">
+        <Badge variant="outline" className="px-1 py-0 text-xs">
           {t("modality.audio")}
         </Badge>
       )}
       {mods.includes("pdf") && (
-        <Badge variant="outline" className="px-1 py-0 text-[9px]">
+        <Badge variant="outline" className="px-1 py-0 text-xs">
           {t("modality.pdf")}
         </Badge>
       )}
       {windowK > 0 && (
-        <span className="text-muted-foreground/80 text-[10px] tabular-nums">{t("windowK", { k: windowK })}</span>
+        <span className="text-muted-foreground/80 text-xs tabular-nums">{t("windowK", { k: windowK })}</span>
       )}
     </span>
   );

@@ -222,7 +222,7 @@ function JudgeCard() {
           <Card className="lg:col-span-2">
             <CardContent className="space-y-5 p-4">
               <div className="space-y-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("judge.modelAndPolicy")}
                 </p>
                 <Field label={t("judge.approvalModel")}>
@@ -271,7 +271,7 @@ function JudgeCard() {
               <Separator />
 
               <div className="space-y-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("judge.manualApproval")}
                 </p>
                 <Field label={t("judge.askTimeout")}>
@@ -856,7 +856,7 @@ export default function InterceptPage() {
               toolGroups.map((group, gi) => (
                 <div key={group.label}>
                   {gi > 0 && <Separator className="mb-5" />}
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     {group.label}
                   </p>
                   <div className="space-y-0.5">
@@ -871,7 +871,7 @@ export default function InterceptPage() {
                           <div className="flex items-center gap-1.5">
                             <span className="font-mono text-sm">{tool.key}</span>
                             {tool.kind && tool.kind !== "builtin" && (
-                              <Badge variant="outline" className="px-1 py-0 text-[10px]">
+                              <Badge variant="outline" className="px-1 py-0 text-xs">
                                 {tool.kind}
                               </Badge>
                             )}

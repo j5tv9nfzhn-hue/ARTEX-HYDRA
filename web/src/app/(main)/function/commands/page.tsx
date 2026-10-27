@@ -393,7 +393,7 @@ export default function CommandsPage() {
                           .map(([cls, n]) => (
                             <span
                               key={cls}
-                              className="rounded-sm bg-red-50 px-1.5 py-0.5 text-[10px] text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                              className="rounded-sm bg-red-50 px-1.5 py-0.5 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300"
                             >
                               {classLabel(cls)} {n}
                             </span>

@@ -257,7 +257,7 @@ export default function LogsPage() {
                   <span className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", levelDot[l.level])} />
                   <span className="shrink-0 tabular-nums text-muted-foreground">{fmtTime(l.ts)}</span>
                   {l.tag && (
-                    <span className="shrink-0 rounded bg-muted px-1 text-[10px] text-foreground/70">{l.tag}</span>
+                    <span className="shrink-0 rounded bg-muted px-1 text-xs text-foreground/70">{l.tag}</span>
                   )}
                   <span className={cn("min-w-0 whitespace-pre-wrap break-words", levelTone[l.level])}>{body}</span>
                 </div>

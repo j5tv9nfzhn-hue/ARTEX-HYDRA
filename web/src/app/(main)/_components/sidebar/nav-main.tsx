@@ -91,7 +91,7 @@ interface NavGroupSectionProps {
 
 function CollapsedIconFallback({ title }: { title: string }) {
   return (
-    <span className="flex size-4 shrink-0 items-center justify-center rounded-xs font-medium text-[10px] outline">
+    <span className="flex size-4 shrink-0 items-center justify-center rounded-xs font-medium text-xs outline">
       {title.slice(0, 1)}
     </span>
   );
@@ -282,7 +282,7 @@ function NotifyUnreadBadge() {
   const unread = useNotifyUnread();
   if (unread === 0) return null;
   return (
-    <SidebarMenuBadge className="flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-red-600 px-1 font-semibold text-[10px] text-white leading-none shadow-sm ring-1 ring-red-500/40">
+    <SidebarMenuBadge className="flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-red-600 px-1 font-semibold text-xs text-white leading-none shadow-sm ring-1 ring-red-500/40">
       {unread > 99 ? "99+" : unread}
     </SidebarMenuBadge>
   );
@@ -310,7 +310,7 @@ function InterceptPendingBadge() {
   );
   if (count === 0) return null;
   return (
-    <SidebarMenuBadge className="flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 font-semibold text-[10px] text-white leading-none shadow-sm ring-1 ring-amber-400/40">
+    <SidebarMenuBadge className="flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 font-semibold text-xs text-white leading-none shadow-sm ring-1 ring-amber-400/40">
       {count > 99 ? "99+" : count}
     </SidebarMenuBadge>
   );

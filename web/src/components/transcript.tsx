@@ -52,7 +52,7 @@ function workerColor(name: string): string {
 }
 
 const chip = (worker: string) =>
-  `mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium text-white ${workerColor(worker)}`;
+  `mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-xs font-medium text-white ${workerColor(worker)}`;
 
 // 工具分类已移到 components/transcript/tool-kind.ts：分类只决定行首图标与类别文案，
 // 不再携带彩色胶囊样式——行的层级交给状态圈 + 文案表达，颜色只留给失败/拦截。

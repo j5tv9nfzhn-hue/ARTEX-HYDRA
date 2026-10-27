@@ -1535,7 +1535,7 @@ export default function SkillsPage() {
                       </span>
                       {s.calls > 0 && (
                         <span
-                          className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground tabular-nums"
+                          className="shrink-0 rounded bg-muted px-1 text-xs text-muted-foreground tabular-nums"
                           title={t("callCountTitle", { count: s.calls, last: fmtTime(s.last_used, t("neverCalled")) })}
                         >
                           {s.calls}
@@ -2002,7 +2002,7 @@ export default function SkillsPage() {
               <TabsTrigger value="mcp">
                 {t("linkedMcp")}
                 {newMcps.length > 0 && (
-                  <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground leading-none">
+                  <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-xs text-primary-foreground leading-none">
                     {newMcps.length}
                   </span>
                 )}
@@ -2010,7 +2010,7 @@ export default function SkillsPage() {
               <TabsTrigger value="visibility">
                 {t("tabVisibility")}
                 {newVisibility.length > 0 && (
-                  <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground leading-none">
+                  <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-xs text-primary-foreground leading-none">
                     {newVisibility.length}
                   </span>
                 )}
@@ -2318,7 +2318,7 @@ export default function SkillsPage() {
                               variant={
                                 p.status === "applied" ? "secondary" : p.status === "rejected" ? "outline" : "default"
                               }
-                              className="shrink-0 px-1.5 py-0 font-normal text-[10px]"
+                              className="shrink-0 px-1.5 py-0 font-normal text-xs"
                             >
                               {p.status === "applied"
                                 ? t("proposalStatusApplied")
@@ -2498,7 +2498,7 @@ export default function SkillsPage() {
                   {importFiles.map((f) => (
                     <Badge key={`${f.name}-${f.size}`} variant="secondary" className="gap-1.5 font-mono text-xs">
                       <span>{f.name}</span>
-                      <span className="text-[10px] text-muted-foreground">({Math.ceil(f.size / 1024)} KB)</span>
+                      <span className="text-xs text-muted-foreground">({Math.ceil(f.size / 1024)} KB)</span>
                       <button
                         type="button"
                         className="ml-0.5 text-muted-foreground hover:text-foreground"

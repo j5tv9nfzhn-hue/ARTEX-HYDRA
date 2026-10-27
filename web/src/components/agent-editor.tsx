@@ -148,12 +148,12 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
         <Checkbox checked={t.agents.includes(agentKey)} disabled={gated} onCheckedChange={() => toggleTool(t)} />
         <span className="font-mono text-xs">{t.key}</span>
         {isTraffic && (
-          <Badge variant="secondary" className="px-1 py-0 text-[9px]">
+          <Badge variant="secondary" className="px-1 py-0 text-xs">
             {tr("tools.trafficBadge")}
           </Badge>
         )}
         {!t.enabled && (
-          <Badge variant="outline" className="text-destructive px-1 py-0 text-[9px]">
+          <Badge variant="outline" className="text-destructive px-1 py-0 text-xs">
             {tr("tools.disabledBadge")}
           </Badge>
         )}
@@ -515,7 +515,7 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                       className="hover:bg-muted inline-flex items-center gap-1 rounded-md border bg-muted/40 px-2 py-1 font-mono text-xs"
                     >
                       {`{{.${v.name}}}`}
-                      <Badge variant="secondary" className="px-1 py-0 text-[10px]">
+                      <Badge variant="secondary" className="px-1 py-0 text-xs">
                         {v.source}
                       </Badge>
                     </button>
@@ -1398,7 +1398,7 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="font-medium">{condLabel(t)}</span>
                 {!t.enabled && (
-                  <Badge variant="outline" className="text-destructive px-1 py-0 text-[9px]">
+                  <Badge variant="outline" className="text-destructive px-1 py-0 text-xs">
                     {tr("tools.disabledBadge")}
                   </Badge>
                 )}

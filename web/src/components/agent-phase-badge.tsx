@@ -22,7 +22,7 @@ export function AgentPhaseBadge({ phase, className }: { phase: AgentPhase; class
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded bg-blue-500/15 px-1.5 py-0.5 font-medium text-[10px] text-blue-600 dark:text-blue-400",
+        "inline-flex items-center gap-1 rounded bg-blue-500/15 px-1.5 py-0.5 font-medium text-xs text-blue-600 dark:text-blue-400",
         className,
       )}
     >

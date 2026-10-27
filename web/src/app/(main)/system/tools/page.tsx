@@ -252,17 +252,17 @@ function ToolEditor({
               }
             >
               <div className="flex flex-wrap items-center gap-2">
-                {r.parentKey && <span className="font-mono text-[10px] text-muted-foreground">↳</span>}
+                {r.parentKey && <span className="font-mono text-xs text-muted-foreground">↳</span>}
                 <span className="font-mono text-sm">{r.name}</span>
-                <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                <Badge variant="secondary" className="px-1.5 py-0 text-xs">
                   {r.type || "?"}
                 </Badge>
                 {r.required && (
-                  <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                  <Badge variant="outline" className="px-1.5 py-0 text-xs">
                     {t("required")}
                   </Badge>
                 )}
-                {r.parentKey && <span className="text-[10px] text-muted-foreground">{t("itemsSubfield")}</span>}
+                {r.parentKey && <span className="text-xs text-muted-foreground">{t("itemsSubfield")}</span>}
               </div>
               <div className="grid gap-2">
                 <div className="grid gap-1">
@@ -315,33 +315,33 @@ function ToolGridCard({ tool, onClick }: { tool: Tool; onClick: () => void }) {
         <span className="font-medium font-mono text-sm">{tool.key}</span>
         {tool.system ? (
           <>
-            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+            <Badge variant="secondary" className="px-1.5 py-0 text-xs">
               {t("badgeSystem")}
             </Badge>
             {NATIVE_GO_TOOL_KEYS.has(tool.key) && (
-              <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+              <Badge variant="outline" className="px-1.5 py-0 text-xs">
                 Go Native
               </Badge>
             )}
           </>
         ) : (
-          <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+          <Badge variant="outline" className="px-1.5 py-0 text-xs">
             {t("badgeCustom")}·{tool.kind}
           </Badge>
         )}
         {tool.deferred && (
-          <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+          <Badge variant="outline" className="px-1.5 py-0 text-xs">
             deferred
           </Badge>
         )}
         {!tool.enabled && (
-          <Badge variant="outline" className="px-1.5 py-0 text-[10px] text-destructive">
+          <Badge variant="outline" className="px-1.5 py-0 text-xs text-destructive">
             {t("badgeDisabled")}
           </Badge>
         )}
         <Badge
           variant="secondary"
-          className="ml-auto px-1.5 py-0 text-[10px] tabular-nums"
+          className="ml-auto px-1.5 py-0 text-xs tabular-nums"
           title={t("callsTitle", { count: tool.calls ?? 0 })}
         >
           {t("callsBadge", { count: tool.calls ?? 0 })}
@@ -349,9 +349,9 @@ function ToolGridCard({ tool, onClick }: { tool: Tool; onClick: () => void }) {
       </div>
       <p className="line-clamp-1 h-4 text-muted-foreground text-xs">{tool.description || t("noDescription")}</p>
       <div className="mt-auto flex flex-wrap gap-1 pt-1">
-        {tool.agents.length === 0 && <span className="text-[10px] text-muted-foreground">{t("noBoundAgents")}</span>}
+        {tool.agents.length === 0 && <span className="text-xs text-muted-foreground">{t("noBoundAgents")}</span>}
         {tool.agents.map((a) => (
-          <Badge key={a} variant="outline" className="px-1.5 py-0 text-[10px]">
+          <Badge key={a} variant="outline" className="px-1.5 py-0 text-xs">
             {a}
           </Badge>
         ))}

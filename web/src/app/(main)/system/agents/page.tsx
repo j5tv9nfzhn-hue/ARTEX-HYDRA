@@ -78,23 +78,23 @@ function AgentGridCard({
           <span className="text-sm font-medium">{agent.name}</span>
           <span className="text-muted-foreground font-mono text-xs">{agent.key}</span>
           {agent.builtin ? (
-            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+            <Badge variant="secondary" className="px-1.5 py-0 text-xs">
               {t("badgeBuiltin")}
             </Badge>
           ) : (
-            <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+            <Badge variant="outline" className="px-1.5 py-0 text-xs">
               {t("badgeCustom")}
             </Badge>
           )}
           {!agent.enabled && (
-            <Badge variant="outline" className="text-destructive px-1.5 py-0 text-[10px]">
+            <Badge variant="outline" className="text-destructive px-1.5 py-0 text-xs">
               {t("badgeDisabled")}
             </Badge>
           )}
         </div>
         {/* biome-ignore lint/nursery/useNullishCoalescing: 空说明也应回退到提示文案，故有意使用 ||；?? 会直接显示空字符串。 */}
         <p className="text-muted-foreground line-clamp-2 min-h-8 text-xs">{agent.description || t("noDescription")}</p>
-        <div className="text-muted-foreground flex flex-wrap gap-1.5 text-[10px]">
+        <div className="text-muted-foreground flex flex-wrap gap-1.5 text-xs">
           <span className="rounded border px-1.5 py-0.5">MCP {agent.mcp_count ?? 0}</span>
           <span className="rounded border px-1.5 py-0.5">Skill {agent.skill_count ?? 0}</span>
           <span className="rounded border px-1.5 py-0.5">
@@ -282,7 +282,7 @@ export default function AgentsPage() {
                   {editing.name}
                   <span className="text-muted-foreground font-mono text-xs">{editing.key}</span>
                   {!editing.builtin && (
-                    <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                    <Badge variant="outline" className="px-1.5 py-0 text-xs">
                       {t("badgeCustom")}
                     </Badge>
                   )}

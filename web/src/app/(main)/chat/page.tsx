@@ -501,7 +501,7 @@ function DraftChat({
                 <Bot className="size-3.5" />
                 {a.name}
                 {!a.builtin && (
-                  <Badge variant="outline" className="px-1 py-0 text-[9px]">
+                  <Badge variant="outline" className="px-1 py-0 text-xs">
                     {t("custom")}
                   </Badge>
                 )}
@@ -1021,11 +1021,11 @@ function ChatViewImpl({
           <Bot className="size-3.5" />
         </div>
         <span className="min-w-0 max-w-48 truncate font-semibold text-sm">{agent?.name ?? conv.agent_key}</span>
-        <span className="hidden shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:inline">
+        <span className="hidden shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground sm:inline">
           {conv.agent_key}
         </span>
         {agent && !agent.builtin && (
-          <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
+          <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-xs">
             {t("custom")}
           </Badge>
         )}

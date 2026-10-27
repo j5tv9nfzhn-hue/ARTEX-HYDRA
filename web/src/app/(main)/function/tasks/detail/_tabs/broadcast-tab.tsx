@@ -219,7 +219,7 @@ function AssetList({ assets, dense = false }: { assets: FindingAsset[]; dense?: 
               )}
               title={`${typeLabel} · ${a.label}`}
             >
-              <span className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground">{typeLabel}</span>
+              <span className="shrink-0 rounded bg-muted px-1 text-xs text-muted-foreground">{typeLabel}</span>
               <code className="truncate font-mono text-xs">{a.label}</code>
             </li>
           );
@@ -386,7 +386,7 @@ function BroadcastRow({
                 <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">P{node.priority}</span>
               )}
               {fresh && (
-                <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                <span className="rounded bg-primary px-1.5 py-0.5 text-xs font-semibold text-primary-foreground">
                   {t("fresh")}
                 </span>
               )}

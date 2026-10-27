@@ -80,7 +80,7 @@ function MethodBadge({ method }: { method: string }) {
   return (
     <span
       className={cn(
-        "inline-block rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold leading-none",
+        "inline-block rounded px-1.5 py-0.5 font-mono text-xs font-semibold leading-none",
         METHOD_COLOR[m] ?? "bg-muted text-muted-foreground",
       )}
     >
@@ -642,7 +642,7 @@ export default function AssetsPage() {
                     <Checkbox checked={selected.has(a.id)} onCheckedChange={() => toggleSelect(a.id)} />
                   </TableCell>
                   <TableCell className="text-xs">
-                    <Badge variant={isHttp ? "default" : "secondary"} className="font-mono text-[10px]">
+                    <Badge variant={isHttp ? "default" : "secondary"} className="font-mono text-xs">
                       {svc || "—"}
                     </Badge>
                   </TableCell>
@@ -964,7 +964,7 @@ function Chips({ items, mono }: { items: string[]; mono?: boolean }) {
   return (
     <div className="flex flex-wrap gap-1">
       {clean.map((s, i) => (
-        <Badge key={i} variant="outline" className={cn("text-[10px]", mono && "font-mono")}>
+        <Badge key={i} variant="outline" className={cn("text-xs", mono && "font-mono")}>
           {s}
         </Badge>
       ))}

@@ -534,7 +534,7 @@ function SessionItem({
       >
         {icon ?? <span className="size-3.5 shrink-0" />}
         {s.intent_id && (
-          <span className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px] text-muted-foreground tabular-nums">
+          <span className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-xs text-muted-foreground tabular-nums">
             #{s.intent_id}
           </span>
         )}
@@ -555,12 +555,12 @@ function SessionItem({
         )}
         {hasPending && <ShieldAlertIcon className="size-3.5 shrink-0 text-amber-500" />}
         {!active && unread ? (
-          <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-blue-500/15 px-1 font-medium text-[10px] text-blue-600 tabular-nums dark:text-blue-400">
+          <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-blue-500/15 px-1 font-medium text-xs text-blue-600 tabular-nums dark:text-blue-400">
             {unread > 99 ? "99+" : unread}
           </span>
         ) : null}
         {s.live && (
-          <span className="inline-flex items-center gap-1 rounded bg-blue-500/15 px-1.5 py-0.5 font-medium text-[10px] text-blue-600 dark:text-blue-400">
+          <span className="inline-flex items-center gap-1 rounded bg-blue-500/15 px-1.5 py-0.5 font-medium text-xs text-blue-600 dark:text-blue-400">
             <LiveDot className="size-1" />
             {t("item.live")}
           </span>
@@ -1972,7 +1972,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                       · {activeDisplayTitle}
                     </span>
                     {hiddenUnread > 0 && (
-                      <span className="inline-flex min-w-4 shrink-0 items-center justify-center rounded-full bg-blue-500/15 px-1 font-medium text-[10px] text-blue-600 tabular-nums lg:hidden dark:text-blue-400">
+                      <span className="inline-flex min-w-4 shrink-0 items-center justify-center rounded-full bg-blue-500/15 px-1 font-medium text-xs text-blue-600 tabular-nums lg:hidden dark:text-blue-400">
                         {hiddenUnread > 99 ? "99+" : hiddenUnread}
                       </span>
                     )}
@@ -1982,7 +1982,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
               {!MOCK && (
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1 text-[10px]",
+                    "inline-flex items-center gap-1 text-xs",
                     sseLive ? "text-emerald-500" : "text-amber-500",
                   )}
                   title={sseLive ? t("sse.titleLive") : t("sse.titleDown")}
@@ -2071,12 +2071,12 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                       <Meta.icon className="size-3.5 text-primary/80" />
                       <span>{t(`role.${role}`)}</span>
                       {role === "reviewer" && (
-                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.2 font-mono text-[10px] text-muted-foreground tabular-nums">
+                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs text-muted-foreground tabular-nums">
                           {rawItems.length}
                         </span>
                       )}
                       {role === "worker" && (
-                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.2 font-mono text-[10px] text-muted-foreground tabular-nums">
+                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs text-muted-foreground tabular-nums">
                           {rawItems.length}
                         </span>
                       )}
@@ -2112,7 +2112,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                               type="button"
                               onClick={() => setWorkerFilter(fKey)}
                               className={cn(
-                                "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[10px] transition-colors",
+                                "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-xs transition-colors",
                                 workerFilter === fKey
                                   ? "border-primary/40 bg-primary/15 font-semibold text-primary"
                                   : "border-border/60 bg-muted/40 text-muted-foreground hover:bg-accent",
@@ -2212,7 +2212,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                   <Tooltip>
                     <TooltipTrigger asChild>{titleEl}</TooltipTrigger>
                     <TooltipContent side="bottom" align="start" className="max-h-80 max-w-sm overflow-auto p-0">
-                      <pre className="p-2 text-[10px] leading-relaxed">{JSON.stringify(meta.json, null, 2)}</pre>
+                      <pre className="p-2 text-xs leading-relaxed">{JSON.stringify(meta.json, null, 2)}</pre>
                     </TooltipContent>
                   </Tooltip>
                 ) : (
@@ -2256,7 +2256,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
               )}
               {active.live && <AgentPhaseBadge phase={livePhase} />}
               {activeState?.hasMore && (
-                <span className="text-[10px] text-muted-foreground" title={t("header.olderHistoryTitle")}>
+                <span className="text-xs text-muted-foreground" title={t("header.olderHistoryTitle")}>
                   {t("header.olderHistoryLabel")}
                 </span>
               )}
@@ -2525,7 +2525,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                   <InputGroupAddon align="block-end">
                     <span
                       className={cn(
-                        "px-1 text-[10px] text-muted-foreground tabular-nums",
+                        "px-1 text-xs text-muted-foreground tabular-nums",
                         workerMessageCharCount(workerMessage) > MAX_WORKER_MESSAGE_CHARS && "text-destructive",
                       )}
                     >
