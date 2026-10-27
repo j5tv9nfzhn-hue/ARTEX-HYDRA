@@ -103,9 +103,10 @@ Autumn-27/ARTEX（国内原作者，中文原创）
 
 到 [Releases](https://github.com/j5tv9nfzhn-hue/ARTEX-HYDRA/releases) 下载对应平台的桌面端产物：
 
-- Windows：下载 `artex-hydra-desktop-<版本>-windows-amd64.zip`，解压后双击 `artex-hydra-desktop.exe` 即可（包内附 `artex-hydra-desktop.ico`，可自行创建带品牌图标的快捷方式）；
-- macOS：解压得到 `artex-hydra-desktop.app`，首次打开需在「系统设置 → 隐私与安全性」放行；
-- Linux：解压后运行 `./artex-hydra-desktop`。
+
+- Windows：`artex-hydra-desktop-<版本>-windows-amd64.zip`（Intel/AMD 机器）或 `-windows-arm64.zip`（骁龙 / Surface ARM），解压后双击 `artex-hydra-desktop.exe`（包内附 `artex-hydra-desktop.ico`，可自行创建带品牌图标的快捷方式）；
+- macOS：`-darwin-arm64.zip`（Apple Silicon）或 `-darwin-amd64.zip`（Intel），解压得到 `artex-hydra-desktop.app`，首次打开需在「系统设置 → 隐私与安全性」放行；两个架构都要求 macOS 11+；
+- Linux：`-linux-amd64.zip` 或 `-linux-arm64.zip`，解压后运行 `./artex-hydra-desktop`。
 
 安装/解压后的包内含 `artex-hydra-desktop`（**单文件**，没有 core、没有 `versions/`）+ `skills/` + `config.example.json` + `README.md`；`config/`、`artex.db`、`data/` 在它旁边生成，**整个目录拷走即完成迁移**。
 
@@ -117,7 +118,7 @@ Autumn-27/ARTEX（国内原作者，中文原创）
 - 更新：页面「系统设置 → 更新」可检查新版本；桌面端是单文件发行，**下载新版后关闭窗口、替换那一个可执行文件**即可（不做 `versions/` 换装，因此不会多出核心副本与第二个进程）；
 - **关闭窗口 = 收进托盘（Windows）**：托盘靠 `fyne.io/systray`（纯 syscall，不加 cgo 依赖）。托盘就绪后关窗只是隐藏，后端与在跑的回合继续；退出走托盘菜单「显示主窗口 / 退出 ARTEX-HYDRA」。托盘起不来就退回"关闭即退出"。macOS/Linux 暂不开（要接 `RunWithExternalLoop` / StatusNotifier，需真机验证）。
 - **本地构建也带品牌图标**：`build.sh --desktop` 现在自己跑 `rsrc` 生成 `desktop/rsrc_windows_<arch>.syso`（`.ico` + DPI manifest），标题栏 / 任务栏 / Alt-Tab 不再是系统默认图标；缺 `rsrc` 时尝试 `go install`，仍失败只告警不阻断。
-- 依赖平台 webview 运行时：Windows 需 WebView2（Win11 自带）、Linux 需 webkit2gtk-4.1、macOS 自带 WebKit。
+- 依赖平台 webview 运行时：Windows 需 WebView2（Win11 自带）、Linux 需 webkit2gtk-4.1、macOS 自带 WebKit（要求 11+）。三平台各自覆盖 amd64 与 arm64，桌面端六端全发。
 
 ### 方式二：下载服务器版
 
@@ -458,7 +459,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   PKG["服务器版发布包<br/>artex-rea(.exe) · start.sh/start.bat · skills/ · config.example.json"] --> BIN["单进程<br/>内嵌前端 + REST/SSE + 引擎 + 记录代理"]
-  PKGD["桌面端发布包<br/>artex-hydra(.exe) · 入口+核心 · skills/"] --> BIN
+  PKGD["桌面端发布包<br/>artex-hydra-desktop(.exe) / 单文件无 core / skills/"] --> BIN
   BIN --> DATA["数据目录<br/>SQLite 单文件 · blobs/ · runs/ · 日志"]
   USER["浏览器"] -->|"http://127.0.0.1:8787（或反向代理 HTTPS）"| BIN
   DESKTOP["桌面窗口（Wails V2）"] -->|"进程内 Handler（同一套 SPA）"| BIN
@@ -526,7 +527,7 @@ gh 只读查询（run list / release list / api GET）
 
 | 工作流 | 职责 |
 |---|---|
-| `.github/workflows/release.yml` | **唯一的构建流水线**：gate（编译/静态）→ frontend → binaries（6 目标）→ desktop（桌面端三平台原生构建）→ release；`workflow_dispatch` 可干跑不发布 |
+| `.github/workflows/release.yml` | **唯一的构建流水线**：gate（编译/静态）→ frontend → binaries（6 目标）→ desktop（桌面端六端：Windows/Linux 原生 runner，macOS 双架构同机交叉）→ release；`workflow_dispatch` 可干跑不发布 |
 | `.github/workflows/detections.yml` | 检测规则与指标回归（`push` 时忽略 `v*` tag） |
 | `.github/workflows/verification-helper.yml` | 手动触发，单独模块 |
 
@@ -598,15 +599,17 @@ release.yml（唯一的构建流水线）
 gate       tag 格式 + go build + go vet + go vet -tags embedui + gofmt + golangci-lint
 frontend   npm ci → npm test / biome（信号）→ build:static（硬门禁，含类型检查）
 binaries   6 目标交叉编译 + 头校验 + 打包
-desktop    Wails V2 桌面端三平台原生构建（CGO 无法交叉编译）+ gofmt + 打包
-release    校验 6+3 个 zip → sha256sum → 建草稿 → 上传 → latest.json → 转正
+desktop    Wails V2 桌面端六端（三平台 × amd64/arm64：Windows/Linux 用对应架构的
+           原生 runner，macOS 的 x86_64 在同一台 Apple Silicon 上由 clang -arch 交叉）
+           + gofmt + 产物头校验 + 打包
+release    校验 6+6 个 zip → sha256sum → 建草稿 → 上传 → latest.json → 转正
            if: failure() → 删除草稿，保留 tag
 signals    go test / 语言检查 / 文档链接（continue-on-error，只报告不拦）
 ```
 
 **为什么只有一份构建**：2026-10-21 之前 `ci.yml` 与 `release.yml` 各有一套前端构建与 Go 编译，两处维护、两套缓存 key，还会出现「ci 绿了但 release 挂了」。现在合并为 `release.yml` 一份；`workflow_dispatch` 用于打 tag 前干跑（不发布）。
 
-**桌面端模块（desktop/）**：独立 Go 模块（`replace` 复用根模块后端），Wails V2 桌面壳。wails 是 CGO 依赖，独立模块避免污染根模块的纯静态（`CGO_ENABLED=0`）构建与门禁。桌面端编译由 `desktop` job 在三个原生 runner 上承担（webview 库是平台原生库，CGO 无法交叉编译）；本机不构建桌面端。`desktop/go.sum` 不入库，首次构建（CI 或本机）由 `go mod tidy` 生成。
+**桌面端模块（desktop/）**：独立 Go 模块（`replace` 复用根模块后端），Wails V2 桌面壳。wails 是 CGO 依赖，独立模块避免污染根模块的纯静态（`CGO_ENABLED=0`）构建与门禁。桌面端编译由 `desktop` job 承担六端（三平台 × amd64/arm64）：Windows 与 Linux 各在对应架构的原生 runner 上，macOS 的 x86_64 在同一台 Apple Silicon 上由 clang `-arch` 交叉；本机不构建桌面端。`desktop/go.sum` 不入库，首次构建（CI 或本机）由 `go mod tidy` 生成。
 
 **为什么测试不进门禁**：测试失败不代表二进制坏掉；把测试挂在发版链路上，会让一次 flaky 测试挡住整个版本。编译与静态检查才是「产物能不能用」的必要条件。
 
@@ -670,7 +673,7 @@ signals    go test / 语言检查 / 文档链接（continue-on-error，只报告
 | 正式构建（当前平台） | `./build.sh` | 先构建前端再编译；需 Node.js/npm 与 rsync |
 | 正式构建（指定目标） | `./build.sh --target windows/amd64` | 支持 linux、darwin、windows 目标 |
 | 发布打包 | `./build.sh --release` | 构建三端默认目标（linux/darwin/windows × amd64/arm64）并产出 zip |
-| 桌面端构建 | `./build.sh --desktop --target <os>/<arch>` | Wails V2 桌面端；CGO 必须原生构建（webview 库是平台原生库），不支持交叉编译；macOS 打包为 .app bundle |
+| 桌面端构建 | `./build.sh --desktop --target <os>/<arch>` | Wails V2 桌面端；Windows/Linux 必须原生构建（webview 库是平台原生库），macOS 可跨到另一架构（clang 双 slice）；构建后跑产物头校验；macOS 打包为 .app bundle |
 
 编译标志（`build.sh` 固定）：
 
@@ -681,7 +684,7 @@ go build -tags embedui -trimpath \
   -o dist/artex-rea-<os>-<arch>/artex-rea        # Windows 目标为 artex-rea.exe
 ```
 
-桌面端（`--desktop`）走独立模块 `desktop/`，`CGO_ENABLED=1` 且不设 `GOOS/GOARCH`（原生构建），ldflags 注入 `selfupdate.entryStem=artex-hydra-desktop` 与 `singleFile=1`（单文件发行，无 core）：
+桌面端（`--desktop`）走独立模块 `desktop/`，`CGO_ENABLED=1`；目标默认取宿主机，只有 macOS 允许 `GOARCH` 与宿主不同（`-arch` 同时进 `CGO_CFLAGS` 与 `CGO_LDFLAGS`），ldflags 注入 `selfupdate.entryStem=artex-hydra-desktop` 与 `singleFile=1`（单文件发行，无 core）：
 
 ```text
 cd desktop && CGO_ENABLED=1 go build -tags "embedui,desktop,production" -trimpath \
@@ -692,6 +695,8 @@ cd desktop && CGO_ENABLED=1 go build -tags "embedui,desktop,production" -trimpat
 ```
 
 `desktop,production` 两个标签是 wails 运行时必需的（CreateApp 按标签选择实现，缺了会退化为启动报错的兜底实现），必须与官方 `wails build` 的标签对齐。
+
+macOS 跨架构时（在 Apple Silicon 上 `--target darwin/amd64`）实际命令多一段 `env GOOS=darwin GOARCH=amd64`，以及 `CGO_CFLAGS` 与 `CGO_LDFLAGS` 里成对出现的 `-arch x86_64 -mmacosx-version-min=11.0`。GOOS/GOARCH 之所以要走 `env`：bash 只把「命令名之前原文就是赋值」的词当赋值处理，变量展开出来的 `GOARCH=amd64` 会被当成命令名。
 
 - `-tags embedui`：启用 `server/webui_embed.go`，把 `server/webui/dist` 编进二进制。**默认构建走 `server/webui_stub.go`，首页返回 404**——这是「忘了带 tag」最常见症状。
 - `-trimpath` 去本地绝对路径保证可复现；`-ldflags "-s -w -buildid="` 去符号去 buildid；`-X main.version=` 默认取 `git describe --tags --always --dirty`（去 `v` 前缀），可用 `ARTEX_BUILD_VERSION` 覆盖。
@@ -713,7 +718,7 @@ rsync -a --delete web/out/ server/webui/dist/
 - 桌面端单目标：`dist/artex-hydra-desktop-<os>-<arch>/artex-hydra-desktop`。
 - 桌面端发布包（`--desktop` + `ARTEX_PACKAGE=1`）：`dist/artex-hydra-desktop-<版本>-<os>-<arch>.zip`，内含**单个**可执行文件 `artex-hydra-desktop`（无 `-core`、无 `versions/`）、`skills/`、`config.example.json`、`README.md`；macOS 为 `artex-hydra-desktop.app` bundle。
 - `dist/SHA256SUMS`：对 `dist/*.zip` 的校验和。
-- CI（`release.yml`）在同一 Release 下发布服务器版六平台 zip 与桌面端三平台 zip/.app。
+- CI（`release.yml`）在同一 Release 下发布服务器版六端 zip 与桌面端六端 zip/.app。
 
 运行时文件落点：
 

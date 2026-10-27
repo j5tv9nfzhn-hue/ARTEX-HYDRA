@@ -82,13 +82,19 @@ CGO_ENABLED=1 go build -tags "embedui,desktop,production" -trimpath \
 （production 实现 / dev 实现 / 无标签时的 MessageBox 报错兜底）——缺了会编译
 成功但启动只弹「Wails applications will not build without the correct build tags」。
 
-CGO 不能交叉编译（webview 库是平台原生库）：桌面端必须在目标平台上原生构建，
-CI 由 `desktop` job 在三个原生 runner 上各自完成。
+CGO 依赖平台原生 webview 库，桌面端六端（Windows / macOS / Linux 各 amd64 + arm64）
+全部由 CI 的 `desktop` job 产出：Windows 与 Linux 跑在对应架构的原生 runner 上
+（`windows-latest`、`windows-11-arm`、`ubuntu-latest`、`ubuntu-24.04-arm`）；macOS
+两个架构都在同一台 Apple Silicon（`macos-15`）上出，x86_64 目标靠 clang 的双 slice
+交叉（`-arch x86_64`，同时进 CGO_CFLAGS 与 CGO_LDFLAGS），不依赖已退役的 Intel
+runner。`build.sh --desktop` 对 macOS 之外的跨架构请求直接拒绝，并在构建后用
+`scripts/check-binary-headers.py` 校验产物的机器类型码——「`-arch` 没生效、包其实是
+宿主架构」这种失败构建期是绿灯，只能靠文件头兜住。
 
 ## 已知限制
 
 - 窗口内为 webview 环境：`window.open` 等浏览器专属行为受限；SSE 流式正常。
-- macOS 发行包未签名/未公证，首次打开需在「系统设置 → 隐私与安全性」放行。
+- macOS 发行包未签名/未公证（开源项目常规做法：直接打包分发），首次打开需在「系统设置 → 隐私与安全性」放行；两个架构都要求 macOS 11+（Go 1.26 的 darwin 与 wails 用到的 UTType 都从 11 起才有）。
 - Linux 需要 webkit2gtk-4.1 运行时；部分发行版需手动安装。
 - 桌面端不做端口接管（不会杀另一个实例的进程），单实例由安装目录锁保证。
 - 三平台桌面端均为解压即用的发行包，不提供安装引导程序；快捷方式需自行创建

@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+### 发布与产物
+
+- **桌面端补齐六端（三平台 × amd64/arm64）**：原先只发 windows-amd64 / darwin-arm64 / linux-amd64，Intel Mac、骁龙 Windows、arm64 Linux 三台机器拿不到桌面版。现在 `desktop` job 六端全发——Windows 与 Linux 跑在对应架构的原生 runner（`windows-11-arm`、`ubuntu-24.04-arm`），macOS 两个架构在同一台 Apple Silicon 上出（x86_64 由 clang 双 slice 交叉，不依赖已退役的 Intel runner）。`build.sh --desktop` 相应放开「目标架构必须等于宿主机」这条硬限制，只保留 macOS 这一例外，其余跨架构请求仍然直接拒绝。
+- **桌面端产物此前从未进过 Release**：桌面 job 的 artifact 名为 `desktop-<os>-<arch>`，而 `release` job 只下载 `pattern: pkg-*`，两边对不上——`gh release view v2.2.4 --json assets` 里确实一个桌面包都没有。改名为 `pkg-desktop-<os>-<arch>` 后一次下载即可，资产齐全校验同步为「服务器 6 + 桌面 6」共 12 个。
+- **产物头校验覆盖桌面端**：`scripts/check-binary-headers.py` 加 `--binary`，`build.sh --desktop` 在编译后校验 Mach-O / PE / ELF 的机器类型码。跨架构最怕「`-arch` 没生效、包其实是宿主架构」——那种产物能编出来、能打包，只在用户机器上打不开。
+- **macOS 最低系统抬到 11.0**：`Info.plist` 的 `LSMinimumSystemVersion` 原写 10.15，但 wails 用到的 `UTType` 与 Go 1.26 的 darwin 目标都要求 11+；跨架构分支的 `-mmacosx-version-min` 同步写 11.0。
+
 ## [0.0.0.1] - 2026-10-27
 
 首个四位版本号发布（`v0.0.0.1`）。这一版把版本号收敛到「tag 是唯一真相来源」：
