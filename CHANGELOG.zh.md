@@ -4,20 +4,31 @@
 
 ## [Unreleased]
 
+## [2.5.0.6] - 2026-10-27
+
+版本号收敛到「tag 是唯一真相来源」：二进制 `-X main.version` 与前端静态包的
+`NEXT_PUBLIC_APP_VERSION` 都从同一个 tag 推导，界面上的版本统一取 `/api/health`，
+桌面端与 WEB 端不再各报一个号。四位段（`vX.Y.Z.W`）不是这一版新加的——自 `v2.4.0`
+起就在用，`v2.5.0.0`～`v2.5.0.5` 是同一天的连续修订；本轮补齐的是前端展示这一环，
+`web/package.json` 的 `version` 退回本地开发占位。
+
+> **为什么桌面端不能从 `0.0.0.1` 起算**：桌面端与 WEB 端共用同一个 tag、同一份
+> `latest.json`、同一条版本线。客户端 `CompareVersions` 比的是纯数字段，
+> `has_update = cmp < 0`；把桌面端单独打低号，会让已装 `2.5.0.5` 的 WEB 端判成
+> 「已是最新」而静默断掉全体更新通道，同时 GitHub 的 `/releases/latest` 指针被降级包占住。
+>
+> `v2.3.x`～`v2.5.0.5` 发布时没有写本文件（发布说明由 `gen-release-notes.py` 从
+> git 历史生成），所以下一节直接接在 `0.3.14` 之后，中间的空档以 tag 与 Release 为准。
+
 ### 发布与产物
 
 - **桌面端补齐六端（三平台 × amd64/arm64）**：原先只发 windows-amd64 / darwin-arm64 / linux-amd64，Intel Mac、骁龙 Windows、arm64 Linux 三台机器拿不到桌面版。现在 `desktop` job 六端全发——Windows 与 Linux 跑在对应架构的原生 runner（`windows-11-arm`、`ubuntu-24.04-arm`），macOS 两个架构在同一台 Apple Silicon 上出（x86_64 由 clang 双 slice 交叉，不依赖已退役的 Intel runner）。`build.sh --desktop` 相应放开「目标架构必须等于宿主机」这条硬限制，只保留 macOS 这一例外，其余跨架构请求仍然直接拒绝。
 - **桌面端产物此前从未进过 Release**：桌面 job 的 artifact 名为 `desktop-<os>-<arch>`，而 `release` job 只下载 `pattern: pkg-*`，两边对不上——`gh release view v2.2.4 --json assets` 里确实一个桌面包都没有。改名为 `pkg-desktop-<os>-<arch>` 后一次下载即可，资产齐全校验同步为「服务器 6 + 桌面 6」共 12 个。
 - **产物头校验覆盖桌面端**：`scripts/check-binary-headers.py` 加 `--binary`，`build.sh --desktop` 在编译后校验 Mach-O / PE / ELF 的机器类型码。跨架构最怕「`-arch` 没生效、包其实是宿主架构」——那种产物能编出来、能打包，只在用户机器上打不开。
 - **macOS 最低系统抬到 11.0**：`Info.plist` 的 `LSMinimumSystemVersion` 原写 10.15，但 wails 用到的 `UTType` 与 Go 1.26 的 darwin 目标都要求 11+；跨架构分支的 `-mmacosx-version-min` 同步写 11.0。
-
-## [0.0.0.1] - 2026-10-27
-
-首个四位版本号发布（`v0.0.0.1`）。这一版把版本号收敛到「tag 是唯一真相来源」：
-二进制 `-X main.version` 与前端静态包的 `NEXT_PUBLIC_APP_VERSION` 都从同一个 tag
-推导，界面上的版本统一取 `/api/health`，桌面端与 WEB 端不再各报一个号。四位版本
-（`vX.Y.Z.W`）此前已被 selfupdate 的解析与 release.yml 的 tag 校验支持，这轮补齐的是
-前端展示这一环，`web/package.json` 的 `version` 退回本地开发占位。下面各节即本版内容。
+- **首跑被自己的门禁拦下**：tag 推上去后 `gate` 红在 `gofmt -l desktop/`——`desktop/tray_windows.go` 的 import 块把 `_ "embed"` 写在 `"context"` 前面。格式化属于编译级确定性失败，按约定拦住不出包，改完重打 tag。
+- **两个 Windows 桌面目标失败在控制台编码**：新加的产物头校验（`scripts/check-binary-headers.py`）在 `go build` 成功后打印「结构校验通过：…」，而 Windows runner 上 Python 的 stdout 默认 cp1252，中文触发 `UnicodeEncodeError`，步骤退出码 1——包本身是好的。按 `check-start-scripts.py` 的既有写法补 `reconfigure(encoding="utf-8", errors="replace")` 守卫。
+- **文档链接检查的两处误报清掉**：行内代码里的 HTML 示例 `<img src="target?action=delete">` 被当成文件引用，技能 `assets/template.md` 里的证据截图占位路径也是。规则改为按 CommonMark 跳过代码跨度、跳过 `skills/*/assets/` 模板：受检引用 275 → 273（正好只掉那两个），28 个锚点覆盖不变，0 失效。
 
 ### 桌面端打包与旧版数据迁移
 

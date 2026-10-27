@@ -5,7 +5,8 @@ import packageJson from "../../package.json";
 // 版本号的唯一真相来源是发布 tag：构建期由 NEXT_PUBLIC_APP_VERSION 注入
 // （release.yml 传 $GITHUB_REF_NAME，build.sh 传 ARTEX_BUILD_VERSION），运行期再由
 // /api/health 的二进制版本校正。package.json 的 semver 只允许三段，四段版本
-// （0.0.0.1）落不进去，所以它只当本地开发的占位，不再充当版本来源。
+// （本项目当前是 2.5.0.6 这样的 vX.Y.Z.W）落不进去，所以它只当本地开发的占位，
+// 不再充当版本来源。
 const BUILD_VERSION = (process.env.NEXT_PUBLIC_APP_VERSION ?? "").trim().replace(/^v(?=\d)/, "");
 
 const currentYear = new Date().getFullYear();
