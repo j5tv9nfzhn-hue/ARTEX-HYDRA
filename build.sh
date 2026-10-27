@@ -336,30 +336,12 @@ PLIST
     rm -f "$package_root/skills/embed.go"
     cp config.example.json "$package_root/"
     if [ -f README.md ]; then cp README.md "$package_root/"; fi
-    # Windows 桌面端附带应用图标（快捷方式与安装器共用）
+    # Windows 桌面端附带应用图标（exe 已内嵌品牌图标；解压后自建快捷方式时同样可用）
     if [ "$goos" = "windows" ] && [ -f desktop/assets/artex-hydra.ico ]; then
       cp desktop/assets/artex-hydra.ico "$package_root/artex-hydra.ico"
     fi
   fi
   make_zip "$ARTEX_PACKAGE_DIR" "$(basename "$package_root")" "$(basename "$archive")"
-  # Windows 安装引导程序：makensis 可用时从同一份 package_root 生成 setup exe
-  # （自定义安装目录 + 快捷方式 + 旧版 WEB 数据导入页，见 desktop/installer/installer.nsi）。
-  # makensis 缺失只跳过安装器，zip 照常产出——本地开发环境不装 NSIS 也能打包。
-  if [ "$goos" = "windows" ]; then
-    if command -v makensis >/dev/null 2>&1 && [ -f desktop/installer/installer.nsi ]; then
-      setup_exe="${ARTEX_PACKAGE_DIR}/${stem}-setup-${ARTEX_BUILD_VERSION}-${goos}-${goarch}.exe"
-      info "生成安装引导程序：$(basename "$setup_exe")"
-      src_win="$(cygpath -w "$package_root" 2>/dev/null || echo "$package_root")"
-      icon_win="$(cygpath -w "$package_root/artex-hydra.ico" 2>/dev/null || echo "$package_root/artex-hydra.ico")"
-      out_win="$(cygpath -w "$setup_exe" 2>/dev/null || echo "$setup_exe")"
-      makensis -DPRODUCT_VERSION="${ARTEX_BUILD_VERSION}" -DSOURCE_DIR="$src_win" \
-        -DICON_FILE="$icon_win" -DOUT_FILE="$out_win" \
-        desktop/installer/installer.nsi
-      ok "安装引导程序：$setup_exe"
-    else
-      warn "未找到 makensis 或安装器脚本，跳过安装引导程序（zip 照常产出）"
-    fi
-  fi
   rm -rf "$package_root"
   ok "桌面端 Release 包：$archive"
 }
@@ -486,9 +468,9 @@ write_checksums() {
   [ "$ARTEX_PACKAGE" = "1" ] || return 0
   checksum_file="$ARTEX_PACKAGE_DIR/SHA256SUMS"
   if command -v sha256sum >/dev/null 2>&1; then
-    (cd "$ARTEX_PACKAGE_DIR" && for archive in *.zip *setup*.exe; do [ -e "$archive" ] && sha256sum "$archive"; done > "$(basename "$checksum_file")")
+    (cd "$ARTEX_PACKAGE_DIR" && for archive in *.zip; do [ -e "$archive" ] && sha256sum "$archive"; done > "$(basename "$checksum_file")")
   elif command -v shasum >/dev/null 2>&1; then
-    (cd "$ARTEX_PACKAGE_DIR" && for archive in *.zip *setup*.exe; do [ -e "$archive" ] && shasum -a 256 "$archive"; done > "$(basename "$checksum_file")")
+    (cd "$ARTEX_PACKAGE_DIR" && for archive in *.zip; do [ -e "$archive" ] && shasum -a 256 "$archive"; done > "$(basename "$checksum_file")")
   else
     warn "未找到 sha256sum 或 shasum，跳过 SHA256SUMS"
     return 0

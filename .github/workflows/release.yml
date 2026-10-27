@@ -252,13 +252,11 @@ jobs:
         with:
           go-version: "1.26"
           cache: false
-      - name: Windows 桌面端构建前置（NSIS 安装器 + rsrc 图标资源）
-        # windows-2025 镜像未预装 NSIS：choco 安装供 build.sh 生成安装引导程序。
+      - name: Windows 桌面端构建前置（rsrc 图标资源）
         # rsrc 把品牌 .ico + DPI manifest 编译成 .syso，go build 自动链接出带图标的 exe。
         if: matrix.goos == 'windows'
         shell: bash
         run: |
-          choco install nsis -y --no-progress
           go install github.com/akavel/rsrc@v0.10.2
           rsrc -ico desktop/assets/artex-hydra.ico -manifest desktop/assets/app.manifest -arch amd64
           ls -la desktop/*.syso
@@ -303,7 +301,6 @@ jobs:
           name: desktop-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
             dist/*.zip
-            dist/*setup*.exe
 
   # ③ 汇总 zip → 建草稿 → 传全部资产 → 校验数量 → 最后一步才公开。
   #
@@ -344,13 +341,10 @@ jobs:
             f="artex-hydra-${version}-${t%%/*}-${t##*/}.zip"
             if [ -f "$f" ]; then echo "✓ $f"; else echo "::error::缺少 $f"; missing=1; fi
           done
-          # Windows 安装引导程序（NSIS；linux/macOS 桌面端本轮无安装器）
-          f="artex-hydra-setup-${version}-windows-amd64.exe"
-          if [ -f "$f" ]; then echo "✓ $f"; else echo "::error::缺少 $f"; missing=1; fi
           [ "$missing" = "0" ] || exit 1
       - name: Generate checksums
         working-directory: dist
-        run: sha256sum -- *.zip *setup*.exe > SHA256SUMS
+        run: sha256sum -- *.zip > SHA256SUMS
       - name: 生成发布说明（完整变更）
         # 不用 --generate-notes：它只汇总 PR 标题，本仓库大量改动是直接提交，
         # 自动生成的结果常常只剩两三条（v2.2.0 首发即如此），等于没写。
@@ -409,7 +403,6 @@ jobs:
             for t in windows/amd64 darwin/arm64 linux/amd64; do
               echo "artex-hydra-${version}-${t%%/*}-${t##*/}.zip"
             done
-            echo "artex-hydra-setup-${version}-windows-amd64.exe"
             echo SHA256SUMS
             echo latest.json
           } | sort > dist/expected.txt

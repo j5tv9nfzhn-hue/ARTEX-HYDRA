@@ -103,7 +103,7 @@ Autumn-27/ARTEX（国内原作者，中文原创）
 
 到 [Releases](https://github.com/j5tv9nfzhn-hue/ARTEX-HYDRA/releases) 下载对应平台的桌面端产物：
 
-- Windows：下载 **`artex-hydra-setup-<版本>-windows-amd64.exe` 安装引导程序**——简体中文向导，支持自定义安装目录、自动创建桌面/开始菜单快捷方式（品牌图标）、并可从旧版 WEB 端安装目录一键导入既有数据；也可下载 zip 解压后直接双击 `artex-hydra.exe`；
+- Windows：下载 `artex-hydra-<版本>-windows-amd64.zip`，解压后双击 `artex-hydra.exe` 即可（包内附 `artex-hydra.ico`，可自行创建带品牌图标的快捷方式）；
 - macOS：解压得到 `artex-hydra.app`，首次打开需在「系统设置 → 隐私与安全性」放行；
 - Linux：解压后运行 `./artex-hydra`。
 
@@ -112,7 +112,7 @@ Autumn-27/ARTEX（国内原作者，中文原创）
 桌面端细节：
 
 - 默认监听回环 `127.0.0.1:8787`，浏览器访问同地址即同一界面；`-lan` 开放局域网（供手机端 App 连接）；
-- **从旧版 WEB 端迁移**：安装向导内勾选导入并选择旧版安装目录，或手动执行 `artex-hydra.exe -import-old "旧版目录"`——迁移 config、数据库（任务/发现/资产/LLM 配置）、密钥、技能与工作空间；导入为纯拷贝，旧目录不受影响，导入前需完全退出旧版程序；
+- **从旧版 WEB 端迁移**：执行 `artex-hydra.exe -import-old "旧版目录"`——迁移 config、数据库（任务/发现/资产/LLM 配置）、密钥、技能与工作空间；导入为纯拷贝，旧目录不受影响，导入前需完全退出旧版程序；
 - 首次全新安装（未导入）时设置令牌写入安装根目录 `setup-info.txt`（桌面端没有控制台），在窗口内 `/setup` 页面完成初始化；
 - 更新系统与服务器版同一套（版本化布局 + SHA256 三闸门），页面「系统设置 → 更新」即可检查与应用；
 - 依赖平台 webview 运行时：Windows 需 WebView2（Win11 自带）、Linux 需 webkit2gtk-4.1、macOS 自带 WebKit。
