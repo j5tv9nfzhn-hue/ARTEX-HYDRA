@@ -356,4 +356,3 @@ func setupDesktopLog(exeDir string) func() {
 	os.Stdout = f
 	return func() { _ = f.Close() }
 }
-
