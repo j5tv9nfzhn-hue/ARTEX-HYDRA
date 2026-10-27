@@ -5,6 +5,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 
 import { getLocalStorageValue, setLocalStorageValue } from "@/lib/local-storage.client";
+import { isGhostEnter } from "@/lib/ime-guard";
 
 // 聊天发送、换行按键是浏览器本地偏好，只存 localStorage，不与账户同步。
 // 更换浏览器需重新设置。issue #39：0.3.2 从 Ctrl+Enter 改为 Enter，
@@ -61,11 +62,13 @@ export function setChatSendMode(mode: ChatSendMode) {
 }
 
 // shouldSubmitOnKey 判断按键是否应发送。isComposing 或 keyCode=229 表示 IME 正在组字，
-// 中文等输入法必须跳过发送，否则确认字符的 Enter 会误发送。
+// 中文等输入法必须跳过发送，否则确认字符的 Enter 会误发送；compositionend 后 500ms
+// 内到达的伴生 Enter 幽灵键（isComposing 已复位，双检拦不住）由 lib/ime-guard 拦截。
 // enter 模式仅排除 Shift，保持 0.3.2 行为；ctrl-enter 同时支持 Ctrl 与 macOS Cmd。
 export function shouldSubmitOnKey(e: React.KeyboardEvent, mode: ChatSendMode): boolean {
   if (e.key !== "Enter") return false;
   if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return false;
+  if (isGhostEnter(e)) return false;
   if (mode === "ctrl-enter") return e.ctrlKey || e.metaKey;
   return !e.shiftKey;
 }

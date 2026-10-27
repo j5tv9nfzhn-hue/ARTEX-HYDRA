@@ -26,6 +26,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { SideQuestions } from "@/hooks/use-side-questions";
+import { isGhostEnter, markCompositionEnd } from "@/lib/ime-guard";
 import { cn } from "@/lib/utils";
 
 type ComposerLayout = "inline" | "stacked";
@@ -159,11 +160,17 @@ function SidePanel({
             disabled={side.busy}
             onChange={(event) => side.setDraft(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing &&
+                !isGhostEnter(event)
+              ) {
                 event.preventDefault();
                 void side.ask(side.draft);
               }
             }}
+            onCompositionEnd={markCompositionEnd}
           />
           <InputGroupAddon align={inlineComposer ? "inline-end" : "block-end"}>
             {!inlineComposer && <span className="text-muted-foreground text-xs">{t("independentNote")}</span>}

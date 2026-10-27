@@ -6,6 +6,7 @@ import { SearchIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Input } from "@/components/ui/input";
+import { isGhostEnter, markCompositionEnd } from "@/lib/ime-guard";
 import { cn } from "@/lib/utils";
 
 // ── DSL autocomplete ──────────────────────────────────────────────────────────
@@ -198,6 +199,8 @@ export function AssetDslSearch({
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // 组字确认的伴生 Enter（isComposing 已复位）：拦截，防止选词时误接受建议。
+    if (isGhostEnter(e)) return;
     if (!open || suggestions.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -228,6 +231,7 @@ export function AssetDslSearch({
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          onCompositionEnd={markCompositionEnd}
           onFocus={() => refresh(query, cursorPos())}
           onClick={() => refresh(query, cursorPos())}
           onBlur={() => setTimeout(() => setOpen(false), 120)}
