@@ -50,6 +50,7 @@ type Options struct {
 	// DisableAuth 打开「桌面壳进程内窗口免登录」：只对 desktop/shell.go 打了标记的
 	// 请求生效（server.authExempt），网络来源（同机浏览器、反向代理、局域网设备）
 	// 照样校验 JWT。服务器版恒为 false（账号密码登录）。
+	DisableAuth bool
 }
 
 // App 是一次已启动的服务实例，持有监听器、server 与双图库。
