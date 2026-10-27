@@ -6,6 +6,7 @@ import * as React from "react";
 import { AppSidebar } from "@/app/(main)/_components/sidebar/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { UINotifier } from "@/components/ui-notifier";
+import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { getClientCookie } from "@/lib/cookie.client";
 import {
@@ -31,19 +32,36 @@ function readPref<T extends string>(key: string, allowed: readonly T[], fallback
 
 export default function Layout({ children }: Readonly<{ children: ReactNode }>) {
   // Client-side auth gate — replaces the Next proxy/middleware that static export
-  // disables. No token → bounce to /login; render nothing until confirmed so no
-  // protected UI (or its API calls) flashes for a logged-out visitor.
+  // disables. No token → 先问后端要不要凭据；确实要（服务器版 / 浏览器入口）才
+  // 回 /login。render nothing until confirmed so no protected UI (or its API calls)
+  // flashes for a logged-out visitor.
   const [authed, setAuthed] = React.useState(false);
   React.useEffect(() => {
     if (auth.getToken()) {
       setAuthed(true);
-    } else {
-      // 客户端守卫认为未登录时，必须同时清掉 cookie：否则 proxy.ts 仅凭
-      // “cookie 存在”就把我们从 /login 又重定向回主界面，与本守卫来回弹跳
-      // 形成无限重定向 → 白屏（cookie 与 localStorage 不一致时触发）。
-      auth.clearToken();
-      window.location.href = "/login";
+      return;
     }
+    // 没有 token 不等于要登录：桌面壳的窗口本来就没有 token，也不该有。
+    // 问一次后端「这条连接要不要凭据」——窗口的请求带进程内标记，会回
+    // auth_disabled=true；浏览器（含桌面端 -lan 之后的局域网入口）为 false。
+    // 这样即使 artex_shell cookie 丢了，窗口也不会掉进登录页。
+    api
+      .authStatus()
+      .then((st) => {
+        if (st.auth_disabled) {
+          setAuthed(true);
+          return;
+        }
+        // 客户端守卫认为未登录时，必须同时清掉 cookie：否则 proxy.ts 仅凭
+        // “cookie 存在”就把我们从 /login 又重定向回主界面，与本守卫来回弹跳
+        // 形成无限重定向 → 白屏（cookie 与 localStorage 不一致时触发）。
+        auth.clearToken();
+        window.location.href = "/login";
+      })
+      .catch(() => {
+        auth.clearToken();
+        window.location.href = "/login";
+      });
   }, []);
 
   const defaultOpen = typeof document === "undefined" ? true : getClientCookie("sidebar_state") !== "false";

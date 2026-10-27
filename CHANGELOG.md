@@ -96,7 +96,8 @@
 - **桌面端窗口免登录，Web 端与局域网照旧要密码。** `boot.Options.DisableAuth` → `Server.SetAuthDisabled`，`requireAuth` 只放行带进程内标记的窗口请求（`server.authExempt`），`/api/auth/status` 按请求回 `auth_disabled`：打开窗口直接进主页面，服务器版仍走账号密码登录与首次初始化。两端共用同一份静态导出，差异只由 `desktop/shell.go` 的 `artex_shell` cookie 与 `web/src/lib/platform.ts` 一处判定承载。
 - **双击不再弹控制台窗口。** 桌面端按 `-H windowsgui` 编译（`build.sh` 自建 ldflags 时显式补回），启动守卫拒绝启动、单实例已被占用、后端起不来改为原生 `MessageBoxW` 弹窗；`-reset-password` / `-import-old` 这类命令行用法反向 `AttachConsole` 回父终端，保留终端输出。
 - **进程日志落盘并可回看。** `setupDesktopLog` 把 stdout/stderr 同时写入发行目录日志文件，`server/logsink.go` 让后端日志在页面内可读——GUI 子系统下没有控制台，这一层是唯一的事后证据。
-- **窗口尺寸按屏幕推导。** 默认 1280×800、最小 1024×640，工作区不足时按真实屏幕夹取，保证 1366×768 上不越界。
+- **窗口尺寸按屏推导，且不铺满。** 默认 1280×800、最小 1024×640，上限取当前屏可用区的 80%，小屏上明显留出桌面；尺寸只认 Wails 的 `Screen.Size`（逻辑像素，官方注明用于设窗口尺寸），不混用 `PhysicalSize`。
+- **窗口里不会掉进登录页，也不会一开就铺满。** `IS_DESKTOP` 除 cookie 外还认 Wails 宿主（`wails.localhost` / `wails:` scheme）；`/login`、`/setup` 与 `(main)` 布局都以 `/api/auth/status` 的 `auth_disabled` 兜底；窗口内隐藏「退出登录」、改密后不再跳登录页。窗口默认尺寸上限从「屏幕 −40/−96」改为可用区的 80%。
 
 ### 移除
 

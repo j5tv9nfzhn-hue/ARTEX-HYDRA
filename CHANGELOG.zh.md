@@ -41,13 +41,15 @@
 - **桌面端窗口免登录，网络入口照旧要密码**：`boot.Options.DisableAuth` → `Server.SetAuthDisabled` 打开「窗口免登录」，`requireAuth` 经由 `authExempt` 只放行进程内窗口的请求（起因与边界见下方「修复的问题」），`/api/auth/status` 的 `auth_disabled` 按请求回 true/false；服务器版（`cmd/artex`）的账号密码登录与初始化流程完全不变。两端共用同一份前端产物，差异只由 `desktop/shell.go` 给文档响应加的 `artex_shell` cookie 决定，前端只在 `web/src/lib/platform.ts` 一处读取。
 - **双击不弹黑窗，失败也看得见**：桌面端以 `-H windowsgui` 编译（`build.sh` 自建 ldflags，必须显式补回），启动守卫拒绝、单实例已占用、后端起不来三种情况改用原生 `MessageBoxW`；只有 `-reset-password` / `-import-old` 这类命令行用法才 `AttachConsole` 回到父终端打印。
 - **日志落盘**：GUI 子系统没有控制台，`setupDesktopLog` 把进程 stdout/stderr 同时写进发行目录日志文件，退出时收尾；`server/logsink.go` 让同一批后端日志在页面里可读。
-- **窗口尺寸按屏取值**：默认 1280×800、最小 1024×640；工作区比默认值小时按真实屏幕夹取，1366×768 这类常见分辨率下不越界、不贴边。
+- **窗口尺寸按屏取值**：默认 1280×800、最小 1024×640；**上限是当前屏可用区的 80%**，小屏上明显留出桌面，任何分辨率下都不越界、不贴边、不铺满。
 
 #### 修复的问题
 
 - **桌面端开放局域网后等于没有鉴权**：`SetAuthDisabled` 当时是把 `/api` 的 JWT 校验整个关掉，`-lan` 之后就变成「同网任何设备无需凭据即可操作」，而这一版还特意让 `WarnIfExposed` 静音，连一行警告都没有。现在免校验只对**桌面壳的进程内窗口**成立：`desktop/shell.go` 在把请求交给 Handler 之前打一个 context 标记（`server.MarkDesktopShellRequest`），`requireAuth` 只认这个标记（`authExempt`）。判定刻意**不看来源地址**——同机浏览器发到 `127.0.0.1` 的请求、以及同机反向代理转发的请求，`RemoteAddr` 都是回环，按地址放行等于给代理开一道后门。业界同款取舍：Syncthing 的 GUI 只对 localhost 免密码、跨主机访问必须显式打开 `insecureAdminAccess`；Jupyter 一旦绑定全接口就必须 token 登录。
 - **开放局域网前必须先有密码**：`POST /api/lan/enable` 在未设密码时直接返回 409「还没有设置登录密码」，不再先把端口开出去、让对面卡在登录页。`WarnIfExposed` 对桌面端的非回环绑定恢复警告并写明去哪设密码；`/api/auth/status` 的 `auth_disabled` 改为按请求计算（只有窗口为 true）。
 - **窗口内可以设置首个登录密码**：`POST /api/password/reset` 原先在「从未设过密码」时一律 403（那是 `/api/auth/init` 的活，要设置令牌），而桌面窗口没有控制台、抄不到令牌，等于开放局域网前无从设密码。现在只对进程内窗口放开这一条——窗口即授权；网络请求仍然只能走 `/api/auth/init` + 设置令牌。
+- **窗口里不该出现登录页**：`artex_shell` cookie 一旦没被 webview 采纳（或用户清掉），窗口就直接掉进 `/login`——这就是实测到的「启动 EXE 出现授权登录页」。现在三重兜底：`IS_DESKTOP` 同时认 Wails 宿主（Windows 的 `wails.localhost`、macOS/Linux 的 `wails:` scheme）；`/login` 与 `/setup` 拿到 `auth_disabled=true` 就地回主页；`(main)` 布局在没有 token 时先问一次 `auth_disabled` 再决定要不要跳登录（后端按请求判定，不需要任何前端 cookie）。顺带把窗口内点了没反应的「退出登录」隐藏、改完密码不再跳 `/login`。
+- **窗口默认尺寸不再铺满桌面**：小屏（1366×768 等）上原来按「屏幕 −40 / −96」夹取，实际得到 1280×672，看上去就是满载。改成「默认尺寸与可用区 80% 取小」；注释里写死 Wails 的 `Screen.Size` 是逻辑像素（`used when setting sizes in Wails`）、`PhysicalSize` 是物理像素，避免以后又混用算错一半。
 
 ### 自适应智能体（第六阶段）
 

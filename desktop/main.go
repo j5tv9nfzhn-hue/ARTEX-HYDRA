@@ -196,24 +196,49 @@ func run() int {
 //     48 − 标题栏 32 ≈ 688。→ 800 高的默认值在 768 屏上必然出界，所以
 //     默认值只作"上限愿望"，运行时按可用区域夹紧。
 //
-// 折算结果：1280×800 的默认值在大屏上原样使用，在 1366×768 上落到
-// ≈1280×688，任何情况下都不出界、也不再"开窗就要拖"。
+// 折算结果：1280×800 的默认值在 1920×1080 这类屏上原样使用；小屏上按
+// 「可用区 × 80%」收缩。**默认窗口绝不铺满屏幕**——铺满之后用户第一件事
+// 往往是往外拖，那不叫开箱即用。
+//
+// 单位说明（Wails v2 的 Screen 文档写死了）：`Screen.Size` 是逻辑像素，
+// "used when setting sizes in Wails"；`PhysicalSize` 才是物理像素。所以这里
+// 只用 Size，不要混用 PhysicalSize，否则 HiDPI 屏上会算错一半。
 const (
 	windowDefaultWidth  = 1280
 	windowDefaultHeight = 800
 	windowMinWidth      = 1024
 	windowMinHeight     = 640
-	// 桌面留白：左右各留一点，避免窗口贴边导致阴影/调整边缘不可点。
-	windowScreenSideMargin = 40
-	// 纵向预留：典型标题栏 32 + 任务栏 48 + 少量留白。
-	windowScreenVerticalReserve = 96
+	// 默认窗口最多占可用区的 4/5，剩下的留给桌面（窗口绝不贴边、绝不铺满）。
+	windowTargetRatioNum = 4
+	windowTargetRatioDen = 5
 )
 
-// fitWindowToScreen 把窗口夹到当前显示器的可用区域内并居中。
+// screenLogicalSize 返回当前窗口所在屏（缺省主屏、再缺省第一块）的逻辑尺寸。
+func screenLogicalSize(screens []wailsruntime.Screen) (int, int) {
+	for _, sc := range screens {
+		if sc.IsCurrent && sc.Size.Width > 0 && sc.Size.Height > 0 {
+			return sc.Size.Width, sc.Size.Height
+		}
+	}
+	for _, sc := range screens {
+		if sc.IsPrimary && sc.Size.Width > 0 && sc.Size.Height > 0 {
+			return sc.Size.Width, sc.Size.Height
+		}
+	}
+	if len(screens) > 0 {
+		return screens[0].Size.Width, screens[0].Size.Height
+	}
+	return 0, 0
+}
+
+// fitWindowToScreen 把窗口定成「默认尺寸与可用区 80% 的较小者」并居中。
 //
-// Wails 的 Width/Height 只是创建窗口时的初值，不会替我们考虑"默认值比屏幕
-// 还大"的情况——1440×900 在 1366×768 的笔记本上会有一截永远点不到。
-// 这里在窗口还没显示时按逻辑像素（Wails 的尺寸单位）重新算一次。
+// 为什么不是「屏幕减去一点边距」：40/96 这种小留白在 1366×768 上会把窗口
+// 夹到 1280×672，视觉上就是铺满整块桌面——用户报的"窗口满载电脑桌面"正是
+// 这一条。改成按比例取上限，任何分辨率下都留出明显桌面。
+//
+// Wails 的 Width/Height 只是创建窗口时的初值，不会替我们考虑「默认值比屏幕
+// 还大」的情况，所以窗口显示前在这里再算一次。
 func fitWindowToScreen(ctx context.Context) {
 	screens, err := wailsruntime.ScreenGetAll(ctx)
 	if err != nil || len(screens) == 0 {
@@ -221,32 +246,14 @@ func fitWindowToScreen(ctx context.Context) {
 		wailsruntime.WindowCenter(ctx)
 		return
 	}
-	// 优先当前窗口所在屏，其次主屏，最后退到第一块。
-	sw, sh := 0, 0
-	for _, sc := range screens {
-		if sc.IsCurrent {
-			sw, sh = sc.Size.Width, sc.Size.Height
-			break
-		}
-	}
-	if sw <= 0 || sh <= 0 {
-		for _, sc := range screens {
-			if sc.IsPrimary {
-				sw, sh = sc.Size.Width, sc.Size.Height
-				break
-			}
-		}
-	}
-	if sw <= 0 || sh <= 0 {
-		sw, sh = screens[0].Size.Width, screens[0].Size.Height
-	}
+	sw, sh := screenLogicalSize(screens)
 	if sw <= 0 || sh <= 0 {
 		wailsruntime.WindowCenter(ctx)
 		return
 	}
 
-	maxW := sw - windowScreenSideMargin
-	maxH := sh - windowScreenVerticalReserve
+	maxW := sw * windowTargetRatioNum / windowTargetRatioDen
+	maxH := sh * windowTargetRatioNum / windowTargetRatioDen
 	w, h := windowDefaultWidth, windowDefaultHeight
 	if maxW > 0 && w > maxW {
 		w = maxW
@@ -254,18 +261,22 @@ func fitWindowToScreen(ctx context.Context) {
 	if maxH > 0 && h > maxH {
 		h = maxH
 	}
-	// 屏幕比最小尺寸还小时，宁可小于 MinWidth 也要留在屏内：能看见半屏，
-	// 比一半按钮在屏幕外可用。
-	if w < 1 {
-		w = sw
+	// 屏幕小到连最小尺寸都放不下时，「不小于最小尺寸」与「不出界」只能二选一：
+	// 选不出界（窗口管理器的 SetMinSize 仍可能把它顶回去，这里只求合理）。
+	if w < windowMinWidth && maxW >= windowMinWidth {
+		w = windowMinWidth
 	}
-	if h < 1 {
-		h = sh
+	if h < windowMinHeight && maxH >= windowMinHeight {
+		h = windowMinHeight
+	}
+	if w < 1 || h < 1 {
+		wailsruntime.WindowCenter(ctx)
+		return
 	}
 
 	wailsruntime.WindowSetSize(ctx, w, h)
 	wailsruntime.WindowCenter(ctx)
-	log.Printf("[desktop] 窗口尺寸 %d×%d（屏幕 %d×%d）", w, h, sw, sh)
+	log.Printf("[desktop] 窗口尺寸 %d×%d（可用区 %d×%d，上限 %d×%d）", w, h, sw, sh, maxW, maxH)
 }
 
 // runDesktopWindow 打开 Wails 原生窗口并阻塞，直到窗口关闭或更新流程请求重启。

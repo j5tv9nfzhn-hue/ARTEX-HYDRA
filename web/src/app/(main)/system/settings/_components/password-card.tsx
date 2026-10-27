@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { http } from "@/lib/api";
+import { IS_DESKTOP } from "@/lib/platform";
 
 // 系统设置 → 登录密码
 //
@@ -75,7 +76,8 @@ export function PasswordCard() {
       }
       reset();
       // 手机端等其它会话已经失效，这里统一回登录页重新登一次。
-      if (typeof window !== "undefined") {
+      // 桌面壳没有登录这回事：留在原页即可，跳 /login 只会被弹回来闪一下。
+      if (typeof window !== "undefined" && !IS_DESKTOP) {
         window.setTimeout(() => {
           window.location.href = "/login";
         }, 600);
