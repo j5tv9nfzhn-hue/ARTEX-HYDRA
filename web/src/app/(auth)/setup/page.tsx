@@ -31,7 +31,12 @@ export default function SetupPage() {
     }
     api
       .authStatus()
-      .then(({ initialized }) => {
+      .then(({ initialized, auth_disabled }) => {
+        // 桌面壳窗口不该出现初始化页：后端按请求回 auth_disabled=true。
+        if (auth_disabled) {
+          window.location.replace("/function/tasks");
+          return;
+        }
         if (initialized) router.replace("/login");
       })
       .catch(() => setError(t("setup.errorBackend")))

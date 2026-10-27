@@ -60,7 +60,13 @@ export default function LoginPage() {
     }
     api
       .authStatus()
-      .then(({ initialized }) => {
+      .then(({ initialized, auth_disabled }) => {
+        // 桌面壳窗口就算走到这里（cookie 丢了、或被别处带过来），也不该看到登录页：
+        // auth_disabled 由后端按请求判定，窗口恒为 true。
+        if (auth_disabled) {
+          window.location.replace("/function/tasks");
+          return;
+        }
         if (!initialized) router.replace("/setup");
       })
       .catch(() => setError(t("login.errorBackend")))
