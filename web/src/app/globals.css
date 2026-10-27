@@ -492,18 +492,18 @@ html {
 }
 
 @utility scroll-fade-b {
-  @supports (animation-timeline: scroll()) {
-    animation: scroll-fade-b linear;
-    animation-timeline: scroll(self);
-    animation-fill-mode: both;
-    mask-image: linear-gradient(
-      to bottom,
-      transparent 0,
-      black var(--scroll-fade-top),
-      black calc(100% - var(--scroll-fade-bottom)),
-      transparent 100%
-    );
-  }
+  /* 不支持 scroll-driven 的引擎：animation-timeline 被忽略，两条自定义属性停在
+     initial-value(0px)，遮罩退化成「全不透明」，等于没有效果——不需要 @supports 兜底。 */
+  animation: scroll-fade-b linear;
+  animation-timeline: scroll(self);
+  animation-fill-mode: both;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black var(--scroll-fade-top),
+    black calc(100% - var(--scroll-fade-bottom)),
+    transparent 100%
+  );
 }
 
 /* 在顶部：只隐下缘；在底部：只隐上缘；中间：两边都隐。
