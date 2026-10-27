@@ -258,7 +258,14 @@ jobs:
         shell: bash
         run: |
           go install github.com/akavel/rsrc@v0.10.2
-          rsrc -ico desktop/assets/artex-hydra.ico -manifest desktop/assets/app.manifest -arch amd64
+          # -o 必须显式给：省略时 rsrc 把 .syso 写到工作目录（仓库根），
+          # 而 go build 只链接 desktop/ 包目录下的 .syso，`desktop/*.syso`
+          # 会找不到文件、步骤以退出码 2 结束。文件名带 _windows_<arch>
+          # 后缀，go build 才会只在 windows/<arch> 目标下把它链进来。
+          rsrc -ico desktop/assets/artex-hydra.ico \
+            -manifest desktop/assets/app.manifest \
+            -arch "${{ matrix.goarch }}" \
+            -o "desktop/rsrc_windows_${{ matrix.goarch }}.syso"
           ls -la desktop/*.syso
       - uses: actions/download-artifact@v8
         with:

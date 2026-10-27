@@ -83,6 +83,10 @@ secrets.env
 # go build -o artex-rea.exe 的 Windows 二进制，对应 Unix 的 /artex-rea。
 /artex-rea.exe
 /artex.exe
+# rsrc 由 .ico + manifest 生成的 Windows 资源对象，每次构建重建，不入库。
+*.syso
+# rsrc 省略 -o 时会写到工作目录（仓库根），一并挡掉。
+/rsrc*.syso
 # 本地设置中的秘密，如 PostgreSQL 密码，严禁提交。
 /.secrets/
 # 项目内 SWC_NATIVE_BINDING_CACHE 的原生绑定缓存。

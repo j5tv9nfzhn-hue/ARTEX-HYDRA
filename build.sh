@@ -441,13 +441,46 @@ build_desktop_target() {
   # 里时尤甚）：每次都跑 tidy 保证两者一致再交给 go build。模块缓存
   # 预热后 tidy 开销很小；tidy 一致后也是 no-op。
   (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" go mod tidy)
+
   # 构建标签必须与官方 wails build 对齐（wails 的 CompileProject 恒定追加
   # OutputType 与 production 两个标签）：wails 运行时的 CreateApp 按标签三选一——
   # production 实现 / dev 实现 / 无标签时的 MessageBox 报错兜底。缺
   # desktop,production 时启动只会弹 "Wails applications will not build
   # without the correct build tags"。embedui 是服务器包的前端内嵌标签，两者叠加。
-  (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" CGO_ENABLED=1 go build \
-    -tags "embedui,desktop,production" \
+  build_tags="embedui,desktop,production"
+  # 下面两项补的是 Wails V2 自身的平台缺口（不是本仓库代码的问题）：
+  #
+  # Linux：wails 默认 #cgo pkg-config webkit2gtk-4.0。Ubuntu 24.04+ / Debian 13
+  #   只提供 webkit2gtk-4.1，必须加 webkit2_41 标签才会改成链接 4.1，否则
+  #   pkg-config 直接报 "Package 'webkit2gtk-4.0' ... not found"。但 RHEL 系与
+  #   旧版 Debian 仍然只有 4.0，无条件加标签会把本来能过的构建弄挂——所以按
+  #   pkg-config 的实际存在情况选，而不是照抄 CI 的环境假设。
+  #
+  # macOS：wails v2.17 的 darwin 前端在 SDK 带 UniformTypeIdentifiers 头时会用到
+  #   UTType，但它自己的 #cgo LDFLAGS 没有链接该 framework，于是链接期报
+  #   "Undefined symbols for architecture arm64: _OBJC_CLASS_$_UTType"。
+  #   cgo LDFLAGS 在最终链接时跨包累加，这里补一条即解（wails 官方
+  #   troubleshooting 给的正是这个写法）。注意 UTType 只在 macOS 11+ 存在，
+  #   打包的 Info.plist 仍写 10.15 只是沿用旧值。
+  extra_cgo_ldflags=""
+  case "$goos" in
+    linux)
+      if command -v pkg-config >/dev/null 2>&1; then
+        if pkg-config --exists webkit2gtk-4.1 && ! pkg-config --exists webkit2gtk-4.0; then
+          build_tags="$build_tags,webkit2_41"
+          info "检测到 webkit2gtk-4.1（无 4.0）：附加构建标签 webkit2_41"
+        fi
+      fi
+      ;;
+    darwin)
+      extra_cgo_ldflags="-framework UniformTypeIdentifiers"
+      ;;
+  esac
+
+  (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" CGO_ENABLED=1 \
+    CGO_LDFLAGS="${CGO_LDFLAGS:-} $extra_cgo_ldflags" \
+    go build \
+    -tags "$build_tags" \
     -trimpath \
     -ldflags "$ldflags" \
     -o "../$output" \
