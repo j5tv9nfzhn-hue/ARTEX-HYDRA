@@ -124,8 +124,8 @@ function SidePanel({
               {item.context?.estimated_input_tokens != null && (
                 <p className="text-muted-foreground text-xs">
                   {t("recentExchanges", { count: item.context.recent_exchanges })}
-                  {item.context.history_summarized && ` · ${t("historySummarized")}`}
-                  {item.context.snapshot_summarized && ` · ${t("snapshotSummarized")}`}
+                  {item.context.history_summarized && ` / ${t("historySummarized")}`}
+                  {item.context.snapshot_summarized && ` / ${t("snapshotSummarized")}`}
                 </p>
               )}
               {item.answer && <Markdown text={item.answer} />}

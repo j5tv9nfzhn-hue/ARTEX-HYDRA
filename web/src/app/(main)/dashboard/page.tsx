@@ -495,7 +495,7 @@ export default function DashboardPage() {
           <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
           {/* 作战状态摘要(页头小字):数据为 0 的段已省略,全空不渲染 */}
           {headerSummary.length > 0 && (
-            <p className="mt-1 text-xs text-muted-foreground tabular-nums">{headerSummary.join(" · ")}</p>
+            <p className="mt-1 text-xs text-muted-foreground tabular-nums">{headerSummary.join(" / ")}</p>
           )}
         </div>
       </div>

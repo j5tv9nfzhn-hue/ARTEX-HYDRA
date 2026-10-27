@@ -572,7 +572,7 @@ export default function LLMRecordsPage() {
             <div className="grid min-h-0 flex-1 grid-cols-2 divide-x">
               <div className="flex min-h-0 min-w-0 flex-col">
                 <div className="flex items-center gap-2 border-b py-0.5 pr-1.5 pl-3 text-xs font-medium text-muted-foreground">
-                  <span>Request{showRaw && ` · ${t("raw")}`}</span>
+                  <span>Request{showRaw && ` / ${t("raw")}`}</span>
                   <CopyButton text={reqText || ""} />
                 </div>
                 <div className="min-h-0 flex-1 overflow-auto">
@@ -590,7 +590,7 @@ export default function LLMRecordsPage() {
               </div>
               <div className="flex min-h-0 min-w-0 flex-col">
                 <div className="flex items-center gap-2 border-b py-0.5 pr-1.5 pl-3 text-xs font-medium text-muted-foreground">
-                  <span>Response{showRaw && ` · ${t("raw")}(SSE)`}</span>
+                  <span>Response{showRaw && ` / ${t("raw")}(SSE)`}</span>
                   <CopyButton text={respText || ""} />
                 </div>
                 <div className="min-h-0 flex-1 overflow-auto">

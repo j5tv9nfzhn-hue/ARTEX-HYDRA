@@ -217,7 +217,7 @@ function AssetList({ assets, dense = false }: { assets: FindingAsset[]; dense?: 
                 "inline-flex max-w-full items-center gap-1.5 rounded-md border bg-background px-2 py-0.5",
                 dense && "text-xs",
               )}
-              title={`${typeLabel} · ${a.label}`}
+              title={`${typeLabel} / ${a.label}`}
             >
               <span className="shrink-0 rounded bg-muted px-1 text-xs text-muted-foreground">{typeLabel}</span>
               <code className="truncate font-mono text-xs">{a.label}</code>

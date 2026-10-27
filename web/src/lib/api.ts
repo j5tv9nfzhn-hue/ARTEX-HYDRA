@@ -226,7 +226,7 @@ function mockReport(_task?: string): string {
 
 ## 概述
 - 范围：acme.com（包含 www / admin / api / shop / vpn 子域名）
-- 已确认发现：6 个（高危 3 · 中危 3 · 低危 2）
+- 已确认发现：6 个（高危 3 / 中危 3 / 低危 2）
 - 引擎模式：exploring
 
 ## 主要发现

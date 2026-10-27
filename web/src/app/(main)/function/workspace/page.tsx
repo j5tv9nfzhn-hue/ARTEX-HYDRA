@@ -230,7 +230,7 @@ export default function WorkspacePage() {
           {summary.partial ? "≥ " : ""}
           {fmtSize(summary.size)}
         </span>
-        <span>·</span>
+
         <span>{t("summary", { files: summary.files, dirs: summary.dirs })}</span>
       </div>
 

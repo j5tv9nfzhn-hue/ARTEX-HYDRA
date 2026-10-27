@@ -626,14 +626,14 @@ export function OverviewTab({ taskId }: { taskId: string }) {
                   </Badge>
                 )}
                 <span className="min-w-0 flex-1 truncate text-muted-foreground text-xs">
-                  {b.stop_reason || "—"} · {t("branches.attempt", { n: b.attempt })}
+                  {b.stop_reason || "—"} / {t("branches.attempt", { n: b.attempt })}
                   {typeof b.requeues === "number" && b.requeues > 0
-                    ? ` · ${t("branches.requeues", { n: b.requeues })}`
+                    ? ` / ${t("branches.requeues", { n: b.requeues })}`
                     : ""}
                   {b.next_retry_at
-                    ? ` · ${t("branches.nextRetry", { at: new Date(b.next_retry_at).toLocaleTimeString() })}`
+                    ? ` / ${t("branches.nextRetry", { at: new Date(b.next_retry_at).toLocaleTimeString() })}`
                     : ""}
-                  {b.has_handoff ? ` · ${t("branches.handoff")}` : ""}
+                  {b.has_handoff ? ` / ${t("branches.handoff")}` : ""}
                 </span>
                 <Button
                   size="sm"

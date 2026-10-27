@@ -57,7 +57,7 @@ export function AboutCard() {
           <Badge variant="outline" className="font-mono">
             v{version}
           </Badge>
-          <Badge variant="outline">Planner · Worker · MainAgent</Badge>
+          <Badge variant="outline">Planner / Worker / MainAgent</Badge>
           <Badge variant="outline" className="font-mono">
             AGPL-3.0
           </Badge>

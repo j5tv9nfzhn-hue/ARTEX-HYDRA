@@ -132,10 +132,10 @@ export function FindingVerifyPanel({
                     <span className="text-xs font-medium">{t(`verdict.${item.verdict}`)}</span>
                   ) : null}
                   <span className="text-muted-foreground text-xs">
-                    #{item.id} · {new Date(item.created_at).toLocaleString()}
+                    #{item.id} / {new Date(item.created_at).toLocaleString()}
                   </span>
                   {item.reason ? (
-                    <span className="text-muted-foreground text-xs">· {t(`reason.${reasonKey(item.reason)}`)}</span>
+                    <span className="text-muted-foreground text-xs">/ {t(`reason.${reasonKey(item.reason)}`)}</span>
                   ) : null}
                   {item.conversation_id != null ? (
                     <Button asChild variant="ghost" size="sm" className="ml-auto">

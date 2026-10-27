@@ -737,7 +737,7 @@ func Review(ctx context.Context, in ReviewerInput) ReviewerResult {
 	res := reviewCore(ctx, in)
 	in.emitA(db.Activity{
 		Kind:    "result",
-		Summary: fmt.Sprintf("判决 %s（%s · 置信 %.2f · %s）", res.Verdict, res.Attribution, res.Confidence, res.DecidedBy),
+		Summary: fmt.Sprintf("判决 %s（%s / 置信 %.2f / %s）", res.Verdict, res.Attribution, res.Confidence, res.DecidedBy),
 		Detail:  res.Summary,
 	})
 	return res
@@ -754,7 +754,7 @@ func reviewCore(ctx context.Context, in ReviewerInput) ReviewerResult {
 	sanitized := t1 || t2
 	rawBytes := len(rawTail) + len(rawLast)
 
-	in.emit("text", fmt.Sprintf("收到交接单：意图 #%d · run %d · 终态 %s · 工具 %d 次（%d 次报错）· 写回 %d 事实 / %d 资产 / %d 漏洞",
+	in.emit("text", fmt.Sprintf("收到交接单：意图 #%d / run %d / 终态 %s / 工具 %d 次（%d 次报错）/ 写回 %d 事实 / %d 资产 / %d 漏洞",
 		in.IntentID, in.RunID, in.EndState, in.ToolCalls, in.ToolErrors,
 		in.Wrote.Facts, in.Wrote.Assets, in.Wrote.Findings), tail)
 	if sanitized {

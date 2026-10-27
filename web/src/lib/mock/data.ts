@@ -871,7 +871,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
       ts: T("2026-07-25T20:00:00Z"),
     },
 
-    // ── 第 1 层 · 外网侦察 / 外部漏洞 ──
+    // ── 第 1 层 / 外网侦察 / 外部漏洞 ──
     {
       id: "i1",
       type: "intent",
@@ -927,7 +927,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
       ts: T("2026-07-25T20:20:00Z"),
     },
 
-    // ── 第 2 层 · 突破 DMZ 建立立足点 ──
+    // ── 第 2 层 / 突破 DMZ 建立立足点 ──
     {
       id: "i6",
       type: "intent",
@@ -956,7 +956,7 @@ export const explorationGraph: { nodes: TaskNode[]; edges: Edge[] } = {
       ts: T("2026-07-25T16:00:00Z"),
     },
 
-    // ── 第 3 层 · 内网横向纵深（多层测试）──
+    // ── 第 3 层 / 内网横向纵深（多层测试）──
     {
       id: "i9",
       type: "intent",
@@ -1301,8 +1301,8 @@ export const frontier: TaskNode[] = explorationGraph.nodes.filter(
 // 每个 worker 会话含完整工具执行链（tool_use → tool_result → …→ result）。
 export const activity: Activity[] = [
   // planner —— 每轮完整决策链：读态势 → 拉 worker 产出对照 → 判目标 → add_intent 派方向
-  // ── 第 0 轮 · 目标拆解与首批意图（2026-07-24 09:12）──
-  { seq: 1000, worker: "planner", ts: T("2026-07-24T09:12:10Z"), kind: "round", summary: "第 0 轮 · 目标拆解" },
+  // ── 第 0 轮 / 目标拆解与首批意图（2026-07-24 09:12）──
+  { seq: 1000, worker: "planner", ts: T("2026-07-24T09:12:10Z"), kind: "round", summary: "第 0 轮 / 目标拆解" },
   {
     seq: 1001,
     worker: "planner",
@@ -1362,8 +1362,8 @@ export const activity: Activity[] = [
       "本轮派生 4 个初始意图：i1 资产侦察、i2 后台密码、i4 注入、i5 API 越权。g1 由 i2 推进，g2 由 i4/i5 推进，两项目标都有独立入口。Worker 产出事实后沿链路增援。",
   },
 
-  // ── 第 1 轮 · 攻击面加码（2026-07-25 14:12）──
-  { seq: 1100, worker: "planner", ts: T("2026-07-25T14:12:00Z"), kind: "round", summary: "第 1 轮 · 攻击面增援" },
+  // ── 第 1 轮 / 攻击面加码（2026-07-25 14:12）──
+  { seq: 1100, worker: "planner", ts: T("2026-07-25T14:12:00Z"), kind: "round", summary: "第 1 轮 / 攻击面增援" },
   {
     seq: 1101,
     worker: "planner",
@@ -1422,13 +1422,13 @@ export const activity: Activity[] = [
       "态势升级：源码、硬编码内网密码与 Fastjson RCE 构成全新突破路径。请求登记 g3“从外网突破 DMZ 并获得内网立足点”，派发 i6（指纹/CVE 关联）和 i7（触发 RCE）。DMZ 提权依赖 Shell，先写入待办，下轮派发。",
   },
 
-  // ── 第 2 轮 · 立足点已建，转内网（2026-07-25 20:25）──
+  // ── 第 2 轮 / 立足点已建，转内网（2026-07-25 20:25）──
   {
     seq: 1200,
     worker: "planner",
     ts: T("2026-07-25T20:25:00Z"),
     kind: "round",
-    summary: "第 2 轮 · 已获立足点，转向内网",
+    summary: "第 2 轮 / 已获立足点，转向内网",
   },
   {
     seq: 1201,
@@ -1506,8 +1506,8 @@ export const activity: Activity[] = [
       "g3 达成，攻击面由外网转向内网。请求登记 g4“内网横向移动并控制目标域控制器 DC01”，派发 i9（主机发现）及 i10/i11/i12 三路并行横向移动。凭据复用直接锚定 faCreds，将外网源码泄露取得的密码用于内网横向移动。",
   },
 
-  // ── 第 3 轮 · 靶标达成复盘（2026-07-26 00:25）──
-  { seq: 1300, worker: "planner", ts: T("2026-07-26T00:25:00Z"), kind: "round", summary: "第 3 轮 · 目标达成复核" },
+  // ── 第 3 轮 / 靶标达成复盘（2026-07-26 00:25）──
+  { seq: 1300, worker: "planner", ts: T("2026-07-26T00:25:00Z"), kind: "round", summary: "第 3 轮 / 目标达成复核" },
   {
     seq: 1301,
     worker: "planner",
@@ -1564,13 +1564,13 @@ export const activity: Activity[] = [
       "g4 收尾，内外网路径已贯通（外网 RCE → DMZ → 内网 → 域控）。逐项核对未覆盖方向：g2“读取用户敏感数据”仍差最后一步，但 i3（后台用户接口）与 i5（API IDOR）已覆盖且均在 running。本轮没有【本质不同的未覆盖新方向】，遵守克制原则，新增意图 0，等待 i3/i5 产物。",
   },
 
-  // ── 第 4 轮 · 后台达成，收敛 g2（2026-07-26 03:55）──
+  // ── 第 4 轮 / 后台达成，收敛 g2（2026-07-26 03:55）──
   {
     seq: 1400,
     worker: "planner",
     ts: T("2026-07-26T03:55:00Z"),
     kind: "round",
-    summary: "第 4 轮 · 后台目标达成，g2 收敛",
+    summary: "第 4 轮 / 后台目标达成，g2 收敛",
   },
   {
     seq: 1401,
@@ -1637,7 +1637,7 @@ export const activity: Activity[] = [
       "g1 已达成（4 个目标中 g1/g3/g4 已 met）。g2 严格执行定量验收：仅进入后台不算完成，必须批量取得用户数据才确认。i3/i5 升至 priority 9 并细化数据获取意图，收到 Worker 结果后可整体收官。",
   },
 
-  // work#1 · i1 子域枚举与端口扫描（done）
+  // work#1 / i1 子域枚举与端口扫描（done）
   {
     seq: 10,
     worker: "work#1",
@@ -1722,7 +1722,7 @@ export const activity: Activity[] = [
     cache_write_tokens: 9000,
   },
 
-  // work#2 · i2 后台默认口令（done，证明 g1）
+  // work#2 / i2 后台默认口令（done，证明 g1）
   {
     seq: 20,
     worker: "work#2",
@@ -1791,7 +1791,7 @@ export const activity: Activity[] = [
     kind: "tool_result",
     tool: "bash",
     tool_use_id: "t23",
-    summary: "<title>Acme Admin · 控制台",
+    summary: "<title>Acme Admin / 控制台",
     detail: "确认已进入后台控制台。",
   },
   {
@@ -1827,7 +1827,7 @@ export const activity: Activity[] = [
     cache_write_tokens: 7200,
   },
 
-  // work#4 · i4 SQL 注入（done）
+  // work#4 / i4 SQL 注入（done）
   {
     seq: 40,
     worker: "work#4",
@@ -1912,7 +1912,7 @@ export const activity: Activity[] = [
     cache_write_tokens: 11000,
   },
 
-  // work#5 · i5 IDOR（running）
+  // work#5 / i5 IDOR（running）
   {
     seq: 50,
     worker: "work#5",
@@ -1992,7 +1992,7 @@ export const activity: Activity[] = [
     summary: "正在批量遍历 id 范围，评估通过权限绕过可访问的数据规模（暂不导出，避免触发拦截规则）。",
   },
 
-  // work#3 · i3 后台用户接口枚举（running）
+  // work#3 / i3 后台用户接口枚举（running）
   {
     seq: 60,
     worker: "work#3",
@@ -2031,7 +2031,7 @@ export const activity: Activity[] = [
     summary: "确认存在批量读取用户数据的入口。导出操作命中破坏性或泄露规则，已提交拦截审批，等待通过。",
   },
 
-  // workG · ig .git 源码泄露与硬编码凭据（done）
+  // workG / ig .git 源码泄露与硬编码凭据（done）
   {
     seq: 310,
     worker: "workG",
@@ -2116,7 +2116,7 @@ export const activity: Activity[] = [
     cache_write_tokens: 8000,
   },
 
-  // work#6 · i6 shop 指纹与 CVE 关联（done）
+  // work#6 / i6 shop 指纹与 CVE 关联（done）
   {
     seq: 320,
     worker: "work#6",
@@ -2181,7 +2181,7 @@ export const activity: Activity[] = [
     cache_write_tokens: 6000,
   },
 
-  // work#7 · i7 反序列化 RCE 拿反弹 shell（done，证明 g3）
+  // work#7 / i7 反序列化 RCE 拿反弹 shell（done，证明 g3）
   {
     seq: 330,
     worker: "work#7",
@@ -2277,7 +2277,7 @@ export const activity: Activity[] = [
     cache_write_tokens: 12000,
   },
 
-  // work#8 · i8 立足点提权（done）
+  // work#8 / i8 立足点提权（done）
   {
     seq: 340,
     worker: "work#8",
@@ -2351,7 +2351,7 @@ export const activity: Activity[] = [
     cache_write_tokens: 7000,
   },
 
-  // work#9 · i9 内网主机发现（done）
+  // work#9 / i9 内网主机发现（done）
   {
     seq: 350,
     worker: "work#9",
@@ -2394,7 +2394,7 @@ export const activity: Activity[] = [
     cache_write_tokens: 8000,
   },
 
-  // work#10 · i10 内网凭据复用（running）
+  // work#10 / i10 内网凭据复用（running）
   {
     seq: 360,
     worker: "work#10",
@@ -2433,7 +2433,7 @@ export const activity: Activity[] = [
     summary: "已控制 FS01，正在枚举共享目录，寻找更多凭据与敏感文件…",
   },
 
-  // work#11 · i11 Jenkins 未授权 RCE（done）
+  // work#11 / i11 Jenkins 未授权 RCE（done）
   {
     seq: 370,
     worker: "work#11",
@@ -2528,7 +2528,7 @@ export const activity: Activity[] = [
     cache_write_tokens: 9500,
   },
 
-  // work#12 · i12 Kerberoasting（done）
+  // work#12 / i12 Kerberoasting（done）
   {
     seq: 380,
     worker: "work#12",
@@ -2602,7 +2602,7 @@ export const activity: Activity[] = [
     cache_write_tokens: 10000,
   },
 
-  // work#13 · i13 拿下域控 DC01（done，证明 g4）
+  // work#13 / i13 拿下域控 DC01（done，证明 g4）
   {
     seq: 390,
     worker: "work#13",
@@ -3371,7 +3371,7 @@ export const skillProposals: SkillProposal[] = [
     file: "SKILL.md",
     action: "create",
     content:
-      "---\nname: case-web-42\ndescription: 任务复盘经验（web_security）：围绕「商城优惠券并发重放审计」，已验证 2 条路径、发现 1 个漏洞、复测 1 次；含关键词 Race Condition、coupon_redeem、Redis 分布式锁。遇到同类目标或同类故障时加载。\n---\n\n# 商城优惠券并发重放审计 · 任务复盘手册\n\n## 何时使用\n\n- 适用分析域：`web_security`\n- 触发场景：围绕「商城优惠券并发重放审计」开展同类测试时优先加载。\n\n## 已验证的有效路径\n\n1. **并发压测 coupon_redeem 接口** → 产出 2 条事实，触发 1 个确认漏洞\n\n## 失败、误区与止损\n\n- **触发 3-Strike 熔断**：同一请求已连续三次相同负反馈，需切换账号或重置令牌。\n\n## 适用边界与验证要求\n\n- 本手册由系统根据任务完成时的结构化探索图、活动流与证据链自动整理，不含未验证猜测。\n",
+      "---\nname: case-web-42\ndescription: 任务复盘经验（web_security）：围绕「商城优惠券并发重放审计」，已验证 2 条路径、发现 1 个漏洞、复测 1 次；含关键词 Race Condition、coupon_redeem、Redis 分布式锁。遇到同类目标或同类故障时加载。\n---\n\n# 商城优惠券并发重放审计 / 任务复盘手册\n\n## 何时使用\n\n- 适用分析域：`web_security`\n- 触发场景：围绕「商城优惠券并发重放审计」开展同类测试时优先加载。\n\n## 已验证的有效路径\n\n1. **并发压测 coupon_redeem 接口** → 产出 2 条事实，触发 1 个确认漏洞\n\n## 失败、误区与止损\n\n- **触发 3-Strike 熔断**：同一请求已连续三次相同负反馈，需切换账号或重置令牌。\n\n## 适用边界与验证要求\n\n- 本手册由系统根据任务完成时的结构化探索图、活动流与证据链自动整理，不含未验证猜测。\n",
     origin: "curator",
     evidence: "task=42 domain=web_security intents=2(done=2,blocked=0) facts=2 findings=1 retests=1 re_samples=0",
     lint: "",
@@ -3707,7 +3707,7 @@ export const conversations: Conversation[] = [
   {
     id: 3,
     agent_key: "mainagent",
-    title: "内网横向移动 · DMZ 到域控制器路径规划",
+    title: "内网横向移动 / DMZ 到域控制器路径规划",
     llm_profile_id: 1,
     created_at: T("2026-07-25T15:45:00Z"),
     updated_at: T("2026-07-26T00:25:00Z"),

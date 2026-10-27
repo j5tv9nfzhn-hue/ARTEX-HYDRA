@@ -392,7 +392,7 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
             <option value="">{t("chooseSample")}</option>
             {overview?.samples.map((item) => (
               <option key={item.sha256} value={item.sha256}>
-                {item.name} · {item.sha256.slice(0, 12)}
+                {item.name} / {item.sha256.slice(0, 12)}
               </option>
             ))}
           </select>
@@ -421,7 +421,7 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
                 .filter((item) => !overview?.samples.some((v) => v.sha256 === item.sha256))
                 .map((item) => (
                   <option key={item.sha256} value={item.sha256}>
-                    {item.name} · {item.sha256.slice(0, 12)}
+                    {item.name} / {item.sha256.slice(0, 12)}
                   </option>
                 ))}
             </select>
@@ -454,14 +454,14 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
             <option value={0}>{t("chooseProvider")}</option>
             {overview?.providers.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} · {p.kind} · {p.discovery}
+                {p.name} / {p.kind} / {p.discovery}
               </option>
             ))}
           </select>
           {!overview?.providers.length && <p className="text-muted-foreground text-xs">{t("noProvider")}</p>}
           {selectedCapability && (
             <p className="break-words text-xs">
-              {selectedCapability.core_ready ? t("capabilityReady") : t("capabilityBlocked")} ·{" "}
+              {selectedCapability.core_ready ? t("capabilityReady") : t("capabilityBlocked")} /{" "}
               {selectedCapability.gate_reason}
             </p>
           )}
@@ -493,14 +493,14 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
             <option value={0}>{t("chooseSession")}</option>
             {overview?.sessions.map((s) => (
               <option key={s.id} value={s.id}>
-                #{s.id} · {s.sample_sha.slice(0, 12)} · {s.snapshot.name} · {s.state}
+                #{s.id} / {s.sample_sha.slice(0, 12)} / {s.snapshot.name} / {s.state}
               </option>
             ))}
           </select>
           {!overview?.sessions.length && <p className="text-muted-foreground text-xs">{t("noSession")}</p>}
           {session && (
             <p className="break-words text-xs">
-              {session.state} · {session.message}
+              {session.state} / {session.message}
             </p>
           )}
           <div className="flex flex-wrap gap-2">
@@ -683,7 +683,7 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
                         {row.created_at}
                         <br />
                         {row.output_sha}
-                        {row.is_error ? " · error" : ""}
+                        {row.is_error ? " / error" : ""}
                       </td>
                       <td className="p-2">
                         <button type="button" className="underline" onClick={() => showEvidence(row.id)}>
@@ -715,14 +715,14 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
       <section className={panel}>
         <h3 className="font-medium">
           {t("raw")}
-          {evidence && ` #${evidence.id} · ${evidence.operation}`}
+          {evidence && ` #${evidence.id} / ${evidence.operation}`}
         </h3>
         {!evidence ? (
           <p className="text-muted-foreground text-sm">{t("noEvidence")}</p>
         ) : (
           <>
             <p className="break-all text-xs">
-              sample SHA-256: {evidence.sample_sha} · session #{evidence.session_id} · {evidence.tool} ·{" "}
+              sample SHA-256: {evidence.sample_sha} / session #{evidence.session_id} / {evidence.tool} /{" "}
               {evidence.created_at}
             </p>
             <p className="break-all text-xs">
@@ -734,7 +734,7 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
             {evidence.truncated && <p className="text-destructive text-sm">{t("outputTruncated")}</p>}
             <details>
               <summary className="cursor-pointer text-xs">
-                {t("input")} · is_error={String(evidence.is_error)}
+                {t("input")} / is_error={String(evidence.is_error)}
               </summary>
               <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs">
                 {JSON.stringify(evidence.input, null, 2)}
@@ -789,7 +789,7 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
           <option value={0}>{t("newProvider")}</option>
           {overview?.providers.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name} · {p.kind}
+              {p.name} / {p.kind}
             </option>
           ))}
         </select>
@@ -804,8 +804,8 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
             <option value={0}>{t("mcp")}</option>
             {mcps.map((m) => (
               <option key={m.id} value={m.id} disabled={!m.enabled}>
-                {m.name} · {m.transport}
-                {!m.enabled ? " · disabled" : ""}
+                {m.name} / {m.transport}
+                {!m.enabled ? " / disabled" : ""}
               </option>
             ))}
           </select>
@@ -903,15 +903,15 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
         </div>
         {editingProvider && (
           <p className="break-words text-xs">
-            {t("providerState")}: {editingProvider.discovery} · {editingProvider.message}
+            {t("providerState")}: {editingProvider.discovery} / {editingProvider.message}
           </p>
         )}
         {editingCapability && (
           <p className="break-words text-xs">
-            {editingCapability.core_ready ? t("capabilityReady") : t("capabilityBlocked")} ·{" "}
+            {editingCapability.core_ready ? t("capabilityReady") : t("capabilityBlocked")} /{" "}
             {editingCapability.gate_reason}
             {editingCapability.ready_operations.length > 0 &&
-              ` · ${t("readyOps", { ops: editingCapability.ready_operations.join(", ") })}`}
+              ` / ${t("readyOps", { ops: editingCapability.ready_operations.join(", ") })}`}
           </p>
         )}
         <details>

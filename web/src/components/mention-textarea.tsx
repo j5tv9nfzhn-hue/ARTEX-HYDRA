@@ -334,7 +334,7 @@ export function MentionTextarea({ value, onValueChange, onKeyDown, className, in
       {selected.length > 0 && (
         <div className="flex flex-wrap items-center gap-1 px-1 pt-1">
           {selected.map((item) => {
-            const label = `${t(`kind.${item.kind}`)} #${item.id}${item.text ? ` · ${item.text}` : ""}`;
+            const label = `${t(`kind.${item.kind}`)} #${item.id}${item.text ? ` / ${item.text}` : ""}`;
             return (
               <Badge key={item.start} variant="secondary" className="max-w-full gap-1">
                 <span className="max-w-64 truncate" title={label}>

@@ -242,7 +242,7 @@ export function FindingsTable({
                         <code
                           key={a.id}
                           className="max-w-full truncate rounded bg-muted px-1.5 py-0.5 font-mono text-xs"
-                          title={`${a.type} · ${a.label}`}
+                          title={`${a.type} / ${a.label}`}
                         >
                           {a.label}
                         </code>

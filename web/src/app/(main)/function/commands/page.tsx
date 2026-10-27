@@ -314,13 +314,13 @@ export default function CommandsPage() {
               {taskFilter || queryQ ? t("statsDescFiltered") : t("statsDescAll")}
               {stats.length > 0 && (
                 <>
-                  {" · "}
+                  {" / "}
                   <span className="tabular-nums">{stats.length}</span>
-                  {t("unitTools")} · <span className="tabular-nums">{statsTotal}</span>
+                  {t("unitTools")} / <span className="tabular-nums">{statsTotal}</span>
                   {t("unitCalls")}
                   {statsErrors > 0 && (
                     <>
-                      {" · "}
+                      {" / "}
                       {t("failed")} <span className="tabular-nums text-red-600 dark:text-red-400">{statsErrors}</span>
                     </>
                   )}

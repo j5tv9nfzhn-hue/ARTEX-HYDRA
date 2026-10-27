@@ -38,7 +38,7 @@
     "llm": {
       "chainLabel": "备用模型链（故障转移顺序）",
       "chainSaveHint": "与上方绑定同一次保存（点「保存配置」生效）",
-      "defaultSuffix": " · 默认",
+      "defaultSuffix": "，默认",
       "follow": "跟随任务 / 全局激活配置",
       "hint": "为该 Agent 绑定固定 LLM 配置（点「保存配置」生效）。优先级：Agent 绑定 > 任务/会话指定 > 全局激活。",
       "imageAdvice": "该角色可能直接收到图片（截图 / 聊天上传）；当前主模型未声明图片输入，带图片的请求会被明确拒绝。建议绑定支持图片的配置，或把支持图片的配置加入备用链。",
@@ -167,10 +167,10 @@
       "onTaskTimeout": "任务超时时触发",
       "onToolCall": "工具调用时触发",
       "parallel": "并行（各自并发会话）",
-      "policyAll": "串行·全部合并：同 agent 一次跑一个；取队列时把当前排队的所有触发合并成一条会话。",
-      "policyByTask": "串行·按任务合并：同 agent 一次跑一个；排队中同一任务的事件触发合并成一条会话。",
+      "policyAll": "串行，全部合并：同 agent 一次跑一个；取队列时把当前排队的所有触发合并成一条会话。",
+      "policyByTask": "串行，按任务合并：同 agent 一次跑一个；排队中同一任务的事件触发合并成一条会话。",
       "policyLabel": "触发后处理策略（决定触发如何排队/合并运行）",
-      "policyNone": "串行·不合并：同 agent 一次跑一个；每条触发各自一个会话。",
+      "policyNone": "串行，不合并：同 agent 一次跑一个；每条触发各自一个会话。",
       "policyParallel": "并行：每次触发立即各开一个会话并发运行，不合并；超过最大并发的触发排队等空位。",
       "runMode": "运行模式",
       "saveEdit": "保存修改",
@@ -351,9 +351,9 @@
     "resultRecordedAt": "结果记录时间",
     "retryDetail": "重试详情",
     "review": {
-      "bgUser": "背景 · 用户消息",
+      "bgUser": "背景，用户消息",
       "bgUserNote": "取自当前用户消息。",
-      "bgWorkerLegacy": "背景 · Worker 意图摘要（旧版）",
+      "bgWorkerLegacy": "背景，Worker 意图摘要（旧版）",
       "bgWorkerNote": "这是旧版发送的 Worker 意图摘要；新版 Worker 审查不再发送此内容。",
       "context": "模型审查上下文",
       "currentCall": "当前待审查调用",
@@ -413,7 +413,7 @@
     },
     "toolCallId": "工具调用 ID",
     "toolNotExecuted": "工具未执行。",
-    "toolRequest": "{agent} · 工具请求",
+    "toolRequest": "{agent}，工具请求",
     "truncatedNote": "内容已截断，以上为保存的片段。",
     "viewAuditFragment": "查看会话审计片段",
     "viewAuditFragmentNotSent": "查看会话审计片段（未发送模型）",
@@ -600,7 +600,7 @@
       "button": "追加",
       "description": "新范围会追加到现有范围。ICP 精确匹配资产，企业关键词仅作为 Agent 提示。",
       "scopeRequired": "请填写要追加的范围",
-      "title": "追加资产范围 · {name}"
+      "title": "追加资产范围，{name}"
     },
     "authFallback": "认证",
     "cancel": "取消",
@@ -650,7 +650,7 @@
       "alsoDeleteAssets": "同时删除该企业下的所有资产",
       "alsoDeleteHint": "不勾选则保留资产，仅取消归属关系",
       "body": "此操作将永久删除该企业及其资产范围配置，不可撤销。",
-      "title": "删除企业 · {name}"
+      "title": "删除企业，{name}"
     },
     "deleteDialog": {
       "body": "将永久删除 <n>{count}</n> 条资产记录，此操作不可撤销。",
@@ -664,7 +664,7 @@
       "description": "编辑后将替换全部现有范围。ICP 精确匹配资产，企业关键词仅作为 Agent 提示。",
       "overwrite": "覆盖保存",
       "savedWithInvalid": "已保存；{invalid} 行无效",
-      "title": "编辑资产范围 · {name}",
+      "title": "编辑资产范围，{name}",
       "updated": "范围已更新，共 {added} 条"
     },
     "emptyData": "暂无数据。",
@@ -731,32 +731,32 @@
     },
     "terms": {
       "a1Body": "本软件（ARTEX-HYDRA）是一款基于 GNU Affero General Public License v3.0（AGPL-3.0）发布的开源程序。您可依据该协议自由使用、复制、修改和分发本软件；但任何衍生作品（包括通过网络向第三方提供的在线服务）均须同样以 AGPL-3.0 协议开源并向使用者公开对应的完整源代码。AGPL-3.0 完整条款以随附的 LICENSE 文件为准。",
-      "a1Title": "第一条 · 定义与开源许可",
+      "a1Title": "第一条，定义与开源许可",
       "a2Body": "本软件仅供个人学习、代码研究、安全技术原理探讨，以及在您自行搭建的本地隔离环境中进行技术验证之用，适用于学习、学术研究、代码审阅等非攻击性、非破坏性用途。除本条明确许可的情形外，您不得将本软件用于任何其他目的。",
-      "a2Title": "第二条 · 授权使用范围",
+      "a2Title": "第二条，授权使用范围",
       "a3Item1": "严禁对任何网站、线上服务、他人或第三方所有的联网系统发起扫描、探测、利用或攻击（无论是否已获得授权、是否为您自有资产）；",
       "a3Item2": "严禁将本软件用于任何实际的渗透测试、攻防对抗、红蓝演练或生产环境；",
       "a3Item3": "严禁将本软件用于非法入侵、数据窃取、勒索、拒绝服务（DoS/DDoS）或任何破坏性、犯罪性活动；",
       "a3Item4": "严禁移除、篡改或规避本软件及其输出中的任何版权、许可或安全提示信息；",
       "a3Item5": "严禁从事任何违反您所在国家或地区法律、法规及监管规定的行为。",
-      "a3Title": "第三条 · 禁止行为",
+      "a3Title": "第三条，禁止行为",
       "a4Body": "本软件的著作权及相关知识产权归项目作者及贡献者所有，并在 AGPL-3.0 协议约定的范围内向您授予相应权利。除该协议明确授予的权利外，本声明未以明示或默示方式授予您任何其他权利。",
-      "a4Title": "第四条 · 知识产权",
+      "a4Title": "第四条，知识产权",
       "a5Body": "本软件为可自行部署的开源程序，作者不运营任何集中式服务、亦不会收集或上传您的使用数据。您在使用过程中产生、处理或接触的一切数据，均由您自行掌控并负责其合法性与安全性；因数据处理不当引发的任何后果由您自行承担。",
-      "a5Title": "第五条 · 数据与隐私",
+      "a5Title": "第五条，数据与隐私",
       "a6Body": "您应自行遵守所在国家或地区关于网络安全、数据安全与个人信息保护、计算机犯罪等方面的全部法律法规（在中国大陆包括但不限于《网络安全法》《数据安全法》《个人信息保护法》及相关司法解释）。",
       "a6Emphasis": "因您违反上述法律法规或本声明约定而产生的一切法律责任与后果，均由您本人独立承担，与本软件作者及贡献者无关。",
-      "a6Title": "第六条 · 合规与法律责任",
+      "a6Title": "第六条，合规与法律责任",
       "a7Body": "本软件按\"现状（AS IS）\"与\"现有（AS AVAILABLE）\"状态提供，不附带任何明示或默示的担保，包括但不限于对适销性、特定用途适用性、准确性及不侵权的担保。在适用法律允许的最大范围内，本软件作者及贡献者不对因使用或无法使用本软件（无论使用方式是否得当）而导致的任何直接、间接、偶然、特殊或后果性损失承担责任，包括但不限于数据丢失、系统损坏、业务中断、利润损失或法律纠纷。",
-      "a7Title": "第七条 · 免责声明与责任限制",
+      "a7Title": "第七条，免责声明与责任限制",
       "a8Body": "作者有权根据法律法规或项目发展需要不时更新本声明，更新后的版本将随项目发布并自公布之日起生效；您继续使用本软件即视为接受修订后的条款。在法律允许的范围内，本声明的最终解释权归项目作者所有。若本声明任一条款被认定为无效，不影响其余条款的效力。",
-      "a8Title": "第八条 · 条款变更与最终解释",
+      "a8Title": "第八条，条款变更与最终解释",
       "agreeButton": "我已阅读并同意全部条款",
       "footerNotRead": "请将条款滚动至底部后再确认",
       "footerRead": "您已浏览全部条款",
       "intro": "本《使用须知与免责声明》（以下简称\"本声明\"）是您与 ARTEX-HYDRA 项目作者及贡献者之间就使用本软件所达成的约定。请您在使用前审慎阅读、充分理解各条款内容，特别是以粗体或色块标注的免责、责任限制及禁止性条款。",
       "introEmphasis": "一旦您下载、安装、访问或以任何方式使用本软件，即视为您已阅读、理解并同意接受本声明的全部约束。",
-      "meta": "版本 v1.0 · 生效日期 2026-09-18 · 请在登录前完整阅读以下全部条款",
+      "meta": "版本 v1.0，生效日期 2026-09-18，请在登录前完整阅读以下全部条款",
       "title": "ARTEX-HYDRA 使用须知与免责声明"
     }
   },
@@ -861,7 +861,7 @@
       "unpinFailed": "取消置顶失败：{msg}",
       "uploadFailed": "上传失败：{msg}"
     },
-    "tokensLine": "输入 {input} · 缓存 {cache} · 输出 {output}",
+    "tokensLine": "输入 {input}，缓存 {cache}，输出 {output}",
     "tokensTooltip": "输入 / 缓存读取 / 输出 Token 数",
     "totalCount": "共 {count} 个",
     "turnsCount": "{turns} 轮",
@@ -1012,7 +1012,7 @@
     "eventCount": "{count} 条事件",
     "findings": "发现",
     "inputUncached": "输入(未命中)",
-    "interruptDetail": "中断 {attempts} · 成功 {succeeded} · 失败 {failed}",
+    "interruptDetail": "中断 {attempts}，成功 {succeeded}，失败 {failed}",
     "interruptRecoveryRate": "中断恢复率",
     "llmConfig": "LLM 配置",
     "morePending": "还有 {count} 条…",
@@ -1029,7 +1029,7 @@
     "on": "开启",
     "output": "输出",
     "pendingApprovals": "待审批 ({count})",
-    "protocolDetail": "协议异常：未配对 {unpaired} · 未知结果 {unknown} · 缺失结果 {missing}",
+    "protocolDetail": "协议异常：未配对 {unpaired}，未知结果 {unknown}，缺失结果 {missing}",
     "range180": "6月",
     "range30": "30天",
     "range365": "一年",
@@ -1038,7 +1038,7 @@
     "recentRequests": "最近请求",
     "recording": "录制中",
     "reliability": "可靠性",
-    "replayDetail": "尝试 {attempts} · 成功 {succeeded} · 失败 {failed}",
+    "replayDetail": "尝试 {attempts}，成功 {succeeded}，失败 {failed}",
     "replaySuccessRate": "崩溃重放成功率",
     "requestCount": "{count} 次请求",
     "sinceStart": "本次启动以来",
@@ -1055,15 +1055,15 @@
     "statDone": "完成",
     "statExplore": "探索",
     "statPaused": "暂停",
-    "statTokenDetail": "入 {input}（含缓存 {cache}）· 出 {output}",
-    "subtitle": "系统全局状态 · 实时刷新",
+    "statTokenDetail": "入 {input}（含缓存 {cache}），出 {output}",
+    "subtitle": "系统全局状态，实时刷新",
     "systemStatus": "系统状态",
     "taskCount": "{count} 个任务",
     "tasks": "任务",
     "title": "总览",
     "tokenConsumption": "LLM Token 消耗",
     "tokenUsage": "Token 用量",
-    "toolCallsDetail": "调用 {calls} · 错误 {errors}",
+    "toolCallsDetail": "调用 {calls}，错误 {errors}",
     "toolErrorRate": "工具错误率",
     "tooltipNew": "新版：来自 llm_usage 计量账本，逐次调用精确、含中断消耗；仅覆盖启用后的数据",
     "tooltipOld": "旧版：来自 activity 统计（含历史任务），中断消耗不计、无法精确到模型",
@@ -1092,7 +1092,7 @@
       "raw": "原始数据",
       "sourceBadge": "来源 #{id}",
       "sourceTask": "来源任务",
-      "sourceTaskBadge": "来源任务 #{id} · 只读",
+      "sourceTaskBadge": "来源任务 #{id}，只读",
       "state": "状态",
       "time": "时间",
       "type": "类型"
@@ -1183,7 +1183,7 @@
       "notFound": "未找到发现 {id}",
       "reportStale": "流量证据已变更，详细报告待更新。",
       "severityChanged": "严重等级已改为「{label}」",
-      "sourceTask": "来源任务 #{id} · 只读",
+      "sourceTask": "来源任务 #{id}，只读",
       "statusChanged": "处理状态已改为「{label}」",
       "statusTitle": "状态",
       "summary": "摘要",
@@ -1245,7 +1245,7 @@
     },
     "subtitle": "跨任务漏洞汇总",
     "table": {
-      "assetInline": "· 资产：",
+      "assetInline": "，资产：",
       "colActions": "操作",
       "colHint": "说明",
       "colAsset": "资产",
@@ -1274,7 +1274,7 @@
       "retestingTitle": "查看正在进行的复测会话",
       "selectOne": "选择该漏洞",
       "trafficEvidence": "流量证据 {count} 条",
-      "typeInline": "· 类型：",
+      "typeInline": "，类型：",
       "unclassified": "未分类",
       "viewDetail": "查看发现详情",
       "verify": "复核",
@@ -1314,7 +1314,7 @@
       "empty": "暂无关联流量",
       "emptyHint": "可绑定正常对照、漏洞证明和补充验证请求。",
       "evidenceNo": "证据 #{id}",
-      "inherited": "继承证据 · 只读",
+      "inherited": "继承证据，只读",
       "moveDown": "下移证据 {id}",
       "moveUp": "上移证据 {id}",
       "noteLabel": "证据说明",
@@ -1346,7 +1346,7 @@
     "updateBadge": "新版本 {latest}",
     "updateBadgeShort": "新版本",
     "updateTitle": "发现新版本 {latest}，点击前往更新",
-    "version": "版本 · {version}"
+    "version": "版本，{version}"
   },
   "i18n": {
     "catalog-merge": {
@@ -1536,7 +1536,7 @@
       "665f6c04": "上传失败： {var0} {var1}",
       "6ac556cf": "下载失败： {var0}",
       "b853b88b": "(demo) {var0} 的下载内容示例。",
-      "cbf56b6d": "# ARTEX-HYDRA 渗透测试报告：Acme Corp\n\n## 概述\n- 范围：acme.com（包含 www / admin / api / shop / vpn 子域名）\n- 已确认发现：6 个（高危 3 · 中危 3 · 低危 2）\n- 引擎模式：exploring\n\n## 主要发现\n1. **[高危] 管理后台默认密码** admin.acme.com admin/admin123 → 可完全控制后台。\n2. **[高危] SQL 注入** www.acme.com/search?q= → 可读取 acme_prod 数据库。\n3. **[高危] IDOR** api.acme.com/v1/orders?id= → 可越权读取他人订单（包含手机号和地址）。\n4. **[中危] 反射型 XSS**、**.git 源码泄露**、**登录缺少速率限制**。\n\n## 建议\n- 强制修改后台密码，启用 MFA，禁止使用默认密码。\n- search 接口使用参数化查询并对输出编码。\n- API 增加对象级权限验证（IDOR），更换强 JWT 密钥。\n\n> (demo) 本报告由 mock 数据生成，仅用于界面演示。",
+      "cbf56b6d": "# ARTEX-HYDRA 渗透测试报告：Acme Corp\n\n## 概述\n- 范围：acme.com（包含 www / admin / api / shop / vpn 子域名）\n- 已确认发现：6 个（高危 3，中危 3，低危 2）\n- 引擎模式：exploring\n\n## 主要发现\n1. **[高危] 管理后台默认密码** admin.acme.com admin/admin123 → 可完全控制后台。\n2. **[高危] SQL 注入** www.acme.com/search?q= → 可读取 acme_prod 数据库。\n3. **[高危] IDOR** api.acme.com/v1/orders?id= → 可越权读取他人订单（包含手机号和地址）。\n4. **[中危] 反射型 XSS**、**.git 源码泄露**、**登录缺少速率限制**。\n\n## 建议\n- 强制修改后台密码，启用 MFA，禁止使用默认密码。\n- search 接口使用参数化查询并对输出编码。\n- API 增加对象级权限验证（IDOR），更换强 JWT 密钥。\n\n> (demo) 本报告由 mock 数据生成，仅用于界面演示。",
       "ce1aa0d2": "尚未通过身份验证",
       "dc0cc2f1": "上传失败 ({var0})",
       "e0dab22b": "下载失败"
@@ -1617,7 +1617,7 @@
         "1f866fe1": "faGit 证据：git-dumper 恢复 config.php / db.php / order_api.php。config.php 中 $db=['host'=>'10.10.10.5','user'=>'sa','pass'=>'Acme@2021']",
         "2252541b": "java -jar JNDIExploit.jar -i <vps> -l 1389 &  # 启动 LDAP/HTTP 服务",
         "225403d9": "add_intent × 4（以立足点为 pivot 展开内网横向移动）",
-        "2382b114": "<title>Acme Admin · 控制台",
+        "2382b114": "<title>Acme Admin，控制台",
         "23861c3c": "当前为 www-data@dmz-web01，第二块网卡为 10.10.10.x，已进入 DMZ 且邻接内网。",
         "249f60d5": "将任务目标拆解为可探索的子目标。",
         "268e7afc": "[模型] 疑似备份表，无法确定是否为业务数据",
@@ -1631,7 +1631,7 @@
         "2de94611": "acme.com → 302 → www; Server: nginx/1.24.0\nadmin.acme.com → 200，无 X-Powered-By，正文发现 element-ui/vue 特征",
         "2f033d76": "资产图概览",
         "2fc33dfb": "reason：Jenkins 泄露 svc_deploy（Domain Admin）→ psexec 控制 DC01 → secretsdump 提取全域哈希；F-09 已确认，“控制内网目标域控制器 DC01”达成。",
-        "301841b2": "第 4 轮 · 后台目标达成，g2 收敛",
+        "301841b2": "第 4 轮，后台目标达成，g2 收敛",
         "30af4ae3": ".git 目录可从外部访问。",
         "3133393c": "无需登录即可访问 Script Console。",
         "3248d910": "已记录 finding f-6，并通过 proves 关联目标 g1。",
@@ -1730,7 +1730,7 @@
         "7716e642": "先进行被动子域名侦察，再识别存活主机的端口与服务。",
         "782c0268": "错误堆栈包含 com.alibaba.fastjson.JSONException (1.2.24)",
         "7875f7d9": "评估支付与订单接口的越权、金额篡改和竞争条件风险。",
-        "7910ed4e": "第 2 轮 · 已获立足点，转向内网",
+        "7910ed4e": "第 2 轮，已获立足点，转向内网",
         "792d11ca": "通过 POST /api/import 发送 JNDI payload (@type:JdbcRowSetImpl) → dnslog 收到回连并获得反向 Shell (www-data@dmz-web01)。",
         "7975329b": "本轮派生 4 个初始意图：i1 资产侦察、i2 后台密码、i4 注入、i5 API 越权。g1 由 i2 推进，g2 由 i4/i5 推进，两项目标都有独立入口。Worker 产出事实后沿链路增援。",
         "79cb1da4": "阻止数据泄露：完整数据库导出需要人工审批",
@@ -1759,7 +1759,7 @@
         "8687d529": "你是 ARTEX-HYDRA 的「{var0}」。\n目标：{{.Goal}}\n资产概览：{{.AssetSummary}}\n路线提示：{{.RouteHint}}\n请基于以上信息推进探索，并通过工具把结果写回图。",
         "886b0cfa": "探测 search?q= 注入，先使用报错型 payload 验证。",
         "8957f4ba": "已控制域控制器 DC01，通过 secretsdump 导出全域哈希，目标达成。",
-        "8999b3b2": "第 0 轮 · 目标拆解",
+        "8999b3b2": "第 0 轮，目标拆解",
         "8a153676": "疑似数据外泄",
         "8a34d0c1": "search?q= 将 q 拼入结果页标题。先手动输入单引号观察错误信息。",
         "8aa6a0ca": "完全控制内网域控制器 DC01 (Domain Admin)",
@@ -1785,7 +1785,7 @@
         "961f3c7a": "对 REST/GraphQL API 进行侦察与越权攻击面枚举，发现新 API 接口时使用。",
         "9675907d": "目标 ② 是读取用户敏感数据。并行推进“后台用户接口枚举”和“API IDOR”。批量导出会触发拦截规则，需要你审批后才能执行。",
         "978958eb": "将 id=1001 改为 id=1002 后返回他人订单（包含收货地址和手机号），缺少所有者验证。",
-        "981733f9": "内网横向移动 · DMZ 到域控制器路径规划",
+        "981733f9": "内网横向移动，DMZ 到域控制器路径规划",
         "988e3e3f": "svc_deploy 是 Domain Admins 成员。",
         "98aaabd3": "围绕目标 API 的身份验证、对象级授权和角色边界开展专项测试。",
         "98ca7a48": "Acme 官网与管理后台外部渗透测试",
@@ -1801,7 +1801,7 @@
         "a17add56": "查询指定 IP 的 Shodan 主机信息",
         "a2395cf1": "admin 是独立后台登录页。已确认五个入口有效，可精确描述初始意图。",
         "a2d1afd9": "成功。使用 admin/admin123 直接登录控制台，已记录高危漏洞并证明“获得后台管理权限”目标达成。下一步转向用户数据读取（目标 ②）。",
-        "a4d8354a": "第 3 轮 · 目标达成复核",
+        "a4d8354a": "第 3 轮，目标达成复核",
         "a5bacbed": "已确认控制。路径为：shop Fastjson RCE → DMZ 提权 → 内网 Jenkins 域凭据导出 → svc_deploy 属于 Domain Admins → psexec DC01 SYSTEM → secretsdump 全域哈希。四项目标均已达成或正在推进。",
         "a60252b0": "对目标互联网暴露面进行黑盒渗透测试，覆盖站点、接口和常见管理入口。",
         "aac8458a": "登录成功并进入管理后台，可管理用户与订单。",
@@ -1887,7 +1887,7 @@
         "f455f89d": "已记录 finding f-2。",
         "f4f1a151": "确认 SQL 注入。",
         "f541dbed": "自定义：使用 nuclei 执行指定模板。",
-        "f59422fe": "第 1 轮 · 攻击面增援",
+        "f59422fe": "第 1 轮，攻击面增援",
         "f6541e07": "4 intents created → ids=[i1, i2, i4, i5]，已加入 frontier",
         "f7bb2ee1": "node_detail(fa6)：确认双网卡与内网可达性",
         "f7e1c336": ".git 可下载，使用 git-dumper 恢复后端源码",
@@ -1902,7 +1902,7 @@
         "73151516": "任务尚未暂停",
         "00c5fdb0": "企业",
         "01f1f675": "资产 #{var0}",
-        "06798dab": "复测 #{var0} · {var1}",
+        "06798dab": "复测 #{var0}，{var1}",
         "0856644d": "等待永久删除",
         "08d8f8ee": "漏洞复测 #{var0}",
         "0a010490": "消息不能为空",
@@ -1999,7 +1999,7 @@
     "findLabel": "查找漏洞",
     "loading": "加载中…",
     "nextPage": "下一页",
-    "pageInfo": "第 {page} 页 · 共 {total} 条",
+    "pageInfo": "第 {page} 页，共 {total} 条",
     "prevPage": "上一页",
     "saving": "保存中…",
     "searchPlaceholder": "名称 / 摘要 / 漏洞类别",
@@ -2053,14 +2053,14 @@
       "thinkingOff": "关"
     },
     "health": {
-      "degraded": "异常 · 失败 {fails} 次",
+      "degraded": "异常，失败 {fails} 次",
       "noKey": {
         "hint": "未填 API Key，无法调用",
         "label": "未配置 Key"
       },
       "ok": "正常",
       "tripped": "已熔断",
-      "trippedCooldown": "已熔断 · {cooldown}",
+      "trippedCooldown": "已熔断，{cooldown}",
       "keyUnreadable": "Key 读不出来（主密钥丢失或更换，重填即可）"
     },
     "page": {
@@ -2112,7 +2112,7 @@
         "aria": "立即恢复",
         "title": "立即恢复：清除熔断，下次调用重试该配置"
       },
-      "title": "LLM 轮询 · 故障转移",
+      "title": "LLM 轮询，故障转移",
       "toast": {
         "disabled": "已关闭 LLM 轮询",
         "enabled": "已开启 LLM 轮询",
@@ -2181,7 +2181,7 @@
       "descNew": "新建后不会自动激活，请在卡片上「设为激活」以启用。",
       "effort": {
         "hint": "独立的强度档位（OpenAI reasoning_effort / Anthropic output_config.effort）。 有些接口没有 thinking 字段、只靠强度即可激活思考，故可单独设置、不发送思考开关。",
-        "label": "思考强度 · reasoning_effort",
+        "label": "思考强度，reasoning_effort",
         "opt": {
           "none": "不发送（默认）"
         }
@@ -2197,7 +2197,7 @@
       },
       "maxTokens": {
         "hint": "单次回复最多生成多少 token，随每次请求发出。0（默认）= 不发送该字段，由服务端默认值决定。 这与上面的「上下文窗口」是两回事：那是模型总容量，只在本地用来算压缩阈值。 设太小会让推理模型在思考阶段就被截断，一个字答案都出不来。",
-        "label": "输出上限 · max tokens"
+        "label": "输出上限，max tokens"
       },
       "maxTokensField": {
         "label": "上限字段名",
@@ -2212,7 +2212,7 @@
       },
       "modalities": {
         "hint": "声明该配置能接收哪些输入模态。三种扩展模态都不勾选 = 未声明，系统按模型名保守推断（仅已知的多模态模型会推断出图片）；勾选任意一项 = 显式声明，文本始终包含。运行时带图片/音频/PDF 附件、而目标配置未声明支持该模态时会被明确拦截报错，不会静默丢弃附件。",
-        "label": "输入模态 · input_modalities",
+        "label": "输入模态，input_modalities",
         "opt": {
           "audio": "音频 (audio)",
           "image": "图片 (image)",
@@ -2249,14 +2249,14 @@
       "streaming": {
         "aria": "流式输出",
         "hint": "开启（默认）走流式 SSE，有运行中实时进度与实时 token 计数。 关闭则走真·非流式（stream:false，一次性返回完整响应）——可绕开部分网关糟糕的 SSE 实现（空帧 / 思考字段丢帧），代价是失去运行中的实时进度。",
-        "label": "流式输出 · streaming"
+        "label": "流式输出，streaming"
       },
       "testConnection": "测试连接",
       "testing": "测试中…",
       "testingElapsed": "测试中… {s}s（最长 60s）",
       "thinkingType": {
         "hint": "控制是否发送 thinking 字段。不发送=不带该字段（兼容 MiniMax 等不支持 的模型）；关闭=发 disabled；开启=发 enabled。与下面的强度互相独立。",
-        "label": "思考开关 · thinking.type",
+        "label": "思考开关，thinking.type",
         "opt": {
           "disabled": "关闭",
           "enabled": "开启",
@@ -2278,7 +2278,7 @@
         "testError": "测试出错：{msg}",
         "testFailed": "连接失败：{error}",
         "testKey": "使用 {source} 的 Key{hint}",
-        "testOk": "连接成功 · {latency}ms · {model}",
+        "testOk": "连接成功，{latency}ms，{model}",
         "testReply": "回复：{reply}",
         "unknown": "未知"
       }
@@ -2314,7 +2314,7 @@
         "skips": "成功一次即清零，所以偶尔抽风的配置不会被慢慢攒到熔断。",
         "title": "轮询熔断",
         "trigger": "瞬时失败（429、5xx、网络错误）连续累计到阈值时熔断；余额不足（402）、密钥失效（401 / 403）、模型不存在（404）这类确定性失败不看阈值，第一次就熔断。",
-        "where": "本项目 · 进程级，全局一份"
+        "where": "本项目，进程级，全局一份"
       },
       "connect": {
         "attemptsLabel": "重试次数",
@@ -2324,7 +2324,7 @@
         "skips": "其余状态码（400 / 401 / 403 / 404 / 413 / 422 等）都是确定性拒绝，重发也一样失败，直接上抛。",
         "title": "建连重试",
         "trigger": "连不上或还没拿到 200：连接重置 / 读写超时 / DNS 失败等网络层错误，以及 HTTP 408、429、500、502、503、504。",
-        "where": "SDK · 拿到 200 之前"
+        "where": "SDK，拿到 200 之前"
       },
       "empty": {
         "attemptsLabel": "重试次数",
@@ -2334,7 +2334,7 @@
         "skips": "因 max_tokens 截断而没有内容的不算（那要靠调高输出上限解决，重发只会再撞一次）。",
         "title": "空响应重试",
         "trigger": "HTTP 200、finish_reason 是正常 stop，但整条响应一个内容块都没有——网关空帧、思考字段丢帧、采样打嗝都会长这样。",
-        "where": "SDK · 仅 openai 格式"
+        "where": "SDK，仅 openai 格式"
       },
       "intent": {
         "attemptsLabel": "重跑次数",
@@ -2344,7 +2344,7 @@
         "skips": "额度耗尽已经由轮询换配置处理，不在这里重跑；任务被暂停 / 终止 / 进入收尾时立即让位，不占用退避时间。",
         "title": "意图重跑",
         "trigger": "前面几层都没兜住：worker 以 model_error 收场——内层重试全部用尽，或者流已经开始交付输出后才断掉（那时重放不安全，只能整条重来）。",
-        "where": "本项目 · 进程级，全局一份"
+        "where": "本项目，进程级，全局一份"
       },
       "stream": {
         "attemptsLabel": "重试次数",
@@ -2354,7 +2354,7 @@
         "skips": "额度耗尽（402 / insufficient_quota，交给轮询换配置）、上下文过长（413 / context length，交给压缩）、400 / 401 / 403 / 404 / 422 确定性拒绝，都不重试。",
         "title": "同 provider 安全窗口重试",
         "trigger": "流已经建立（拿到 200）之后才出问题：连接中途断开、供应商 overloaded、流内的 429 / 5xx 错误事件——且一个 token 都还没交给调用方。",
-        "where": "本项目 · 未交付输出前"
+        "where": "本项目，未交付输出前"
       }
     }
   },
@@ -2473,7 +2473,7 @@
     "saveFailed": "保存失败：{msg}",
     "saved": "已保存",
     "sheetDesc": "stdio（本地起进程）或 http（远程 Streamable HTTP）",
-    "subtitle": "外部 MCP 工具服务器 · 按 Agent 授权可见",
+    "subtitle": "外部 MCP 工具服务器，按 Agent 授权可见",
     "tabConfig": "配置",
     "tabTools": "工具列表",
     "toolCount": "{count} 个工具",
@@ -2490,7 +2490,7 @@
   "mentionTextarea": {
     "allRecords": "全部记录",
     "candidatesAria": "引用候选",
-    "hintKeys": "↑↓ 选择 · Enter 确认 · Esc 关闭",
+    "hintKeys": "↑↓ 选择，Enter 确认，Esc 关闭",
     "inputAria": "消息，输入 @ 引用记录",
     "kind": {
       "app": "应用",
@@ -2513,7 +2513,7 @@
     "searchHint": "输入名称、地址或 ID 搜索记录",
     "searchKind": "搜索{kind}",
     "searching": "搜索中…",
-    "selectedHint": "发送时读取最新详情 · 最多 10 条",
+    "selectedHint": "发送时读取最新详情，最多 10 条",
     "showingAll": "已显示全部 {count} 条",
     "showingMore": "已显示 {count} 条，向下滚动加载更多"
   },
@@ -2749,8 +2749,8 @@
       "wecom": "企业微信"
     },
     "masked": {
-      "saved": "已保存 · 填入新值即覆盖，清空则删除该项",
-      "savedTail": "已保存（尾号 {tail}） · 填入新值即覆盖，清空则删除该项"
+      "saved": "已保存，填入新值即覆盖，清空则删除该项",
+      "savedTail": "已保存（尾号 {tail}），填入新值即覆盖，清空则删除该项"
     },
     "mode": {
       "digest": "汇总",
@@ -2816,18 +2816,18 @@
       "enable": "启用该渠道",
       "kindLabel": "渠道类型",
       "kindLocked": "渠道类型不可修改——改了类型等于换一套凭据，请新建渠道。",
-      "modeDigest": "汇总 · 按周期合并成一条",
+      "modeDigest": "汇总，按周期合并成一条",
       "modeHint": "想做「高危实时、其余汇总」就建两个渠道：一个实时 + 门槛高危，一个汇总 + 不限级别。",
       "modeLabel": "推送时机",
-      "modeRealtime": "实时 · 每条漏洞单独发一条",
+      "modeRealtime": "实时，每条漏洞单独发一条",
       "nameLabel": "渠道名称",
       "namePlaceholder": "应急响应群 / 日常播报群",
       "noFields": "该渠道的表单尚未定义（前端缺 CHANNEL_FIELDS 条目），请补全后再试。",
       "rateHint": "留空用渠道默认值；0 表示不限流。超限不会丢消息，只会推迟发送。",
       "rateLabel": "限流（条/分钟）",
-      "rateLimited": " · 默认限流 {rate} 条/分钟",
+      "rateLimited": "，默认限流 {rate} 条/分钟",
       "ratePlaceholder": "0 = 不限",
-      "rateUnlimited": " · 不限流",
+      "rateUnlimited": "，不限流",
       "save": "保存",
       "sendTest": "发送测试消息"
     },
@@ -2840,7 +2840,7 @@
       "pending": "待发送",
       "sentToday": "今日送达"
     },
-    "subtitle": "发现漏洞时推送到钉钉 / 飞书 / 企业微信等渠道 · 每个渠道可独立设推送时机与过滤规则",
+    "subtitle": "发现漏洞时推送到钉钉 / 飞书 / 企业微信等渠道，每个渠道可独立设推送时机与过滤规则",
     "summary": {
       "all": "全部漏洞",
       "approval": "含待审批",
@@ -3074,7 +3074,7 @@
       "olderHistoryLabel": "↑ 更早历史",
       "olderHistoryTitle": "向上滚动加载更早历史",
       "runDurationTitle": "运行时长（首步 → 末步）",
-      "sourceTask": "来源任务 #{id} · 只读历史"
+      "sourceTask": "来源任务 #{id}，只读历史"
     },
     "item": {
       "deleteTitle": "删除该意图（需填写原因，可选假删除/真删除）",
@@ -3130,10 +3130,10 @@
     },
     "taskTotal": "任务总计",
     "title": {
-      "main": "主 Agent · 会话 #{n}",
-      "planner": "规划 Planner · 态势研判",
-      "system": "系统事件 · LLM 故障转移",
-      "reviewer": "回顾者 · 意图 #{id}"
+      "main": "主 Agent，会话 #{n}",
+      "planner": "规划 Planner，态势研判",
+      "system": "系统事件，LLM 故障转移",
+      "reviewer": "回顾者，意图 #{id}"
     },
     "toast": {
       "createSessionFailed": "新建会话失败：{msg}",
@@ -3162,7 +3162,7 @@
       "outShort": "出"
     },
     "tokens": {
-      "full": "输入 {input} · 输出 {output} · 缓存读取 {cacheRead} · 缓存写入 {cacheWrite}"
+      "full": "输入 {input}，输出 {output}，缓存读取 {cacheRead}，缓存写入 {cacheWrite}"
     },
     "transcript": {
       "emptyMain": "还没有对话。在下方给主 Agent 发消息，引导探索方向或介入流程。",
@@ -3275,8 +3275,8 @@
     },
     "agentBinding": {
       "desc": "默认关闭。开启后，漏洞入库时触发的报告 Agent 会核对已有 HTTP 请求/响应，关联对应流量后再编写报告。<b>查阅数据包及额外的工具调用会增加 Token 消耗。</b><br></br>TCP、未抓包或没有匹配流量时仍可正常上报。此开关不影响流量捕获、人工绑定及已保存证据的查看。 对下一轮 Agent 生效；关闭后会立即拒绝新的自动绑定。",
-      "off": "已关闭 · 可继续人工绑定",
-      "on": "已开启 · 会增加 Token 消耗",
+      "off": "已关闭，可继续人工绑定",
+      "on": "已开启，会增加 Token 消耗",
       "title": "Agent 自动绑定流量"
     },
     "budget": {
@@ -3312,7 +3312,7 @@
     "verificationStatus": {
       "desc": "只读展示内置有界免费 PoW 求解协议与可选外部 TLS/HTTP 指纹 Helper 的本地配置检测状态（不发起外部网络请求、不自动下载或执行）。",
       "helperLabel": "可选外部指纹 Helper（独立 Go 模块）",
-      "helperMeta": "二进制名：{binary} · 内核：{provider} · 预设指纹：{profiles}",
+      "helperMeta": "二进制名：{binary}，内核：{provider}，预设指纹：{profiles}",
       "limitMemory": "Helper 软内存上限",
       "limitProcesses": "并发 Helper 进程上限",
       "limitRoundtrips": "单流最大往返",
@@ -3332,16 +3332,16 @@
         "high": "严重 + 高危（critical / high）",
         "low": "全部等级（含低危）",
         "medium": "严重 + 高危 + 中危",
-        "off": "关闭 · 只手动发起"
+        "off": "关闭，只手动发起"
       },
       "thresholdLabel": "强制复核的最低等级",
       "title": "自动复核闸门"
     },
     "globalProxy": {
       "addrLabel": "代理地址",
-      "configured": "已配置 · 所有目标流量经此代理出网",
+      "configured": "已配置，所有目标流量经此代理出网",
       "desc": "所有 Agent 的<b>目标流量</b>经此代理出网（隐藏源 IP / 走跳板）。支持 <b>http / https / socks5</b>，可带 <code>user:pass</code> 认证。留空=直连。<br></br>开启<b>流量捕获</b>时，它作为记录代理的<b>上游</b>（流量仍全量落库，再经此代理出网）；关闭捕获时，直接注入 Agent 的 bash / WebFetch 出网。与网络搜索代理、LLM 代理相互独立。<br></br><b>提示</b>：socks5 在<b>关闭捕获</b>时依赖各命令行工具对 <code>ALL_PROXY</code> 的支持（curl 可用，部分工具可能忽略）； 若主要用 socks5，建议开启流量捕获——此路径由 MITM 亲自拨号，工具无感知、稳定生效。",
-      "notConfigured": "未配置 · 目标流量直连出网",
+      "notConfigured": "未配置，目标流量直连出网",
       "placeholder": "socks5://user:pass@host:1080 或 http://host:port（留空=直连）",
       "title": "全局代理"
     },
@@ -3350,8 +3350,8 @@
       "label": "语言",
       "title": "显示语言"
     },
-    "offSuffix": " · 已关闭",
-    "onSuffix": " · 已开启",
+    "offSuffix": "，已关闭",
+    "onSuffix": "，已开启",
     "pricing": {
       "desc": "把各家模型的价格填成 JSON，用量视图即可显示<b>费用估算</b>（USD / 百万 token）。key 是<b>模型名子串</b>（如 <code>claude-opus</code>、<code>deepseek</code>），匹配时<b>取最长匹配</b>：claude-opus-4 同时命中 claude-opus 与 opus 时按更具体的那条计价。每条价目的 input / output / cache_read / cache_write 四档都可省略，缺省按 0 计（缓存两档不填 = 不计缓存费用）。<br></br>费用在<b>读取时计算</b>，修改价格后历史用量立即按新价重算，无需迁移数据；留空 = 不计算费用。",
       "placeholder": "{\"claude-opus\":{\"input\":15,\"output\":75,\"cache_read\":1.5,\"cache_write\":18.75},\"deepseek\":{\"input\":0.27,\"output\":1.1}}",
@@ -3361,7 +3361,7 @@
       "desc": "自定义 <b>script</b> 类型工具用它跑 Python。开机会自动检测（python3 优先）；此处可手填 venv / 特定版本的绝对路径，留空则运行时自动检测。",
       "detect": "重新检测",
       "placeholder": "/usr/bin/python3（留空=自动检测）",
-      "title": "自定义脚本 · Python 解释器"
+      "title": "自定义脚本，Python 解释器"
     },
     "save": "保存",
     "sendKey": {
@@ -3386,7 +3386,7 @@
       "saveFailed": "保存失败：{error}",
       "tavilyKeySaved": "已保存 Tavily API Key",
       "testFailed": "搜索测试失败：{error}",
-      "testSuccess": "搜索测试成功 · {backend} 返回 {count} 条结果",
+      "testSuccess": "搜索测试成功，{backend} 返回 {count} 条结果",
       "testUnknownError": "未知错误",
       "verifyGateInvalid": "抽查比例必须是 0–100 的整数",
       "verifyGateSaved": "已保存自动复核闸门（对之后入库的发现生效）",
@@ -3396,8 +3396,8 @@
     },
     "trafficCapture": {
       "desc": "开启后，所有 Agent 的 HTTP 流量经记录代理全量落库，并向 Agent 注入 traffic_search / traffic_get 工具与代理配置（提示词含代理说明）。<br></br>关闭（默认）时不记录任何流量：Agent<b>不会</b>拿到代理配置与流量工具，提示词也<b>不含</b>代理相关内容。切换后会即时重建 Agent 生效。",
-      "off": "已关闭 · 不记录、不注入代理",
-      "on": "已开启 · 正在记录流量并注入代理",
+      "off": "已关闭，不记录、不注入代理",
+      "on": "已开启，正在记录流量并注入代理",
       "title": "流量捕获"
     },
     "update": {
@@ -3451,13 +3451,13 @@
       "deepseekDesc3": "是否满足上述条件由你自行确认，系统不做拦截；可用下方「测试搜索」按钮实际跑一次来验证。",
       "deepseekTitle": "DeepSeek 官方联网搜索",
       "desc": "这是网络搜索的<b>总开关 + 来源配置</b>。开启后，才能在<b>每个 Agent 的配置</b>里单独选择是否启用 <b>web_search</b>（仅返回标题/链接/摘要，不抓取正文；抓取由 WebFetch 负责）。网络搜索<b>不走</b>记录代理，独立于流量捕获。<br></br>来源可选 <b>DuckDuckGo（ddgs）</b>（无需 Key）、<b>Brave（免费版）</b>（需填写 Brave API Key）、 <b>Tavily</b>（需填写 Tavily API Key）或 <b>DeepSeek</b>（复用当前 LLM 配置）。总开关关闭时，各 Agent 的网络搜索开关不可用。",
-      "off": "已关闭 · 各 Agent 无法启用网络搜索",
-      "on": "总开关已开启 · 可在各 Agent 配置里单独启用",
+      "off": "已关闭，各 Agent 无法启用网络搜索",
+      "on": "总开关已开启，可在各 Agent 配置里单独启用",
       "proxyHint": "独立出口代理，仅用于访问搜索端点（VPN/SOCKS 等）。与记录流量的 MITM 代理无关；网络不通时经此代理访问。",
       "proxyLabel": "出口代理（可选）",
       "proxyPlaceholder": "http://host:port 或 socks5://host:port（留空=直连）",
-      "sourceBrave": "Brave（免费版 · 需 Key）",
-      "sourceDdgs": "DuckDuckGo（ddgs · 免费无 Key）",
+      "sourceBrave": "Brave（免费版，需 Key）",
+      "sourceDdgs": "DuckDuckGo（ddgs，免费无 Key）",
       "sourceDeepseek": "DeepSeek（官方）",
       "sourceLabel": "搜索来源",
       "sourcePlaceholder": "选择来源",
@@ -3474,7 +3474,7 @@
     },
     "workers": {
       "desc": "每个任务并发运行的工作 agent 数量（默认 3）。数值越大并发探测越多、消耗也越高。修改后<b>对之后启动的任务生效</b>，正在运行的任务不受影响。",
-      "title": "工作并发 · Work Agent 数"
+      "title": "工作并发，Work Agent 数"
     },
     "shell": {
       "title": "工具执行器",
@@ -3512,7 +3512,7 @@
     "emptyTitle": "随时问一个问题",
     "firstRunHint": "主 Agent 首次运行后即可提问",
     "historySummarized": "含早期问答摘要",
-    "independentNote": "独立问答 · 无工具执行",
+    "independentNote": "独立问答，无工具执行",
     "loadEarlier": "加载更早的旁路问答",
     "panelLabel": "旁路提问面板",
     "parseError": "旁路数据解析失败，请重新打开面板",
@@ -3542,7 +3542,7 @@
     "bodyHint": "（留空自动生成骨架）",
     "bodyLabel": "正文",
     "bodyPlaceholder": "## 执行方法\n\n1. 先探测错误\n2. 区分盲注类型\n\n脚本放 scripts/ 目录。",
-    "callCountTitle": "被调用 {count} 次 · 最近 {last}",
+    "callCountTitle": "被调用 {count} 次，最近 {last}",
     "callStats": "调用统计",
     "callers": "调用方：",
     "callsCount": "{count} 次",
@@ -3620,7 +3620,7 @@
     "statUnused": "未使用",
     "statUnusedHintNone": "全部用过",
     "statUnusedHintSome": "从未被任何 agent 加载",
-    "subtitle": "技能库 · agentskills.io 规范 · 按 Agent 授权可见",
+    "subtitle": "技能库，agentskills.io 规范，按 Agent 授权可见",
     "tabBasic": "基本信息",
     "tabVisibility": "可见性",
     "taskRef": "任务 #{id}",
@@ -3638,7 +3638,7 @@
     "distilledCaseBadge": "任务沉淀",
     "draftFromMissing": "建技能",
     "proposalsBtn": "提议审阅",
-    "proposalsTitle": "AI 自主沉淀 · 技能提议审阅与任务提炼",
+    "proposalsTitle": "AI 自主沉淀，技能提议审阅与任务提炼",
     "proposalsDesc": "审阅由任务完成自动提炼（curator）或 Agent 自主提交（agent）的技能提议，支持在线修订正文后批准落盘。",
     "proposalFilterPending": "待审阅",
     "proposalFilterApplied": "已批准",
@@ -3825,7 +3825,7 @@
     "analysisDomain": {
       "web": "网站安全",
       "software": "软件分析",
-      "title": "软件分析 · 静态分析优先",
+      "title": "软件分析，静态分析优先",
       "hint": "已加入哈希样本库、受管静态分析会话与函数/调用关系/证据工作台。请先配置并审核实际 MCP 工具映射；工具目录就绪不等于引擎和目标兼容。动态执行、远程样本同步与自动会话恢复未启用。"
     },
     "archive": {
@@ -3934,9 +3934,9 @@
         "service": "服务",
         "subdomain": "子域名"
       },
-      "assets": "涉及资产 · {count}",
+      "assets": "涉及资产，{count}",
       "deleteReason": "删除原因",
-      "downstream": "下游 · 由此产生",
+      "downstream": "下游，由此产生",
       "emptyFiltered": "没有符合条件的播报。",
       "emptyNoNodes": "这个任务还没有产生探索节点。",
       "fieldSource": "来源 {origin}",
@@ -3956,7 +3956,7 @@
       "noSummary": "（无摘要）",
       "node": "节点",
       "nodeRef": "节点 #{id}",
-      "pending": "{count} 条新播报 · 回到最新",
+      "pending": "{count} 条新播报，回到最新",
       "rel": {
         "covers": "压缩",
         "derived_from": "意图链",
@@ -4003,7 +4003,7 @@
         "searchPlaceholder": "搜索内容 / 来源 / 节点 id"
       },
       "unknownDay": "未知日期",
-      "upstream": "上游 · 由此而来"
+      "upstream": "上游，由此而来"
     },
     "control": {
       "completed": "已完成",
@@ -4054,7 +4054,7 @@
         "refFacts": "关联事实",
         "refFindings": "关联发现",
         "refIntents": "关联意图",
-        "refSource": "来源 #{id} · 只读",
+        "refSource": "来源 #{id}，只读",
         "showMore": "展示更多（+{step}）",
         "tested": "已测试",
         "untested": "未测试"
@@ -4070,7 +4070,7 @@
       "orderDesc": "倒序",
       "sortAria": "发现时间当前{order}，点击切换排序方向",
       "sortTime": "发现时间",
-      "sourceReadonly": "来源 #{id} · 只读",
+      "sourceReadonly": "来源 #{id}，只读",
       "trafficEvidence": "流量证据 {count} 条",
       "unclassified": "未分类",
       "updateFailed": "更新失败：{message}",
@@ -4148,7 +4148,7 @@
         "openWorkHint": "（下一步 / 假设 / 已排除，均未验证，可推翻）",
         "patchHistory": "全部补注记录（{n} 条）",
         "rawJson": "原始 JSON",
-        "title": "交接单 · 意图 #{id}",
+        "title": "交接单，意图 #{id}",
         "written": "已写回：事实 {facts} / 资产 {assets} / 漏洞 {findings}；共 {steps} 步"
       },
       "blocked": {
@@ -4398,7 +4398,7 @@
       "colOriginalStatus": "原状态",
       "colProcessingState": "处理状态",
       "colTask": "任务",
-      "compression": "{size} · 节省 {percent}%",
+      "compression": "{size}，节省 {percent}%",
       "deleteCancel": "取消",
       "deleteConfirm": "永久删除",
       "deleteDescription": "将永久删除约 {size} 的归档包及 {rows} 条关联数据快照。此操作不可恢复。",
@@ -4564,7 +4564,7 @@
     "count": "{shown}/{total} 条",
     "create": {
       "advanced": "高级设置",
-      "advancedSub": "超时 · 心跳 · Token 预算 · 首个意图",
+      "advancedSub": "超时，心跳，Token 预算，首个意图",
       "budgetHint": "按任务累计的输入 + 输出 token 计量（不含缓存读/写）；达到上限时任务自动暂停并在活动流留痕，调高预算后恢复即可继续。0 = 不限。",
       "budgetInvalid": "Token 预算必须是不小于 0 的数字（单位：千 token）",
       "budgetLabel": "Token 预算（千 token，可选）",
@@ -4687,7 +4687,7 @@
       "tokenCache": "缓",
       "tokenIn": "入",
       "tokenOut": "出",
-      "tokenTitle": "输入 {input} · 缓存 {cache} · 输出 {output}",
+      "tokenTitle": "输入 {input}，缓存 {cache}，输出 {output}",
       "unnamed": "未命名",
       "unpinAria": "取消置顶任务 #{id}",
       "unpinTitle": "取消置顶",
@@ -4748,7 +4748,7 @@
   },
   "todoPopover": {
     "empty": "（空）",
-    "loadingSuffix": " · 加载中…",
+    "loadingSuffix": "，加载中…",
     "none": "本会话暂无 Todo",
     "parseError": "解析 Todo 失败",
     "recent": "最近 Todo",
@@ -4889,7 +4889,7 @@
       "selected": "已选 {count} 条流量"
     },
     "stopped": "已停用",
-    "subtitle": "全局录制代理 · 所有 HTTP 往来",
+    "subtitle": "全局录制代理，所有 HTTP 往来",
     "table": {
       "empty": "没有匹配的流量。",
       "loading": "加载中…",
@@ -4958,7 +4958,7 @@
       "saving": "保存中…",
       "selectOne": "选择流量 {id}",
       "selectPage": "选择本页未绑定流量",
-      "selectedSummary": "已选 {selected} 条 · 共 {total} 条",
+      "selectedSummary": "已选 {selected} 条，共 {total} 条",
       "title": "绑定流量"
     },
     "viewer": {
@@ -4967,7 +4967,7 @@
       "downloadResponse": "下载完整响应正文",
       "fallbackDesc": "查看绑定时保存的请求与响应",
       "loadMore": "加载更多正文",
-      "previewSuffix": " · 当前为预览",
+      "previewSuffix": "，当前为预览",
       "request": "请求 Request",
       "response": "响应 Response",
       "title": "流量证据 #{id}"
@@ -4983,7 +4983,7 @@
       "deniedToast": "已拒绝执行",
       "deny": "拒绝",
       "expand": "展开审批详情",
-      "historyReadonly": "历史记录 · 只读",
+      "historyReadonly": "历史记录，只读",
       "loadError": "审批详情加载失败",
       "loading": "正在加载审批详情…",
       "request": "审批请求",
@@ -5020,7 +5020,7 @@
       "formatJson": "格式化 JSON",
       "lines": "{count} 行",
       "loadFailed": "（加载失败）",
-      "metaStats": "{lines} 行 · {chars} 字符",
+      "metaStats": "{lines} 行，{chars} 字符",
       "name": "工具",
       "ok": "✓ 完成",
       "output": "执行输出 / 响应",
@@ -5131,7 +5131,7 @@
     "saved": "已保存",
     "saving": "保存中…",
     "sizePartial": "部分内容未统计完（超时或无权限），实际占用可能更大",
-    "summary": "{files} 个文件 · {dirs} 个目录",
+    "summary": "{files} 个文件，{dirs} 个目录",
     "synced": "已同步",
     "toneCaution": "删除前先确认",
     "toneClean": "可安全删除",
@@ -5368,7 +5368,7 @@
       "recovery": "策略保存异常后须重载策略。执行异常后须核对审计；不会自动重试，也不会使用默认值掩盖错误。"
     },
     "policy": {
-      "title": "1 · 保留策略",
+      "title": "1，保留策略",
       "description": "0 天为永久保留。输入只接受整数，保存才会生效；保存本身不清理业务数据。",
       "enabled": "允许人工执行",
       "enabledHelp": "此开关不是自动清理。关闭时仍可预览；启用并保存后也必须重新预览和逐次确认。",
@@ -5403,7 +5403,7 @@
       }
     },
     "preview": {
-      "title": "2 · 有上限的候选预览",
+      "title": "2，有上限的候选预览",
       "description": "仅在点击时请求。不会删除业务数据，但会写入预览计划和审计元数据。",
       "create": "生成新预览",
       "saveFirst": "请先保存修改；不能用未保存表单的条件生成预览。",
@@ -5442,7 +5442,7 @@
       "notification_events": "无投递子记录的孤立事件"
     },
     "confirm": {
-      "title": "3 · 明确确认人工删除",
+      "title": "3，明确确认人工删除",
       "description": "这是永久删除，不是预演。取消只会关闭确认框；提交后不能通过取消浏览器等待来保证回滚。",
       "summary": "本次最多处理已预览的 {count} 行，每表上限 {limit} 行。仍被引用或状态改变的候选会跳过；执行不会添加新行。",
       "type": "请逐字输入下方确认文字（不接受额外空格）",
@@ -5464,7 +5464,7 @@
       "acknowledge": "解除本地待核对状态"
     },
     "audit": {
-      "title": "4 · 维护审计",
+      "title": "4，维护审计",
       "description": "进入页面和操作完成后读取，也可手动刷新；不自动轮询或触发清理。时间按浏览器本地时区显示。",
       "refresh": "刷新审计",
       "loading": "正在读取审计……",

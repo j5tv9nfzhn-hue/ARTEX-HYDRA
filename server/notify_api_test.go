@@ -550,7 +550,7 @@ func TestNotifyTestMessageEndpoint(t *testing.T) {
 		t.Fatalf("假接收端应收到 1 条测试消息，得到 %d", hook.count())
 	}
 	// 测试消息必须一眼可辨，不能误认为真实漏洞。
-	// 标题来自 notify_api.go 的 notifyTestName：“测试消息 · 渠道配置正常”。
+	// 标题来自 notify_api.go 的 notifyTestName：“测试消息：渠道配置正常”。
 	if text := markdownText(t, hook.last(t)); !strings.Contains(text, "测试") {
 		t.Fatalf("测试消息应标明是测试: %s", text)
 	}

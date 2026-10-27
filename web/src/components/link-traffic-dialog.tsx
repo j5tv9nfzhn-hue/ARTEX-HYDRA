@@ -121,7 +121,7 @@ export function LinkTrafficDialog({
             >
               <span className="flex min-w-0 flex-col gap-1">
                 <span>
-                  #{f.finding_id ?? f.id} · {f.name || f.vulnclass}
+                  #{f.finding_id ?? f.id} / {f.name || f.vulnclass}
                 </span>
                 <span className="line-clamp-2 text-xs text-muted-foreground">{f.summary}</span>
               </span>

@@ -206,7 +206,7 @@ function trunc(s: string, n = 26): string {
   return s.length > n ? `${s.slice(0, n - 1)}…` : s;
 }
 
-// 图里的节点文案：服务不显示完整 URL，只显示 端口·标题·状态码；端点只显示 path。
+// 图里的节点文案：服务不显示完整 URL，只显示 端口 / 标题 / 状态码；端点只显示 path。
 // 其余类型沿用后端给的 label。
 function graphLabel(n: CoverageGraphNode): string {
   if (n.kind === "service") {
@@ -215,7 +215,7 @@ function graphLabel(n: CoverageGraphNode): string {
     if (n.page_title) parts.push(n.page_title);
     if (n.status_code) parts.push(String(n.status_code));
     // biome-ignore lint/nursery/useNullishCoalescing: 展示回退需将空字符串继续回退到 ip 或 label，故有意使用 ||；?? 会显示空字符串。
-    return parts.length ? parts.join(" · ") : n.domain || n.ip || n.label;
+    return parts.length ? parts.join(" / ") : n.domain || n.ip || n.label;
   }
   if (n.kind === "endpoint" && n.url) {
     try {
@@ -718,7 +718,7 @@ function GraphInner({ taskId, coverageEnabled = true }: { taskId: string; covera
               {coverageEnabled && (
                 <>
                   {" "}
-                  · {t("graph.tested")}{" "}
+                  / {t("graph.tested")}{" "}
                   <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{tested}</span>
                 </>
               )}

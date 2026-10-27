@@ -735,7 +735,7 @@ type steerHooks struct {
 	// limit 是空转续跑的次数上限，由 Engine.emptyTurnNudgeLimit() 从「空响应重试
 	// 次数」解析而来。<=0 = 不介入(用户显式关掉了这层)。
 	limit int
-	// label 形如 "worker-1 · #42"，只用于日志。
+	// label 形如 "worker-1 (#42)"，用于日志与拦截记录的 agent_name。
 	label string
 }
 
@@ -1302,7 +1302,7 @@ func (e *Engine) runIntent(ctx context.Context, t *Task, name string, worker *ag
 		a.NodeID, a.Worker = &nid, name
 		emit(a)
 	}
-	label := fmt.Sprintf("%s · #%d", name, iid)
+	label := fmt.Sprintf("%s (#%d)", name, iid)
 	workCtx = intercept.WithTaskContext(workCtx, t.ID, label, taskEmit)
 	// nudges 有意建在 model_error 重跑循环之外:空转续跑的上限是「这条意图」的总量，
 	// 重跑一轮不该把额度清零重来。

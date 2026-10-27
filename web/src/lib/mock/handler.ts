@@ -1148,7 +1148,7 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
         kind: "finding",
         id: index + 1,
         label: finding.name || finding.vulnclass,
-        description: `${finding.severity} · ${finding.summary}`,
+        description: `${finding.severity} / ${finding.summary}`,
       })),
       ...D.companies.map((company) => ({ kind: "company", id: company.id, label: company.name, description: "企业" })),
       ...D.assets.map((asset) => ({
@@ -1160,7 +1160,7 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
             : asset.app_name || asset.url || asset.domain || asset.ip || asset.bundle_id || `资产 #${asset.id}`,
         description: [asset.type, asset.page_title, asset.service_name, asset.bundle_id, asset.ip]
           .filter(Boolean)
-          .join(" · "),
+          .join(" / "),
       })),
     ];
     const filtered = candidates
@@ -2139,7 +2139,7 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
       mockConversations.unshift({
         id: conversationID,
         agent_key: "retester",
-        title: `复测 #${finding.id} · ${finding.name || finding.vulnclass}`,
+        title: `复测 #${finding.id} / ${finding.name || finding.vulnclass}`,
         pinned: false,
         created_at: now,
         updated_at: now,
@@ -2662,7 +2662,7 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
       skill: name,
       file: "SKILL.md",
       action: "create",
-      content: `---\nname: ${name}\ndescription: ${String(b.description ?? "跨任务合并复盘技能")}\n---\n\n# ${name} · 跨任务合并复盘手册\n`,
+      content: `---\nname: ${name}\ndescription: ${String(b.description ?? "跨任务合并复盘技能")}\n---\n\n# ${name} / 跨任务合并复盘手册\n`,
       origin: "curator",
       evidence: `merged_from=${ids.join(",")}`,
       lint: "",
@@ -2718,7 +2718,7 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
       skill: `case-web-${taskId}`,
       file: "SKILL.md",
       action: "create",
-      content: `---\nname: case-web-${taskId}\ndescription: 任务复盘经验（web_security）：围绕「任务 #${taskId}」自动提炼。\n---\n\n# 任务 #${taskId} · 任务复盘手册\n`,
+      content: `---\nname: case-web-${taskId}\ndescription: 任务复盘经验（web_security）：围绕「任务 #${taskId}」自动提炼。\n---\n\n# 任务 #${taskId} / 任务复盘手册\n`,
       origin: "curator",
       evidence: `task=${taskId} domain=web_security`,
       lint: "",
@@ -2738,7 +2738,7 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
       skill: skillName,
       file: "SKILL.md",
       action: "create",
-      content: `---\nname: ${skillName}\ndescription: 外部报告沉淀技能包：含攻击推导过程、踩坑陷阱与绕过手册。\n---\n\n# ${skillName} · 实战过程推导与防踩坑专家手册\n`,
+      content: `---\nname: ${skillName}\ndescription: 外部报告沉淀技能包：含攻击推导过程、踩坑陷阱与绕过手册。\n---\n\n# ${skillName} / 实战过程推导与防踩坑专家手册\n`,
       origin: "curator",
       evidence: "report_import files=report.md domain=web_security engine=llm findings=5 pitfalls=4 steps=5",
       lint: "",

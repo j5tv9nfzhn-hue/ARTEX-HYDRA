@@ -616,9 +616,9 @@ function WorkerAssetBadge({ assets }: { assets: IntentAsset[] }) {
             <div key={`${asset.intent_id}-${asset.asset_id}`} className="min-w-0">
               <div className="break-all font-mono text-xs">{asset.label.trim() || `#${asset.asset_id}`}</div>
               <div className="mt-0.5 text-muted-foreground text-xs">
-                {t(`asset.type.${asset.type}`)} ·{" "}
+                {t(`asset.type.${asset.type}`)} /{" "}
                 {t.has(`asset.source.${asset.source}`) ? t(`asset.source.${asset.source}`) : asset.source}
-                {asset.inherited ? ` · ${t("asset.sourceTask", { id: asset.source_task_id })}` : ""}
+                {asset.inherited ? ` / ${t("asset.sourceTask", { id: asset.source_task_id })}` : ""}
               </div>
               <div className="mt-0.5 text-xs [overflow-wrap:anywhere]">{asset.source_summary}</div>
             </div>
@@ -1438,16 +1438,17 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   }, [allIntents]);
 
   // Returns true if any pending intercept belongs to this session.
-  // Worker agent_name format: "work#N · #intentID". Main/planner match by role key.
+  // Worker agent_name format: "work#N / #intentID". Main/planner match by role key.
   const hasPendingForSession = React.useCallback(
     (s: Session): boolean => {
       if (s.inherited) return false;
       if (!pendingIntercepts.length) return false;
       if (s.role === "mainagent") return pendingIntercepts.some((r) => r.agent_name === "mainagent");
       if (s.role === "planner") return pendingIntercepts.some((r) => r.agent_name === "planner");
-      // Worker: extract intent ID from "work#N · #<intentID>"
+      // Worker: 意图 ID 在 agent_name 末尾，现行格式 "work#1 (#42)"。
+      // 历史拦截记录仍是旧格式 "work#1 · #42"，两种都要认，否则老任务的红点会静默消失。
       return pendingIntercepts.some((r) => {
-        const m = r.agent_name.match(/·\s*#(\d+)$/);
+        const m = r.agent_name.match(/\(#(\d+)\)$/) ?? r.agent_name.match(/·\s*#(\d+)$/);
         return m ? m[1] === s.intent_id : false;
       });
     },
@@ -1969,7 +1970,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                 {!listOpen && (
                   <>
                     <span className="min-w-0 truncate text-foreground lg:hidden" title={activeDisplayTitle}>
-                      · {activeDisplayTitle}
+                      / {activeDisplayTitle}
                     </span>
                     {hiddenUnread > 0 && (
                       <span className="inline-flex min-w-4 shrink-0 items-center justify-center rounded-full bg-blue-500/15 px-1 font-medium text-xs text-blue-600 tabular-nums lg:hidden dark:text-blue-400">
@@ -2006,7 +2007,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                 <TooltipTrigger asChild>
                   <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1 text-muted-foreground text-xs">
                     <span>{t("taskTotal")}</span>
-                    <span>·</span>
+
                     <TokenMetrics
                       input={taskTokens.input_tokens}
                       cache={taskTokens.cache_read_tokens}
@@ -2197,7 +2198,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
         {/* Right: transcript */}
         <SideQuestionWorkspace
           side={side}
-          label={active.role === "worker" ? `Worker #${active.intent_id} · ${activeDisplayTitle}` : activeDisplayTitle}
+          label={active.role === "worker" ? `Worker #${active.intent_id} / ${activeDisplayTitle}` : activeDisplayTitle}
         >
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-card">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 border-b bg-background/35 px-3.5 py-2 backdrop-blur-xs sm:px-4 sm:py-2.5">

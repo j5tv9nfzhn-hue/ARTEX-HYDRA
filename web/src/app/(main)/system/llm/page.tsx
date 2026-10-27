@@ -361,7 +361,7 @@ function ProviderSheet({
       if (r.ok)
         toast.success(t("profile.toast.testOk", { latency: r.latency_ms ?? "?", model: r.model ?? model }), {
           description:
-            [r.reply ? t("profile.toast.testReply", { reply: r.reply }) : "", keyLine].filter(Boolean).join(" · ") ||
+            [r.reply ? t("profile.toast.testReply", { reply: r.reply }) : "", keyLine].filter(Boolean).join(" / ") ||
             undefined,
         });
       else
@@ -462,7 +462,7 @@ function ProviderSheet({
             <Input
               id="v-proxy"
               className="font-mono"
-              placeholder="socks5://user:pass@127.0.0.1:1080 · http://127.0.0.1:8080"
+              placeholder="socks5://user:pass@127.0.0.1:1080 / http://127.0.0.1:8080"
               value={proxy}
               onChange={(e) => setProxy(e.target.value)}
             />
@@ -771,7 +771,7 @@ function ModelSheet({
                 <span className="text-destructive">{t("health.noKey.label")}</span>
               )}
               <span>
-                {endpoint?.rate_per_second ?? 0}/s · {endpoint?.rate_per_minute ?? 0}/min
+                {endpoint?.rate_per_second ?? 0}/s / {endpoint?.rate_per_minute ?? 0}/min
               </span>
               {endpoint?.proxy && <span className="truncate">{t("card.proxy", { proxy: endpoint.proxy })}</span>}
               {endpoint?.session_header_key && <span className="font-mono">{endpoint.session_header_key}</span>}
@@ -1098,7 +1098,7 @@ function ProviderCard({
             ) : null}
             {provider && (
               <span>
-                {provider.rate_per_second}/s · {provider.rate_per_minute}/min
+                {provider.rate_per_second}/s / {provider.rate_per_minute}/min
               </span>
             )}
             {provider?.proxy && <span className="truncate">{t("card.proxy", { proxy: provider.proxy })}</span>}
@@ -1184,7 +1184,7 @@ function ProviderCard({
                       {t("card.modalities", {
                         modalities: extraModalities(p.effective_input_modalities)
                           .map((m) => t(`profile.modalities.opt.${m}`))
-                          .join("·"),
+                          .join(" / "),
                       })}
                     </span>
                   )}

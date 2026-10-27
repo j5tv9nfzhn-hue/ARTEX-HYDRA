@@ -251,7 +251,7 @@ func emitChatMilestone(convID int64, convTitle, status, reason string) {
 	}
 	if s := uiTrim(reason, 160); s != "" {
 		if ev.Body != "" {
-			ev.Body += " · " + s
+			ev.Body += " / " + s
 		} else {
 			ev.Body = s
 		}
@@ -281,7 +281,7 @@ func emitFindingMilestone(findingID, taskID int64, name, vulnclass, severity, su
 	body := uiTrim(summary, 160)
 	if t := uiTrim(taskTitle, 60); t != "" {
 		if body != "" {
-			body = t + " · " + body
+			body = t + " / " + body
 		} else {
 			body = t
 		}
@@ -326,7 +326,7 @@ func emitApprovalPendingMilestone(convID int64, taskID, toolName string, pending
 	if convID > 0 {
 		c := "会话 #" + strconv.FormatInt(convID, 10)
 		if body != "" {
-			body += " · " + c
+			body += " / " + c
 		} else {
 			body = c
 		}

@@ -326,7 +326,7 @@ function ToolGridCard({ tool, onClick }: { tool: Tool; onClick: () => void }) {
           </>
         ) : (
           <Badge variant="outline" className="px-1.5 py-0 text-xs">
-            {t("badgeCustom")}·{tool.kind}
+            {t("badgeCustom")} / {tool.kind}
           </Badge>
         )}
         {tool.deferred && (

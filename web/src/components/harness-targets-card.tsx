@@ -212,7 +212,7 @@ export function HarnessTargetsCard() {
                     <div className="mt-1 space-y-0.5 text-muted-foreground">
                       {c.configs.slice(0, 2).map((cfg) => (
                         <div key={cfg.display + cfg.scope} className="truncate font-mono text-xs">
-                          {cfg.exists ? "✓" : "·"} {cfg.display}
+                          {cfg.exists ? "✓" : "—"} {cfg.display}
                         </div>
                       ))}
                       {c.configs.length > 2 ? (

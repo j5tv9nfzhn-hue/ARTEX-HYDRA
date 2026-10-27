@@ -358,7 +358,7 @@ function AssetTreeRow({
         type="button"
         onClick={onSelect}
         className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left"
-        title={`${kindLabel} · ${node.label}`}
+        title={`${kindLabel} / ${node.label}`}
       >
         <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className={cn("min-w-0 truncate", selected && "font-medium")}>{node.display}</span>

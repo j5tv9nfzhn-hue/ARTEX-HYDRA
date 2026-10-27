@@ -271,8 +271,8 @@ export function MCPExposureCard() {
                     : "rounded-full border border-border/80 px-3 py-1 text-muted-foreground text-xs hover:border-primary/40 disabled:opacity-50"
                 }
               >
-                {tier.id} · {tier.label}
-                {disabled ? ` · ${t("l3Short")}` : ""}
+                {tier.id} / {tier.label}
+                {disabled ? ` / ${t("l3Short")}` : ""}
               </button>
             );
           })}

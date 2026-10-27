@@ -124,7 +124,7 @@ function TaskLLMControl({ task, profiles, onUpdated }: { task: Task; profiles: L
     backupCount > 0 ? t("backupCount", { count: backupCount }) : "",
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join(" / ");
   let editorDescription = t("editorDescription");
   if (terminal) editorDescription = t("editorDescriptionTerminal");
   let saveLabel = t("save");

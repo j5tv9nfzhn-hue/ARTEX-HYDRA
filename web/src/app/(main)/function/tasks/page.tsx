@@ -1367,9 +1367,9 @@ const TaskRow = React.memo(function TaskRow({
         {task.tokens ? (
           <span className="text-muted-foreground">
             {t("row.tokenIn")} <span className="text-foreground">{fmtTokens(task.tokens.input_tokens)}</span>
-            {` · ${t("row.tokenCache")} `}
+            {` / ${t("row.tokenCache")} `}
             <span className="text-foreground">{fmtTokens(task.tokens.cache_read_tokens)}</span>
-            {` · ${t("row.tokenOut")} `}
+            {` / ${t("row.tokenOut")} `}
             <span className="text-foreground">{fmtTokens(task.tokens.output_tokens)}</span>
           </span>
         ) : (
@@ -2010,7 +2010,7 @@ function TaskArchivesPanel({ onChanged }: { onChanged: () => void }) {
                           {archive.task_name || archive.task_description || t("taskRef", { id: archive.task_id })}
                         </span>
                         <span className="truncate text-muted-foreground text-xs">
-                          #{archive.task_id} · {archive.task_description}
+                          #{archive.task_id} / {archive.task_description}
                         </span>
                       </div>
                     </TableCell>
@@ -2046,7 +2046,7 @@ function TaskArchivesPanel({ onChanged }: { onChanged: () => void }) {
                           </p>
                         ))}
                         <span className="text-muted-foreground text-xs">
-                          {archive.phase} · {archive.progress}%
+                          {archive.phase} / {archive.progress}%
                         </span>
                       </div>
                     </TableCell>
@@ -2524,7 +2524,7 @@ function SourceTaskPicker({
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-sm">
-                      #{taskID} · {task?.description ?? t("sourcePicker.unknownTask")}
+                      #{taskID} / {task?.description ?? t("sourcePicker.unknownTask")}
                     </p>
                     {task?.goal && <p className="truncate text-muted-foreground text-xs">{task.goal}</p>}
                   </div>
@@ -2684,9 +2684,9 @@ function companyScopeSummary(t: Translator, company: Company): string {
     const value = row.raw || row.value || row.domain || row.net || "";
     return t("companyPicker.scopeEntry", { label: companyScopeLabel(t, row.kind), value });
   });
-  const base = preview.join(" · ");
+  const base = preview.join(" / ");
   if (rows.length > preview.length) {
-    return `${base} · ${t("companyPicker.scopeMore", { count: rows.length - preview.length })}`;
+    return `${base} / ${t("companyPicker.scopeMore", { count: rows.length - preview.length })}`;
   }
   return base;
 }
@@ -2836,7 +2836,7 @@ function DraggableCategoryTask({ task, disabled, moving }: { task: Task; disable
           </Link>
         </ItemTitle>
         <ItemDescription className="line-clamp-1">
-          #{task.id} · {task.description}
+          #{task.id} / {task.description}
         </ItemDescription>
       </ItemContent>
       <ItemActions>
