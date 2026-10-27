@@ -88,6 +88,23 @@ const openapiSpec = `{
     "/api/traces/{thread}": {
       "get": {"summary": "P0 语义事件时间线（?after= 行游标 &limit=，next==total 即读尽）", "responses": {"200": {"description": "事件流"}}}
     },
+    "/api/migrate/scan": {
+      "get": {"summary": "扫描桌面/下载/文档与当前安装目录同级，返回含 artex.db 的候选安装目录（桌面端或 WEB 版）", "responses": {"200": {"description": "{current_root, candidates}"}}}
+    },
+    "/api/migrate/inspect": {
+      "post": {
+        "summary": "体检一个安装目录：库体积、逐表行数、主密钥/会话密钥、工作空间与技能条目",
+        "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}}},
+        "responses": {"200": {"description": "候选目录体检结果"}, "400": {"description": "路径不可访问、不是目录或没有 artex.db"}}
+      }
+    },
+    "/api/migrate/import": {
+      "post": {
+        "summary": "导入另一个安装目录的数据：mode=merge 合并（主键冲突跳过）| replace 替换（先 VACUUM INTO 备份再清表）；replace 必须回传确认词 REPLACE。桌面端与 WEB 端共用同一处理器",
+        "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"path": {"type": "string"}, "mode": {"type": "string", "enum": ["merge", "replace"]}, "confirm": {"type": "string"}}, "required": ["path"]}}}},
+        "responses": {"200": {"description": "逐表导入结果 + 备份路径 + 是否需重启"}, "400": {"description": "缺 path / 确认词不对 / 旧库不可读 / 端口仍被占用"}, "409": {"description": "已有导入在进行"}}
+      }
+    },
     "/api/openapi.json": {
       "get": {"summary": "本文档", "responses": {"200": {"description": "OpenAPI 3.1 文档"}}}
     }

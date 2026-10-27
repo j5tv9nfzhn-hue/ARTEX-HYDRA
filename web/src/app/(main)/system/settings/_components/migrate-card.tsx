@@ -259,6 +259,7 @@ export function MigrateCard() {
                   disabled={
                     busy ||
                     selected.is_current ||
+                    selected.running ||
                     (mode === "replace" && confirm.trim() !== "REPLACE")
                   }
                 >

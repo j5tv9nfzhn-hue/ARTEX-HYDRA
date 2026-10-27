@@ -2348,7 +2348,7 @@ export type MigrateCandidate = {
   has_jwt_key: boolean;
   data_entries: number;
   skill_entries: number;
-  /** 本机 8787/8788 有人在监听：旧程序可能还在跑，导入会被后端拒绝。 */
+  /** 除本程序之外还有东西在监听 8787/8788：对方可能还在跑，导入会被后端拒绝。 */
   running: boolean;
   /** 这个目录就是当前安装目录（不能从自己导入自己）。 */
   is_current: boolean;
