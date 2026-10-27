@@ -572,7 +572,8 @@ set HTTPS_PROXY=http://127.0.0.1:10808&& set HTTP_PROXY=http://127.0.0.1:10808&&
 
 #### 6.1 版本号：tag 是唯一真相来源
 
-- tag 形如 `vX.Y.Z`，或四位 `vX.Y.Z.W`（同一 patch 重发微修订时用，`0.0.0.1` 即首版）；带 `-rc.1` 之类后缀的 tag 会被客户端判成不可比较、静默禁用一键更新，`release.yml` 直接拦下。
+- tag 形如 `vX.Y.Z`，或四位 `vX.Y.Z.W`（同一 patch 重发微修订时用，如 `v2.5.0.6` 跟在 `v2.5.0.5` 之后）；带 `-rc.1` 之类后缀的 tag 会被客户端判成不可比较、静默禁用一键更新，`release.yml` 直接拦下。
+- 全仓只有一条版本线：服务器版（`artex-rea-*`）与桌面端（`artex-hydra-desktop-*`）由同一个 tag、同一份 `latest.json` 发出，**不得给某个产物族单独起低号**——客户端 `has_update = CompareVersions(当前, 最新) < 0`，低号会让已装高版本的用户判成「已是最新」而静默断掉更新通道，GitHub 的 `/releases/latest` 指针也会被降级包占住。
 - 版本只在两处落地，都由 tag 推导：二进制 `-X main.version`（`build.sh` 去掉前导 `v`）与前端静态包的 `NEXT_PUBLIC_APP_VERSION`（`release.yml` 传 `$GITHUB_REF_NAME`、`build.sh` 传 `ARTEX_BUILD_VERSION`）。
 - `web/package.json` 的 `version` 只当本地开发占位（semver 不允许四段）；运行期界面版本以 `/api/health` 的二进制版本为准，所以桌面端与 WEB 端显示同一个号。
 
