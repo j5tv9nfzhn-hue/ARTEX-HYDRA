@@ -5,6 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 
 import {
+  ArrowDownIcon,
   ArrowUpIcon,
   Bot,
   ChevronDownIcon,
@@ -839,9 +840,12 @@ function ChatViewImpl({
   // （滚动事件、messages/running 的 layout effect、实时流回调），再加上浏览器自身的
   // scroll anchoring，同一帧里两套系统抢同一个滚动位置——推理流每 40ms 推高一次容器，
   // 观感就是整块区域上下抽搐。现在只剩一个写入口，同一帧最多写一次，用户一上滑就停手。
+  // 「回到底部」浮钮的依据：脱离底部才出现；一键回底后 hook 会把状态翻回贴底。
+  const [pinned, setPinned] = React.useState(true);
   const { pin: followBottom, reset: resetToBottom } = useStickToBottom(contentRef, {
     paused: Boolean(approvalFocus.state && !focusHistory.ready),
     onNearTop: () => void loadEarlier(),
+    onAtBottomChange: setPinned,
     refreshKey: conv.id,
   });
   // open/switch a conversation → jump to the latest (bottom)
@@ -1124,6 +1128,25 @@ function ChatViewImpl({
           )}
         </div>
       </ScrollArea>
+
+      {/* 上翻阅读时贴底已被冻结（hook 内负责），这里给一键回底（ENG-11）。
+          h-0 是定位锚点：不占布局高度、不挤占消息区，浮钮只压在消息区下沿。 */}
+      <div className="relative h-0">
+        {!pinned ? (
+          <div className="pointer-events-none absolute inset-x-0 -top-12 z-20 flex justify-center">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="pointer-events-auto gap-1.5 rounded-full border-border/80 shadow-sm"
+              onClick={() => resetToBottom()}
+            >
+              <ArrowDownIcon className="size-3.5" />
+              {t("backToLatest")}
+            </Button>
+          </div>
+        ) : null}
+      </div>
 
       <Composer
         value={input}

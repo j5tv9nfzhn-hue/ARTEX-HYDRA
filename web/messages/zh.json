@@ -783,6 +783,7 @@
     "andMore": " 等",
     "bulkDeleteDesc": "对话消息和执行记录将一并删除，此操作不可撤销。",
     "bulkDeleteError": "批量删除失败：{msg}",
+    "backToLatest": "回到底部",
     "bulkDeleteFailDetail": "#{id}（{error}）",
     "bulkDeleteFailed": "{count} 个对话删除失败：{details}",
     "bulkDeleteTitle": "删除选中的 {count} 个对话？",
