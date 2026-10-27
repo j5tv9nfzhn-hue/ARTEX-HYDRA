@@ -10,11 +10,11 @@ import { cn } from "@/lib/utils";
 // globals.css(.animate-fade-up / .animate-scale-in / .animate-pulse-soft / .animate-glow-once)。
 //
 // 使用边界(避免动效悄悄改变布局):
-//  · 包一层 div 会让"包装 div"替代原元素成为父级(grid / flex / divide-y)的直接子项。
+//  - 包一层 div 会让"包装 div"替代原元素成为父级(grid / flex / divide-y)的直接子项。
 //    对靠拉伸对齐的卡片网格、或被 divide-y 分隔的行,适合用本组件(布局类名透传给
 //    包装层即可);对 <tr> 等表格结构则不能插 div —— 给原元素直接加
 //    className="animate-fade-up" + 内联 animationDelay 更稳(见任务列表的接线注释)。
-//  · 分页/筛选导致的批量重渲染不要重复挂动画:用 useStaggerOnce 控制"仅首次进场"。
+//  - 分页/筛选导致的批量重渲染不要重复挂动画:用 useStaggerOnce 控制"仅首次进场"。
 
 export interface MotionProps {
   /** 进场延迟(毫秒)。列表项由调用方按 index * step 计算;组件不做递增推算。 */

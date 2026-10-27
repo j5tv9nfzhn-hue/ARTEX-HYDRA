@@ -145,7 +145,7 @@ export function HandoffDialog({
                     {data.open_work.map((w) => (
                       <li key={w.id} className="rounded border border-border/50 p-1.5 text-xs">
                         <span className="text-muted-foreground">
-                          {w.author || "—"} · {new Date(w.created_at).toLocaleString()}
+                          {w.author || "—"} / {new Date(w.created_at).toLocaleString()}
                         </span>
                         <div className="whitespace-pre-wrap">
                           {[w.next_actions, w.hypotheses, w.negative_results].filter(Boolean).join("\n")}
@@ -166,7 +166,7 @@ export function HandoffDialog({
                       <span className="font-mono">{c.action}</span>
                       <span className="text-muted-foreground">
                         {" "}
-                        · {c.actor} · {c.reason_code} · {new Date(c.created_at).toLocaleString()}
+                        / {c.actor} / {c.reason_code} / {new Date(c.created_at).toLocaleString()}
                       </span>
                       {c.note && <div className="whitespace-pre-wrap">{c.note}</div>}
                     </li>

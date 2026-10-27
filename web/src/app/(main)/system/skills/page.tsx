@@ -2364,7 +2364,7 @@ export default function SkillsPage() {
                           : " / SKILL.md"}
                       </h3>
                       <p className="text-muted-foreground text-xs">
-                        ID: <code className="font-mono">{selectedProposal.id}</code> ·{" "}
+                        ID: <code className="font-mono">{selectedProposal.id}</code> /{" "}
                         {selectedProposal.origin === "curator" ? t("proposalOriginCurator") : t("proposalOriginAgent")}
                       </p>
                     </div>

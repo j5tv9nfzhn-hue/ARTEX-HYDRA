@@ -525,7 +525,7 @@ export default function StoragePage() {
           <CardTitle className="text-base">{t("tablesTitle")}</CardTitle>
           <CardDescription>
             {t("tablesDesc")}
-            {db?.tables_partial ? ` · ${t("tablesPartial")}` : ""}
+            {db?.tables_partial ? ` / ${t("tablesPartial")}` : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>{tablesBody}</CardContent>

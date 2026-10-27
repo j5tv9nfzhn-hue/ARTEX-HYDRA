@@ -211,9 +211,9 @@ export function notifyNewFindings(findings: Finding[]) {
 /**
  * useNewFindingsAlert:页面接线点(仪表盘 / 发现页各接一处)。
  * 内部维护"上一轮 id 集合"的 ref,并在 ready 后才建立基线:
- *  · ready=false(首载前 / 刚切换结果集)→ 只清基线,不弹;
- *  · ready=true 后的第一批数据 → 记录基线,不弹(首载绝不触发的闸门);
- *  · 后续批次与基线求差集 → 仅把新增 id 交给 notifyNewFindings。
+ *  / ready=false(首载前 / 刚切换结果集)→ 只清基线,不弹;
+ *  / ready=true 后的第一批数据 → 记录基线,不弹(首载绝不触发的闸门);
+ *  / 后续批次与基线求差集 → 仅把新增 id 交给 notifyNewFindings。
  * 纯旁路观察:不改动调用方的轮询、签名比对与请求时序。
  */
 export function useNewFindingsAlert(findings: Finding[], ready: boolean) {

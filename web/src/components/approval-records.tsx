@@ -234,7 +234,7 @@ function ModelReviewContext({ input }: { input: InterceptReviewInput }) {
             input.history.map((entry) => (
               <div key={entry.tool_use_id} className="flex min-w-0 flex-col gap-2 rounded-lg border p-3">
                 <p className="break-words font-medium text-xs">
-                  {entry.tool} · {entry.status === "succeeded" ? t("review.histSucceeded") : t("review.histFailed")}
+                  {entry.tool} / {entry.status === "succeeded" ? t("review.histSucceeded") : t("review.histFailed")}
                 </p>
                 <CodeBlock label={t("review.histArgs")} text={entry.arguments_preview} truncated={entry.truncated} />
                 <CodeBlock label={t("review.histResult")} text={entry.result} truncated={entry.truncated} />
@@ -477,7 +477,7 @@ export function ApprovalDetail({
                           audit.context.map((entry, index) => (
                             <CodeBlock
                               key={`${entry.kind}-${entry.tool_use_id || index}`}
-                              label={`${t.has(`context.${entry.kind}`) ? t(`context.${entry.kind}`) : entry.kind}${entry.tool ? ` · ${entry.tool}` : ""}${entry.is_error ? ` · ${t("errorTag")}` : ""}`}
+                              label={`${t.has(`context.${entry.kind}`) ? t(`context.${entry.kind}`) : entry.kind}${entry.tool ? ` / ${entry.tool}` : ""}${entry.is_error ? ` / ${t("errorTag")}` : ""}`}
                               text={entry.text}
                               truncated={entry.truncated}
                             />

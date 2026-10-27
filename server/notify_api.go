@@ -31,7 +31,7 @@ const (
 // 渠道连接测试会实际发送至用户注册的渠道，正文采用中文，
 // 并明确标注为测试，防止被误认为真实漏洞。
 const (
-	notifyTestName    = "测试消息 · 渠道配置正常"
+	notifyTestName    = "测试消息：渠道配置正常"
 	notifyTestClass   = "测试连接"
 	notifyTestSummary = "这是 ARTEX-HYDRA 通知渠道测试消息。收到此消息表示渠道配置正常。"
 )

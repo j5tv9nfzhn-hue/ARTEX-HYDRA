@@ -134,7 +134,7 @@ export function FindingTrafficPanel({
                     {index + 1}. {t(`traffic.role.${b.role}`)}
                   </Badge>
                   <Badge variant="secondary">
-                    {b.snapshot.method} · {b.snapshot.status}
+                    {b.snapshot.method} / {b.snapshot.status}
                   </Badge>
                   <span className="text-xs text-muted-foreground">{t("traffic.evidenceNo", { id: b.id })}</span>
                 </div>

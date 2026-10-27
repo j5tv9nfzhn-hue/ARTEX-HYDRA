@@ -158,5 +158,5 @@ export function FilterSummary({ filter }: { filter: NotificationFilter }) {
   if (parts.length === 0) {
     return <p className="text-muted-foreground text-sm">{t("summary.all")}</p>;
   }
-  return <p className="text-muted-foreground text-sm">{parts.join(" · ")}</p>;
+  return <p className="text-muted-foreground text-sm">{parts.join(" / ")}</p>;
 }

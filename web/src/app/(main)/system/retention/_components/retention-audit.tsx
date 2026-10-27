@@ -157,7 +157,7 @@ export function RetentionAudit({
                       {new Date(entry.at).toLocaleString("zh-CN", { hour12: false })}
                     </time>
                     <div className="text-muted-foreground text-xs">
-                      #{entry.id} · {entry.actor}
+                      #{entry.id} / {entry.actor}
                     </div>
                   </TableCell>
                   <TableCell className="align-top text-xs">

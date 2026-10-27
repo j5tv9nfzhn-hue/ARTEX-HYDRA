@@ -220,8 +220,8 @@ export default function LogsPage() {
             {t("clear")}
           </Button>
           <span className="ml-auto text-xs text-muted-foreground">
-            {t("totalLines", { count: counts.total })} ·{" "}
-            <span className="text-amber-600 dark:text-amber-400">{t("warnCount", { count: counts.warn })}</span> ·{" "}
+            {t("totalLines", { count: counts.total })} /{" "}
+            <span className="text-amber-600 dark:text-amber-400">{t("warnCount", { count: counts.warn })}</span> /{" "}
             <span className="text-red-600 dark:text-red-400">{t("errorCount", { count: counts.error })}</span>
           </span>
         </div>

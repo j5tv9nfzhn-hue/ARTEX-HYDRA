@@ -87,7 +87,7 @@ export function RetestsTab({ taskId }: { taskId: string }) {
           <CardHeader>
             <CardTitle>
               {t("retests.selectTitle")}
-              {data ? ` · ${data.total}` : ""}
+              {data ? ` / ${data.total}` : ""}
             </CardTitle>
             <CardDescription>{t("retests.selectDesc")}</CardDescription>
           </CardHeader>

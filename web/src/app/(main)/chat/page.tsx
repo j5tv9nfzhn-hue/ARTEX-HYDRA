@@ -290,7 +290,7 @@ function Composer({
                   className="shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={disabled || uploading}
-                  title={`${t("composer.uploadFile")} · ${t("composer.pasteHint")}`}
+                  title={`${t("composer.uploadFile")} / ${t("composer.pasteHint")}`}
                 >
                   {uploading ? <Loader2Icon className="size-4 animate-spin" /> : <PaperclipIcon className="size-4" />}
                 </Button>
@@ -371,7 +371,7 @@ function LLMProfileRow({
           <button
             type="button"
             disabled={disabled}
-            title={`${label} · ${t("llmProfile.change")}`}
+            title={`${label} / ${t("llmProfile.change")}`}
             className="inline-flex h-7 min-w-0 max-w-56 items-center gap-1.5 rounded-lg border border-border/70 bg-muted/50 px-2.5 text-muted-foreground text-xs transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
           >
             <ZapIcon className="size-3 shrink-0 text-primary" />
@@ -396,7 +396,7 @@ function LLMProfileRow({
             <span className="text-sm">{defaultLabel}</span>
             {activeDefault && (
               <span className="text-xs text-muted-foreground">
-                {activeDefault.format} · {activeDefault.model}
+                {activeDefault.format} / {activeDefault.model}
               </span>
             )}
           </button>
@@ -415,7 +415,7 @@ function LLMProfileRow({
             >
               <span className="text-sm">{p.name}</span>
               <span className="text-xs text-muted-foreground">
-                {p.format} · {p.model}
+                {p.format} / {p.model}
               </span>
             </button>
           ))}
@@ -1294,7 +1294,7 @@ const ConversationItem = React.memo(function ConversationItem({
               <>
                 <Bot className="size-3 shrink-0" />
                 <span className="min-w-0 truncate">{agent?.name ?? conv.agent_key}</span>
-                <span className="shrink-0">·</span>
+
               </>
             )}
             <span className="shrink-0">

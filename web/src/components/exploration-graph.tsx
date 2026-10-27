@@ -670,7 +670,7 @@ function NodeDetailSheet({
                                   {nodeSummary(m) || t(mMeta.labelKey)}
                                 </span>
                                 <span className="text-muted-foreground block font-mono text-xs">
-                                  {t(mMeta.labelKey)} · #{m.id}
+                                  {t(mMeta.labelKey)} / #{m.id}
                                 </span>
                               </span>
                             </button>

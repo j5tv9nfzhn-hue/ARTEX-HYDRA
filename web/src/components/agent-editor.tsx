@@ -1136,7 +1136,7 @@ function AgentTriggersTab({ agentKey, agent }: { agentKey: string; agent?: Agent
     if (t.on_task_timeout) parts.push(tr("triggers.cond.taskTimeout"));
     if (t.on_tool_call) parts.push(tr("triggers.cond.toolCall", { count: t.tool_names.length }));
     if (t.on_task_create) parts.push(tr("triggers.cond.taskCreate"));
-    return parts.join(" · ") || tr("triggers.cond.none");
+    return parts.join(" / ") || tr("triggers.cond.none");
   }
 
   return (

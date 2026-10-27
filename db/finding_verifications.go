@@ -137,7 +137,7 @@ WHERE finding_id=$1 AND status IN ('pending','running')`, findingID))
 		title = string(runes[:100])
 	}
 	c, err := scanConv(tx.QueryRowContext(ctx, `INSERT INTO conversations(agent_key,title) VALUES ($1,$2) RETURNING `+convCols,
-		VerifierAgentKey, fmt.Sprintf("复核 #%d · %s", findingID, title)))
+		VerifierAgentKey, fmt.Sprintf("复核 #%d（%s）", findingID, title)))
 	if err != nil {
 		return nil, nil, false, err
 	}

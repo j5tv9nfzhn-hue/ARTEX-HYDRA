@@ -167,7 +167,7 @@ func clueSummaryLine(c db.Clue) string {
 	if key != "" && strings.HasPrefix(strings.ToLower(key), strings.ToLower(val)) {
 		val = ""
 	}
-	line := c.Kind + " · " + key
+	line := c.Kind + " / " + key
 	if val != "" {
 		line += " — " + truncRunesLog(val, 160)
 	}

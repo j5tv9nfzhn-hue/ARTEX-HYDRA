@@ -968,7 +968,7 @@ func mergeTriggeredRuns(items []triggeredRun) triggeredRun {
 	}
 	return triggeredRun{
 		agentKey:  first.agentKey,
-		title:     fmt.Sprintf("合并触发 · task#%d · %d 条", first.taskID, len(items)),
+		title:     fmt.Sprintf("合并触发 task#%d（%d 条）", first.taskID, len(items)),
 		message:   b.String(),
 		taskID:    first.taskID,
 		mergeable: true,
@@ -1016,7 +1016,7 @@ func mergeAllRuns(items []triggeredRun) triggeredRun {
 	}
 	return triggeredRun{
 		agentKey:  first.agentKey,
-		title:     fmt.Sprintf("合并触发 · 全部 · %d 条", len(items)),
+		title:     fmt.Sprintf("合并触发（全部 %d 条）", len(items)),
 		message:   b.String(),
 		taskID:    mergedTaskID,
 		mergeable: true,
