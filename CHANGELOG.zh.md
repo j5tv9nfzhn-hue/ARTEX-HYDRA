@@ -2,6 +2,14 @@
 
 本项目的重要变更记录在此文件中，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.0.0.1] - 2026-10-27
+
+首个四位版本号发布（`v0.0.0.1`）。这一版把版本号收敛到「tag 是唯一真相来源」：
+二进制 `-X main.version` 与前端静态包的 `NEXT_PUBLIC_APP_VERSION` 都从同一个 tag
+推导，界面上的版本统一取 `/api/health`，桌面端与 WEB 端不再各报一个号；同时补上
+四位版本支持（`vX.Y.Z.W`），`web/package.json` 的 `version` 退回本地开发占位。
+内容见下方 Unreleased 各节。
+
 ## [Unreleased]
 
 ### 桌面端打包与旧版数据迁移

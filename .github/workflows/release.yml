@@ -131,6 +131,11 @@ jobs:
       # 这一步是硬门禁：类型检查与静态导出都在里面，前端编不过就没有可发布的包。
       - run: npm run build:static
         working-directory: web
+        env:
+          # 版本只有一个真相来源：tag。这里把 tag 内嵌进静态包（四段版本
+          # v0.0.0.1 也要原样落地），运行期再由 /api/health 的二进制版本校正；
+          # workflow_dispatch 干跑没有 tag，注入空值，前端回落到 package.json 占位。
+          NEXT_PUBLIC_APP_VERSION: ${{ github.ref_name }}
       - uses: actions/upload-artifact@v7
         with:
           name: web-dist
