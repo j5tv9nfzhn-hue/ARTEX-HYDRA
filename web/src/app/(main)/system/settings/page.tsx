@@ -21,6 +21,7 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Masthead } from "@/components/editorial";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -430,10 +431,7 @@ export default function SystemSettingsPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-      </div>
+      <Masthead title={t("title")} subtitle={t("subtitle")} titleClassName="text-xl" subtitleClassName="text-sm" />
 
       {/* 多列而非 grid：网络搜索卡片比其余高数倍，且高度随所选后端变化（brave/tavily
           的 key 输入是条件渲染）。grid 会按最高的一张撑满整行、在旁边留下大片空白，

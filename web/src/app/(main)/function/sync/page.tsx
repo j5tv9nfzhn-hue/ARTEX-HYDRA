@@ -6,6 +6,7 @@ import { AlertCircleIcon, CheckCircle2Icon, DownloadIcon, PlugZapIcon, RefreshCw
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Masthead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,8 +37,7 @@ export default function AssetSyncPage() {
   return (
     <div className="p-4 md:p-6">
       <div className="mb-4">
-        <h1 className="font-semibold text-xl">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
+        <Masthead title={t("title")} titleClassName="text-xl" subtitle={t("subtitle")} subtitleClassName="text-sm" />
       </div>
       <Tabs defaultValue="scopesentry">
         <TabsList>

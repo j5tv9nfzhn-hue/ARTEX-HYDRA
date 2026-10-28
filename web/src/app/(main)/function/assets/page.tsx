@@ -19,6 +19,7 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Masthead } from "@/components/editorial";
 import { AssetDslSearch } from "@/components/asset-dsl-search";
 import { EmptyState } from "@/components/empty-state";
 import { ScopeTextEditor } from "@/components/scope-text-editor";
@@ -318,9 +319,7 @@ export default function AssetsPage() {
   return (
     <div className="flex h-[calc(100vh-6rem)] min-h-0 flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
-        </div>
+        <Masthead title={t("title")} titleClassName="text-xl" />
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">
             {t.rich("totalAssets", {

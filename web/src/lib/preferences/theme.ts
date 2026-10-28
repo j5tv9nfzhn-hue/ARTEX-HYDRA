@@ -52,6 +52,14 @@ export const THEME_PRESET_OPTIONS = [
     },
   },
   {
+    label: "纸本",
+    value: "paper",
+    primary: {
+      light: "oklch(0.5 0.078 200)",
+      dark: "oklch(0.735 0.09 196)",
+    },
+  },
+  {
     label: "柔和流行",
     value: "soft-pop",
     primary: {
@@ -65,6 +73,14 @@ export const THEME_PRESET_OPTIONS = [
     primary: {
       light: "oklch(0.64 0.17 36.44)",
       dark: "oklch(0.64 0.17 36.44)",
+    },
+  },
+  {
+    label: "双墨",
+    value: "two-inks",
+    primary: {
+      light: "oklch(0.548 0.187 33)",
+      dark: "oklch(0.700 0.170 34)",
     },
   },
 ] as const;

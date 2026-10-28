@@ -18,6 +18,7 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Masthead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { useNewFindingsAlert } from "@/components/finding-alert";
 import { FindingRetestDialog } from "@/components/finding-retest-dialog";
@@ -868,12 +869,9 @@ export default function FindingsPage() {
   );
 
   return (
-    <div className="flex flex-1 flex-col gap-4 md:gap-6">
+    <div data-editorial="body" className="flex flex-1 flex-col gap-4 md:gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-        </div>
+        <Masthead title={t("title")} subtitle={t("subtitle")} titleClassName="text-xl" subtitleClassName="text-sm" />
         <Tabs value={view} onValueChange={(v) => setView(v as FindingView)}>
           <TabsList>
             <TabsTrigger value="flat">{t("view.flat")}</TabsTrigger>

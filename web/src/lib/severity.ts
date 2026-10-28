@@ -122,8 +122,28 @@ export function severityBarClass(value: Severity): string {
   return SEVERITY_META[value].bar;
 }
 
-/** 画布(SVG / Canvas)用 hex;mode 缺省 light。 */
+/**
+ * 画布(SVG / Canvas)用 hex;mode 缺省 light。
+ *
+ * 双墨预设(two-inks)下 canvas 拿不到 CSS 变量重映射,色相会漏出来,
+ * 所以这里补一条对齐规则:critical 走专色,其余三级走墨色深浅。
+ * 读取 <html data-theme-preset> 只在浏览器端;服务端渲染时回落到常规色板。
+ */
+const INK_CANVAS: Record<Severity, { light: string; dark: string }> = {
+  // critical = 专色 #D33A1A / 暗底 #FF6A44
+  critical: { light: "#D33A1A", dark: "#FF6A44" },
+  high: { light: "#3A3830", dark: "#C9C3B6" },
+  medium: { light: "#6B6759", dark: "#9A9486" },
+  low: { light: "#9A9486", dark: "#6B6759" },
+};
+
+function isInkPreset(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.documentElement.dataset.themePreset === "two-inks";
+}
+
 export function severityHex(value: Severity, mode: "light" | "dark" = "light"): string {
+  if (isInkPreset()) return INK_CANVAS[value][mode];
   return SEVERITY_META[value].hex[mode];
 }
 

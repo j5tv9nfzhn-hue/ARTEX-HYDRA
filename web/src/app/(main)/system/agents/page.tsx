@@ -6,6 +6,7 @@ import { Bot, PlusIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Masthead } from "@/components/editorial";
 import { AgentEditor } from "@/components/agent-editor";
 import { EmptyState } from "@/components/empty-state";
 import { useStaggerOnce } from "@/components/motion";
@@ -234,10 +235,7 @@ export default function AgentsPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-        </div>
+        <Masthead title={t("title")} subtitle={t("subtitle")} titleClassName="text-xl" subtitleClassName="text-sm" />
         <CreateAgentDialog
           onCreated={(key) => {
             reload();

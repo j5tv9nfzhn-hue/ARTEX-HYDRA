@@ -17,10 +17,11 @@ import {
 import { useTranslations } from "next-intl";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
+import { KpiBand, KpiRow, Masthead, SectionHead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { useNewFindingsAlert } from "@/components/finding-alert";
 import { LiveDot } from "@/components/live-dot";
-import { FadeIn, Stagger } from "@/components/motion";
+import { Stagger } from "@/components/motion";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -69,11 +70,14 @@ function fmtPct(rate: number): string {
   return `${(rate * 100).toFixed(1)}%`;
 }
 
-// rateClass 按可用性给率上色：≥99% 绿、≥95% 琥珀、其余红。
+// rateClass 按可用性给率上色。正常值不再用色相（绿/琥珀/红）区分，
+// 改用墨色深浅 + 是否动用专色：健康=正文色、降级=次要文字、异常=专色。
+// 理由：色相在深色主题下容易被误读，且与 severity 的红撞车；
+// 双墨预设下这一支能直接落地，其它预设依然继承原有 tailwind 色。
 function rateClass(rate: number): string {
-  if (rate >= 0.99) return "text-emerald-400";
-  if (rate >= 0.95) return "text-amber-400";
-  return "text-red-400";
+  if (rate >= 0.99) return "text-foreground";
+  if (rate >= 0.95) return "text-muted-foreground";
+  return "text-destructive";
 }
 
 // 资产分布条的系列色:与图表统一走 --chart-* 令牌(经 @theme 映射为 bg-chart-*)。
@@ -103,26 +107,6 @@ function statusBg(code: number): string {
 }
 
 // ── sub-components ────────────────────────────────────────────────────────────
-
-function SectionTitle({
-  icon: Icon,
-  children,
-  sub,
-}: {
-  icon: React.ElementType;
-  children: React.ReactNode;
-  sub?: React.ReactNode;
-}) {
-  return (
-    <div className="mb-3 flex items-center justify-between">
-      <div className="flex items-center gap-1.5 text-xs font-semibold">
-        <Icon className="size-3.5 text-muted-foreground" />
-        {children}
-      </div>
-      {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
-    </div>
-  );
-}
 
 // ── page ─────────────────────────────────────────────────────────────────────
 
@@ -487,24 +471,19 @@ export default function DashboardPage() {
   // ── render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-1 flex-col gap-5 pb-6">
+    <div data-editorial="body" className="flex flex-1 flex-col gap-5 pb-6">
       {/* ── Header ── */}
-      <div>
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight">{t("title")}</h1>
-          <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
-          {/* 作战状态摘要(页头小字):数据为 0 的段已省略,全空不渲染 */}
-          {headerSummary.length > 0 && (
-            <p className="mt-1 text-xs text-muted-foreground tabular-nums">{headerSummary.join(" / ")}</p>
-          )}
-        </div>
-      </div>
+      <Masthead
+        title={t("title")}
+        subtitle={t("subtitle")}
+        meta={headerSummary.length > 0 ? headerSummary.join(" / ") : undefined}
+      />
 
       {/* ── Row 1: 战况行 —— 主 KPI + 次级指标矩阵(非对称层级) ──
           主 KPI 选「活跃任务」:指挥室视角下先回答「系统现在在跑什么」再看出什么结果,
           running 是行动量,且这张卡自带探索/暂停/完成三段细分,天然承接主 KPI 的状态细分行;
           「确认发现」等产出指标降为右侧紧凑矩阵 —— 数值与细分全部保留,零丢失。 */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      <KpiBand className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         {/* 主 KPI:活跃任务(running 大排印,数字走 Space Grotesk + 等宽数字)。
             进场用 .animate-fade-up 直接挂 Card(不包 div)—— 该卡是栅格子项、要跟着
             右侧矩阵拉伸对齐,包装层会把"卡片本身"替换成 div、破坏等高。 */}
@@ -541,7 +520,7 @@ export default function DashboardPage() {
         {/* 次级紧凑指标 2×2:确认发现 / 资产节点 / 流量交互 / Token 用量。
             整块作为一个"面板"错峰进场(60ms):FadeIn 的包装层直接带上原本的 grid 类,
             与不包时的布局逐像素一致,不引入等高问题。 */}
-        <FadeIn delay={60} className="grid grid-cols-2 gap-3">
+        <KpiRow delay={60} className="grid grid-cols-2 gap-3">
           {/* 确认发现 */}
           <Card size="sm" className="gap-1">
             <CardHeader className="pb-0">
@@ -616,8 +595,8 @@ export default function DashboardPage() {
               })}
             </CardContent>
           </Card>
-        </FadeIn>
-      </div>
+        </KpiRow>
+      </KpiBand>
 
       {/* ── Row 2: LLM Token 消耗 ── */}
       <Card className="animate-fade-up p-4" style={{ animationDelay: "120ms" }}>
@@ -1095,9 +1074,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {/* 资产分布 */}
         <Card className="animate-fade-up p-4" style={{ animationDelay: "280ms" }}>
-          <SectionTitle icon={NetworkIcon} sub={t("byType")}>
+          <SectionHead index="01" icon={NetworkIcon} sub={t("byType")}>
             {t("assetDistribution")}
-          </SectionTitle>
+          </SectionHead>
 
           {assetByType.length === 0 ? (
             <EmptyState compact illustration="nodes" className="py-4" title={t("noAssetData")} />
@@ -1127,9 +1106,9 @@ export default function DashboardPage() {
 
         {/* 流量状态码 */}
         <Card className="animate-fade-up p-4" style={{ animationDelay: "320ms" }}>
-          <SectionTitle icon={ActivityIcon} sub={t("requestCount", { count: traffic.length })}>
+          <SectionHead index="02" icon={ActivityIcon} sub={t("requestCount", { count: traffic.length })}>
             {t("trafficStatusCodes")}
-          </SectionTitle>
+          </SectionHead>
 
           {/* bar chart */}
           {trafficByCodes.length === 0 ? (
@@ -1179,7 +1158,7 @@ export default function DashboardPage() {
 
         {/* 系统状态 & 待审批 */}
         <Card className="animate-fade-up p-4" style={{ animationDelay: "360ms" }}>
-          <SectionTitle icon={ShieldCheckIcon}>{t("systemStatus")}</SectionTitle>
+          <SectionHead index="03" icon={ShieldCheckIcon}>{t("systemStatus")}</SectionHead>
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2">
@@ -1263,9 +1242,9 @@ export default function DashboardPage() {
 
       {/* ── Row 6: 可靠性（工具调用/崩溃重放/中断恢复，#1–3、#36、#165–171） ── */}
       <Card className="animate-fade-up p-4" style={{ animationDelay: "400ms" }}>
-        <SectionTitle icon={ShieldCheckIcon} sub={t("sinceStart")}>
+        <SectionHead index="04" icon={ShieldCheckIcon} sub={t("sinceStart")}>
           {t("reliability")}
-        </SectionTitle>
+        </SectionHead>
         {!reliability || reliability.tools.calls === 0 ? (
           <div className="rounded-lg border bg-muted/10 px-3 py-3 text-center text-xs text-muted-foreground">
             {t("noReliabilityData")}

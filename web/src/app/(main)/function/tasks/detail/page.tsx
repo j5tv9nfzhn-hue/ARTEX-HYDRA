@@ -407,7 +407,7 @@ function TaskDetailInner() {
   );
 
   return (
-    <Tabs value={tab} onValueChange={setTab} className="flex flex-1 flex-col gap-0">
+    <Tabs data-editorial="body" value={tab} onValueChange={setTab} className="flex flex-1 flex-col gap-0">
       {task.analysis_domain === "software_re" && (
         <Alert className="rounded-none border-x-0 border-t-0">
           <BrainIcon className="size-4" />

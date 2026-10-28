@@ -6,6 +6,7 @@ import { BellIcon, PlusIcon, SendIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Masthead } from "@/components/editorial";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -280,10 +281,7 @@ export default function NotifyPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-semibold text-xl tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-        </div>
+        <Masthead title={t("title")} titleClassName="text-xl tracking-tight" subtitle={t("subtitle")} subtitleClassName="text-sm" />
         {meta && (
           // 用 div 而不是 label：Switch 自带 aria-label，外面再套一层 label
           // 既关联不到任何原生控件，又会让点击文字看起来应该能切换。

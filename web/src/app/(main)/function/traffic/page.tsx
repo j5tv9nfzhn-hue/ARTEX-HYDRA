@@ -18,6 +18,7 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Masthead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { HttpCodeBlock } from "@/components/http-code-block";
 import { LinkTrafficDialog } from "@/components/link-traffic-dialog";
@@ -334,10 +335,7 @@ export default function TrafficPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-        </div>
+        <Masthead title={t("title")} subtitle={t("subtitle")} titleClassName="text-xl" subtitleClassName="text-sm" />
         <div className="flex items-center gap-4 text-sm">
           <span
             className={cn(

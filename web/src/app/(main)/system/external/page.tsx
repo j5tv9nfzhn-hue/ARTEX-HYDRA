@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 
+import { Masthead } from "@/components/editorial";
 import { HarnessTargetsCard } from "@/components/harness-targets-card";
 import { MCPExposureCard } from "@/components/mcp-exposure-card";
 
@@ -11,10 +12,7 @@ export default function ExternalAccessPage() {
   const t = useTranslations("externalPage");
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
-      <div>
-        <h1 className="font-semibold text-xl tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-      </div>
+      <Masthead title={t("title")} titleClassName="text-xl tracking-tight" subtitle={t("subtitle")} subtitleClassName="text-sm" />
 
       <HarnessTargetsCard />
 

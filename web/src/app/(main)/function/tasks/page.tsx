@@ -815,7 +815,7 @@ export default function TasksPage() {
   );
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-4">
+    <Tabs data-editorial="body" value={activeTab} onValueChange={setActiveTab} className="gap-4">
       <TabsList className="mx-4 lg:mx-6">
         <TabsTrigger value="current">{t("tab.current")}</TabsTrigger>
         <TabsTrigger value="archived">{t("tab.archived")}</TabsTrigger>

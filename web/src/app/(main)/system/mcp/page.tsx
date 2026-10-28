@@ -6,6 +6,7 @@ import { PlusIcon, RefreshCwIcon, ServerIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Masthead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -381,10 +382,7 @@ export default function MCPPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
-      <div>
-        <h1 className="font-semibold text-xl tracking-tight">MCP</h1>
-        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-      </div>
+      <Masthead title="MCP" titleClassName="text-xl tracking-tight" subtitle={t("subtitle")} subtitleClassName="text-sm" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         <button

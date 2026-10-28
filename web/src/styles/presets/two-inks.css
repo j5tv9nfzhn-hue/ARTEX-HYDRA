@@ -1,0 +1,709 @@
+/* 
+label: 双墨
+value: two-inks  
+*/
+
+/* =============================================================================
+   ARTEX-HYDRA · 主题预设「双墨 / Two Inks」
+   -----------------------------------------------------------------------------
+   这份预设解决的不是"换色相"，而是三件事：
+
+   1. 有彩色归零。全站 665 处硬编码色相（琥珀 189 / 红 123 / 翠绿 119 / 蓝 57 …）
+      不再靠逐个改组件，而是在本预设作用域内重映射 Tailwind v4 的 --color-* 变量。
+      §A1 把 10 个色族压成一条灰阶（保留 --500 比 --700 亮的层级），
+      §A2 只留危险色族（red/rose）映射到专色，
+      §A3 剩下 10 个低频色族直接别名过去。
+      结果：一屏里唯一的有彩色 = 需要你动手的东西。
+
+   2. 阴影归零。层级改由 1px 描边（14% / 30% / 50%）与留白承担，而不是 box-shadow。
+
+   3. 装饰动效归零。animate-fade-up / pulse / pulse-soft / glow-once 在本预设下停用；
+      spin / in / out / accordion 这些功能性动效保留。
+
+   为什么改 --color-* 而不是改组件：Tailwind v4 的工具类引用变量而非内联值
+   （.text-red-600 { color: var(--color-red-600) }），因此重映射一次即覆盖全部调用点，
+   且 --color-red-600/10 这类透明度变体走 color-mix 也会自动跟随。
+   其它 6 套预设不受影响：所有改动都锁在 [data-theme-preset="two-inks"] 下。
+
+   安装见 docs/two-inks.md。生成脚本：scripts/generate-two-inks.mjs
+   ============================================================================= */
+
+/* ============================ §1 令牌 ============================ */
+
+/*
+  浅色：暖白纸 + 纯中性墨（"去尘"版）
+  ---------------------------------------------------------------------------
+  早先用的是米色纸 oklch(0.929 0.014 86) #EFE9DD。它确实"有纸感"，
+  但大面积铺开后会读成陈纸 / 灰尘 —— 明度偏低 + 黄相 + 低彩度，
+  三者叠加就是"脏"。改成接近白的暖纸后，纸感来自质感和描边，
+  而不是靠把底色调深。
+  色相统一到 90、彩度压到 0.004：仍不是纯灰（不至于滑向科技风），
+  但已看不出黄。
+*/
+:root[data-theme-preset="two-inks"] {
+  /* 形状：小件取直角，卡片 2px，弹层 4px —— 印刷品的刀切边 */
+  --radius: 0.25rem;
+
+  /* 纸与墨 */
+  --background: oklch(0.972 0.004 90);          /* 暖白纸  #F7F6F3 */
+  --foreground: oklch(0.190 0.004 90);          /* 墨      #141412  17.0:1 */
+
+  --card: oklch(1 0 0);                         /* 纯白面 #FFFFFF —— 靠描边定界，不靠压暗画布 */
+  --card-foreground: oklch(0.190 0.004 90);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.190 0.004 90);
+
+  /* 专色：全站唯一的有彩色 */
+  --primary: oklch(0.548 0.187 33);             /* 朱  #C63417  白字 5.36:1 / 纸上 4.94:1 */
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.936 0.004 90);           /* 1.12:1 —— 与画布可辨 */
+  --secondary-foreground: oklch(0.300 0.006 90);
+  --muted: oklch(0.930 0.004 90);               /* 1.13:1 —— hover 必须看得见 */
+  --muted-foreground: oklch(0.485 0.006 90);    /* 次要文字 5.90:1 */
+  --accent: oklch(0.922 0.004 90);              /* 1.16:1 —— 主 hover 面，略重于 muted */
+  --accent-foreground: oklch(0.190 0.004 90);
+
+  /* 危险 = 专色：破坏性操作与品牌色同源，读者只需记住一种红 */
+  --destructive: oklch(0.505 0.180 30);         /* #B52719  纸上 5.93:1 */
+
+  --border: oklch(0.255 0.004 90 / 0.36);       /* 2.15:1 —— 低于 ~1.9 卡片边界会消失 */
+  --input: oklch(0.255 0.004 90 / 0.50);        /* 3.09:1 —— 表单控件边界需 ≥3:1 */
+  --ring: oklch(0.548 0.187 33 / 0.55);
+
+  /* 图表五槽：五级灰阶，第 1 级最深 = 主系列 */
+  --chart-1: oklch(0.245 0.008 90);
+  --chart-2: oklch(0.395 0.010 89);
+  --chart-3: oklch(0.545 0.012 88);
+  --chart-4: oklch(0.685 0.012 87);
+  --chart-5: oklch(0.805 0.012 87);
+
+  --sidebar: oklch(0.955 0.004 90);             /* 1.06:1 —— 与主画布分层 */
+  --sidebar-foreground: oklch(0.190 0.004 90);
+  --sidebar-primary: oklch(0.548 0.187 33);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.938 0.004 90);
+  --sidebar-accent-foreground: oklch(0.190 0.004 90);
+  --sidebar-border: oklch(0.255 0.004 90 / 0.24);
+  --sidebar-ring: oklch(0.548 0.187 33 / 0.55);
+
+  /* 阴影全部归零 —— "去科技感"最重要的一刀 */
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+
+  /* 自定义令牌（globals.css 已在 @theme 里映射为 text-spot / bg-spot） */
+  --spot: oklch(0.548 0.187 33);
+  --spot-weak: oklch(0.548 0.187 33 / 0.12);
+}
+
+.dark:root[data-theme-preset="two-inks"] {
+  /* 墨纸互换：同一版式，另一套油墨 */
+  --background: oklch(0.175 0.008 90);
+  --foreground: oklch(0.929 0.014 86);
+
+  --card: oklch(0.225 0.009 91);
+  --card-foreground: oklch(0.929 0.014 86);
+  --popover: oklch(0.245 0.009 91);
+  --popover-foreground: oklch(0.929 0.014 86);
+
+  --primary: oklch(0.700 0.170 34);             /* 暗底专色提亮一档 */
+  --primary-foreground: oklch(0.175 0.008 90);
+
+  --secondary: oklch(0.268 0.010 91);
+  --secondary-foreground: oklch(0.880 0.013 87);
+  --muted: oklch(0.255 0.009 91);
+  --muted-foreground: oklch(0.735 0.012 88);
+  --accent: oklch(0.300 0.011 91);
+  --accent-foreground: oklch(0.929 0.014 86);
+
+  --destructive: oklch(0.660 0.180 32);
+
+  --border: oklch(0.929 0.014 86 / 0.26);       /* 2.08:1 —— 与浅色同感知强度 */
+  --input: oklch(0.929 0.014 86 / 0.38);
+  --ring: oklch(0.700 0.170 34 / 0.60);
+
+  --chart-1: oklch(0.918 0.012 87);
+  --chart-2: oklch(0.780 0.012 88);
+  --chart-3: oklch(0.635 0.012 88);
+  --chart-4: oklch(0.490 0.011 89);
+  --chart-5: oklch(0.360 0.010 90);
+
+  --sidebar: oklch(0.215 0.009 91);             /* 1.08:1 —— 与主画布分层 */
+  --sidebar-foreground: oklch(0.929 0.014 86);
+  --sidebar-primary: oklch(0.700 0.170 34);
+  --sidebar-primary-foreground: oklch(0.175 0.008 90);
+  --sidebar-accent: oklch(0.285 0.011 91);
+  --sidebar-accent-foreground: oklch(0.929 0.014 86);
+  --sidebar-border: oklch(0.929 0.014 86 / 0.16);
+  --sidebar-ring: oklch(0.700 0.170 34 / 0.60);
+
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+
+  --spot: oklch(0.700 0.170 34);
+  --spot-weak: oklch(0.700 0.170 34 / 0.16);
+}
+
+/* ====================== §2 调色板重映射 ====================== */
+/* 抽掉色相，保留明度层级；暗色下镜像排布，保证 400/500 仍是浅色可读字。 */
+
+:root[data-theme-preset="two-inks"] {
+  /* ── §2.1 有彩色 → 灰阶（保留 Tailwind 明度层级，只抽掉色相）── */
+  --color-amber-50: oklch(0.965 0.010 88);
+  --color-amber-100: oklch(0.935 0.010 88);
+  --color-amber-200: oklch(0.875 0.010 88);
+  --color-amber-300: oklch(0.785 0.010 88);
+  --color-amber-400: oklch(0.645 0.010 88);
+  --color-amber-500: oklch(0.525 0.010 88);
+  --color-amber-600: oklch(0.405 0.010 88);
+  --color-amber-700: oklch(0.325 0.010 88);
+  --color-amber-800: oklch(0.250 0.010 88);
+  --color-amber-900: oklch(0.195 0.010 88);
+  --color-amber-950: oklch(0.155 0.010 88);
+  --color-orange-50: oklch(0.965 0.010 88);
+  --color-orange-100: oklch(0.935 0.010 88);
+  --color-orange-200: oklch(0.875 0.010 88);
+  --color-orange-300: oklch(0.785 0.010 88);
+  --color-orange-400: oklch(0.645 0.010 88);
+  --color-orange-500: oklch(0.525 0.010 88);
+  --color-orange-600: oklch(0.405 0.010 88);
+  --color-orange-700: oklch(0.325 0.010 88);
+  --color-orange-800: oklch(0.250 0.010 88);
+  --color-orange-900: oklch(0.195 0.010 88);
+  --color-orange-950: oklch(0.155 0.010 88);
+  --color-emerald-50: oklch(0.965 0.010 88);
+  --color-emerald-100: oklch(0.935 0.010 88);
+  --color-emerald-200: oklch(0.875 0.010 88);
+  --color-emerald-300: oklch(0.785 0.010 88);
+  --color-emerald-400: oklch(0.645 0.010 88);
+  --color-emerald-500: oklch(0.525 0.010 88);
+  --color-emerald-600: oklch(0.405 0.010 88);
+  --color-emerald-700: oklch(0.325 0.010 88);
+  --color-emerald-800: oklch(0.250 0.010 88);
+  --color-emerald-900: oklch(0.195 0.010 88);
+  --color-emerald-950: oklch(0.155 0.010 88);
+  --color-green-50: oklch(0.965 0.010 88);
+  --color-green-100: oklch(0.935 0.010 88);
+  --color-green-200: oklch(0.875 0.010 88);
+  --color-green-300: oklch(0.785 0.010 88);
+  --color-green-400: oklch(0.645 0.010 88);
+  --color-green-500: oklch(0.525 0.010 88);
+  --color-green-600: oklch(0.405 0.010 88);
+  --color-green-700: oklch(0.325 0.010 88);
+  --color-green-800: oklch(0.250 0.010 88);
+  --color-green-900: oklch(0.195 0.010 88);
+  --color-green-950: oklch(0.155 0.010 88);
+  --color-teal-50: oklch(0.965 0.010 88);
+  --color-teal-100: oklch(0.935 0.010 88);
+  --color-teal-200: oklch(0.875 0.010 88);
+  --color-teal-300: oklch(0.785 0.010 88);
+  --color-teal-400: oklch(0.645 0.010 88);
+  --color-teal-500: oklch(0.525 0.010 88);
+  --color-teal-600: oklch(0.405 0.010 88);
+  --color-teal-700: oklch(0.325 0.010 88);
+  --color-teal-800: oklch(0.250 0.010 88);
+  --color-teal-900: oklch(0.195 0.010 88);
+  --color-teal-950: oklch(0.155 0.010 88);
+  --color-blue-50: oklch(0.965 0.010 88);
+  --color-blue-100: oklch(0.935 0.010 88);
+  --color-blue-200: oklch(0.875 0.010 88);
+  --color-blue-300: oklch(0.785 0.010 88);
+  --color-blue-400: oklch(0.645 0.010 88);
+  --color-blue-500: oklch(0.525 0.010 88);
+  --color-blue-600: oklch(0.405 0.010 88);
+  --color-blue-700: oklch(0.325 0.010 88);
+  --color-blue-800: oklch(0.250 0.010 88);
+  --color-blue-900: oklch(0.195 0.010 88);
+  --color-blue-950: oklch(0.155 0.010 88);
+  --color-sky-50: oklch(0.965 0.010 88);
+  --color-sky-100: oklch(0.935 0.010 88);
+  --color-sky-200: oklch(0.875 0.010 88);
+  --color-sky-300: oklch(0.785 0.010 88);
+  --color-sky-400: oklch(0.645 0.010 88);
+  --color-sky-500: oklch(0.525 0.010 88);
+  --color-sky-600: oklch(0.405 0.010 88);
+  --color-sky-700: oklch(0.325 0.010 88);
+  --color-sky-800: oklch(0.250 0.010 88);
+  --color-sky-900: oklch(0.195 0.010 88);
+  --color-sky-950: oklch(0.155 0.010 88);
+  --color-violet-50: oklch(0.965 0.010 88);
+  --color-violet-100: oklch(0.935 0.010 88);
+  --color-violet-200: oklch(0.875 0.010 88);
+  --color-violet-300: oklch(0.785 0.010 88);
+  --color-violet-400: oklch(0.645 0.010 88);
+  --color-violet-500: oklch(0.525 0.010 88);
+  --color-violet-600: oklch(0.405 0.010 88);
+  --color-violet-700: oklch(0.325 0.010 88);
+  --color-violet-800: oklch(0.250 0.010 88);
+  --color-violet-900: oklch(0.195 0.010 88);
+  --color-violet-950: oklch(0.155 0.010 88);
+  --color-slate-50: oklch(0.965 0.010 88);
+  --color-slate-100: oklch(0.935 0.010 88);
+  --color-slate-200: oklch(0.875 0.010 88);
+  --color-slate-300: oklch(0.785 0.010 88);
+  --color-slate-400: oklch(0.645 0.010 88);
+  --color-slate-500: oklch(0.525 0.010 88);
+  --color-slate-600: oklch(0.405 0.010 88);
+  --color-slate-700: oklch(0.325 0.010 88);
+  --color-slate-800: oklch(0.250 0.010 88);
+  --color-slate-900: oklch(0.195 0.010 88);
+  --color-slate-950: oklch(0.155 0.010 88);
+  --color-neutral-50: oklch(0.965 0.010 88);
+  --color-neutral-100: oklch(0.935 0.010 88);
+  --color-neutral-200: oklch(0.875 0.010 88);
+  --color-neutral-300: oklch(0.785 0.010 88);
+  --color-neutral-400: oklch(0.645 0.010 88);
+  --color-neutral-500: oklch(0.525 0.010 88);
+  --color-neutral-600: oklch(0.405 0.010 88);
+  --color-neutral-700: oklch(0.325 0.010 88);
+  --color-neutral-800: oklch(0.250 0.010 88);
+  --color-neutral-900: oklch(0.195 0.010 88);
+  --color-neutral-950: oklch(0.155 0.010 88);
+  /* ── §2.2 危险色族 → 专色（全站唯一保留的彩色）── */
+  --color-red-50: oklch(0.965 0.030 33);
+  --color-red-100: oklch(0.930 0.050 33);
+  --color-red-200: oklch(0.870 0.090 33);
+  --color-red-300: oklch(0.790 0.130 33);
+  --color-red-400: oklch(0.660 0.170 33);
+  --color-red-500: oklch(0.548 0.187 33);
+  --color-red-600: oklch(0.505 0.180 33);
+  --color-red-700: oklch(0.440 0.160 33);
+  --color-red-800: oklch(0.360 0.130 33);
+  --color-red-900: oklch(0.290 0.100 33);
+  --color-red-950: oklch(0.220 0.070 33);
+  --color-rose-50: oklch(0.965 0.030 33);
+  --color-rose-100: oklch(0.930 0.050 33);
+  --color-rose-200: oklch(0.870 0.090 33);
+  --color-rose-300: oklch(0.790 0.130 33);
+  --color-rose-400: oklch(0.660 0.170 33);
+  --color-rose-500: oklch(0.548 0.187 33);
+  --color-rose-600: oklch(0.505 0.180 33);
+  --color-rose-700: oklch(0.440 0.160 33);
+  --color-rose-800: oklch(0.360 0.130 33);
+  --color-rose-900: oklch(0.290 0.100 33);
+  --color-rose-950: oklch(0.220 0.070 33);
+  /* ── §2.3 低频色族：别名到已覆盖的族，一条顶一族 ── */
+  --color-yellow-50: var(--color-amber-50);
+  --color-yellow-100: var(--color-amber-100);
+  --color-yellow-200: var(--color-amber-200);
+  --color-yellow-300: var(--color-amber-300);
+  --color-yellow-400: var(--color-amber-400);
+  --color-yellow-500: var(--color-amber-500);
+  --color-yellow-600: var(--color-amber-600);
+  --color-yellow-700: var(--color-amber-700);
+  --color-yellow-800: var(--color-amber-800);
+  --color-yellow-900: var(--color-amber-900);
+  --color-yellow-950: var(--color-amber-950);
+  --color-lime-50: var(--color-green-50);
+  --color-lime-100: var(--color-green-100);
+  --color-lime-200: var(--color-green-200);
+  --color-lime-300: var(--color-green-300);
+  --color-lime-400: var(--color-green-400);
+  --color-lime-500: var(--color-green-500);
+  --color-lime-600: var(--color-green-600);
+  --color-lime-700: var(--color-green-700);
+  --color-lime-800: var(--color-green-800);
+  --color-lime-900: var(--color-green-900);
+  --color-lime-950: var(--color-green-950);
+  --color-cyan-50: var(--color-sky-50);
+  --color-cyan-100: var(--color-sky-100);
+  --color-cyan-200: var(--color-sky-200);
+  --color-cyan-300: var(--color-sky-300);
+  --color-cyan-400: var(--color-sky-400);
+  --color-cyan-500: var(--color-sky-500);
+  --color-cyan-600: var(--color-sky-600);
+  --color-cyan-700: var(--color-sky-700);
+  --color-cyan-800: var(--color-sky-800);
+  --color-cyan-900: var(--color-sky-900);
+  --color-cyan-950: var(--color-sky-950);
+  --color-purple-50: var(--color-violet-50);
+  --color-purple-100: var(--color-violet-100);
+  --color-purple-200: var(--color-violet-200);
+  --color-purple-300: var(--color-violet-300);
+  --color-purple-400: var(--color-violet-400);
+  --color-purple-500: var(--color-violet-500);
+  --color-purple-600: var(--color-violet-600);
+  --color-purple-700: var(--color-violet-700);
+  --color-purple-800: var(--color-violet-800);
+  --color-purple-900: var(--color-violet-900);
+  --color-purple-950: var(--color-violet-950);
+  --color-indigo-50: var(--color-blue-50);
+  --color-indigo-100: var(--color-blue-100);
+  --color-indigo-200: var(--color-blue-200);
+  --color-indigo-300: var(--color-blue-300);
+  --color-indigo-400: var(--color-blue-400);
+  --color-indigo-500: var(--color-blue-500);
+  --color-indigo-600: var(--color-blue-600);
+  --color-indigo-700: var(--color-blue-700);
+  --color-indigo-800: var(--color-blue-800);
+  --color-indigo-900: var(--color-blue-900);
+  --color-indigo-950: var(--color-blue-950);
+  --color-gray-50: var(--color-slate-50);
+  --color-gray-100: var(--color-slate-100);
+  --color-gray-200: var(--color-slate-200);
+  --color-gray-300: var(--color-slate-300);
+  --color-gray-400: var(--color-slate-400);
+  --color-gray-500: var(--color-slate-500);
+  --color-gray-600: var(--color-slate-600);
+  --color-gray-700: var(--color-slate-700);
+  --color-gray-800: var(--color-slate-800);
+  --color-gray-900: var(--color-slate-900);
+  --color-gray-950: var(--color-slate-950);
+  --color-zinc-50: var(--color-slate-50);
+  --color-zinc-100: var(--color-slate-100);
+  --color-zinc-200: var(--color-slate-200);
+  --color-zinc-300: var(--color-slate-300);
+  --color-zinc-400: var(--color-slate-400);
+  --color-zinc-500: var(--color-slate-500);
+  --color-zinc-600: var(--color-slate-600);
+  --color-zinc-700: var(--color-slate-700);
+  --color-zinc-800: var(--color-slate-800);
+  --color-zinc-900: var(--color-slate-900);
+  --color-zinc-950: var(--color-slate-950);
+  --color-stone-50: var(--color-slate-50);
+  --color-stone-100: var(--color-slate-100);
+  --color-stone-200: var(--color-slate-200);
+  --color-stone-300: var(--color-slate-300);
+  --color-stone-400: var(--color-slate-400);
+  --color-stone-500: var(--color-slate-500);
+  --color-stone-600: var(--color-slate-600);
+  --color-stone-700: var(--color-slate-700);
+  --color-stone-800: var(--color-slate-800);
+  --color-stone-900: var(--color-slate-900);
+  --color-stone-950: var(--color-slate-950);
+  --color-pink-50: var(--color-rose-50);
+  --color-pink-100: var(--color-rose-100);
+  --color-pink-200: var(--color-rose-200);
+  --color-pink-300: var(--color-rose-300);
+  --color-pink-400: var(--color-rose-400);
+  --color-pink-500: var(--color-rose-500);
+  --color-pink-600: var(--color-rose-600);
+  --color-pink-700: var(--color-rose-700);
+  --color-pink-800: var(--color-rose-800);
+  --color-pink-900: var(--color-rose-900);
+  --color-pink-950: var(--color-rose-950);
+  --color-fuchsia-50: var(--color-rose-50);
+  --color-fuchsia-100: var(--color-rose-100);
+  --color-fuchsia-200: var(--color-rose-200);
+  --color-fuchsia-300: var(--color-rose-300);
+  --color-fuchsia-400: var(--color-rose-400);
+  --color-fuchsia-500: var(--color-rose-500);
+  --color-fuchsia-600: var(--color-rose-600);
+  --color-fuchsia-700: var(--color-rose-700);
+  --color-fuchsia-800: var(--color-rose-800);
+  --color-fuchsia-900: var(--color-rose-900);
+  --color-fuchsia-950: var(--color-rose-950);
+}
+
+.dark:root[data-theme-preset="two-inks"] {
+  /* ── §2.1 有彩色 → 灰阶（保留 Tailwind 明度层级，只抽掉色相）── */
+  --color-amber-50: oklch(0.160 0.010 88);
+  --color-amber-100: oklch(0.190 0.010 88);
+  --color-amber-200: oklch(0.240 0.010 88);
+  --color-amber-300: oklch(0.320 0.010 88);
+  --color-amber-400: oklch(0.620 0.010 88);
+  --color-amber-500: oklch(0.700 0.010 88);
+  --color-amber-600: oklch(0.780 0.010 88);
+  --color-amber-700: oklch(0.850 0.010 88);
+  --color-amber-800: oklch(0.900 0.010 88);
+  --color-amber-900: oklch(0.930 0.010 88);
+  --color-amber-950: oklch(0.960 0.010 88);
+  --color-orange-50: oklch(0.160 0.010 88);
+  --color-orange-100: oklch(0.190 0.010 88);
+  --color-orange-200: oklch(0.240 0.010 88);
+  --color-orange-300: oklch(0.320 0.010 88);
+  --color-orange-400: oklch(0.620 0.010 88);
+  --color-orange-500: oklch(0.700 0.010 88);
+  --color-orange-600: oklch(0.780 0.010 88);
+  --color-orange-700: oklch(0.850 0.010 88);
+  --color-orange-800: oklch(0.900 0.010 88);
+  --color-orange-900: oklch(0.930 0.010 88);
+  --color-orange-950: oklch(0.960 0.010 88);
+  --color-emerald-50: oklch(0.160 0.010 88);
+  --color-emerald-100: oklch(0.190 0.010 88);
+  --color-emerald-200: oklch(0.240 0.010 88);
+  --color-emerald-300: oklch(0.320 0.010 88);
+  --color-emerald-400: oklch(0.620 0.010 88);
+  --color-emerald-500: oklch(0.700 0.010 88);
+  --color-emerald-600: oklch(0.780 0.010 88);
+  --color-emerald-700: oklch(0.850 0.010 88);
+  --color-emerald-800: oklch(0.900 0.010 88);
+  --color-emerald-900: oklch(0.930 0.010 88);
+  --color-emerald-950: oklch(0.960 0.010 88);
+  --color-green-50: oklch(0.160 0.010 88);
+  --color-green-100: oklch(0.190 0.010 88);
+  --color-green-200: oklch(0.240 0.010 88);
+  --color-green-300: oklch(0.320 0.010 88);
+  --color-green-400: oklch(0.620 0.010 88);
+  --color-green-500: oklch(0.700 0.010 88);
+  --color-green-600: oklch(0.780 0.010 88);
+  --color-green-700: oklch(0.850 0.010 88);
+  --color-green-800: oklch(0.900 0.010 88);
+  --color-green-900: oklch(0.930 0.010 88);
+  --color-green-950: oklch(0.960 0.010 88);
+  --color-teal-50: oklch(0.160 0.010 88);
+  --color-teal-100: oklch(0.190 0.010 88);
+  --color-teal-200: oklch(0.240 0.010 88);
+  --color-teal-300: oklch(0.320 0.010 88);
+  --color-teal-400: oklch(0.620 0.010 88);
+  --color-teal-500: oklch(0.700 0.010 88);
+  --color-teal-600: oklch(0.780 0.010 88);
+  --color-teal-700: oklch(0.850 0.010 88);
+  --color-teal-800: oklch(0.900 0.010 88);
+  --color-teal-900: oklch(0.930 0.010 88);
+  --color-teal-950: oklch(0.960 0.010 88);
+  --color-blue-50: oklch(0.160 0.010 88);
+  --color-blue-100: oklch(0.190 0.010 88);
+  --color-blue-200: oklch(0.240 0.010 88);
+  --color-blue-300: oklch(0.320 0.010 88);
+  --color-blue-400: oklch(0.620 0.010 88);
+  --color-blue-500: oklch(0.700 0.010 88);
+  --color-blue-600: oklch(0.780 0.010 88);
+  --color-blue-700: oklch(0.850 0.010 88);
+  --color-blue-800: oklch(0.900 0.010 88);
+  --color-blue-900: oklch(0.930 0.010 88);
+  --color-blue-950: oklch(0.960 0.010 88);
+  --color-sky-50: oklch(0.160 0.010 88);
+  --color-sky-100: oklch(0.190 0.010 88);
+  --color-sky-200: oklch(0.240 0.010 88);
+  --color-sky-300: oklch(0.320 0.010 88);
+  --color-sky-400: oklch(0.620 0.010 88);
+  --color-sky-500: oklch(0.700 0.010 88);
+  --color-sky-600: oklch(0.780 0.010 88);
+  --color-sky-700: oklch(0.850 0.010 88);
+  --color-sky-800: oklch(0.900 0.010 88);
+  --color-sky-900: oklch(0.930 0.010 88);
+  --color-sky-950: oklch(0.960 0.010 88);
+  --color-violet-50: oklch(0.160 0.010 88);
+  --color-violet-100: oklch(0.190 0.010 88);
+  --color-violet-200: oklch(0.240 0.010 88);
+  --color-violet-300: oklch(0.320 0.010 88);
+  --color-violet-400: oklch(0.620 0.010 88);
+  --color-violet-500: oklch(0.700 0.010 88);
+  --color-violet-600: oklch(0.780 0.010 88);
+  --color-violet-700: oklch(0.850 0.010 88);
+  --color-violet-800: oklch(0.900 0.010 88);
+  --color-violet-900: oklch(0.930 0.010 88);
+  --color-violet-950: oklch(0.960 0.010 88);
+  --color-slate-50: oklch(0.160 0.010 88);
+  --color-slate-100: oklch(0.190 0.010 88);
+  --color-slate-200: oklch(0.240 0.010 88);
+  --color-slate-300: oklch(0.320 0.010 88);
+  --color-slate-400: oklch(0.620 0.010 88);
+  --color-slate-500: oklch(0.700 0.010 88);
+  --color-slate-600: oklch(0.780 0.010 88);
+  --color-slate-700: oklch(0.850 0.010 88);
+  --color-slate-800: oklch(0.900 0.010 88);
+  --color-slate-900: oklch(0.930 0.010 88);
+  --color-slate-950: oklch(0.960 0.010 88);
+  --color-neutral-50: oklch(0.160 0.010 88);
+  --color-neutral-100: oklch(0.190 0.010 88);
+  --color-neutral-200: oklch(0.240 0.010 88);
+  --color-neutral-300: oklch(0.320 0.010 88);
+  --color-neutral-400: oklch(0.620 0.010 88);
+  --color-neutral-500: oklch(0.700 0.010 88);
+  --color-neutral-600: oklch(0.780 0.010 88);
+  --color-neutral-700: oklch(0.850 0.010 88);
+  --color-neutral-800: oklch(0.900 0.010 88);
+  --color-neutral-900: oklch(0.930 0.010 88);
+  --color-neutral-950: oklch(0.960 0.010 88);
+  /* ── §2.2 危险色族 → 专色（全站唯一保留的彩色）── */
+  --color-red-50: oklch(0.200 0.060 33);
+  --color-red-100: oklch(0.240 0.080 33);
+  --color-red-200: oklch(0.310 0.110 33);
+  --color-red-300: oklch(0.420 0.140 33);
+  --color-red-400: oklch(0.600 0.180 33);
+  --color-red-500: oklch(0.700 0.170 33);
+  --color-red-600: oklch(0.780 0.140 33);
+  --color-red-700: oklch(0.850 0.110 33);
+  --color-red-800: oklch(0.900 0.080 33);
+  --color-red-900: oklch(0.940 0.050 33);
+  --color-red-950: oklch(0.970 0.030 33);
+  --color-rose-50: oklch(0.200 0.060 33);
+  --color-rose-100: oklch(0.240 0.080 33);
+  --color-rose-200: oklch(0.310 0.110 33);
+  --color-rose-300: oklch(0.420 0.140 33);
+  --color-rose-400: oklch(0.600 0.180 33);
+  --color-rose-500: oklch(0.700 0.170 33);
+  --color-rose-600: oklch(0.780 0.140 33);
+  --color-rose-700: oklch(0.850 0.110 33);
+  --color-rose-800: oklch(0.900 0.080 33);
+  --color-rose-900: oklch(0.940 0.050 33);
+  --color-rose-950: oklch(0.970 0.030 33);
+  /* ── §2.3 低频色族：别名到已覆盖的族，一条顶一族 ── */
+  --color-yellow-50: var(--color-amber-50);
+  --color-yellow-100: var(--color-amber-100);
+  --color-yellow-200: var(--color-amber-200);
+  --color-yellow-300: var(--color-amber-300);
+  --color-yellow-400: var(--color-amber-400);
+  --color-yellow-500: var(--color-amber-500);
+  --color-yellow-600: var(--color-amber-600);
+  --color-yellow-700: var(--color-amber-700);
+  --color-yellow-800: var(--color-amber-800);
+  --color-yellow-900: var(--color-amber-900);
+  --color-yellow-950: var(--color-amber-950);
+  --color-lime-50: var(--color-green-50);
+  --color-lime-100: var(--color-green-100);
+  --color-lime-200: var(--color-green-200);
+  --color-lime-300: var(--color-green-300);
+  --color-lime-400: var(--color-green-400);
+  --color-lime-500: var(--color-green-500);
+  --color-lime-600: var(--color-green-600);
+  --color-lime-700: var(--color-green-700);
+  --color-lime-800: var(--color-green-800);
+  --color-lime-900: var(--color-green-900);
+  --color-lime-950: var(--color-green-950);
+  --color-cyan-50: var(--color-sky-50);
+  --color-cyan-100: var(--color-sky-100);
+  --color-cyan-200: var(--color-sky-200);
+  --color-cyan-300: var(--color-sky-300);
+  --color-cyan-400: var(--color-sky-400);
+  --color-cyan-500: var(--color-sky-500);
+  --color-cyan-600: var(--color-sky-600);
+  --color-cyan-700: var(--color-sky-700);
+  --color-cyan-800: var(--color-sky-800);
+  --color-cyan-900: var(--color-sky-900);
+  --color-cyan-950: var(--color-sky-950);
+  --color-purple-50: var(--color-violet-50);
+  --color-purple-100: var(--color-violet-100);
+  --color-purple-200: var(--color-violet-200);
+  --color-purple-300: var(--color-violet-300);
+  --color-purple-400: var(--color-violet-400);
+  --color-purple-500: var(--color-violet-500);
+  --color-purple-600: var(--color-violet-600);
+  --color-purple-700: var(--color-violet-700);
+  --color-purple-800: var(--color-violet-800);
+  --color-purple-900: var(--color-violet-900);
+  --color-purple-950: var(--color-violet-950);
+  --color-indigo-50: var(--color-blue-50);
+  --color-indigo-100: var(--color-blue-100);
+  --color-indigo-200: var(--color-blue-200);
+  --color-indigo-300: var(--color-blue-300);
+  --color-indigo-400: var(--color-blue-400);
+  --color-indigo-500: var(--color-blue-500);
+  --color-indigo-600: var(--color-blue-600);
+  --color-indigo-700: var(--color-blue-700);
+  --color-indigo-800: var(--color-blue-800);
+  --color-indigo-900: var(--color-blue-900);
+  --color-indigo-950: var(--color-blue-950);
+  --color-gray-50: var(--color-slate-50);
+  --color-gray-100: var(--color-slate-100);
+  --color-gray-200: var(--color-slate-200);
+  --color-gray-300: var(--color-slate-300);
+  --color-gray-400: var(--color-slate-400);
+  --color-gray-500: var(--color-slate-500);
+  --color-gray-600: var(--color-slate-600);
+  --color-gray-700: var(--color-slate-700);
+  --color-gray-800: var(--color-slate-800);
+  --color-gray-900: var(--color-slate-900);
+  --color-gray-950: var(--color-slate-950);
+  --color-zinc-50: var(--color-slate-50);
+  --color-zinc-100: var(--color-slate-100);
+  --color-zinc-200: var(--color-slate-200);
+  --color-zinc-300: var(--color-slate-300);
+  --color-zinc-400: var(--color-slate-400);
+  --color-zinc-500: var(--color-slate-500);
+  --color-zinc-600: var(--color-slate-600);
+  --color-zinc-700: var(--color-slate-700);
+  --color-zinc-800: var(--color-slate-800);
+  --color-zinc-900: var(--color-slate-900);
+  --color-zinc-950: var(--color-slate-950);
+  --color-stone-50: var(--color-slate-50);
+  --color-stone-100: var(--color-slate-100);
+  --color-stone-200: var(--color-slate-200);
+  --color-stone-300: var(--color-slate-300);
+  --color-stone-400: var(--color-slate-400);
+  --color-stone-500: var(--color-slate-500);
+  --color-stone-600: var(--color-slate-600);
+  --color-stone-700: var(--color-slate-700);
+  --color-stone-800: var(--color-slate-800);
+  --color-stone-900: var(--color-slate-900);
+  --color-stone-950: var(--color-slate-950);
+  --color-pink-50: var(--color-rose-50);
+  --color-pink-100: var(--color-rose-100);
+  --color-pink-200: var(--color-rose-200);
+  --color-pink-300: var(--color-rose-300);
+  --color-pink-400: var(--color-rose-400);
+  --color-pink-500: var(--color-rose-500);
+  --color-pink-600: var(--color-rose-600);
+  --color-pink-700: var(--color-rose-700);
+  --color-pink-800: var(--color-rose-800);
+  --color-pink-900: var(--color-rose-900);
+  --color-pink-950: var(--color-rose-950);
+  --color-fuchsia-50: var(--color-rose-50);
+  --color-fuchsia-100: var(--color-rose-100);
+  --color-fuchsia-200: var(--color-rose-200);
+  --color-fuchsia-300: var(--color-rose-300);
+  --color-fuchsia-400: var(--color-rose-400);
+  --color-fuchsia-500: var(--color-rose-500);
+  --color-fuchsia-600: var(--color-rose-600);
+  --color-fuchsia-700: var(--color-rose-700);
+  --color-fuchsia-800: var(--color-rose-800);
+  --color-fuchsia-900: var(--color-rose-900);
+  --color-fuchsia-950: var(--color-rose-950);
+}/* ====================== §3 物性归一 ====================== */
+/* 只在本预设生效；Shadow / 装饰动效 / 大写字距 三类"科技感"来源统一收口。 */
+
+/* 3.1 阴影归零（即便组件上仍写着 shadow-md，也渲染为无阴影） */
+:root[data-theme-preset="two-inks"] [class*="shadow-"] {
+  --tw-shadow: 0 0 #0000;
+  box-shadow: none;
+}
+
+/* 3.2 装饰动效停用：只关"循环/进场"，功能性动效（spin / in / out / accordion）保留 */
+:root[data-theme-preset="two-inks"] .animate-fade-up,
+:root[data-theme-preset="two-inks"] .animate-scale-in,
+:root[data-theme-preset="two-inks"] .animate-glow-once,
+:root[data-theme-preset="two-inks"] .animate-pulse,
+:root[data-theme-preset="two-inks"] .animate-pulse-soft {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+/* 3.3 全大写不适用于中文；字距收回到正常排版值 */
+:root[data-theme-preset="two-inks"] .uppercase {
+  text-transform: none;
+}
+:root[data-theme-preset="two-inks"] [class*="tracking-widest"] {
+  letter-spacing: 0.04em;
+}
+:root[data-theme-preset="two-inks"] [class*="tracking-wider"] {
+  letter-spacing: 0.02em;
+}
+
+/* 3.4 微型字号抬一档。
+   全站 text-xs 出现在 111 个文件里（1180 处），它实际承担的是正文而不是注脚 ——
+   这就是"阅读疲劳"的主因。在预设层把它抬到 12.8/1.55，与 text-sm(14px) 仍保留层级差。
+   根治办法是用 scripts/migrate-type-scale.mjs 把 text-xs 迁到 text-ui-xs 后删掉本节。 */
+:root[data-theme-preset="two-inks"] .text-xs {
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+:root[data-theme-preset="two-inks"] .text-\[10px\],
+:root[data-theme-preset="two-inks"] .text-\[11px\] {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+/* 3.5 圆角收口：只压容器级圆角。rounded-full 必须保留（头像/状态点依赖它），
+   故按档位点名，不做 [class*=] 通配。 */
+:root[data-theme-preset="two-inks"] [class*="rounded-md"],
+:root[data-theme-preset="two-inks"] [class*="rounded-lg"],
+:root[data-theme-preset="two-inks"] [class*="rounded-xl"],
+:root[data-theme-preset="two-inks"] [class*="rounded-2xl"],
+:root[data-theme-preset="two-inks"] [class*="rounded-3xl"] {
+  border-radius: var(--radius);
+}
