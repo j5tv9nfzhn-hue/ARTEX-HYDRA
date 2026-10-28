@@ -5,6 +5,7 @@ import * as React from "react";
 import { RefreshCwIcon, ShieldAlertIcon, WifiIcon, WifiOffIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { Masthead } from "@/components/editorial";
 import { CopyButton } from "@/components/copy-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -128,10 +129,7 @@ export default function LanPage() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="text-sm font-normal leading-relaxed text-muted-foreground">{t("desc")}</p>
-        </div>
+        <Masthead title={t("title")} subtitle={t("desc")} titleClassName="text-xl" subtitleClassName="text-sm font-normal leading-relaxed" />
         <Button type="button" size="sm" variant="outline" disabled={loading || switching} onClick={() => void load()}>
           <RefreshCwIcon />
           {t("refresh")}

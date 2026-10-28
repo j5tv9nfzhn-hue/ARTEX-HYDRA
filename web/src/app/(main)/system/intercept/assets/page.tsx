@@ -6,6 +6,7 @@ import { BanIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Masthead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -183,10 +184,7 @@ export default function AssetInterceptPage() {
       {/* header */}
       <div className="flex items-center gap-2.5">
         <BanIcon className="h-5 w-5 shrink-0" />
-        <div>
-          <h1 className="text-lg font-semibold leading-tight">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{t("subtitle")}</p>
-        </div>
+        <Masthead title={t("title")} titleClassName="text-lg leading-tight" subtitle={t("subtitle")} subtitleClassName="text-sm mt-0.5" />
       </div>
 
       <div className="flex items-center justify-between gap-3">

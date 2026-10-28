@@ -7,8 +7,13 @@
 @import "../styles/presets/brutalist.css";
 @import "../styles/presets/command.css";
 @import "../styles/presets/matrix.css";
+@import "../styles/presets/paper.css";
 @import "../styles/presets/soft-pop.css";
 @import "../styles/presets/tangerine.css";
+@import "../styles/presets/two-inks.css";
+
+/* 编辑排版层：只在 data-theme-preset="paper" 下生效，其余预设零影响 */
+@import "../styles/editorial.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -55,6 +60,10 @@
      亮/暗各一份在文件末尾定义；diff-view.tsx 只用 text-diff-added / bg-diff-removed 这类工具类 */
   --color-diff-added: var(--diff-added);
   --color-diff-removed: var(--diff-removed);
+  /* 双墨预设的专色：唯一有彩色，供 text-spot / bg-spot / border-spot 直接使用。
+     其它预设不定义 --spot，取到空值即不生效，不会污染既有主题。 */
+  --color-spot: var(--spot, var(--primary));
+  --color-spot-weak: var(--spot-weak, var(--accent));
   /* 对话区微型字号：把散落的 text-[10px] / text-[11px] 收敛成两支令牌，
      行高随字号一起给出，避免每个组件各写一个像素值 */
   --text-ui-2xs: 10px;

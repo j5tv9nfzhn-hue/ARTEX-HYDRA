@@ -800,7 +800,7 @@ export function ApprovalRecords({ taskId }: { taskId?: string }) {
     }));
   const title = taskId ? t("title.task") : t("title.history");
   return (
-    <div className="flex min-w-0 flex-col gap-5">
+    <div data-editorial="body" className="flex min-w-0 flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <ClipboardListIcon className="size-5 text-muted-foreground" />

@@ -1,0 +1,182 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   编辑排版层（方案 A · 纸张 · 编年）
+   ────────────────────────────────────────────────────────────────────────────
+   这一层只负责「结构 → 排版」的翻译，全部规则都挂在
+   [data-theme-preset="paper"] 之下。
+
+   因此：
+   - 其余 8 套主题（默认 / 琥珀终端 / 粗野主义 / 深空指挥室 / 矩阵绿 /
+     柔和流行 / 柑橘 / 双墨）**完全不受影响**，回落到改造前的观感；
+   - 令牌层（纸色、墨色、主色、圆角、阴影）仍然在 presets/paper.css 里，
+     这里不动它们，只补「卡片以外」的报纸语法：报头、章节号、数据栏。
+
+   为什么不做成 @layer：这里的规则要和 Tailwind 的 @layer utilities 竞争，
+   未分层（unlayered）的规则天然优先，比到处加 !important 干净。
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* 结构锚点的默认状态 —— 先让所有主题看起来和改造前一样。 */
+
+[data-editorial="masthead-meta"] {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-editorial="secnum"] {
+  display: none;
+}
+
+/* ── 纸本主题：报头 ───────────────────────────────────────────────────────── */
+
+[data-theme-preset="paper"] {
+  --ed-serif:
+    "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "Source Han Serif CN", "SimSun", Georgia,
+    "Times New Roman", serif;
+}
+
+[data-theme-preset="paper"] [data-editorial="masthead"] {
+  padding-bottom: 10px;
+  border-bottom: 3px double var(--border);
+}
+
+[data-theme-preset="paper"] [data-editorial="masthead-meta"] {
+  margin: 0 0 9px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+[data-theme-preset="paper"] [data-editorial="masthead"] h1 {
+  font-family: var(--ed-serif);
+  font-size: clamp(28px, 3vw, 38px);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+}
+
+[data-theme-preset="paper"] [data-editorial="masthead"] p {
+  margin-top: 6px;
+  font-family: var(--ed-serif);
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* ── 纸本主题：章节号 ─────────────────────────────────────────────────────── */
+
+[data-theme-preset="paper"] [data-editorial="sechead"] {
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+}
+
+[data-theme-preset="paper"] [data-editorial="secnum"] {
+  display: inline;
+  margin-right: 1px;
+  font-family: var(--ed-serif);
+  font-size: 12px;
+  font-style: italic;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+/* ── 纸本主题：数据栏（竖线分栏，不是一排卡片）───────────────────────────── */
+
+[data-theme-preset="paper"] [data-editorial="kpi-band"] {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+[data-theme-preset="paper"] [data-editorial="kpi-row"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+}
+
+[data-theme-preset="paper"] [data-editorial="kpi-row"] > * {
+  padding-left: 14px;
+  border-left: 1px solid var(--border);
+}
+
+[data-theme-preset="paper"] [data-editorial="kpi-row"] > *:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+/* 窄屏回落两栏：四栏竖线分栏是给桌面宽视口准备的 */
+@media (max-width: 1023px) {
+  [data-theme-preset="paper"] [data-editorial="kpi-row"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  [data-theme-preset="paper"] [data-editorial="kpi-row"] > * {
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+/* 主 KPI 在报纸里是「导语」，不该被装进一个盒子里 */
+[data-theme-preset="paper"] [data-editorial="kpi-band"] > [data-slot="card"] {
+  background: transparent;
+}
+
+/* ── 纸本主题：去掉卡片的外壳语言 ─────────────────────────────────────────── */
+
+[data-theme-preset="paper"] [data-slot="card"] {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+/* ── 纸本主题：正文腔调（限定在页面主体内，不碰侧栏与顶栏）────────────────── */
+
+/* 全大写 + 超宽字距是机器感的来源之一，纸本一律收回正文腔调。
+   注意作用域：只对挂了 data-editorial="body" 的页面主体生效，
+   侧栏导航、顶部工具条这些「机器外壳」保持原样。 */
+[data-theme-preset="paper"] [data-editorial="body"] .uppercase {
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
+/* ── 纸本主题：表格语法（A 方案里权重最大的一块）─────────────────────────────
+   报纸的表格没有网格、没有斑马纹：表头是一条 2px 实线压住，行间只有发丝线，
+   数字一律等宽对齐。这里同时覆盖 ui/table 组件与手写 <table> 两种写法。 */
+
+[data-theme-preset="paper"] [data-editorial="body"] thead {
+  border-top: 2px solid var(--foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme-preset="paper"] [data-editorial="body"] th {
+  background: transparent;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--muted-foreground);
+}
+
+[data-theme-preset="paper"] [data-editorial="body"] tbody tr {
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme-preset="paper"] [data-editorial="body"] tbody tr:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+/* 斑马纹在纸上读成「脏」，一律去掉 */
+[data-theme-preset="paper"] [data-editorial="body"] tbody tr:nth-child(even) {
+  background: transparent;
+}
+
+[data-theme-preset="paper"] [data-editorial="body"] table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 纸本主题：装饰性入场动效静音 ─────────────────────────────────────────────
+   报纸不会「淡入」。保留 spin（加载态是真实反馈），
+   只关掉装饰性的进场与呼吸动画。 */
+[data-theme-preset="paper"] [data-editorial="body"] .animate-fade-up,
+[data-theme-preset="paper"] [data-editorial="body"] .animate-scale-in,
+[data-theme-preset="paper"] [data-editorial="body"] .animate-pulse-soft,
+[data-theme-preset="paper"] [data-editorial="body"] .animate-glow-once {
+  animation: none;
+}
