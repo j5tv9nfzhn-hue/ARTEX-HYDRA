@@ -49,8 +49,8 @@ usage() {
 桌面端（--desktop）走独立 Go 模块 desktop/，产物是**单文件** artex-hydra-desktop
 （无 core、无 versions/，数据与它同目录），名字基名经 ldflags 注入 selfupdate；
 CGO 依赖平台原生 webview 库：Windows 与 Linux 必须在对应架构上原生构建；macOS
-两个架构可在同一台 Apple Silicon 上出（x86_64 由 clang -arch 交叉；CI 不用这条例外，
-arm64 与 x86_64 各有专属 runner）。所有 darwin 构建一律带 -mmacosx-version-min=11.0。
+两个架构在同一台 Apple Silicon 上出（x86_64 由 clang -arch 交叉；CI 的 darwin 行即走此路径，
+一个 macos-26 job 内先 arm64 后 amd64）。所有 darwin 构建一律带 -mmacosx-version-min=11.0。
 macOS 打包为 .app bundle，其余平台为 zip。产物名带 -desktop 后缀，与 WEB 版区分。
 EOF
 }
@@ -421,9 +421,8 @@ build_desktop_target() {
   # 桌面端默认必须原生构建：CGO 依赖平台原生 webview 库（Windows=WebView2、
   # macOS=WebKit、Linux=webkit2gtk）。macOS 是唯一的例外——Apple 的 SDK 与 clang
   # 在同一台机器上同时带 arm64 与 x86_64 两个 slice，加 -arch 就能在 Apple Silicon
-  # 上编出 Intel 目标。CI 不依赖这条例外（darwin/amd64 跑在 macos-26-intel 上原生
-  # 构建），留着是给本机一把出两架构用的；Windows 与 Linux 没有这种条件，跨架构
-  # 请求一律拒绝。
+  # 上编出 Intel 目标。CI 的 darwin 行也走这条路径（同一个 macos-26 job 内先 arm64、后 amd64，
+  # 见 release.yml）；Windows 与 Linux 没有这种条件，跨架构请求一律拒绝。
   #
   # 最低系统版本对**所有** darwin 构建一律写死 11.0，不只交叉时给：clang 不带
   # -mmacosx-version-min 时，产物 LC_BUILD_VERSION 的 minos 取 runner 那套 SDK 的

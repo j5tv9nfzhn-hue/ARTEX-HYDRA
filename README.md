@@ -527,7 +527,7 @@ gh 只读查询（run list / release list / api GET）
 
 | 工作流 | 职责 |
 |---|---|
-| `.github/workflows/release.yml` | **唯一的构建流水线**：gate（编译/静态）→ frontend → binaries（6 目标）→ desktop（桌面端六端各自原生 runner：Windows/Linux 按架构，macOS 用 `macos-26` 与 `macos-26-intel`）→ release；`workflow_dispatch` 可干跑不发布 |
+| `.github/workflows/release.yml` | **唯一的构建流水线**：gate（编译/静态）→ frontend → binaries（6 目标）→ desktop（桌面端六端：Windows/Linux 各自原生 runner，macOS 一个 `macos-26` job 内依次出 arm64 与 amd64）→ release；`workflow_dispatch` 可干跑不发布 |
 | `.github/workflows/detections.yml` | 检测规则与指标回归（`push` 时忽略 `v*` tag） |
 | `.github/workflows/verification-helper.yml` | 手动触发，单独模块 |
 
@@ -601,7 +601,7 @@ gate       tag 格式 + go build + go vet + go vet -tags embedui + gofmt + golan
 frontend   npm ci → npm test / biome（信号）→ build:static（硬门禁，含类型检查）
 binaries   6 目标交叉编译 + 头校验 + 打包
 desktop    Wails V2 桌面端六端（三平台 × amd64/arm64：Windows/Linux 用对应架构的
-           原生 runner；macOS 两个架构分别用 macos-26 与 macos-26-intel，各自原生构建）
+           原生 runner；macOS 在一个 macos-26 job 内依次构建 arm64（原生）与 amd64（同机 clang -arch 交叉））
            + gofmt + 产物头校验 + 打包
 release    校验 6+6 个 zip → sha256sum → 建草稿 → 上传 → latest.json → 转正
            if: failure() → 删除草稿，保留 tag
@@ -610,7 +610,7 @@ signals    go test / 语言检查 / 文档链接（continue-on-error，只报告
 
 **为什么只有一份构建**：2026-10-21 之前 `ci.yml` 与 `release.yml` 各有一套前端构建与 Go 编译，两处维护、两套缓存 key，还会出现「ci 绿了但 release 挂了」。现在合并为 `release.yml` 一份；`workflow_dispatch` 用于打 tag 前干跑（不发布）。
 
-**桌面端模块（desktop/）**：独立 Go 模块（`replace` 复用根模块后端），Wails V2 桌面壳。wails 是 CGO 依赖，独立模块避免污染根模块的纯静态（`CGO_ENABLED=0`）构建与门禁。桌面端编译由 `desktop` job 承担六端（三平台 × amd64/arm64），全部原生构建：Windows 与 Linux 各在对应架构的 runner 上，macOS 的 arm64 用 `macos-26`、x86_64 用 `macos-26-intel`（两个不同池的标签，不挤同一个）；最低系统对所有 darwin 构建一律 `-mmacosx-version-min=11.0`。本机不构建桌面端。`desktop/go.sum` 不入库，首次构建（CI 或本机）由 `go mod tidy` 生成。
+**桌面端模块（desktop/）**：独立 Go 模块（`replace` 复用根模块后端），Wails V2 桌面壳。wails 是 CGO 依赖，独立模块避免污染根模块的纯静态（`CGO_ENABLED=0`）构建与门禁。桌面端编译由 `desktop` job 承担六端（三平台 × amd64/arm64）：Windows 与 Linux 各在对应架构的 runner 上原生构建，macOS 的两个架构合并进一个 `macos-26` job：arm64 原生，x86_64 由 `build.sh` 同机 clang `-arch` 交叉（只需一次 runner 获取，不依赖 Intel 镜像）；最低系统对所有 darwin 构建一律 `-mmacosx-version-min=11.0`。本机不构建桌面端。`desktop/go.sum` 不入库，首次构建（CI 或本机）由 `go mod tidy` 生成。
 
 **为什么测试不进门禁**：测试失败不代表二进制坏掉；把测试挂在发版链路上，会让一次 flaky 测试挡住整个版本。编译与静态检查才是「产物能不能用」的必要条件。
 

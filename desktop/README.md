@@ -89,20 +89,16 @@ CGO 依赖平台原生 webview 库，桌面端六端（Windows / macOS / Linux �
 | --- | --- |
 | windows/amd64 | `windows-latest` |
 | windows/arm64 | `windows-11-arm` |
-| linux/amd64 | `ubuntu-latest` |
+| linux/amd64 | `ubuntu-24.04` |
 | linux/arm64 | `ubuntu-24.04-arm` |
 | darwin/arm64 | `macos-26` |
-| darwin/amd64 | `macos-26-intel` |
+| darwin/amd64 | `macos-26`（与 arm64 同一 job，同机交叉） |
 
-macOS 特意用两个不同池的标签，而不是把两个架构挤在同一个镜像上：`macos-15` 实测已经
-给不出机器（darwin job 全程 0 步骤 0 日志、卡在「waiting for a hosted runner to come
-online」被取消，而同批 Windows/Linux job 全绿）；把两架构合并成一个 job 也救不了——
-合并版同样被取消，说明瓶颈在标签的池子，不在并发个数。runner 拾取发生在任何仓库代码
-执行之前，这类取消与构建脚本无关，别去改 `build.sh` 找原因。
+macOS 两个架构合并进同一个 `macos-26` job，依次构建。GitHub 的 macOS 并发上限按账号计算、与标签无关；每个 macOS job 都要单独拿一台机器，拿不到就整次发版失败，合并后只有一次获取机会。`macos-15` 曾在多次运行中 0 步骤被取消（runner 拾取阶段，与仓库代码无关），因此不再使用；此前「拆成两个 macOS 标签」的做法已撤回。
 
 `build.sh --desktop` 仍保留「macOS 可在同一台 Apple Silicon 上跨到另一架构」的能力
 （clang 双 slice，`-arch` 同时进 CGO_CFLAGS 与 CGO_LDFLAGS），供本机一把出两架构用；
-CI 不走它。除 macOS 之外的跨架构请求一律直接拒绝。两条兜底：所有 darwin 构建一律带
+CI 的 darwin 行也走它（同一 job 内先 arm64、后 amd64）。除 macOS 之外的跨架构请求一律直接拒绝。两条兜底：所有 darwin 构建一律带
 `-mmacosx-version-min=11.0`（不加时 minos 会取 runner 那套 SDK 的默认部署目标，在
 macos-26 上就是 26.x，等于发一个只在新系统能开的包），以及构建后用
 `scripts/check-binary-headers.py` 校验产物机器类型码——「`-arch` 没生效、包其实是宿主

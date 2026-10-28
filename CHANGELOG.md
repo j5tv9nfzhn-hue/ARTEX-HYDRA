@@ -5,6 +5,12 @@
 
 ## [Unreleased] · 分支改动
 
+### 发布与产物
+
+- **macOS 桌面端合并进一个 `macos-26` job，产物仍是六端**：darwin/amd64 不再占用 `macos-26-intel`，改为同一个 arm64 job 内由 `build.sh --desktop`（`ARTEX_TARGET_ARCH=amd64`）经 clang `-arch x86_64` 同机交叉构建；两个架构依次构建，`pkg-desktop-darwin` 一次上传两个 zip。目的是减少 runner 获取次数（每个 macOS job 都要单独拿机器）。`release` 的服务器 6 + 桌面 6 齐全校验不变。
+- **桌面端 CI 小修**：`desktop` job 设 `timeout-minutes: 60`；linux/amd64 钉到 `ubuntu-24.04`；Go 编译缓存路径改由 `go env GOCACHE` 取得；不再缓存 `build.sh` 生成的 `desktop/go.mod`、`go.sum`。
+- 本次合并方案尚未在 CI 验证，首次变更需用 `workflow_dispatch` 干跑确认。
+
 ### 模型与成本
 
 - **删除供应商改为一次性级联**：事务内按「模型 → 供应商 → 激活位交接」删除，返回被带走的模型数；新库外键补 `ON DELETE CASCADE`，老库由 Go 事务保证同一结果。前端只留一个确认框，不再要求先删光模型。
