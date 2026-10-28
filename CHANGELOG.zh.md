@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+### 变更
+
+- **macOS 桌面端合并进一个 `macos-26` job，产物仍是六端**：darwin/amd64 不再占用 `macos-26-intel`，改为在同一个 arm64 job 内由 `build.sh --desktop`（`ARTEX_TARGET_ARCH=amd64`）经 clang `-arch x86_64` 同机交叉构建；两个架构依次构建，`pkg-desktop-darwin` 一次上传两个 zip。目的是减少 runner 获取次数：每个 macOS job 都要单独拿机器，拿不到就整次发版失败，合并后只有一次获取机会。Intel 镜像也不再依赖（Apple 已停止 x86_64 支持，macOS 15 Intel 镜像预计 2027 年秋退役）。`release` 的服务器 6 + 桌面 6 齐全校验不变。
+- **桌面端 CI 稳定性小修**：`desktop` job 设 `timeout-minutes: 60`；linux/amd64 钉到 `ubuntu-24.04`，与 linux/arm64 对齐；Go 编译缓存路径改由 `go env GOCACHE` 取得（原先 Windows 写死的 `%LocalAppData%` 按字面匹配，从不命中）；不再缓存 `build.sh` 生成的 `desktop/go.mod`、`go.sum`。
+- **撤回「拆成 macos-26 / macos-26-intel 两个池」的做法**：那是基于对额度的误判，且 Intel 镜像将退役。注意：本次合并方案尚未在 CI 验证，首次变更需用 `workflow_dispatch` 干跑确认。
+
 ## [2.5.0.6] - 2026-10-27
 
 版本号收敛到「tag 是唯一真相来源」：二进制 `-X main.version` 与前端静态包的
