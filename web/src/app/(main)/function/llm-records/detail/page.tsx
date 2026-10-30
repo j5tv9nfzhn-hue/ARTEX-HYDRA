@@ -117,17 +117,14 @@ function RecordDetailInner() {
           meta={
             <>
               <code className="font-mono text-xs">#{rec.id}</code>
-              <span className="mx-1.5 opacity-40">·</span>
               <span className="font-mono">{rec.profile_name || "—"}</span>
-              <span className="mx-1.5 opacity-40">·</span>
               <span>{rec.status === "ok" ? t("statusOk") : t("statusError")}</span>
-              <span className="mx-1.5 opacity-40">·</span>
               <span className="tabular-nums">{rec.ts}</span>
             </>
           }
           subtitle={[rec.worker || null, rec.task_id ? `#${rec.task_id}` : null, rec.session_id || null]
             .filter(Boolean)
-            .join(" · ")}
+            .join(" / ")}
           titleClassName="text-xl"
         />
         {back}

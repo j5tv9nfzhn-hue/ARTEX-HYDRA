@@ -113,11 +113,8 @@ function ApprovalDetailInner() {
           meta={
             <>
               <code className="font-mono text-xs">#{row.id}</code>
-              <span className="mx-1.5 opacity-40">·</span>
               <span className="font-mono">{row.agent_name || "—"}</span>
-              <span className="mx-1.5 opacity-40">·</span>
               <Badge variant="outline">{ta(`status.${row.status}`)}</Badge>
-              <span className="mx-1.5 opacity-40">·</span>
               <span className="tabular-nums">{row.created_at}</span>
             </>
           }

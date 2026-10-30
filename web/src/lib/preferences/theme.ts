@@ -24,7 +24,7 @@ export type ResolvedThemeMode = "light" | "dark";
 
 export const SKIN_OPTIONS = [
   { label: "经典", value: "classic", hint: "原本的九套预设" },
-  { label: "纸本", value: "editorial", hint: "书刊排版 · 发丝线 · 等宽数字" },
+  { label: "纸本", value: "editorial", hint: "书刊排版 / 发丝线 / 等宽数字" },
 ] as const;
 
 export const SKIN_VALUES = SKIN_OPTIONS.map((o) => o.value);

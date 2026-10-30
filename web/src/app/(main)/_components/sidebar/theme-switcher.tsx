@@ -36,7 +36,7 @@ export function SkinSwitcher() {
         void persistPreference("skin", next);
       }}
       aria-label={skin === "editorial" ? "当前为新主题（纸本），点击切回老主题" : "当前为老主题，点击切到新主题（纸本）"}
-      title={skin === "editorial" ? "新主题 · 纸本" : "老主题"}
+      title={skin === "editorial" ? "新主题 / 纸本" : "老主题"}
       data-skin-state={skin}
     >
       <Type className="size-4" />

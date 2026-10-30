@@ -105,15 +105,21 @@ function TrafficDetailInner() {
           meta={
             <>
               {meta ? <span className="font-mono">{meta.method}</span> : null}
-              {meta ? <span className="mx-1.5 opacity-40">·</span> : null}
               {meta ? <span className="tabular-nums">{meta.status}</span> : null}
-              {meta ? <span className="mx-1.5 opacity-40">·</span> : null}
               {meta ? <span className="font-mono">{meta.host}</span> : null}
-              <span className="mx-1.5 opacity-40">·</span>
               <code className="font-mono text-xs">{id}</code>
             </>
           }
-          subtitle={meta ? `${meta.ts} · ${meta.content_type || t("noContentType")}` : t("metaGone")}
+          subtitle={
+            meta ? (
+              <span className="inline-flex flex-wrap items-center gap-x-1.5">
+                <span>{meta.ts}</span>
+                <span>{meta.content_type || t("noContentType")}</span>
+              </span>
+            ) : (
+              t("metaGone")
+            )
+          }
           titleClassName="text-xl"
         />
         {back}

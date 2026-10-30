@@ -129,17 +129,14 @@ function SkillDetailInner() {
           meta={
             <>
               <span>{skill.origin || t("originUnknown")}</span>
-              <span className="mx-1.5 opacity-40">·</span>
               <span className="tabular-nums">{t("callsMeta", { n: skill.calls })}</span>
               {skill.last_used ? (
                 <>
-                  <span className="mx-1.5 opacity-40">·</span>
                   <span className="tabular-nums">{skill.last_used}</span>
                 </>
               ) : null}
               {skill.out_of_sync ? (
                 <>
-                  <span className="mx-1.5 opacity-40">·</span>
                   <span>{t("outOfSync")}</span>
                 </>
               ) : null}

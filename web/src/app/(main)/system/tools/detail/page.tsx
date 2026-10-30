@@ -106,13 +106,10 @@ function ToolDetailInner() {
           meta={
             <>
               <span>{tool.system ? t("system") : t("custom")}</span>
-              <span className="mx-1.5 opacity-40">·</span>
               <span>{tool.kind || "builtin"}</span>
-              <span className="mx-1.5 opacity-40">·</span>
               <span>{tool.enabled ? t("enabled") : t("disabled")}</span>
               {tool.deferred ? (
                 <>
-                  <span className="mx-1.5 opacity-40">·</span>
                   <span>{t("deferred")}</span>
                 </>
               ) : null}
@@ -234,8 +231,9 @@ function ToolDetailInner() {
                     ]}
                   >
                     <span className="block truncate font-mono text-xs">{c.command}</span>
-                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                      {c.is_error ? t("callFailed") : t("callOk")} · {c.worker || "—"}
+                    <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="shrink-0">{c.is_error ? t("callFailed") : t("callOk")}</span>
+                      <span className="truncate">{c.worker || "—"}</span>
                     </span>
                   </RecordRow>
                 ))}

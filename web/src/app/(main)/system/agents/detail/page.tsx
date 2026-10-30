@@ -34,7 +34,6 @@ function AgentDetailInner() {
           meta={
             <>
               <code className="font-mono text-xs">{key || "—"}</code>
-              <span className="mx-1.5 opacity-40">·</span>
               <span>{t("metaEditor")}</span>
             </>
           }

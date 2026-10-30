@@ -77,7 +77,6 @@ function TaskSessionInner() {
               <Link href={`/function/tasks/detail?id=${encodeURIComponent(id)}`} className="hover:underline">
                 {task?.name || task?.description || `#${id}`}
               </Link>
-              <span className="mx-1.5 opacity-40">·</span>
               <code className="font-mono text-xs">#{id}</code>
             </>
           }

@@ -104,13 +104,10 @@ function MCPDetailInner() {
           meta={
             <>
               <code className="font-mono text-xs">#{server.id}</code>
-              <span className="mx-1.5 opacity-40">·</span>
               <span className="font-mono">{server.transport}</span>
-              <span className="mx-1.5 opacity-40">·</span>
               <span>{server.enabled ? t("enabled") : t("disabled")}</span>
               {server.insecure ? (
                 <>
-                  <span className="mx-1.5 opacity-40">·</span>
                   <span className="text-amber-600 dark:text-amber-400">{t("insecure")}</span>
                 </>
               ) : null}
@@ -167,7 +164,7 @@ function MCPDetailInner() {
             ) : null}
             {envKeys.length > 0 ? (
               <RecordRow lead={t("row.env")} cols="72px minmax(0,1fr)">
-                <span className="font-mono text-[12px]">{envKeys.join(" · ")}</span>
+                <span className="font-mono text-[12px]">{envKeys.join(" / ")}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">{t("envHint")}</span>
               </RecordRow>
             ) : null}

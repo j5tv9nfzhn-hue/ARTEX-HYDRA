@@ -118,16 +118,14 @@ function CommandDetailInner() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      {/* 书眉：编号 / 工具 / 状态一行，标题是「工具 · 一句话」，下面是字段条 */}
+      {/* 书眉：编号 / 工具 / 状态一行，标题是「工具 / 一句话」，下面是字段条 */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <Masthead
           title={t("title")}
           meta={
             <>
               <code className="font-mono text-xs">#{record.id}</code>
-              <span className="mx-1.5 opacity-40">·</span>
               <span>{record.tool}</span>
-              <span className="mx-1.5 opacity-40">·</span>
               <span className={record.is_error ? "text-destructive" : "text-emerald-600"}>
                 {record.is_error ? "失败" : "成功"}
               </span>

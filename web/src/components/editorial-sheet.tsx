@@ -165,7 +165,7 @@ export function RecordRow({
   );
 }
 
-/** 记录行里的第二行：来源 · 时间 · 证据数这类。中间用 2px 圆点隔开。 */
+/** 记录行里的第二行：来源、时间、证据数这类。中间用 2px 圆点隔开。 */
 export function RecordSub({ items }: { items: React.ReactNode[] }) {
   const nodes = items.filter((x) => x !== null && x !== undefined && x !== "");
   return (

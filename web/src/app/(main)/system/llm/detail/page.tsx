@@ -140,13 +140,10 @@ function LLMDetailInner() {
           meta={
             <>
               <code className="font-mono text-xs">#{profile.id}</code>
-              <span className="mx-1.5 opacity-40">·</span>
               <span className="font-mono">{profile.model}</span>
-              <span className="mx-1.5 opacity-40">·</span>
               <span className="font-mono">{profile.format}</span>
               {profile.is_default ? (
                 <>
-                  <span className="mx-1.5 opacity-40">·</span>
                   <span>{t("defaultTag")}</span>
                 </>
               ) : null}
@@ -214,7 +211,7 @@ function LLMDetailInner() {
             <RecordRow
               lead={t("row.modalities")}
               cols="104px minmax(0,1fr) auto"
-              values={[modalities.length ? modalities.join(" · ") : "text"]}
+              values={[modalities.length ? modalities.join(" / ") : "text"]}
             >
               <span className="text-[13px] text-muted-foreground">{t("modalitiesNote")}</span>
             </RecordRow>
@@ -308,8 +305,9 @@ function LLMDetailInner() {
                 ]}
               >
                 <span className="block truncate text-[13px]">{p.name}</span>
-                <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                  {p.model} · {p.pool_exclude ? t("excluded") : t("inPool")}
+                <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="truncate">{p.model}</span>
+                  <span className="shrink-0">{p.pool_exclude ? t("excluded") : t("inPool")}</span>
                 </span>
               </RecordRow>
             ))}

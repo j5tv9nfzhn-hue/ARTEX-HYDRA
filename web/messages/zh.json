@@ -2252,7 +2252,7 @@
       },
       "streaming": {
         "aria": "流式输出",
-        "hint": "开启（默认）走流式 SSE，有运行中实时进度与实时 token 计数。 关闭则走真·非流式（stream:false，一次性返回完整响应）——可绕开部分网关糟糕的 SSE 实现（空帧 / 思考字段丢帧），代价是失去运行中的实时进度。",
+        "hint": "开启（默认）走流式 SSE，有运行中实时进度与实时 token 计数。 关闭则走真非流式（stream:false，一次性返回完整响应）——可绕开部分网关糟糕的 SSE 实现（空帧 / 思考字段丢帧），代价是失去运行中的实时进度。",
         "label": "流式输出，streaming"
       },
       "testConnection": "测试连接",
@@ -4083,7 +4083,7 @@
       "unclassified": "未分类",
       "updateFailed": "更新失败：{message}",
       "viewDetail": "查看漏洞详情",
-      "foot": "共 {total} 条 · 分 {groups} 卷",
+      "foot": "共 {total} 条 / 分 {groups} 卷",
       "footHint": "点条目展开证据，右侧进入详情"
     },
     "header": {
@@ -4317,7 +4317,7 @@
       "selectAria": "选择漏洞：{name}",
       "selectDesc": "查看本任务漏洞的复测记录，或发起新的复测。",
       "selectTitle": "选择漏洞",
-      "foot": "共 {total} 条 · 每页 {size}"
+      "foot": "共 {total} 条 / 每页 {size}"
     },
     "tabs": {
       "software": "软件分析",
@@ -4341,7 +4341,7 @@
     },
     "graph": {
       "hint": "每 20 秒刷新",
-      "foot": "共 {nodes} 个节点 · {edges} 条边"
+      "foot": "共 {nodes} 个节点 / {edges} 条边"
     }
   },
   "taskTemplate": {
@@ -5606,7 +5606,7 @@
       "status": "状态码"
     },
     "profile": "画像",
-    "profileHint": "类型 · 地址 · 指纹 · 来源",
+    "profileHint": "类型 / 地址 / 指纹 / 来源",
     "field": {
       "type": "类型",
       "addr": "地址",
@@ -5739,7 +5739,7 @@
       "decided": "裁决时间"
     },
     "body": "上下文与审计链",
-    "bodyHint": "执行轨迹 · 影响范围 · 模型判定",
+    "bodyHint": "执行轨迹 / 影响范围 / 模型判定",
     "foot": "审批 #{id}"
   },
   "toolDetail": {
@@ -5850,7 +5850,7 @@
       "cost": "近 30 天费用"
     },
     "params": "参数",
-    "paramsHint": "思考 · 流式 · 模态",
+    "paramsHint": "思考 / 流式 / 模态",
     "row": {
       "model": "模型",
       "rate": "限速",
@@ -5872,7 +5872,7 @@
       "tasksNote": "加载过这条配置的任务"
     },
     "thinkingNote": "留空 = 不发送该字段",
-    "streamingNote": "关掉即真·非流式",
+    "streamingNote": "关掉即真非流式",
     "modalitiesNote": "文本始终隐含",
     "excluded": "不参与",
     "poolNote": "仍可被显式绑定",

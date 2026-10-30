@@ -433,7 +433,7 @@ func (e *Engine) blockTaskCompletion(t *Task) bool {
 	if mode == branchGateShadow {
 		log.Printf("[gate][shadow] task %s 有 %d 条未收口分支：%s（影子模式，未拦截）", t.ID, len(bs), branchIDs(bs))
 		e.emitActivity(t, db.Activity{Worker: "system", Kind: "text",
-			Summary: fmt.Sprintf("（实验·影子模式）检测到 %d 条未收口分支：%s —— 强制模式下任务不会判定完成", len(bs), branchIDs(bs))})
+			Summary: fmt.Sprintf("（实验 / 影子模式）检测到 %d 条未收口分支：%s —— 强制模式下任务不会判定完成", len(bs), branchIDs(bs))})
 		return false
 	}
 	log.Printf("[gate] task %s 有 %d 条未收口分支，拒绝完成：%s", t.ID, len(bs), branchIDs(bs))
@@ -527,7 +527,7 @@ func (e *Engine) kickRequeue(t *Task, intentID int64, nodeState, stopReason, err
 	if mode == branchGateShadow {
 		log.Printf("[gate][shadow] task %s 意图 #%d %s → 本应 %s（%s）", t.ID, intentID, nodeState, d.Action, d.Reason)
 		e.emitActivity(t, db.Activity{Worker: "system", Kind: "text",
-			Summary: fmt.Sprintf("（实验·影子模式）意图 #%d %s：本应 %s（%s），未执行", intentID, branchStateLabel(nodeState), requeueActionLabel(d.Action), d.Reason)})
+			Summary: fmt.Sprintf("（实验 / 影子模式）意图 #%d %s：本应 %s（%s），未执行", intentID, branchStateLabel(nodeState), requeueActionLabel(d.Action), d.Reason)})
 		return
 	}
 	e.applyRequeue(t, intentID, retry, d, errorHash(errText), nodeState, stopReason)
