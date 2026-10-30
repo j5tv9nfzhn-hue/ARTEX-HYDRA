@@ -16,9 +16,8 @@ var PromptOverride func(agentKey string) (string, bool)
 // Prompt-variable structs — fields mirror each agent's catalog (docs §5a) so a
 // user template referencing a catalog variable renders; referencing anything else
 // fails template execution and falls back to the built-in default.
-type PlannerVars struct{ Goal, Scope, AssetSummary, DataDir, Now string }
-type WorkerVars struct{ ProxyAddr, WorkerName, DataDir, Now string }
-type MainVars struct{ Goal, AssetSummary, FindingsSummary, DataDir, Now string }
+// 【P4】PlannerVars / WorkerVars / MainVars 已随三个角色下线删除。
+// GoalsVars 保留：goals 目标拆解仍在用。
 type GoalsVars struct{ EngagementDescription, DataDir, Now string }
 
 // nowStr is the server-local wall-clock string exposed as the universal {{.Now}}

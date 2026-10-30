@@ -121,24 +121,25 @@ var DecommissionTable = []DecomEntry{
 
 	// ── 第二层：引擎里的派发骨架 ─────────────────────────────────────────
 	{
-		Symbol: "Engine.plannerLoop", Where: "server/engine.go:1048", Lines: 190,
+		Symbol: "Engine.plannerLoop", Where: "server/engine.go（P4 已删，约 156 行）", Lines: 156,
 		Replacement: "agent.StartTask + TaskRun.AwaitRoot",
 		Note: "事件驱动的唤醒循环：debounce / 心跳 / 空转跳过 / 终局收尾轮。" +
 			"这些全部是「谁来决定现在该想」这一问题的产物；新架构里由根 agent 自己决定。",
 	},
 	{
-		Symbol: "Engine.runWorkerStep + workerLoop", Where: "server/engine.go:1250", Lines: 160,
+		Symbol: "Engine.runWorkerStep + workerLoop", Where: "server/engine.go（P4 已删，约 140 行）", Lines: 140,
 		Replacement: "Spawner.Delegate（每个意图一个子 agent）",
 		Note: "从 frontier 领取意图、执行、结算。领取与结算这两步在内存 mailbox 里退化成一次投递。",
 	},
 	{
-		Symbol: "Engine.runFinalPlannerRound", Where: "server/engine_timeout.go:270", Lines: 60,
-		Replacement: "finish_task（由根 agent 在收到收尾指令时调用）",
-		Note:        "超时收尾的「最后一轮 Planner」。新架构里收尾是根 agent 的一次工具调用，不需要一个特殊轮次。",
+		Symbol: "Engine.runFinalPlannerRound", Where: "server/engine_timeout.go（P4 改为读库判定）", Lines: 40,
+		Replacement: "finish_task（收尾由根 agent 调用）+ 读库判定目标是否全 met",
+		Note: "超时收尾的「最后一轮 Planner」已删。新实现不再叫醒模型重新判一遍，而是直接读" +
+			"目标节点的 state——根 agent 运行期间 prove_goal 落的库才是权威记录，临场判定反而受上下文余量影响。",
 	},
 	{
 		Symbol: "Engine.resolve / SetAgentResolver / SetAuthoritativeAgentResolver / snapshotFor",
-		Where: "server/engine.go:179,952,960,968",
+		Where: "server/engine.go（P4 已删；收敛为 Engine.resolve bool + SetTaskRunnable）",
 		Replacement: "Spawner 持有 Runner（构造期注入，运行期不可变）",
 		Note: "运行时可换 planner/worker 的注入点。新架构里执行器在 StartTask 时绑定，" +
 			"中途换执行器等同于换掉整张图——那应该是一个新任务，不是一个运行期开关。",
@@ -160,8 +161,8 @@ var DecommissionTable = []DecomEntry{
 
 	// ── 第三层：四套提示词与工具面 ───────────────────────────────────────
 	{
-		Symbol: "plannerDefaultTmpl / workerSystem / reviewerDefaultTmpl / goals 分解提示词",
-		Where: "agent/planner.go:334 / agent/worker.go / agent/reviewer.go:382 / agent/goals.go",
+		Symbol: "plannerDefaultTmpl / workerSystem / reviewerDefaultTmpl（均已删；goals 分解提示词保留）",
+		Where: "agent/{planner,worker,reviewer}.go 已下线 / agent/goals.go 仍存活",
 		Replacement: "rootTmpl / childTmpl（prompts_coord.go）",
 		Note: "四套提示词 + 各自的九段后处理拼接（artifactSpec / toolBatchSpec / langDirective / " +
 			"toolNameDiscipline / constraintBlock / envBrief / intentBlock / 启动指令 / intent 8KB 兜底）。" +

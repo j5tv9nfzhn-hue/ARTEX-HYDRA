@@ -144,25 +144,18 @@ func (s *Server) sendWorkerMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// runDetachedIntent transitions paused->running, emits the user turn and starts a
-	// dedicated run. Root the run at s.ctx so a disconnected browser cannot strand it
-	// while task pause/delete/shutdown still stop it.
-	if err := s.engine.runDetachedIntent(s.ctx, t, iid, requestID, message, agentMessage); err != nil {
-		switch {
-		case errors.Is(err, db.ErrIntentStateConflict):
-			writeErr(w, http.StatusConflict, err.Error())
-		default:
-			writeErr(w, http.StatusInternalServerError, err.Error())
-		}
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]any{
-		"id":         iid,
-		"state":      "running",
-		"accepted":   true,
-		"request_id": requestID,
-	})
+	// 【P4】原实现在这里调 engine.runDetachedIntent，把暂停的意图重新拉起来跑一个
+	// 专属 run。它跑的是一个 Worker（agent.Worker），而 Worker 已随旧调度链路下线。
+	//
+	// coord 下意图不再是执行单位：没有 worker 池去领取它，也没有"恢复一条暂停的
+	// 意图"这回事——干活的是 delegate_task 派生的子 agent，它们的生命周期由根
+	// agent 掌握。所以这条通路没有等价的替代品，只能如实告知。
+	//
+	// 明确报 410 而不是静默成功：前端仍保留着这个按钮，静默成功会让用户以为
+	// 消息被送达了，而实际上没有任何角色会看到它。
+	_ = agentMessage
+	_ = requestID
+	writeErr(w, http.StatusGone, "意图级的继续对话已随旧调度链路下线：coord 模式下请直接在任务页对编排者说话。")
 }
 
 // steerIntent 把人工纠偏指令递交给一条正在运行的 Worker 意图（不暂停、不重跑）：

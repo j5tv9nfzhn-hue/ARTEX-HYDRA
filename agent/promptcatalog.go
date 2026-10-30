@@ -133,14 +133,15 @@ func BuiltinPromptSeeds() map[string]string {
 		PromptKeyCoordRoot:  rootTmpl,
 		PromptKeyCoordChild: childTmpl,
 
-		// ── 旧四角色 ──────────────────────────────────────────────────────
-		// 仍然保留：ARTEX_SCHED=legacy 时它们才会被真正调度，截图/排障也还
-		// 需要能改。coord 模式下它们不参与运行，但删掉会让 legacy 回退路径
-		// 失去可编辑提示词。B4 删除旧骨架时一并移除。
-		"goals":     goalsDefaultTmpl,
-		"planner":   plannerDefaultTmpl,
-		"mainagent": mainAgentDefaultTmpl,
-		"worker":    workerDefaultTmpl,
+		// ── 旧四角色：已全部下线 ──────────────────────────────────────────
+		// planner / worker / mainagent 的文件是 //go:build decommissioned 桩，
+		// 三者对应的 DefaultTmpl 常量已随文件一起消失，这里不能再列出该 key。
+		// reviewer 同理（见下方说明）。
+		//
+		// goals 是唯一的例外：它不是角色，而是一次性的 LLM 目标拆解
+		// （DecomposeGoals），由 server/goals.go 的 createGoals 在任务创建时
+		// 调用，与调度链路无关，因此继续存活、继续可编辑。
+		"goals": goalsDefaultTmpl,
 
 		// ── 独立/自定义角色 ───────────────────────────────────────────────
 		"auto":    autoDefaultTmpl,

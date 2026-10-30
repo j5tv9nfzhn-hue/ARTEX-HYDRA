@@ -19,12 +19,9 @@ func newAdmissionTestServer(m *Manager, available func(*Task) bool) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	e := NewEngine(m)
-	planner, worker := new(agent.Planner), new(agent.Worker)
-	e.SetAuthoritativeAgentResolver(func(task *Task) (*agent.Planner, *agent.Worker) {
-		if available == nil || available(task) {
-			return planner, worker
-		}
-		return nil, nil
+	// 【P4】resolver 已收敛成 bool：以前靠"返回一对非空指针"表示可运行。
+	e.SetTaskRunnable(func(task *Task) bool {
+		return available == nil || available(task)
 	})
 	// 与 server.New 保持一致：agentsForTask 会写入 taskAgents，provider 解析会
 	// 写入 provByProfile；缺 map 时首次写入即 panic（暂停/恢复路径会触发）。

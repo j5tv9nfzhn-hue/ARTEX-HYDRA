@@ -122,19 +122,26 @@ const childTmpl = `你是这次授权渗透测试任务里的**执行者**（chi
 `
 
 // RootSystemPrompt 渲染编排者提示词。
+//
+// 语言指令由代码在所有 DB 正文之后追加（与 chatSystem/goalsSystem 同一模式）：
+// 它是策略而不是文本，用户在 UI 里改正文不能把它改没。缺少它会让根 agent 用
+// 训练语料的语言随手作答——用户选了英文界面却收到中文简报。
 func RootSystemPrompt(v CoordVars) string {
 	if v.Now == "" {
 		v.Now = nowStr()
 	}
-	return renderTmplSafe(PromptKeyCoordRoot, rootTmpl, v)
+	return renderTmplSafe(PromptKeyCoordRoot, rootTmpl, v) + langDirective(resolveOutputLang())
 }
 
 // ChildSystemPrompt 渲染执行者提示词。
+//
+// 同 RootSystemPrompt：语言指令必须在正文之外追加。子 agent 的 finish_task
+// 简报会直接呈现给用户，正文里没写语言就是没约束。
 func ChildSystemPrompt(v CoordVars) string {
 	if v.Now == "" {
 		v.Now = nowStr()
 	}
-	return renderTmplSafe(PromptKeyCoordChild, childTmpl, v)
+	return renderTmplSafe(PromptKeyCoordChild, childTmpl, v) + langDirective(resolveOutputLang())
 }
 
 // renderTmplSafe 复用 prompt.go 的渲染器（DB 覆盖 → 内置模板 → 原文）。
