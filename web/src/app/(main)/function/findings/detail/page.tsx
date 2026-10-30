@@ -149,7 +149,7 @@ function FindingDetailInner() {
         )}
       </div>
 
-      {/* 书眉：编号 · 严重度 · 状态 · 复核 · 时间 / 标题 / 所属任务 */}
+      {/* 书眉：编号 / 严重度 / 状态 / 复核 / 时间 / 标题 / 所属任务 */}
       <div className="flex flex-col gap-1 px-4 pt-2 pb-2 lg:px-6">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular-nums">
           <code className="rounded-[2px] border border-border/60 px-1 py-px font-mono text-xs">#{finding.id}</code>

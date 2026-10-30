@@ -17,6 +17,13 @@
 /* 结构锚点的默认状态 —— 先让所有主题看起来和改造前一样。 */
 
 [data-editorial="masthead-meta"] {
+  /* 元数据各项之间靠间距分隔，不再用「·」字符：中点在很多字体里
+     基线偏低、字重偏重，且屏幕阅读器会把它读成「中点」。 */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.4;

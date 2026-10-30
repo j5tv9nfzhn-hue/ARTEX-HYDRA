@@ -300,7 +300,7 @@ func (e *Engine) settleCoordTask(t *Task, b agent.Brief) {
 		summary += fmt.Sprintf("（未闭环 %d 项）", len(b.OpenItems))
 	}
 	e.emitActivity(t, db.Activity{Worker: "system", Kind: "text",
-		Summary: fmt.Sprintf("任务收尾：%s · %s", b.Outcome, summary)})
+		Summary: fmt.Sprintf("任务收尾：%s / %s", b.Outcome, summary)})
 }
 
 // emitCoordActivity 把 capture 产出的 Activity 落到活动流。

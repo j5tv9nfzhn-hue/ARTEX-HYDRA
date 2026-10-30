@@ -505,7 +505,7 @@ function TaskDetailInner() {
           </Button>
         </div>
 
-        {/* 书眉：编号 · 分类 · 状态 / 标题 / 目标 */}
+        {/* 书眉：编号 / 分类 / 状态 / 标题 / 目标 */}
         <div className="flex flex-col gap-1 px-4 pt-3 pb-2 lg:px-6">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular-nums">
             <code className="rounded-[2px] border border-border/60 px-1 py-px font-mono text-xs">#{task.id}</code>

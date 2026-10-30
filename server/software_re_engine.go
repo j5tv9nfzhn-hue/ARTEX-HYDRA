@@ -27,9 +27,9 @@ type REEngineContract struct {
 }
 
 var reContractTitles = map[string]string{
-	"rea":    "REA 逆向分析助手 · 深化静态契约（选定单引擎）",
-	"ghidra": "Ghidra MCP · 通用只读静态契约",
-	"ida":    "IDA Pro / Hex-Rays MCP · 通用只读静态契约",
+	"rea":    "REA 逆向分析助手 / 深化静态契约（选定单引擎）",
+	"ghidra": "Ghidra MCP / 通用只读静态契约",
+	"ida":    "IDA Pro / Hex-Rays MCP / 通用只读静态契约",
 }
 
 // reContractCoreOps 是各家族进入 deep 层必须全部就绪的核心操作。

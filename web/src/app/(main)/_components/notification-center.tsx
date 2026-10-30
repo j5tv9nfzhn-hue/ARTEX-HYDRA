@@ -127,8 +127,9 @@ export function NotificationCenter() {
                 <span className="mt-1 size-1.5 shrink-0 rounded-full bg-amber-500" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-mono text-xs">{row.tool_name}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {row.agent_name} · {relTime(row.created_at, t)}
+                  <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="truncate">{row.agent_name}</span>
+                    <span className="shrink-0">{relTime(row.created_at, t)}</span>
                   </span>
                 </span>
                 <ArrowUpRightIcon className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
@@ -164,8 +165,11 @@ export function NotificationCenter() {
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs">{f.name || f.vulnclass || f.summary}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {f.task_description || (f.task_id ? `#${f.task_id}` : "—")} · {relTime(f.ts, t)}
+                  <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="truncate">
+                      {f.task_description || (f.task_id ? `#${f.task_id}` : "—")}
+                    </span>
+                    <span className="shrink-0">{relTime(f.ts, t)}</span>
                   </span>
                 </span>
                 <ArrowUpRightIcon className="mt-0.5 size-3 shrink-0 text-muted-foreground" />

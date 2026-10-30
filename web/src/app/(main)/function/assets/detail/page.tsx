@@ -33,7 +33,7 @@ function AddressOf(a: Asset): string {
   if (a.app_name) return a.app_name;
   if (a.service_name) return a.service_name;
   if (typeof a.record_value === "string") return a.record_value;
-  if (Array.isArray(a.record_value) && a.record_value.length > 0) return a.record_value.join(" · ");
+  if (Array.isArray(a.record_value) && a.record_value.length > 0) return a.record_value.join(" / ");
   return "—";
 }
 
@@ -171,9 +171,7 @@ function AssetDetailInner() {
           meta={
             <>
               <code className="font-mono text-xs">#{asset.id}</code>
-              <span className="mx-1.5 opacity-40">·</span>
               <span>{tk(asset.type)}</span>
-              <span className="mx-1.5 opacity-40">·</span>
               <span className="tabular-nums">{asset.last_seen}</span>
             </>
           }
@@ -218,7 +216,7 @@ function AssetDetailInner() {
               {asset.root_domain ? <Field label={t("field.root")}>{asset.root_domain}</Field> : null}
               {asset.bound_domains && asset.bound_domains.length > 0 ? (
                 <Field label={t("field.domains")}>
-                  <span className="font-mono text-[12px]">{asset.bound_domains.join(" · ")}</span>
+                  <span className="font-mono text-[12px]">{asset.bound_domains.join(" / ")}</span>
                 </Field>
               ) : null}
               {asset.port ? <Field label={t("field.port")}>{asset.port}</Field> : null}
