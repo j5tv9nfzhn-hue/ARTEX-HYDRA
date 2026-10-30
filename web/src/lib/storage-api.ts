@@ -88,6 +88,32 @@ export interface StorageMemoryDB {
   activity_older_30d: number;
   /** 单写协程的累计观测值。 */
   write_queue: StorageWriteQueue;
+  /** WAL 健康度。并发下最先劣化的指标。 */
+  wal: StorageWAL;
+}
+
+/**
+ * SQLite 的 WAL（预写日志）状态。
+ *
+ * 为什么值得展示：WAL 模式让读写互不阻塞，代价是检查点必须把 WAL 里的帧回填
+ * 进主库。检查点只能回填「比最老读事务还老」的帧——只要有一个读事务钉住旧
+ * 快照，它就推不动，WAL 只增不减。而 WAL 变大之后，每次提交都要顺带做检查点，
+ * 写入延迟被反过来拖垮。
+ *
+ * 所以这个面板回答的是一个具体问题：**数据库是不是正在因为读者太多而变慢。**
+ * 正常情况下 frames 与 backfilled 应当接近；两者差距持续拉大就是那个信号。
+ */
+export interface StorageWAL {
+  /** -wal 文件当前字节数。 */
+  size_bytes: number;
+  /** WAL 中的总帧数。 */
+  frames: number;
+  /** 已回填进主库的帧数。与 frames 差距越大，说明检查点越落后。 */
+  backfilled: number;
+  /** true = 检查点被读者挡住，无法推进（不是错误，是「有长读事务」的信号）。 */
+  busy: boolean;
+  /** 综合判定：大小在健康水位内且未被挡住。 */
+  healthy: boolean;
 }
 
 export interface StorageStats {

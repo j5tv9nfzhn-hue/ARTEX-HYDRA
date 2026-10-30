@@ -40,15 +40,20 @@ const (
 	// walMaintenanceBudget 是一次维护允许占用的最长时间。超过就放弃、下次再来：
 	// 维护是后台行为，不该长时间占着写锁。
 	walMaintenanceBudget = 5 * time.Second
+
+	// walStatusBudget 是单次**观测**的预算，比维护预算短一个量级。
+	// 观测挂在存储页的 HTTP 请求上，不能让它把页面拖到几秒；维护跑在后台
+	// 协程里，慢一点没人等。
+	walStatusBudget = 500 * time.Millisecond
 )
 
 // WALStatus 是 WAL 的当前状态，供存储页/诊断展示与自愈判定使用。
 type WALStatus struct {
-	SizeBytes int64 `json:"size_bytes"` // -wal 文件当前大小
-	Frames    int   `json:"frames"`     // WAL 中的帧数
-	Backfilled int  `json:"backfilled"` // 已回填进主库的帧数
-	Busy      bool  `json:"busy"`       // true = 检查点被读者挡住，无法推进
-	Healthy   bool  `json:"healthy"`    // 综合判定
+	SizeBytes  int64 `json:"size_bytes"` // -wal 文件当前大小
+	Frames     int   `json:"frames"`     // WAL 中的帧数
+	Backfilled int   `json:"backfilled"` // 已回填进主库的帧数
+	Busy       bool  `json:"busy"`       // true = 检查点被读者挡住，无法推进
+	Healthy    bool  `json:"healthy"`    // 综合判定
 }
 
 // sqliteFilePathFromDSN 从 "file:<path>?<params>" 里取出文件路径。
@@ -83,7 +88,10 @@ func walSize(path string) int64 {
 // PASSIVE 不阻塞任何读者和写者，所以它是安全的**观测**手段：即使它什么都没能
 // 回填，也不会给前台制造等待。我们只用它读数，不依赖它清理。
 func (d *DB) WALStatusOf(path string) WALStatus {
-	ctx, cancel := context.WithTimeout(context.Background(), walMaintenanceBudget)
+	// 观测专用预算，比维护预算短：这个函数跟着存储页的 HTTP 请求走，用户点开
+	// 页面不该等满 5 秒。PASSIVE 检查点即使被打断也没有副作用（不写主库之外的
+	// 任何东西），超时就当作「这轮没读到帧数」，只报文件大小。
+	ctx, cancel := context.WithTimeout(context.Background(), walStatusBudget)
 	defer cancel()
 
 	st := WALStatus{SizeBytes: walSize(path)}
@@ -166,10 +174,11 @@ func (d *DB) maintainWAL(path string) int64 {
 // 间隔取 2 分钟：WAL 从 32MiB 涨到 96MiB 在这类工作负载下需要相当长时间，
 // 2 分钟的检查频率足以在它变成问题之前介入；而每次检查只是一次 PASSIVE
 // PRAGMA，代价可以忽略。
-func (d *DB) StartWALMaintenance(ctx context.Context, dbPath string) {
-	if d == nil || dbPath == "" {
+func (d *DB) StartWALMaintenance(ctx context.Context) {
+	if d == nil || d.path == "" {
 		return
 	}
+	path := d.path
 	go func() {
 		ticker := time.NewTicker(2 * time.Minute)
 		defer ticker.Stop()
@@ -178,8 +187,19 @@ func (d *DB) StartWALMaintenance(ctx context.Context, dbPath string) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				d.maintainWAL(dbPath)
+				d.maintainWAL(path)
 			}
 		}
 	}()
+}
+
+// WALStatus 返回当前 WAL 状态，供存储页展示与排障。内存库返回零值。
+//
+// 与 WALStatusOf 的区别只是路径从 DB 自己取——调用方（server 的存储页）
+// 手上只有一个 *db.DB，不该关心库文件在哪。
+func (d *DB) WALStatus() WALStatus {
+	if d == nil || d.path == "" {
+		return WALStatus{Healthy: true}
+	}
+	return d.WALStatusOf(d.path)
 }

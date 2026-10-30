@@ -42,6 +42,9 @@ type DB struct {
 	// 句柄也能用，不必依赖 openSQLite。
 	wqMu sync.Mutex
 	wq   *writeQueue
+	// path 是主库文件路径（内存库为空）。WAL 状态查询需要按路径去看 -wal 文件
+	// 大小，而 sql.DB 本身不暴露 DSN——所以打开时记下来。
+	path string
 }
 
 // ReadDB 返回只读连接池；没有（内存库/测试句柄）时返回主池。

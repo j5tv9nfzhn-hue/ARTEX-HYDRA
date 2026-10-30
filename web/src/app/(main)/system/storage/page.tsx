@@ -125,6 +125,7 @@ export default function StoragePage() {
   const mem = stats?.mem;
   const mdb = stats?.memory_db;
   const wq = stats?.memory_db?.write_queue;
+  const wal = stats?.memory_db?.wal;
   const keep = stats?.activity_retention;
   const savedKeepDays = keep?.days ?? 0;
   const savedMaxRows = keep?.max_rows ?? 0;
@@ -423,7 +424,12 @@ export default function StoragePage() {
         </Card>
       </div>
 
-      {/* 写入管道 + 活动自动保留 */}
+      {/*
+        写入管道与 WAL 并排：它们讲的是同一件事的两半——前者是"批量提交省了多少"，
+        后者是"检查点跟不跟得上"。活动保留单独占一行（下面），因为它带输入框、
+        操作按钮和说明文字，塞进窄列会被挤成一团。
+        窄屏一律退化为单列，顺序仍是 写入 → WAL → 保留。
+      */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -453,71 +459,118 @@ export default function StoragePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t("retentionTitle")}</CardTitle>
-            <CardDescription>{t("retentionDesc")}</CardDescription>
+            <CardTitle className="text-base">{t("walTitle")}</CardTitle>
+            <CardDescription>{t("walDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <Label htmlFor="activity-retention-days" className="text-xs">
-                  {t("retentionDaysLabel")}
-                </Label>
-                <Input
-                  id="activity-retention-days"
-                  type="number"
-                  min={0}
-                  max={3650}
-                  value={effectiveKeepDays}
-                  onChange={(e) => setKeepDays(Math.max(0, Math.min(3650, Number(e.target.value) || 0)))}
-                />
-              </div>
-              <div className="flex-1">
-                <Label htmlFor="activity-retention-rows" className="text-xs">
-                  {t("retentionMaxRowsLabel")}
-                </Label>
-                <Input
-                  id="activity-retention-rows"
-                  type="number"
-                  min={0}
-                  max={10000000}
-                  step={10000}
-                  value={effectiveMaxRows}
-                  onChange={(e) => setKeepMaxRows(Math.max(0, Math.min(10000000, Number(e.target.value) || 0)))}
-                />
-              </div>
-              <Button
-                variant="outline"
-                disabled={busy !== null || !retentionDirty}
-                onClick={() =>
-                  void run("retention", async () => {
-                    const days = effectiveKeepDays;
-                    const rows = effectiveMaxRows;
-                    await storageApi.activityRetention(days, rows);
-                    setKeepDays(null);
-                    setKeepMaxRows(null);
-                    return t("retentionSaved", { days, rows: fmtNum(rows) });
-                  })
-                }
-              >
-                {busy === "retention" ? t("running") : t("retentionSave")}
-              </Button>
-            </div>
-            <div>
-              <Stat
-                label={t("retentionLast")}
-                value={
-                  keep?.last_run_unix_ms
-                    ? new Date(keep.last_run_unix_ms).toLocaleString("zh-CN")
-                    : t("retentionNever")
-                }
-              />
-              <Stat label={t("retentionLastRows")} value={fmtNum(keep?.last_deleted ?? 0)} />
-              <Stat label={t("retentionLastCapped")} value={fmtNum(keep?.last_capped ?? 0)} />
-            </div>
-            <p className="text-xs text-muted-foreground">{t("retentionNote")}</p>
+            {loading || !wal ? (
+              <p className="text-muted-foreground text-sm">{t("loading")}</p>
+            ) : (
+              <>
+                <div className="grid gap-x-6 sm:grid-cols-2">
+                  <Stat label={t("walSize")} value={fmtBytes(wal.size_bytes)} />
+                  <Stat label={t("walFrames")} value={fmtNum(wal.frames)} />
+                  <Stat label={t("walBackfilled")} value={fmtNum(wal.backfilled)} />
+                  {/*
+                    待回填 = frames - backfilled。这是整块面板里唯一需要盯的数字：
+                    它为 0 说明检查点跟得上；持续变大说明有读事务钉住了旧快照。
+                    frames 在 WAL 被截断后会归零，所以不能直接拿它当积压量看。
+                  */}
+                  <Stat
+                    label={t("walLag")}
+                    value={fmtNum(Math.max(0, (wal.frames ?? 0) - (wal.backfilled ?? 0)))}
+                  />
+                  <Stat
+                    label={t("walState")}
+                    value={
+                      /*
+                        三态而不是两态：busy 与 healthy 是两件独立的事。
+                        体积正常但被读者挡住，仍然是需要知道的状态——它意味着
+                        下一次写入密集时 WAL 会开始涨。
+                      */
+                      wal.busy ? (
+                        <Badge variant="secondary">{t("walStateBlocked")}</Badge>
+                      ) : wal.healthy ? (
+                        <Badge variant="outline">{t("walStateHealthy")}</Badge>
+                      ) : (
+                        <Badge variant="destructive">{t("walStateLagging")}</Badge>
+                      )
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">{t("walNote")}</p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("retentionTitle")}</CardTitle>
+          <CardDescription>{t("retentionDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Label htmlFor="activity-retention-days" className="text-xs">
+                {t("retentionDaysLabel")}
+              </Label>
+              <Input
+                id="activity-retention-days"
+                type="number"
+                min={0}
+                max={3650}
+                value={effectiveKeepDays}
+                onChange={(e) => setKeepDays(Math.max(0, Math.min(3650, Number(e.target.value) || 0)))}
+              />
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="activity-retention-rows" className="text-xs">
+                {t("retentionMaxRowsLabel")}
+              </Label>
+              <Input
+                id="activity-retention-rows"
+                type="number"
+                min={0}
+                max={10000000}
+                step={10000}
+                value={effectiveMaxRows}
+                onChange={(e) => setKeepMaxRows(Math.max(0, Math.min(10000000, Number(e.target.value) || 0)))}
+              />
+            </div>
+            <Button
+              variant="outline"
+              disabled={busy !== null || !retentionDirty}
+              onClick={() =>
+                void run("retention", async () => {
+                  const days = effectiveKeepDays;
+                  const rows = effectiveMaxRows;
+                  await storageApi.activityRetention(days, rows);
+                  setKeepDays(null);
+                  setKeepMaxRows(null);
+                  return t("retentionSaved", { days, rows: fmtNum(rows) });
+                })
+              }
+            >
+              {busy === "retention" ? t("running") : t("retentionSave")}
+            </Button>
+          </div>
+          <div>
+            <Stat
+              label={t("retentionLast")}
+              value={
+                keep?.last_run_unix_ms
+                  ? new Date(keep.last_run_unix_ms).toLocaleString("zh-CN")
+                  : t("retentionNever")
+              }
+            />
+            <Stat label={t("retentionLastRows")} value={fmtNum(keep?.last_deleted ?? 0)} />
+            <Stat label={t("retentionLastCapped")} value={fmtNum(keep?.last_capped ?? 0)} />
+          </div>
+          <p className="text-xs text-muted-foreground">{t("retentionNote")}</p>
+        </CardContent>
+      </Card>
 
       {/* 表行数 */}
       <Card>
