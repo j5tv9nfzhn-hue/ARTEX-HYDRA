@@ -7,12 +7,13 @@ import Link from "next/link";
 import { ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { FindingRetestPanel } from "@/components/finding-retest-panel";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
@@ -83,15 +84,13 @@ export function RetestsTab({ taskId }: { taskId: string }) {
         </Alert>
       ) : null}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
-        <Card className="min-w-0">
-          <CardHeader>
-            <CardTitle>
-              {t("retests.selectTitle")}
-              {data ? ` / ${data.total}` : ""}
-            </CardTitle>
-            <CardDescription>{t("retests.selectDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex max-h-[32rem] flex-col overflow-y-auto">
+        <Sheet className="min-w-0">
+          <SheetHead
+            title={t("retests.selectTitle")}
+            count={data ? data.total : undefined}
+            hint={t("retests.selectDesc")}
+          />
+          <div className="flex max-h-[32rem] flex-col overflow-y-auto px-4">
             {!loaded && !error ? <Skeleton className="h-24 w-full" /> : null}
             {findings.map((finding, index) => (
               <React.Fragment key={finding.id}>
@@ -119,7 +118,7 @@ export function RetestsTab({ taskId }: { taskId: string }) {
                 description={t("retests.emptyDesc")}
               />
             ) : null}
-          </CardContent>
+          </div>
           {data && data.total > PAGE_SIZE ? (
             <CardFooter className="justify-between gap-2">
               <Button
@@ -145,12 +144,13 @@ export function RetestsTab({ taskId }: { taskId: string }) {
               </Button>
             </CardFooter>
           ) : null}
-        </Card>
+          <SheetFoot left={t("retests.foot", { total: data?.total ?? 0, size: PAGE_SIZE })} />
+        </Sheet>
         {selected ? (
           <div className="flex min-w-0 flex-col gap-4">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 border-border/70 border-t pt-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <h2 className="min-w-0 flex-1 break-words font-medium">
+                <h2 className="min-w-0 flex-1 break-words font-semibold text-sm">
                   {findingLabel(selected, t("findings.unclassified"))}
                 </h2>
                 <Button asChild variant="ghost" size="sm">

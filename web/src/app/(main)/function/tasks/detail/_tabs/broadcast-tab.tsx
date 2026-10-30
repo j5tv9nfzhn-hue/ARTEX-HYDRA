@@ -25,7 +25,7 @@ import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Sheet } from "@/components/editorial-sheet";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -564,7 +564,7 @@ export function BroadcastTab({ taskId }: { taskId: string }) {
   }
 
   return (
-    <Card className="overflow-hidden py-0">
+    <Sheet>
       {/* 工具条 */}
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5">
         <div className="relative w-full sm:w-64">
@@ -649,7 +649,7 @@ export function BroadcastTab({ taskId }: { taskId: string }) {
         </button>
       )}
 
-      <CardContent className="px-4 py-0">
+      <div data-editorial="body" className="px-4">
         {!loaded ? (
           <div className="flex flex-col gap-3 py-4">
             {[0, 1, 2, 3].map((i) => (
@@ -676,9 +676,12 @@ export function BroadcastTab({ taskId }: { taskId: string }) {
             </div>
           ))
         )}
-      </CardContent>
+      </div>
 
-      <CardFooter className="flex flex-wrap items-center gap-2 border-t px-4 py-2.5 text-xs text-muted-foreground">
+      <div
+        data-editorial="sheet-foot"
+        className="flex flex-wrap items-center gap-2 border-t px-4 py-2.5 text-xs text-muted-foreground"
+      >
         <Select
           value={String(size)}
           onValueChange={(v) => {
@@ -724,7 +727,7 @@ export function BroadcastTab({ taskId }: { taskId: string }) {
             <ChevronRightIcon />
           </Button>
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+    </Sheet>
   );
 }

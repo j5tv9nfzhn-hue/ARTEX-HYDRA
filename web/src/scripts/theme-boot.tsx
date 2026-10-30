@@ -15,6 +15,7 @@ export function ThemeBootScript() {
   const fontKeys = JSON.stringify(Object.keys(fontRegistry));
 
   const persistence = JSON.stringify({
+    skin: PREFERENCE_PERSISTENCE.skin,
     theme_mode: PREFERENCE_PERSISTENCE.theme_mode,
     theme_preset: PREFERENCE_PERSISTENCE.theme_preset,
     font: PREFERENCE_PERSISTENCE.font,
@@ -25,6 +26,7 @@ export function ThemeBootScript() {
   });
 
   const defaults = JSON.stringify({
+    skin: PREFERENCE_DEFAULTS.skin,
     theme_mode: PREFERENCE_DEFAULTS.theme_mode,
     theme_preset: PREFERENCE_DEFAULTS.theme_preset,
     font: PREFERENCE_DEFAULTS.font,
@@ -78,6 +80,7 @@ export function ThemeBootScript() {
 
         var rawMode = readPreference("theme_mode", DEFAULTS.theme_mode);
         var rawPreset = readPreference("theme_preset", DEFAULTS.theme_preset);
+        var rawSkin = readPreference("skin", DEFAULTS.skin);
         var rawFont = readPreference("font", DEFAULTS.font);
         var rawContentLayout = readPreference("content_layout", DEFAULTS.content_layout);
         var rawNavbarStyle = readPreference("navbar_style", DEFAULTS.navbar_style);
@@ -90,7 +93,9 @@ export function ThemeBootScript() {
           mode === "system" && window.matchMedia
             ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
             : mode;
-        var preset = rawPreset || DEFAULTS.theme_preset;
+        var skin = rawSkin === "editorial" || rawSkin === "classic" ? rawSkin : DEFAULTS.skin;
+        // 新主题的令牌固定取纸本：先定 skin，再按 skin 决定 preset。
+        var preset = skin === "editorial" ? "paper" : rawPreset || DEFAULTS.theme_preset;
         // rawFont 可能来自旧 cookie,不在白名单内时回退到默认字体
         var font = FONT_KEYS.indexOf(rawFont) !== -1 ? rawFont : DEFAULTS.font;
         var contentLayout = rawContentLayout || DEFAULTS.content_layout;
@@ -100,6 +105,7 @@ export function ThemeBootScript() {
 
         root.classList.toggle("dark", resolvedMode === "dark");
         root.setAttribute("data-theme-mode", mode);
+        root.setAttribute("data-skin", skin);
         root.setAttribute("data-theme-preset", preset);
         root.setAttribute("data-font", font);
         root.setAttribute("data-content-layout", contentLayout);

@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import Link from "next/link";
+
 import {
   BotIcon,
   CheckIcon,
@@ -407,6 +409,15 @@ export function ApprovalDetail({
             ) : null}
           </dl>
           {!readOnly ? <DecisionActions row={current} busy={busy} decide={decide} /> : null}
+          {/* 行内展开够快；要贴给别人、要从通知里直链，就走独立页。 */}
+          <p className="text-xs">
+            <Link
+              href={`/system/intercept/approvals/detail?id=${current.id}`}
+              className="text-primary hover:underline"
+            >
+              {t("openPage")}
+            </Link>
+          </p>
         </div>
       </div>
       {error ? (

@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import Link from "next/link";
+
 import {
   AlertTriangleIcon,
   CheckCircle2Icon,
@@ -19,6 +21,7 @@ import {
   UploadIcon,
   XCircleIcon,
 } from "lucide-react";
+import { Masthead } from "@/components/editorial";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -1321,10 +1324,13 @@ export default function SkillsPage() {
   return (
     <div data-content-padding="false" className="flex flex-1 flex-col overflow-hidden">
       <div className="flex items-center gap-3 border-b px-4 py-2.5 lg:px-6">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="font-semibold text-sm leading-tight">{t("title")}</h1>
-          <p className="text-muted-foreground text-xs">{t("subtitle")}</p>
-        </div>
+        <Masthead
+          title={t("title")}
+          subtitle={t("subtitle")}
+          titleClassName="text-sm leading-tight"
+          subtitleClassName="text-xs"
+          meta={null}
+        />
         <div className="ml-auto flex items-center gap-2">
           {/* 缺口清单：agent 点名调用、但库里没有的 skill —— 直接是该补什么的依据。 */}
           {missing.length > 0 && (
@@ -1672,6 +1678,12 @@ export default function SkillsPage() {
                   >
                     <DownloadIcon className="size-3.5" />
                     {t("exportZipBtn")}
+                  </Button>
+                  {/* 详情页：正文 + 文件清单 + 调用账本，一处看全。 */}
+                  <Button asChild size="sm" variant="outline" className="h-7 text-xs">
+                    <Link href={`/system/skills/detail?name=${encodeURIComponent(selectedSkill.name)}`}>
+                      {t("openDetailAction")}
+                    </Link>
                   </Button>
                 </div>
                 {selectedSkill.description && (

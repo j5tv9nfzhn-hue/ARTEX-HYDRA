@@ -2,17 +2,19 @@
 
 import * as React from "react";
 
+import Link from "next/link";
+
 import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CopyIcon,
   Loader2Icon,
-  RadioIcon,
   SearchIcon,
   Trash2Icon,
   XIcon,
 } from "lucide-react";
+import { Masthead } from "@/components/editorial";
 import { useTranslations } from "next-intl";
 
 import { EmptyState } from "@/components/empty-state";
@@ -28,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Sheet } from "@/components/editorial-sheet";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -302,14 +304,16 @@ export default function LLMRecordsPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <RadioIcon className="h-5 w-5 text-muted-foreground" />
-          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
-          <Badge variant="secondary">{total}</Badge>
-        </div>
-      </div>
+      <Masthead
+        title={t("title")}
+        subtitle={t("subtitle")}
+        meta={
+          <>
+            共 <span className="tabular-nums">{total}</span> 条
+          </>
+        }
+        titleClassName="text-xl"
+      />
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
@@ -431,7 +435,7 @@ export default function LLMRecordsPage() {
 
       {/* History table + inline detail (Burp-style split) */}
       <div className="flex h-[calc(100vh-13rem)] min-h-0 flex-col gap-3">
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
+        <Sheet className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-card">
@@ -516,13 +520,13 @@ export default function LLMRecordsPage() {
               </TableBody>
             </Table>
           </div>
-        </Card>
+        </Sheet>
 
         {/* Inline detail panel */}
         {selected && (
-          <Card className="flex h-[42%] min-h-0 flex-col overflow-hidden py-0">
+          <Sheet className="flex h-[42%] min-h-0 flex-col">
             {/* Detail header */}
-            <div className="flex items-center gap-2 border-b px-3 py-2">
+            <div data-editorial="sheet-head" className="flex items-center gap-2 border-b px-3 py-2">
               <Badge variant="outline" className="text-xs font-mono">
                 #{selected.id}
               </Badge>
@@ -563,6 +567,9 @@ export default function LLMRecordsPage() {
                 onClick={() => setRawView((v) => !v)}
               >
                 {t("raw")}
+              </Button>
+              <Button asChild variant="ghost" size="sm" className="h-7 shrink-0 text-xs">
+                <Link href={`/function/llm-records/detail?id=${selected.id}`}>{t("openPage")}</Link>
               </Button>
               <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => setSelected(null)}>
                 <XIcon />
@@ -612,7 +619,7 @@ export default function LLMRecordsPage() {
                 </div>
               </div>
             </div>
-          </Card>
+          </Sheet>
         )}
       </div>
 

@@ -6,9 +6,10 @@ import type { Graph as G6Graph } from "@antv/g6";
 import { AppWindow, Building2, Globe, Link2, type LucideIcon, Radio, RefreshCw, Server, Waypoints } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { Sheet as PaperSheet } from "@/components/editorial-sheet";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { api } from "@/lib/api";
@@ -779,12 +780,10 @@ function GraphInner({ taskId, coverageEnabled = true }: { taskId: string; covera
 
 export function CoverageGraphTab({ taskId, coverageEnabled = true }: { taskId: string; coverageEnabled?: boolean }) {
   return (
-    <Card>
-      <CardContent className="p-0">
-        <div className="h-[72vh] w-full overflow-hidden rounded-xl">
-          <GraphInner taskId={taskId} coverageEnabled={coverageEnabled} />
-        </div>
-      </CardContent>
-    </Card>
+    <PaperSheet>
+      <div data-editorial="body" className="h-[72vh] w-full overflow-hidden">
+        <GraphInner taskId={taskId} coverageEnabled={coverageEnabled} />
+      </div>
+    </PaperSheet>
   );
 }

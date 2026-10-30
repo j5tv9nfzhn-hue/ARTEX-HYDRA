@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { api } from "@/lib/api";
 import { copyText } from "@/lib/utils";
 
@@ -80,20 +80,22 @@ export function ReportTab({
   }
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <FileTextIcon className="size-4" /> {t(softwareRE ? "softwareTitle" : "title")}
-        </CardTitle>
-        <div className="flex gap-2">
-          {report && (
+    <Sheet>
+      <SheetHead
+        icon={FileTextIcon}
+        title={t(softwareRE ? "softwareTitle" : "title")}
+        count={report ? t("chars", { n: report.length.toLocaleString("zh-CN") }) : undefined}
+        actions={
+          report ? (
             <Button size="sm" variant="outline" onClick={copy}>
-              {copied ? <CheckIcon /> : <CopyIcon />} {t("copy")}
+              {copied ? <CheckIcon data-icon="inline-start" /> : <CopyIcon data-icon="inline-start" />}
+              {t("copy")}
             </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>{content}</CardContent>
-    </Card>
+          ) : null
+        }
+      />
+      <div className="px-4 pt-1">{content}</div>
+      <SheetFoot left={t(softwareRE ? "softwareTitle" : "title")} right={t("foot")} />
+    </Sheet>
   );
 }

@@ -2,8 +2,10 @@
 
 import * as React from "react";
 
+import { useTranslations } from "next-intl";
+
+import { Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { ExplorationGraph } from "@/components/exploration-graph";
-import { Card, CardContent } from "@/components/ui/card";
 import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api";
 import type { Edge, TaskNode } from "@/lib/types";
@@ -42,6 +44,7 @@ function graphSignature(ns: TaskNode[], es: Edge[]) {
 }
 
 export function GraphTab({ taskId }: { taskId: string }) {
+  const t = useTranslations("taskDetail");
   const cached = readGraphCache(taskId);
   const [nodes, setNodes] = React.useState<TaskNode[]>(cached?.nodes ?? []);
   const [edges, setEdges] = React.useState<Edge[]>(cached?.edges ?? []);
@@ -77,10 +80,12 @@ export function GraphTab({ taskId }: { taskId: string }) {
   );
 
   return (
-    <Card>
-      <CardContent className="p-0">
+    <Sheet>
+      <SheetHead title={t("tabs.graph")} count={`${nodes.length} / ${edges.length}`} hint={t("graph.hint")} />
+      <div className="px-0">
         <ExplorationGraph nodes={nodes} edges={edges} className="h-[72vh]" />
-      </CardContent>
-    </Card>
+      </div>
+      <SheetFoot left={t("graph.foot", { nodes: nodes.length, edges: edges.length })} />
+    </Sheet>
   );
 }

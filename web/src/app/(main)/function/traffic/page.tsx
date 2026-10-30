@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import Link from "next/link";
+
 import {
   ArrowDownWideNarrowIcon,
   ArrowUpNarrowWideIcon,
@@ -742,6 +744,12 @@ export default function TrafficPage() {
                     {selected.status}
                   </Badge>
                   <span className="ml-auto text-xs text-muted-foreground tabular-nums">{fmtTime(selected.ts)}</span>
+                  {/* 抽屉给快速看；要引用、要贴给别人时走独立页。 */}
+                  <Button asChild size="sm" variant="ghost" className="h-6 shrink-0 px-1.5 text-xs">
+                    <Link href={`/function/traffic/detail?id=${encodeURIComponent(selected.id)}`}>
+                      {t("detail.openPage")}
+                    </Link>
+                  </Button>
                 </div>
                 <SheetTitle className="break-all font-mono">{selected.host}</SheetTitle>
                 <SheetDescription className="break-all font-mono">{selected.url}</SheetDescription>
