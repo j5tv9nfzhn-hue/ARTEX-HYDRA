@@ -84,7 +84,7 @@ export function NotificationCenter() {
         >
           <BellIcon className="size-4" />
           {count > 0 ? (
-            <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 font-semibold text-[10px] text-destructive-foreground tabular-nums">
+            <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 font-semibold text-xs text-destructive-foreground tabular-nums">
               {count > 99 ? "99+" : count}
             </span>
           ) : null}
@@ -106,16 +106,16 @@ export function NotificationCenter() {
         <div className="max-h-[26rem] overflow-y-auto">
           <div className="flex items-center gap-1.5 px-3 pt-2 pb-1">
             <ShieldCheckIcon className="size-3.5 text-amber-500" />
-            <span className="font-medium text-[11px]">{t("pending")}</span>
-            <span className="text-[11px] text-muted-foreground tabular-nums">{pending.length}</span>
+            <span className="font-medium text-xs">{t("pending")}</span>
+            <span className="text-xs text-muted-foreground tabular-nums">{pending.length}</span>
             <span className="ml-auto">
-              <Link href="/system/intercept/approvals" className="text-[11px] text-primary hover:underline">
+              <Link href="/system/intercept/approvals" className="text-xs text-primary hover:underline">
                 {t("all")}
               </Link>
             </span>
           </div>
           {pending.length === 0 ? (
-            <p className="px-3 py-2 text-[11.5px] text-muted-foreground">{t("pendingEmpty")}</p>
+            <p className="px-3 py-2 text-xs text-muted-foreground">{t("pendingEmpty")}</p>
           ) : (
             pending.slice(0, MAX_EACH).map((row) => (
               <Link
@@ -126,8 +126,8 @@ export function NotificationCenter() {
               >
                 <span className="mt-1 size-1.5 shrink-0 rounded-full bg-amber-500" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-mono text-[11.5px]">{row.tool_name}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
+                  <span className="block truncate font-mono text-xs">{row.tool_name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
                     {row.agent_name} · {relTime(row.created_at, t)}
                   </span>
                 </span>
@@ -138,16 +138,16 @@ export function NotificationCenter() {
 
           <div className="mt-1 flex items-center gap-1.5 border-t px-3 pt-2 pb-1">
             <ShieldAlertIcon className="size-3.5 text-rose-500" />
-            <span className="font-medium text-[11px]">{t("severe")}</span>
-            <span className="text-[11px] text-muted-foreground tabular-nums">{severe.length}</span>
+            <span className="font-medium text-xs">{t("severe")}</span>
+            <span className="text-xs text-muted-foreground tabular-nums">{severe.length}</span>
             <span className="ml-auto">
-              <Link href="/function/findings" className="text-[11px] text-primary hover:underline">
+              <Link href="/function/findings" className="text-xs text-primary hover:underline">
                 {t("all")}
               </Link>
             </span>
           </div>
           {severe.length === 0 ? (
-            <p className="px-3 py-2 text-[11.5px] text-muted-foreground">{t("severeEmpty")}</p>
+            <p className="px-3 py-2 text-xs text-muted-foreground">{t("severeEmpty")}</p>
           ) : (
             severe.map((f) => (
               <Link
@@ -163,8 +163,8 @@ export function NotificationCenter() {
                   )}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[11.5px]">{f.name || f.vulnclass || f.summary}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
+                  <span className="block truncate text-xs">{f.name || f.vulnclass || f.summary}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
                     {f.task_description || (f.task_id ? `#${f.task_id}` : "—")} · {relTime(f.ts, t)}
                   </span>
                 </span>

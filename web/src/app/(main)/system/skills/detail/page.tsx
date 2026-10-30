@@ -153,23 +153,23 @@ function SkillDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.calls")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.calls")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{skill.calls}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.tasks")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.tasks")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{skill.tasks}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.files")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.files")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{files.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.agents")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.agents")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{skill.usage_agents.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.mcps")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.mcps")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{(skill.mcps ?? []).length}</span>
         </div>
       </KpiRow>
@@ -184,7 +184,7 @@ function SkillDetailInner() {
           />
           <div data-editorial="body" className="min-h-0 px-4 py-3">
             {body ? (
-              <pre className="max-h-[64vh] overflow-auto whitespace-pre-wrap font-mono text-[11.5px] leading-relaxed [overflow-wrap:anywhere]">
+              <pre className="max-h-[64vh] overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
                 {body}
               </pre>
             ) : (
@@ -204,8 +204,8 @@ function SkillDetailInner() {
             ) : (
               <div data-editorial="body" className="px-4 pt-1 pb-2">
                 {files.map((f) => (
-                  <RecordRow key={f} cols="20px minmax(0,1fr)" lead={<span className="text-[10px]">—</span>}>
-                    <code className="block truncate font-mono text-[11.5px]">{f}</code>
+                  <RecordRow key={f} cols="20px minmax(0,1fr)" lead={<span className="text-xs">—</span>}>
+                    <code className="block truncate font-mono text-xs">{f}</code>
                   </RecordRow>
                 ))}
               </div>
@@ -230,19 +230,19 @@ function SkillDetailInner() {
                         <Link
                           key="t"
                           href={`/function/tasks/detail?id=${c.task_id}`}
-                          className="text-[11px] text-primary hover:underline tabular-nums"
+                          className="text-xs text-primary hover:underline tabular-nums"
                         >
                           #{c.task_id}
                         </Link>
                       ) : (
-                        <span key="t" className="text-[10px] text-muted-foreground">
+                        <span key="t" className="text-xs text-muted-foreground">
                           {t("chat")}
                         </span>
                       ),
                     ]}
                   >
-                    <span className="block truncate font-mono text-[11.5px]">{c.agent_key || "—"}</span>
-                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                    <span className="block truncate font-mono text-xs">{c.agent_key || "—"}</span>
+                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                       {t("argsLen", { n: c.args_len })}
                     </span>
                   </RecordRow>

@@ -103,7 +103,7 @@ function MCPDetailInner() {
           title={server.name}
           meta={
             <>
-              <code className="font-mono text-[10px]">#{server.id}</code>
+              <code className="font-mono text-xs">#{server.id}</code>
               <span className="mx-1.5 opacity-40">·</span>
               <span className="font-mono">{server.transport}</span>
               <span className="mx-1.5 opacity-40">·</span>
@@ -124,25 +124,25 @@ function MCPDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.tools")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.tools")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">
             {tools.length || (server.tools ?? []).length}
           </span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.transport")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.transport")}</span>
           <span className="font-semibold text-[15px] leading-none font-mono">{server.transport}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.env")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.env")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{envKeys.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.args")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.args")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{(server.args ?? []).length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.state")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.state")}</span>
           <span className="font-semibold text-[15px] leading-none">
             {server.enabled ? t("enabled") : t("disabled")}
           </span>
@@ -168,7 +168,7 @@ function MCPDetailInner() {
             {envKeys.length > 0 ? (
               <RecordRow lead={t("row.env")} cols="72px minmax(0,1fr)">
                 <span className="font-mono text-[12px]">{envKeys.join(" · ")}</span>
-                <span className="mt-0.5 block text-[11px] text-muted-foreground">{t("envHint")}</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">{t("envHint")}</span>
               </RecordRow>
             ) : null}
             <RecordRow lead={t("row.handshake")} cols="72px minmax(0,1fr)">
@@ -193,10 +193,10 @@ function MCPDetailInner() {
             <div data-editorial="body" className="px-4 pt-1 pb-2">
               {(tools.length > 0 ? tools.map((x) => ({ name: x.name, description: x.description })) : (server.tools ?? []).map((n) => ({ name: n, description: "" }))).map(
                 (tool) => (
-                  <RecordRow key={tool.name} lead={<Badge variant="outline" className="text-[10px]">mcp</Badge>} cols="56px minmax(0,1fr)">
+                  <RecordRow key={tool.name} lead={<Badge variant="outline">mcp</Badge>} cols="56px minmax(0,1fr)">
                     <code className="block truncate font-mono text-[12px]">{tool.name}</code>
                     {tool.description ? (
-                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{tool.description}</span>
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">{tool.description}</span>
                     ) : null}
                   </RecordRow>
                 ),

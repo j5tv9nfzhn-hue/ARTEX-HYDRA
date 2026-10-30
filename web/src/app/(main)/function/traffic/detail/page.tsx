@@ -110,7 +110,7 @@ function TrafficDetailInner() {
               {meta ? <span className="mx-1.5 opacity-40">·</span> : null}
               {meta ? <span className="font-mono">{meta.host}</span> : null}
               <span className="mx-1.5 opacity-40">·</span>
-              <code className="font-mono text-[10px]">{id}</code>
+              <code className="font-mono text-xs">{id}</code>
             </>
           }
           subtitle={meta ? `${meta.ts} · ${meta.content_type || t("noContentType")}` : t("metaGone")}
@@ -121,23 +121,23 @@ function TrafficDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.status")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.status")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{meta?.status ?? "—"}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.method")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.method")}</span>
           <span className="font-semibold text-[22px] leading-none font-mono">{meta?.method ?? "—"}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.reqLines")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.reqLines")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{reqLines}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.respLines")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.respLines")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{respLines}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.size")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.size")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">
             {meta ? `${Math.round(meta.resp_len / 102.4) / 10}K` : "—"}
           </span>

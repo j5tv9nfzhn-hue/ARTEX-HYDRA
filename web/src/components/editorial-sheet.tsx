@@ -109,7 +109,7 @@ export function GroupHead({
         <span className="shrink-0 text-muted-foreground text-xs tabular-nums">{count}</span>
       ) : null}
       <span className="h-px min-w-3 flex-1 bg-border/70" />
-      {hint ? <span className="hidden shrink-0 text-muted-foreground text-[10px] sm:block">{hint}</span> : null}
+      {hint ? <span className="hidden shrink-0 text-muted-foreground text-xs sm:block">{hint}</span> : null}
     </div>
   );
 }
@@ -169,7 +169,7 @@ export function RecordRow({
 export function RecordSub({ items }: { items: React.ReactNode[] }) {
   const nodes = items.filter((x) => x !== null && x !== undefined && x !== "");
   return (
-    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
       {nodes.map((node, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: 以位置定身份，内容可能重复
         <span key={i} className="inline-flex items-center gap-2">

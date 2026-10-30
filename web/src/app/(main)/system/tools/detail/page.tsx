@@ -126,23 +126,23 @@ function ToolDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.properties")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.properties")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{propKeys.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.required")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.required")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{required.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.agents")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.agents")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{tool.agents.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.calls")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.calls")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{tool.calls ?? 0}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.kind")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.kind")}</span>
           <span className="font-semibold text-[15px] leading-none">{tool.kind || "builtin"}</span>
         </div>
       </KpiRow>
@@ -159,15 +159,15 @@ function ToolDetailInner() {
                 return (
                   <RecordRow
                     key={p}
-                    lead={<code className="font-mono text-[11px]">{spec?.type || "any"}</code>}
+                    lead={<code className="font-mono text-xs">{spec?.type || "any"}</code>}
                     cols="72px minmax(0,1fr) auto"
                     values={[
                       required.includes(p) ? (
-                        <Badge key="r" variant="outline" className="text-[10px]">
+                        <Badge key="r" variant="outline">
                           {t("requiredTag")}
                         </Badge>
                       ) : (
-                        <span key="r" className="text-[10px] text-muted-foreground">
+                        <span key="r" className="text-xs text-muted-foreground">
                           {t("optionalTag")}
                         </span>
                       ),
@@ -175,7 +175,7 @@ function ToolDetailInner() {
                   >
                     <code className="block truncate font-mono text-[12px]">{p}</code>
                     {spec?.description ? (
-                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                         {spec.description}
                       </span>
                     ) : null}
@@ -227,14 +227,14 @@ function ToolDetailInner() {
                       <Link
                         key="l"
                         href={`/function/commands/detail?id=${c.id}${c.exploration_id ? `&task=${c.exploration_id}` : ""}`}
-                        className="text-[11px] text-primary hover:underline"
+                        className="text-xs text-primary hover:underline"
                       >
                         {t("open")}
                       </Link>,
                     ]}
                   >
-                    <span className="block truncate font-mono text-[11.5px]">{c.command}</span>
-                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                    <span className="block truncate font-mono text-xs">{c.command}</span>
+                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                       {c.is_error ? t("callFailed") : t("callOk")} · {c.worker || "—"}
                     </span>
                   </RecordRow>
