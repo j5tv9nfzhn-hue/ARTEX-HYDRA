@@ -137,7 +137,7 @@ else
     (cd web && npm ci)
   fi
   # 版本号内嵌进静态包：与 -X main.version 同源（ARTEX_BUILD_VERSION），
-  # 这样桌面端窗口内的「关于」与 /api/health 报的是同一个版本，四段（如 2.5.0.6）
+  # 这样界面「关于」里显示的版本与 /api/health 报的是同一个，四段（如 2.5.0.6）
   # 也原样落地——package.json 的 semver 只允许三段，不能当来源。
   (cd web && NEXT_PUBLIC_APP_VERSION="$ARTEX_BUILD_VERSION" npm run build:static)
   info "正在将前端资源同步到 server/webui/dist"
