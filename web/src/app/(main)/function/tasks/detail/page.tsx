@@ -507,8 +507,8 @@ function TaskDetailInner() {
 
         {/* 书眉：编号 · 分类 · 状态 / 标题 / 目标 */}
         <div className="flex flex-col gap-1 px-4 pt-3 pb-2 lg:px-6">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground tabular-nums">
-            <code className="rounded-[2px] border border-border/60 px-1 py-px font-mono text-[10px]">#{task.id}</code>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular-nums">
+            <code className="rounded-[2px] border border-border/60 px-1 py-px font-mono text-xs">#{task.id}</code>
             <span>{t(task.analysis_domain === "software_re" ? "analysisDomain.software" : "analysisDomain.web")}</span>
             <span className="h-2 w-px bg-border" />
             <StatusBadge domain={terminal ? "task" : "engine"} value={terminal ? task.status : engineMode} dot />
@@ -538,7 +538,7 @@ function TaskDetailInner() {
             onClick={() => setTab("overview")}
             className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
           >
-            <span className="text-[10px] tracking-[0.08em] text-muted-foreground">目标达成</span>
+            <span className="text-xs tracking-[0.08em] text-muted-foreground">目标达成</span>
             <span className="font-semibold text-[22px] leading-none tabular-nums">
               {goalsMet}
               <span className="ml-0.5 font-normal text-[12px] text-muted-foreground">/ {goalsTotal}</span>
@@ -549,7 +549,7 @@ function TaskDetailInner() {
             onClick={() => setTab("graph")}
             className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
           >
-            <span className="text-[10px] tracking-[0.08em] text-muted-foreground">在途 Worker</span>
+            <span className="text-xs tracking-[0.08em] text-muted-foreground">在途 Worker</span>
             <span className="font-semibold text-[22px] leading-none tabular-nums">{inFlightCount}</span>
           </button>
           <button
@@ -557,7 +557,7 @@ function TaskDetailInner() {
             onClick={() => setTab("findings")}
             className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
           >
-            <span className="text-[10px] tracking-[0.08em] text-muted-foreground">已确认发现</span>
+            <span className="text-xs tracking-[0.08em] text-muted-foreground">已确认发现</span>
             <span className="font-semibold text-[22px] leading-none tabular-nums">{totalFindings}</span>
           </button>
           <button
@@ -565,7 +565,7 @@ function TaskDetailInner() {
             onClick={() => setTab("intercept")}
             className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
           >
-            <span className="text-[10px] tracking-[0.08em] text-muted-foreground">待审批</span>
+            <span className="text-xs tracking-[0.08em] text-muted-foreground">待审批</span>
             <span className="font-semibold text-[22px] leading-none tabular-nums">{interceptPendingCount}</span>
           </button>
           <button
@@ -573,7 +573,7 @@ function TaskDetailInner() {
             onClick={() => setTab("timeline")}
             className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
           >
-            <span className="text-[10px] tracking-[0.08em] text-muted-foreground">未收口分支</span>
+            <span className="text-xs tracking-[0.08em] text-muted-foreground">未收口分支</span>
             <span className="font-semibold text-[22px] leading-none tabular-nums">{openBranches}</span>
           </button>
         </KpiRow>
@@ -585,12 +585,12 @@ function TaskDetailInner() {
               <TabsTrigger key={value} value={value} className="h-8 px-0 text-xs">
                 {t(`tabs.${value}`)}
                 {value === "findings" && totalFindings > 0 && (
-                  <span className="ml-1 text-[10px] font-semibold text-rose-600 tabular-nums dark:text-rose-400">
+                  <span className="ml-1 text-xs font-semibold text-rose-600 tabular-nums dark:text-rose-400">
                     {totalFindings > 99 ? "99+" : totalFindings}
                   </span>
                 )}
                 {value === "intercept" && interceptPendingCount > 0 && (
-                  <span className="ml-1 text-[10px] font-semibold text-amber-600 tabular-nums dark:text-amber-400">
+                  <span className="ml-1 text-xs font-semibold text-amber-600 tabular-nums dark:text-amber-400">
                     {interceptPendingCount > 99 ? "99+" : interceptPendingCount}
                   </span>
                 )}

@@ -57,7 +57,7 @@ function HostOf(a: Asset): string {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-3 border-border/60 border-b py-1.5 last:border-b-0">
-      <span className="w-28 shrink-0 text-[11px] text-muted-foreground">{label}</span>
+      <span className="w-28 shrink-0 text-xs text-muted-foreground">{label}</span>
       <div className="min-w-0 flex-1 text-[13px] [overflow-wrap:anywhere]">{children}</div>
     </div>
   );
@@ -170,7 +170,7 @@ function AssetDetailInner() {
           title={label}
           meta={
             <>
-              <code className="font-mono text-[10px]">#{asset.id}</code>
+              <code className="font-mono text-xs">#{asset.id}</code>
               <span className="mx-1.5 opacity-40">·</span>
               <span>{tk(asset.type)}</span>
               <span className="mx-1.5 opacity-40">·</span>
@@ -185,23 +185,23 @@ function AssetDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.ports")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.ports")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{ports.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.tech")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.tech")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{tech.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.tasks")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.tasks")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{taskIds.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.findings")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.findings")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{findings.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.status")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.status")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{asset.status_code ?? "—"}</span>
         </div>
       </KpiRow>
@@ -231,7 +231,7 @@ function AssetDetailInner() {
               ) : null}
               {asset.favicon_mmh3 ? (
                 <Field label={t("field.favicon")}>
-                  <code className="font-mono text-[11px] text-muted-foreground">{asset.favicon_mmh3}</code>
+                  <code className="font-mono text-xs text-muted-foreground">{asset.favicon_mmh3}</code>
                 </Field>
               ) : null}
               {asset.company_id ? <Field label={t("field.company")}>#{asset.company_id}</Field> : null}
@@ -286,7 +286,7 @@ function AssetDetailInner() {
                     ]}
                   >
                     <span className="block truncate text-[13px]">{f.name || f.vulnclass || f.summary}</span>
-                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                       {f.task_description || (f.task_id ? `#${f.task_id}` : "—")}
                     </span>
                   </RecordRow>
@@ -332,7 +332,7 @@ function AssetDetailInner() {
                 {traffic.map((x) => (
                   <RecordRow
                     key={x.id}
-                    lead={<span className="font-mono text-[11px]">{x.method}</span>}
+                    lead={<span className="font-mono text-xs">{x.method}</span>}
                     cols="52px minmax(0,1fr) 40px 44px"
                     values={[
                       <span key="s" className="tabular-nums">
@@ -348,7 +348,7 @@ function AssetDetailInner() {
                       </Link>,
                     ]}
                   >
-                    <span className="block truncate font-mono text-[11.5px]">{x.url}</span>
+                    <span className="block truncate font-mono text-xs">{x.url}</span>
                   </RecordRow>
                 ))}
               </div>

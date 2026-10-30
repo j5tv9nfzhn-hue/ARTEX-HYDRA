@@ -90,8 +90,8 @@ function CommandDetailInner() {
   }
 
   const fields: { k: string; v: React.ReactNode }[] = [
-    { k: t("fieldTool"), v: <code className="font-mono text-[11px]">{record.tool}</code> },
-    { k: t("fieldWorker"), v: <span className="font-mono text-[11px]">{record.worker || "—"}</span> },
+    { k: t("fieldTool"), v: <code className="font-mono text-xs">{record.tool}</code> },
+    { k: t("fieldWorker"), v: <span className="font-mono text-xs">{record.worker || "—"}</span> },
     {
       k: t("fieldTask"),
       v: record.exploration_id ? (
@@ -124,7 +124,7 @@ function CommandDetailInner() {
           title={t("title")}
           meta={
             <>
-              <code className="font-mono text-[10px]">#{record.id}</code>
+              <code className="font-mono text-xs">#{record.id}</code>
               <span className="mx-1.5 opacity-40">·</span>
               <span>{record.tool}</span>
               <span className="mx-1.5 opacity-40">·</span>
@@ -142,7 +142,7 @@ function CommandDetailInner() {
       <dl className="grid grid-cols-2 divide-border/60 border-border/60 border-y sm:grid-cols-3 lg:grid-cols-5 lg:divide-x">
         {fields.map((f) => (
           <div key={f.k} className="flex flex-col gap-0.5 px-3 py-2">
-            <dt className="text-[10px] tracking-[0.08em] text-muted-foreground">{f.k}</dt>
+            <dt className="text-xs tracking-[0.08em] text-muted-foreground">{f.k}</dt>
             <dd className="truncate text-[13px]">{f.v}</dd>
           </div>
         ))}
@@ -150,19 +150,19 @@ function CommandDetailInner() {
 
       {/* 输入：原文，等宽，可横向滚动 */}
       <section className="flex min-h-0 flex-col gap-1.5">
-        <h2 className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("input")}</h2>
-        <pre className="overflow-x-auto rounded-[2px] border border-border/70 bg-muted/25 p-3 font-mono text-[11.5px] leading-relaxed">
+        <h2 className="text-xs tracking-[0.08em] text-muted-foreground">{t("input")}</h2>
+        <pre className="overflow-x-auto rounded-[2px] border border-border/70 bg-muted/25 p-3 font-mono text-xs leading-relaxed">
           {record.command}
         </pre>
       </section>
 
       {/* 输出：成功/失败同一块，失败时整块转危险色的左边线 */}
       <section className="flex min-h-0 flex-col gap-1.5">
-        <h2 className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("output")}</h2>
+        <h2 className="text-xs tracking-[0.08em] text-muted-foreground">{t("output")}</h2>
         {record.output ? (
           <pre
             className={cn(
-              "max-h-[52vh] overflow-auto rounded-[2px] border border-border/70 bg-muted/25 p-3 font-mono text-[11.5px] leading-relaxed",
+              "max-h-[52vh] overflow-auto rounded-[2px] border border-border/70 bg-muted/25 p-3 font-mono text-xs leading-relaxed",
               record.is_error && "border-l-2 border-l-destructive",
             )}
           >

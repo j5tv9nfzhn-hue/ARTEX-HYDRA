@@ -116,7 +116,7 @@ function RecordDetailInner() {
           title={rec.model || t("title")}
           meta={
             <>
-              <code className="font-mono text-[10px]">#{rec.id}</code>
+              <code className="font-mono text-xs">#{rec.id}</code>
               <span className="mx-1.5 opacity-40">·</span>
               <span className="font-mono">{rec.profile_name || "—"}</span>
               <span className="mx-1.5 opacity-40">·</span>
@@ -135,25 +135,25 @@ function RecordDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.input")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.input")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{fmtTokens(rec.input_tokens)}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.output")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.output")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{fmtTokens(rec.output_tokens)}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.cache")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.cache")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">
             {fmtTokens(rec.cache_read)}
           </span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.latency")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.latency")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{fmtLatency(rec.latency_ms)}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.cost")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.cost")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{fmtCost(rec.cost ?? 0)}</span>
         </div>
       </KpiRow>
@@ -166,7 +166,7 @@ function RecordDetailInner() {
             actions={<CopyButton text={reqText} />}
           />
           <div data-editorial="body" className="min-h-0 px-3 py-2">
-            <pre className="max-h-[56vh] overflow-auto whitespace-pre-wrap break-all font-mono text-[11.5px] leading-relaxed [overflow-wrap:anywhere]">
+            <pre className="max-h-[56vh] overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
               {reqText || t("emptyContent")}
             </pre>
           </div>
@@ -182,8 +182,8 @@ function RecordDetailInner() {
             <pre
               className={
                 rec.status === "ok"
-                  ? "max-h-[56vh] overflow-auto whitespace-pre-wrap break-all font-mono text-[11.5px] leading-relaxed [overflow-wrap:anywhere]"
-                  : "max-h-[56vh] overflow-auto whitespace-pre-wrap break-all border-l-2 border-l-destructive pl-3 font-mono text-[11.5px] leading-relaxed text-destructive [overflow-wrap:anywhere]"
+                  ? "max-h-[56vh] overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-relaxed [overflow-wrap:anywhere]"
+                  : "max-h-[56vh] overflow-auto whitespace-pre-wrap break-all border-l-2 border-l-destructive pl-3 font-mono text-xs leading-relaxed text-destructive [overflow-wrap:anywhere]"
               }
             >
               {respText || t("emptyContent")}
@@ -242,7 +242,7 @@ function RecordDetailInner() {
               </RecordRow>
             ) : null}
             <RecordRow lead={t("row.session")} cols="96px minmax(0,1fr) auto">
-              <code className="font-mono text-[11.5px] text-muted-foreground">{rec.session_id || "—"}</code>
+              <code className="font-mono text-xs text-muted-foreground">{rec.session_id || "—"}</code>
             </RecordRow>
           </div>
           <SheetFoot left={t("footCost")} right={t("replayOff")} />

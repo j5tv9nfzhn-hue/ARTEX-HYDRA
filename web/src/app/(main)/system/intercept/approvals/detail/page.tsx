@@ -112,7 +112,7 @@ function ApprovalDetailInner() {
           title={row.tool_name || t("title")}
           meta={
             <>
-              <code className="font-mono text-[10px]">#{row.id}</code>
+              <code className="font-mono text-xs">#{row.id}</code>
               <span className="mx-1.5 opacity-40">·</span>
               <span className="font-mono">{row.agent_name || "—"}</span>
               <span className="mx-1.5 opacity-40">·</span>
@@ -133,27 +133,27 @@ function ApprovalDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.status")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.status")}</span>
           <span className="font-semibold text-[15px] leading-none">
             <Badge variant="outline">{ta(`status.${row.status}`)}</Badge>
           </span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.source")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.source")}</span>
           <span className="font-semibold text-[15px] leading-none">
             {row.decision_source === "model" ? ta("modelDecision") : row.rule_name || ta("ruleMissing")}
           </span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.agent")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.agent")}</span>
           <span className="truncate font-mono text-[13px] leading-none">{row.agent_name || "—"}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.requested")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.requested")}</span>
           <span className="font-semibold text-[13px] leading-none tabular-nums">{row.created_at}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("kpi.decided")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.decided")}</span>
           <span className="font-semibold text-[13px] leading-none tabular-nums">{row.decided_at || "—"}</span>
         </div>
       </KpiRow>

@@ -151,8 +151,8 @@ function FindingDetailInner() {
 
       {/* 书眉：编号 · 严重度 · 状态 · 复核 · 时间 / 标题 / 所属任务 */}
       <div className="flex flex-col gap-1 px-4 pt-2 pb-2 lg:px-6">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground tabular-nums">
-          <code className="rounded-[2px] border border-border/60 px-1 py-px font-mono text-[10px]">#{finding.id}</code>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular-nums">
+          <code className="rounded-[2px] border border-border/60 px-1 py-px font-mono text-xs">#{finding.id}</code>
           <span>{finding.vulnclass || t("table.unclassified")}</span>
           <span className="h-2 w-px bg-border" />
           <StatusBadge domain="severity" value={finding.severity} dot />
@@ -184,7 +184,7 @@ function FindingDetailInner() {
           onClick={() => setTab("overview")}
           className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
         >
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("detail.fieldSeverity")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("detail.fieldSeverity")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">
             {tStatus(`severity.${finding.severity}`)}
           </span>
@@ -194,7 +194,7 @@ function FindingDetailInner() {
           onClick={() => setTab("overview")}
           className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
         >
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("detail.fieldStatus")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("detail.fieldStatus")}</span>
           <span className="font-semibold text-[22px] leading-none">
             {tStatus(`finding.${finding.status}`)}
           </span>
@@ -204,7 +204,7 @@ function FindingDetailInner() {
           onClick={() => setTab("overview")}
           className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
         >
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">复核态</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">复核态</span>
           <span className="font-semibold text-[22px] leading-none">
             <StatusBadge domain="validation" value={finding.validation ?? "unverified"} dot />
           </span>
@@ -214,7 +214,7 @@ function FindingDetailInner() {
           onClick={() => setTab("overview")}
           className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
         >
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("detail.fieldAssets")}</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("detail.fieldAssets")}</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">{finding.assets?.length ?? 0}</span>
         </button>
         <button
@@ -222,7 +222,7 @@ function FindingDetailInner() {
           onClick={() => setTab("overview")}
           className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
         >
-          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">证据</span>
+          <span className="text-xs tracking-[0.08em] text-muted-foreground">证据</span>
           <span className="font-semibold text-[22px] leading-none tabular-nums">
             {finding.evidence ? `${Math.max(1, Math.round(finding.evidence.length / 1024))}K` : "—"}
           </span>

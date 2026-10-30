@@ -153,7 +153,7 @@ function Row({
 
       {open && (
         <div className="px-4 pb-3 pl-14">
-          <div className="mb-1 text-[10px] text-muted-foreground tracking-[0.06em]">{t("evidencePoc")}</div>
+          <div className="mb-1 text-xs text-muted-foreground tracking-[0.06em]">{t("evidencePoc")}</div>
           <pre
             data-editorial="evidence"
             className="overflow-auto whitespace-pre-wrap rounded-md border bg-muted/25 p-3 font-mono text-xs"

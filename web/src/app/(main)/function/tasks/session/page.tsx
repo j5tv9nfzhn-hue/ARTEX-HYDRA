@@ -78,7 +78,7 @@ function TaskSessionInner() {
                 {task?.name || task?.description || `#${id}`}
               </Link>
               <span className="mx-1.5 opacity-40">·</span>
-              <code className="font-mono text-[10px]">#{id}</code>
+              <code className="font-mono text-xs">#{id}</code>
             </>
           }
           titleClassName="text-xl"

@@ -89,7 +89,7 @@ export function ToolSummaryRow({
         {t(kind.labelKey)}
       </span>
       {worker ? <span className={workerChipClass}>{worker}</span> : null}
-      <span className="shrink-0 font-mono font-medium text-[11.5px] text-foreground">
+      <span className="shrink-0 font-mono font-medium text-ui-xs text-foreground">
         {execToolLabel(tool, shell)}
       </span>
       {target ? (

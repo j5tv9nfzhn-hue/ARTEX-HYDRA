@@ -130,7 +130,7 @@ export function LayoutControls() {
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
-              <p className="text-muted-foreground text-[10px] leading-snug">
+              <p className="text-muted-foreground text-xs leading-snug">
                 {skin === "editorial"
                   ? "纸本：书刊排版、发丝线、等宽数字；配色固定为纸本预设。"
                   : "经典：沿用下方主题预设的原始观感。"}
