@@ -211,8 +211,8 @@ GitHub Release 发布三端（Linux/macOS/Windows）zip 包（amd64/arm64），�
 ### 9.3 构建路径与前置条件
 
 - web-dist 放入 `server/webui/dist`，`server/webui_embed.go` 的 `//go:embed all:webui/dist` 内嵌它；binaries 用 `ARTEX_SKIP_FRONTEND=1` 防止重复编译前端。
-- `build.sh --target OS/ARCH` 输出 `dist/artex-rea-<版本>-<os>-<arch>/artex-rea`（Windows 为 `artex-rea.exe`）和发布用 zip；包含对应启动脚本（`start.bat` / `start.sh`）、skills、config.example.json、README。桌面端目标（`--desktop`）输出 `dist/artex-hydra-desktop-<版本>-<os>-<arch>/`，包内是**单文件** `artex-hydra-desktop`（无 `-core`、无 `versions/`；macOS 为 `artex-hydra-desktop.app`），`-desktop` 后缀用于与 WEB 版 `artex-rea-*` 区分。
-- 一键更新由 `selfupdate.AssetName` 按当前平台拼 `artex-rea-<版本>-<os>-<架构>.zip`，与 `package_binary`top` 命名一致。桌面端构建同时注入 `singleFile=1`：`Bootstrap` 直接放行、`Handoff` 永不转交、`/api/update/apply` 返回「下载新版替换单文件」，因此桌面端不产生 `versions/`、`pointer.json` 与核心副本。
+- `build.sh --target OS/ARCH` 输出 `dist/artex-rea-<版本>-<os>-<arch>/artex-rea`（Windows 为 `artex-rea.exe`）和发布用 zip；包含对应启动脚本（`start.bat` / `start.sh`）、skills、config.example.json、README。包内还有 `artex-rea-core`（与入口字节相同，首次启动被收进 `versions/<ver>/`，升级只加目录、原子改指针）。发布包名固定为 `artex-rea-<版本>-<os>-<arch>.zip`，是本仓库唯一的产物族。
+- 一键更新由 `selfupdate.AssetName` 按当前平台拼 `artex-rea-<版本>-<os>-<架构>.zip`，与 `package_binary` 的命名是同一口径；`FindAsset` 用 `strings.EqualFold` 精确匹配，不做前缀或模糊匹配。`build.sh`、`release.yml`、`gen-update-manifest.py` 三处各自校验产物族，别族 zip 一律失败退出（见 §9.2 与 README「产物单一性」）。
 
 ### 9.4 不发布 tag 的本地验证
 
