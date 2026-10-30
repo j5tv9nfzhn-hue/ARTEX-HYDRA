@@ -118,9 +118,10 @@ func (c *ChatAgent) Chat(ctx context.Context, agentKey, sessionID, message strin
 	defer cleanup()
 
 	chatSys := chatSystem(agentKey, c.workDir, sessionWorkDir)
-	if hint := BuildTacticalRoutingHint(message, tools, def); hint != "" {
-		chatSys += "\n\n" + hint
-	}
+	// 【P4 拆除】此处曾拼接 BuildTacticalRoutingHint(message, tools, def)，把
+	// "这次该用哪几个 MCP/技能"的建议写进系统提示。工具面冻结到 8+9 后没有可裁
+	// 的能力面，这段建议退化为把已挂载 MCP 再列一遍，与 deferredSystem 生成的
+	// <available-deferred-tools> 块重复。
 	system, boundary := deferredSystem(chatSys, def)
 	opts := agentcore.Options{
 		Provider:        c.prov,

@@ -1,3 +1,11 @@
+//go:build decommissioned
+
+// 【P4 批次 A：已下线】本文件测试 BuildTacticalRoutingHint —— 把"这次该用哪几个
+// MCP/技能"的建议写进系统提示的那段逻辑。它随能力路由一起下线：工具面冻结后
+// 没有可裁的能力面，该建议退化为把已挂载 MCP 再列一遍，与 deferredSystem 生成的
+// <available-deferred-tools> 块重复。
+//
+// 保留理由与恢复方式同 tool_router_test.go。
 package agent
 
 import (

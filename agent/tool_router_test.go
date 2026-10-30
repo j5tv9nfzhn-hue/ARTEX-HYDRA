@@ -1,3 +1,16 @@
+//go:build decommissioned
+
+// 【P4 批次 A：已下线】本文件测试的是工具面能力向量路由（RouteToolFace /
+// RankTools / WithRouteIntent）。P4 拆除了路由的三个调用点——第六阶段把工具面
+// 冻结到 8+9 之后，候选规模已低于 Top-N=10，路由永远走"候选本来就小"的早退
+// 分支，是纯空转（见 assembly.go 的拆除注释与 CORRECTION-toolface.md §2）。
+//
+// 保留文件而不是删除：这些用例记录的是"路由曾经怎么判"，将来若要恢复按意图
+// 裁剪工具面，它们是现成的验收线。加构建约束使其不参与编译，因此不会因
+// routeToolFace 失去调用者而报未使用告警。
+//
+// 恢复方式：删掉本行及下一行的构建约束即可，前提是先把 routeToolFace 的调用点
+// 接回去。
 package agent
 
 import (

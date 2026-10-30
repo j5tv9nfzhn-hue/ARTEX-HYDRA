@@ -12,7 +12,6 @@ import (
 
 	"github.com/Autumn-27/artex/metrics"
 	"github.com/Autumn-27/artex/stageerr"
-	"github.com/Autumn-27/norma/llm"
 	actool "github.com/Autumn-27/norma/tool"
 )
 
@@ -44,14 +43,13 @@ var ToolAugment func(ctx context.Context, agentKey string) (extra []actool.CoreT
 // DeferredInfo, and a cleanup func the caller must defer (closes MCP clients).
 // Built-in base tools are kept as-is — never filtered (内置工具留代码层，不做可见性过滤).
 func AugmentTools(ctx context.Context, agentKey string, base []actool.CoreTool) ([]actool.CoreTool, DeferredInfo, func()) {
-	// 【Reviewer 硬闸门】Reviewer 是纯裁决角色：单次 LLM 调用、无 harness 循环、
-	// 不持有任何工具。它在运行时的身份只由 agentKey 决定（见 IsReviewerKey），
-	// 与 agents.role 无关。这里做兜底拦截——即便将来有代码路径误把 reviewer 送进
-	// 工具装配，它拿到的也是空工具面，绝不可能拿到 Worker 的执行工具。
-	if IsReviewerKey(agentKey) {
-		log.Printf("[tools] %s 是裁决角色，不参与工具面装配，返回空工具集", agentKey)
-		return nil, DeferredInfo{}, func() {}
-	}
+	// 【B2 拆除：Reviewer 硬闸门】这里原本判断 IsReviewerKey(agentKey) 并返回空
+	// 工具集，防的是"把 reviewer 误送进工具装配"。reviewer 角色已删除，这条防御
+	// 失去了主语。
+	//
+	// ⚠️ 连带风险（P3 README §5 已记录）：新链路的 coordAgentKey 会把配错的
+	// RootAgentKey 原样传给 GetAgentByKey，查不到就得到空工具面。这层兜底改由
+	// 启动期校验承担——见 server/engine_coord_wire.go 的 CoordSelfCheck。
 	var (
 		def     DeferredInfo
 		cleanup = func() {}
@@ -83,10 +81,12 @@ func AugmentTools(ctx context.Context, agentKey string, base []actool.CoreTool) 
 	// 瘦身只改 Description/InputSchema，并在末尾追加常驻的 get_tool_help 兜底。
 	// 能力路由放在瘦身之前：路由要读完整的 Description 才能判准，瘦身把说明
 	// 截到 72 字之后再做匹配，等于拿残句去猜语义。
-	if intent := routeIntentFrom(ctx); intent != "" {
-		out = routeToolFace(intent, out, routeAlwaysKeep(def))
-		def = pruneDeferredInfo(out, def)
-	}
+	//
+	// 【P4 拆除：能力向量路由】这里原本还有
+	//	if intent := routeIntentFrom(ctx); intent != "" { out = routeToolFace(...) }
+	// 它按意图文字对工具面做 Top-N 裁剪。第六阶段把工具面冻结到 8+9 之后，
+	// 候选集的非控制面规模已低于 Top-N=10，路由永远走「候选本来就小」的早退
+	// 分支（tool_router.go `candidateCount <= topN → return tools`），纯空转。
 	if leanEnabled() {
 		out = leanToolList(out)
 	}
@@ -103,11 +103,11 @@ func AugmentTools(ctx context.Context, agentKey string, base []actool.CoreTool) 
 	return out, def, cleanup
 }
 
-// routeAlwaysKeep 返回动态路由不得摘掉的 deferred 工具名。DeferredTools 的
-// schema 由 SDK 扣住并经 Search/ExecuteExtraTool 惰性加载；若路由把 CoreTool
-// 本体删掉，DeferredInfo、全局速查表与 Skill 解锁都会指向不存在的工具。
-// 存在 skill-gated（deferred 但不在 GlobalNames）的工具时连 Skill 一起保住，
-// 否则模型连解锁入口都没有。
+// routeAlwaysKeep 已随能力路由（P4 批次 A）失去全部调用者。
+//
+// Go 不对未使用的包级函数报错，所以它不会挡住编译；留着它是因为它记录了一条与
+// 路由无关的不变式——deferred 名单里的工具必须留在工具面上，否则 DeferredInfo、
+// 全局速查表与 Skill 解锁会同时指向空处。将来若恢复按需裁剪，这条约束仍然成立。
 func routeAlwaysKeep(def DeferredInfo) map[string]bool {
 	if len(def.Deferred) == 0 {
 		return nil
@@ -130,10 +130,13 @@ func routeAlwaysKeep(def DeferredInfo) map[string]bool {
 	return keep
 }
 
-// pruneDeferredInfo 把 DeferredInfo 收敛到最终工具面：路由摘掉的原生 MCP 工具
-// 不得继续出现在「已挂载可直调」的名单里。MCPCatalog 是上游按全量 GlobalNames
-// 预拼的一整段文本，名单有删减时无法逐行可靠裁剪，宁可整段不发（工具名仍在
-// available-deferred-tools 块中，参数结构可用 SearchExtraTools 按需取）。
+// pruneDeferredInfo 把 DeferredInfo 收敛到最终工具面。
+//
+// 【P4 批次 A：已失去调用者】它原本服务能力路由——路由摘掉某个工具后，名字不能
+// 继续留在「已挂载可直调」的名单里。路由拆除后唯一会过滤工具的是 ToolResolve
+// （DB 工具表），而它只影响**内置工具**：MCP / 技能 / 宿主工具没有 tools 行，
+// 在 ToolResolve 里原样放行。所以今天这个函数留在仓库里是安全的空转，但一旦
+// 将来有人给 MCP 工具补了 tools 行，这里就是第一个该被接回去的地方。
 func pruneDeferredInfo(tools []actool.CoreTool, def DeferredInfo) DeferredInfo {
 	present := make(map[string]bool, len(tools))
 	for _, t := range tools {
@@ -248,18 +251,10 @@ func (g *guardedTool) Call(ctx context.Context, in json.RawMessage, tc *actool.T
 		return *blocked, nil
 	}
 	defer release()
-	// 单意图工具额度闸门（任务 27）：额度用尽后调用**不进入工具实现**，不是提示、
-	// 不是靠模型自觉。被拒绝的调用计 error_class=quota，用来回头调阈值。
-	budget := intentBudgetFrom(callCtx)
-	allow, budgetExtra := budget.beforeCall()
-	if !allow {
-		metrics.ObserveToolError(name, metrics.StageExec)
-		return actool.Result{
-			IsError: true,
-			Content: []llm.ContentBlock{llm.TextBlock(quotaRefusalText)},
-			Extra:   budgetExtra,
-		}, nil
-	}
+	// 【P4 拆除：单意图工具额度闸门】这里原本按 ctx 上的 intentBudget 拦调用，
+	// 额度用尽不进入工具实现。它属于「意图」这一控制流概念的配套设施，新链路
+	// 没有意图节点（子 agent 就是意图的替代物），预算由 MaxTurns/MaxDuration 在
+	// 会话层约束。留着它只会让"到底谁在限制工具调用"多一个假答案。
 	res, err = g.CoreTool.Call(callCtx, in, tc)
 	// 统一输出裁剪（第三阶段）：head 70% / tail 30% + 全量落盘。
 	// 只处理「工具自己没裁过」的长文本——SDK 的 tool.Capture、MCP 与自定义工具

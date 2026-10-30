@@ -150,17 +150,10 @@ func (m *MainAgent) Chat(ctx context.Context, taskID int64, mainSeg int, as *db.
 	if isRE {
 		mainSys = softwareREMain + "\n\n任务目标：" + goal + softwareREArtifactSpec(mainDir) + toolBatchSpec() + langDirective(resolveOutputLang())
 	}
-	if hint := func() string {
-		tactical := BuildTacticalRoutingHint(goal+"\n"+message, tools, def)
-		if isRE {
-			if tactical != "" {
-				return softwareREHint() + "\n\n" + tactical
-			}
-			return softwareREHint()
-		}
-		return tactical
-	}(); hint != "" {
-		mainSys += "\n\n" + hint
+	// 【P4 拆除】战术路由提示随能力路由下线；软逆分支自己的 softwareREHint
+	// 不依赖路由，原样保留。
+	if isRE {
+		mainSys += "\n\n" + softwareREHint()
 	}
 	system, boundary := deferredSystem(mainSys, def)
 	opts := agentcore.Options{

@@ -561,10 +561,10 @@ func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.
 			}
 		}
 	}
-	// 意图文字进 ctx：AugmentTools 据此做能力路由（见 tool_router.go）。人工续聊
-	// 的新指令也是当前意图的一部分，必须参与本次 run 的工具面选择。
-	routeText := strings.TrimSpace(workerRouteText(intent) + " " + assetRouteText(intentAssets) + " " + message)
-	ctx = WithRouteIntent(ctx, routeText)
+	// 【P4 拆除：意图 → 能力路由】这里原本把"意图文字 + 资产特征 + 人工续聊指令"
+	// 拼成 routeText 挂到 ctx 上，供工具面路由按语义裁剪工具。路由下线后这段
+	// 拼接没有任何消费者：workerRouteText / assetRouteText 只服务路由，
+	// 不参与系统提示。
 	// 线索缓存进 ctx：连续失败时 loop breaker 会直接把缓存里的材料递到眼前
 	// （见 clue_hint.go），不用模型自己想起来去查。
 	ctx = WithClueStore(ctx, tsx.Clues())
@@ -631,14 +631,11 @@ func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.
 		"每当确认一个新方向、排除一条死路、或留下未验证的假设，立刻用 record_fact 写下来" +
 		"（detail 里写清下一步 / 假设 / 已排除项，写得越具体越好）。不要等到收尾。"
 	if hint := func() string {
-		tactical := BuildTacticalRoutingHint(intentBlock, tools, def)
+		// 【P4 拆除】战术路由提示随能力路由下线，软逆提示保留。
 		if isRE {
-			if tactical != "" {
-				return softwareREHint() + "\n\n" + tactical
-			}
 			return softwareREHint()
 		}
-		return tactical
+		return ""
 	}(); hint != "" {
 		sysBody += "\n\n" + hint
 	}

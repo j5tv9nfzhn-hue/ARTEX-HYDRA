@@ -267,6 +267,10 @@ func (e *Engine) settleTask(ctx context.Context, t *Task) {
 // timeoutFinalRoundSummaryFmt 是无 node_id 的展示活动摘要，不进入模型回读路径。[[G132]]
 const timeoutFinalRoundSummaryFmt = "任务超时收尾与最终判定（第 %d 轮）"
 
+// runFinalPlannerRound 是超时收尾的「最后一轮 Planner」。
+// 【P4 / B4：正常情况下不可达】新链路里收尾是根 agent 的一次工具调用
+// （finish_task），不需要一个特殊轮次。保留是因为 engine_timeout.go 的
+// 其他函数（deadline 协调器）仍在旧链路上被引用。
 func (e *Engine) runFinalPlannerRound(ctx context.Context, t *Task) (met bool) {
 	if e.IsDeleting(t.ID) {
 		return false

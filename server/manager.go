@@ -430,9 +430,9 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 		log.Printf("[llmusage] create table: %v", err)
 	}
 	// 任务与线索缓存（外挂记忆体）：资产/端点/密钥/报错的结构化落库。
-	if err := pg.EnsureReviewerVerdictTable(); err != nil {
-		log.Printf("[reviewer] 建判决台账表失败: %v", err)
-	}
+	// 【B2 拆除】原为 pg.EnsureReviewerVerdictTable()。reviewer_verdicts /
+	// reviewer_evidence 两张表不再是控制流的一部分；历史库里的表保留为审计数据，
+	// 但启动期不再建它——新装实例不该凭空多出两张没有写入方的表。
 	if err := pg.EnsureClueCacheTables(); err != nil {
 		log.Printf("[clue] create clue cache table: %v", err)
 	}
