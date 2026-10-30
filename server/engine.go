@@ -301,6 +301,11 @@ func (e *Engine) Pause(taskID string, cause error) {
 	e.paused.Store(taskID, true)
 	e.traceEv(taskID, "engine", "task.control", "pause", errDetail(cause))
 	e.cancelExec(taskID, cause)
+	// 【B1 改道点 2/4】coord 模式下 cancelExec 只取消"正在跑的 run"，而新链路里
+	// 活着的是**整张图**（根 + 在飞的子 agent）。暂停必须真的把根停掉，否则
+	// UI 显示已暂停、根 agent 还在派活。旧链路没有这个动作，因为它假设 loop
+	// 一直活着、只要 next tick 不再领活就自然静止。
+	e.PauseCoord(taskID, cause)
 }
 
 // checkTokenBudget 是任务级 Token 预算硬闸：每次 run（worker 意图 / 规划轮）收尾后
@@ -368,6 +373,10 @@ func (e *Engine) BeginDelete(taskID string) bool {
 	e.paused.Store(taskID, true)
 	e.deleteMu.Unlock()
 	e.cancelExec(taskID, agent.AbortTaskDeleted)
+	// 【B1 改道点 4/4】删除屏障之前先关图：否则删除过程中子 agent 还在往库里写，
+	// 清理与写入赛跑。放在 cancelExec 之后是刻意的——先断执行上下文，再关图，
+	// 让在飞的工具调用先收到取消，而不是反过来。
+	e.DeleteCoord(taskID)
 	return true
 }
 
@@ -492,6 +501,12 @@ func (e *Engine) Resume(t *Task) {
 	}
 	e.paused.Delete(t.ID)
 	e.traceEv(t.ID, "engine", "task.control", "resume", "")
+	// 【B1 改道点 3/4】coord 模式下"恢复"不等于"唤醒规划轮"：根 agent 已经终结
+	// （暂停时整张图被关掉），必须重建一张图。ResumeCoord 内部区分两种情况——
+	// 图还在就 nudge，图没了就重新 StartTask。
+	if e.ResumeCoord(t) {
+		return
+	}
 	t.Notify()
 }
 
@@ -993,6 +1008,22 @@ func (e *Engine) ReadyFor(t *Task) bool {
 // but no-op until an LLM is configured (so a task created while idle picks up
 // automatically once LLM is set from the UI).
 func (e *Engine) Run(ctx context.Context, t *Task) {
+	// 【B1 改道点 1/4】coord 模式下整条旧链路不启动：不起 plannerLoop、不起
+	// worker 池、不 kick 首轮规划。改由 RunCoord 起一个根 agent，由它自己派活、
+	// 自己等、自己收尾。四个改道点是新链路与旧引擎的**唯一接缝**，其余 1,598 行
+	// 一行未改（见 engine_coord_wire.go 文件头）。
+	if e.coordTakeoverFor(t) {
+		e.RunCoord(ctx, t)
+		return
+	}
+	// 【B3】旧骨架（plannerLoop + worker 池 + 首轮 kick）只在 ARTEX_SCHED=legacy
+	// 时才会走到这里。coord 已是默认模式（见 agent/coord_switch.go），所以这段
+	// 代码在正常部署里是**不可达**的。它保留不是因为还需要它，而是因为删掉
+	// engine.go 里的 400+ 行会牵动 62 处 frontier 表引用；那是 B4 的范围。
+	//
+	// 这里加一条显式日志：如果有人在日志里看到它，说明调度模式被显式改回了
+	// legacy，那是排障时首先要确认的一件事。
+	log.Printf("[engine] task %s 走旧调度链路（ARTEX_SCHED=legacy）：plannerLoop + %d worker", t.ID, e.m.Workers())
 	workers := e.m.Workers()
 	e.deleteMu.RLock()
 	if e.IsDeleting(t.ID) {
@@ -1045,6 +1076,15 @@ func resetPlannerTimer(timer *time.Timer, d time.Duration) {
 	timer.Reset(d)
 }
 
+// plannerLoop 是旧链路的规划轮循环（事件驱动唤醒：debounce / 心跳 / 空转跳过 /
+// 终局收尾轮）。【P4 / B4：正常情况下不可达】
+//
+// 它唯一的调用点是 Run，而 Run 在 coord 模式（现在是默认）下已在第一行改道到
+// RunCoord。保留函数体而不删除的原因见 Run 里的说明：删除它要连带处理 62 处
+// frontier 表引用与 branch_gate 的回炉闭环，那属于"删表"而不是"删调度"。
+//
+// 如果真的需要它重新可用（ARTEX_SCHED=legacy），请先确认 reviewer 的下线不会
+// 让它的收尾判定失去依据——Reviewer 已在 B2 拆除。
 func (e *Engine) plannerLoop(ctx context.Context, t *Task) {
 	interval := plannerHeartbeatInterval(t)
 	// 心跳定时器在 loop 入口臂 = 从任务 start 计时:即使是跳过首轮 planner 的 seed 任务
@@ -1201,6 +1241,9 @@ func (e *Engine) plannerLoop(ctx context.Context, t *Task) {
 	}
 }
 
+// workerLoop 是旧链路的固定 worker 池。【P4 / B4：正常情况下不可达】
+// 新链路的并行是"按派发动态起停"（delegate_task → 子 agent），上限由
+// Spawner.MaxConcurrent 控制，不再受池大小约束。
 func (e *Engine) workerLoop(ctx context.Context, t *Task, name string) {
 	for {
 		select {
@@ -1250,6 +1293,8 @@ func (e *Engine) workerLoop(ctx context.Context, t *Task, name string) {
 // runWorkerStep claims one intent from the frontier and fully settles it via
 // runIntent. Returns false when nothing was claimable. The pool worker loop is its
 // only caller.
+// runWorkerStep 从 frontier 领取一条意图、执行、结算。【P4 / B4：正常情况下不可达】
+// 领取与结算这两步在新链路里退化成一次 mailbox 投递。
 func (e *Engine) runWorkerStep(ctx context.Context, t *Task, name string, worker *agent.Worker) bool {
 	intent := e.claimNext(t, name)
 	if intent == nil {

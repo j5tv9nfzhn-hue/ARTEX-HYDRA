@@ -194,36 +194,10 @@ func TestAugmentToolsSlimsAndAppendsHelp(t *testing.T) {
 	}
 }
 
-// TestRoutedToolFaceIsNarrowerThanFull 把两层体积治理并起来看：完整候选目录先
-// 经 RouteToolFace 按意图选 Top-N，再做 lean 瘦身。最终体积必须显著小于未瘦身
-// 的完整候选目录——这才是运行时真正下发给 worker 的面。
-func TestRoutedToolFaceIsNarrowerThanFull(t *testing.T) {
-	t.Setenv("ARTEX_TOOL_ROUTE", "")
-	t.Setenv("ARTEX_TOOL_ROUTE_TOPN", "")
-	ts := NewToolSet(nil, "")
-	fullTools := ts.WorkerTools()
-	full := schemaPayloadBytes(fullTools)
-	if full <= 0 {
-		t.Fatal("完整候选目录为空")
-	}
-	intents := map[string]string{
-		"recon":   "枚举 example.com 子域名、扫描端口并识别服务指纹",
-		"verify":  "复核登录接口的验证码与误报结论，确认是否可复现",
-		"exploit": "对管理后台做越权访问测试",
-	}
-	for label, intent := range intents {
-		subset := RouteToolFace(intent, fullTools)
-		leaned := leanToolList(subset)
-		if got, want := len(leaned), len(subset)+1; got != want {
-			t.Fatalf("%s: 瘦身后工具数 = %d, 期望 %d", label, got, want)
-		}
-		after := 0
-		for _, tool := range leaned {
-			after += schemaOneBytes(tool)
-		}
-		ratio := float64(after) / float64(full)
-		if ratio > 0.7 {
-			t.Errorf("%s 的最终工具面是完整候选目录未瘦身体积的 %.0f%%，动态路由没起作用", label, ratio*100)
-		}
-	}
-}
+// 【P4 批次 A】TestRoutedToolFaceIsNarrowerThanFull 已删除。
+//
+// 它断言的是"完整候选目录经 RouteToolFace 选 Top-N 后，最终面必须显著小于未瘦身
+// 的体积"。能力路由拆除后这个命题没有主语：没有路由，就没有"路由后的面"。
+//
+// 它守护的真实目标（运行时下发的工具面体积可控）仍由 TestWorkerToolFaceBudget
+// 覆盖——那条测的是实际下发面 + 瘦身后体积，不依赖路由。

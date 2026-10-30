@@ -140,66 +140,49 @@ func (e *Engine) finishIntentRun(runID int64, t *Task, intent *db.Node, started 
 			runID = id
 		}
 	}
-	rec := e.saveHandoff(t, intent, runID, reason, state, stopReason, wrote)
-	// 判定链整体移到后台（见 reviewThenNotify）：worker 收尾后立刻回去领下一条意图，
-	// 不再被一次外部模型调用挡住。顺序不变——唤醒仍然发生在判决落库之后。
-	e.reviewThenNotify(t, intent, runID, rec, state, stopReason, errText, notify)
+	e.saveHandoff(t, intent, runID, reason, state, stopReason, wrote)
+	// 【B2 拆除：Reviewer 判定链】这里原本是
+	//	e.reviewThenNotify(t, intent, runID, rec, state, stopReason, errText, notify)
+	// 它把「Reviewer 落判决 → 情报闸门 → 回炉策略 → 唤醒 Planner」整条链塞进后台
+	// goroutine。Reviewer 是第四角色：它存在的唯一理由是"Agent 的自述不可信，
+	// 需要一个外部模型把交卷清洗成判决"。新架构里判据内化为 submit_report 的
+	// outcome 与 open_items 两个**必填字段**——由提交方写、由等待方读，中间没有
+	// 清洗层，因此也就没有"等清洗结果"这件事。
+	//
+	// 回炉策略（kickRequeue）随之一并消失：它读取的正是 Reviewer 的 state。
+	_ = errText // 保留参数签名：调用方仍在传，台账里也在用
+	if notify != nil {
+		notify()
+	}
 }
 
-const (
-	// reviewerCallTimeout 是 Reviewer **单次**判定的预算。
-	//
-	// 判定已经挪到后台 goroutine，慢判定不再占用 worker 槽位，所以这个数字可以从容
-	// 给足：一次调用带着 6000 字原始材料，解析失败时还会追加一次格式纠正重试，
-	// 45s 在慢模型 / 限流排队下会在第二次调用途中被掐断，判决随即降级成
-	// pivot/harness——明明只差几秒。
-	reviewerCallTimeout = 90 * time.Second
-	// reviewerVerdictWait 是判定写完后，闸门确认「判决确实在库里」的等待上限。
-	//
-	// 判定在同一个 goroutine 里同步写完才进来，正常情况第一次查询就命中；留着它是
-	// 为了兜住「判定自称完成、但落库失败」——那种情形必须拒绝唤醒，不能让规划者读到
-	// 未经裁定的情报。
-	reviewerVerdictWait = 5 * time.Second
-)
+// 【B2 拆除】这里原本是一个常量块：
+//
+//	reviewerCallTimeout = 90 * time.Second   // Reviewer 单次判定的预算
+//	reviewerVerdictWait = 5 * time.Second    // 闸门确认判决落库的等待上限
+//
+// 两者都随 Reviewer 一起失去使用者——没有判定调用、没有要等的判决。
+// 留着常量不会报错（Go 允许未使用的常量），但它会让后来者以为还有这条路径。
 
-// reviewThenNotify 把判定链放到后台：
+// reviewThenNotify 已随 Reviewer 一起下线（P4 / B2）。
+//
+// 它原本做的是「把判定链放到后台」：
 //
 //	Reviewer（落判决）→ 情报闸门 → 回炉策略 → notify（唤醒规划者）
 //
-// 为什么必须后台化：Reviewer 同步跑在意图收尾路径上时，一个 run 的收尾最长要等一个
-// 完整的模型调用预算。任务里几条意图几乎同时收尾时，worker 池会被「等模型」整体占满，
-// 期间谁也不能去领新意图——吞吐直接被判定延迟锁死。判定本身不依赖 worker 的任何资源，
-// 唯一的约束是「唤醒必须在判决落库之后」，所以把整条链连同唤醒一起搬进 goroutine
-// 就够：既解耦，又不破坏顺序。
-func (e *Engine) reviewThenNotify(t *Task, intent *db.Node, runID int64, rec handoffRecord, state, stopReason, errText string, notify func()) {
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("[handoff] task %s 意图 #%d run %d 后台判定 panic: %v", t.ID, intent.ID, runID, r)
-			}
-		}()
-		e.runReviewerForIntent(t, intent, runID, rec) // 内部同步落判决，慢就慢在后台
-		// 任何一处唤醒之前，判决必须在库里。返回 false 只有一种可能——连降级判决都
-		// 写不进去，那就停摆等人工介入，绝不放行。
-		if !e.awaitReviewerVerdict(t, intent, runID, reviewerVerdictWait) {
-			log.Printf("[handoff] task %s 意图 #%d run %d：情报闸门无法落库，拒绝唤醒 Planner（任务停摆待人工介入）",
-				t.ID, intent.ID, runID)
-			return
-		}
-		// P2：坏终态 → 立刻按策略决定「立即重跑 / 退避重跑 / 转人工」。
-		// 成功则把回炉账本清掉（这条分支不再欠账）。paused 两者都不是：
-		// 它会被恢复路径重新放回 frontier，不需要走回炉策略。
-		switch {
-		case state == "done":
-			_ = e.m.pg.DeleteRetryState(t.ID, intent.ID)
-		case isBadBranchState(state):
-			e.kickRequeue(t, intent.ID, state, stopReason, errText)
-		}
-		if notify != nil {
-			notify()
-		}
-	}()
-}
+// 三条理由说明它不该再存在：
+//
+//  1. 判定链本身没了：Reviewer 已删除，agent.Review 无实现；
+//  2. 闸门没了：awaitReviewerVerdict 的语义是"确认判决在库里才准唤醒"，
+//     没有判决就没有要确认的东西；
+//  3. 后台化这个动作也没了理由：当初必须后台化，是因为一次收尾要等一个完整的
+//     模型调用预算，几条意图同时收尾会把 worker 池占满。现在收尾路径上没有任何
+//     外部模型调用，notify 直接调用即可（见 deliverHandoff 与 settleInterruptedRun）。
+//
+// 回炉策略（kickRequeue）**保留**：它读取的是运行终态（isBadBranchState），
+// 原本只是恰好被塞在这条判定链里，并不依赖 Reviewer 的判决。
+//
+// 函数本体已删除而不是注释掉：留着空壳会让"唤醒到底经过什么"难以回答。
 
 // errTextOf 把 error 折成台账里的错误文本（空 error = 空串）。
 func errTextOf(err error) string {
@@ -220,9 +203,12 @@ func (e *Engine) settleInterruptedRun(t *Task, intent *db.Node, runID int64, not
 		log.Printf("[reaper] task %s 意图 #%d run %d 收尾失败: %v", t.ID, intent.ID, runID, err)
 		return
 	}
-	rec := e.saveHandoff(t, intent, runID, harness.TerminalReason("interrupted"), "interrupted", "crash", agent.WriteCounts{})
-	// 崩溃补收尾同样要出判决，但没有人等它：交给后台，reaper 继续往下走。
-	e.reviewThenNotify(t, intent, runID, rec, "interrupted", "crash", "", notify)
+	e.saveHandoff(t, intent, runID, harness.TerminalReason("interrupted"), "interrupted", "crash", agent.WriteCounts{})
+	// 【B2 拆除】原为 reviewThenNotify(...)。崩溃补收尾不再需要外部判定：
+	// 交卷内容本身就是结论，reaper 直接放回 frontier 并唤醒。
+	if notify != nil {
+		notify()
+	}
 }
 
 // saveHandoff 机械抽取交接单：活动流 + 写回计数 + 意图原文 + 可选的额度报告。

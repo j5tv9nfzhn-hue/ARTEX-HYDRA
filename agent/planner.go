@@ -440,14 +440,11 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 		sysBody += "\n\n" + brief
 	}
 	if hint := func() string {
-		tactical := BuildTacticalRoutingHint(goal+"\n"+situational, tools, def)
+		// 【P4 拆除】战术路由提示随能力路由下线，软逆提示保留。
 		if isRE {
-			if tactical != "" {
-				return softwareREHint() + "\n\n" + tactical
-			}
 			return softwareREHint()
 		}
-		return tactical
+		return ""
 	}(); hint != "" {
 		sysBody += "\n\n" + hint
 	}

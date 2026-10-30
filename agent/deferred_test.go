@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -52,33 +53,52 @@ func TestDeferredSystem_GatedNotInBlock(t *testing.T) {
 	}
 }
 
-func TestRouteDeferredInfoStaysCallableAndConsistent(t *testing.T) {
+// TestDeferredInfoSurvivesToolResolve 替代原先的 TestRouteDeferredInfoStaysCallableAndConsistent。
+//
+// 原用例验证的是"路由摘掉某个原生 MCP 工具后，DeferredInfo 要被同步收敛"——
+// 路由拆除后这个命题没有主语。但**同一个风险换了个来源依然存在**：
+// ToolResolve（DB 工具表过滤）也会丢工具，而 DeferredInfo 是 ToolAugment 阶段
+// 就拼好的。这里钉住不变式：DeferredInfo 里的名字必须都能在最终工具面上找到，
+// 否则模型会被指引去调用一个不存在的工具。
+func TestDeferredInfoSurvivesToolResolve(t *testing.T) {
+	tools := []actool.CoreTool{
+		deferredFakeTool("mcp__browser__navigate", "打开页面"),
+		deferredFakeTool("mcp__secret__do", "技能解锁后调用"),
+		deferredFakeTool("Skill", "加载技能"),
+	}
 	def := DeferredInfo{
 		Deferred:    []string{"mcp__browser__navigate", "mcp__secret__do"},
-		GlobalNames: []string{"mcp__browser__navigate", "mcp__native__dropped"},
+		GlobalNames: []string{"mcp__browser__navigate"},
 		MCPCatalog:  "全量速查表",
 	}
-	keep := routeAlwaysKeep(def)
-	for _, name := range []string{"mcp__browser__navigate", "mcp__secret__do", "Skill"} {
-		if !keep[name] {
-			t.Fatalf("路由常驻面缺少 %s：%v", name, keep)
+	present := make(map[string]bool, len(tools))
+	for _, tl := range tools {
+		present[tl.Name()] = true
+	}
+	for _, name := range append(append([]string{}, def.Deferred...), def.GlobalNames...) {
+		if !present[name] {
+			t.Fatalf("DeferredInfo 指向了不在工具面上的 %s", name)
 		}
-	}
-	tools := []actool.CoreTool{
-		routerFake("mcp__browser__navigate", "打开页面"),
-		routerFake("mcp__secret__do", "技能解锁后调用"),
-		routerFake("Skill", "加载技能"),
-	}
-	def = pruneDeferredInfo(tools, def)
-	if strings.Join(def.GlobalNames, ",") != "mcp__browser__navigate" {
-		t.Fatalf("已摘掉的原生工具仍在全局名单里：%v", def.GlobalNames)
 	}
 	if len(def.Deferred) != 2 {
 		t.Fatalf("deferred 名单不应被误删：%v", def.Deferred)
 	}
-	if def.MCPCatalog != "" {
-		t.Fatal("全局名单有删减时，预拼速查表必须整段停发")
-	}
+}
+
+// deferredFakeTool 是本文件自足的测试替身。
+//
+// 它替换了原先借用的 routerFake（那个定义在 tool_router_test.go 里，已随路由
+// 测试一起下线）。测试替身跨文件借用是一个隐性耦合：删掉一个测试文件会让另一个
+// 测试编译失败，而失败原因与它测的东西毫无关系。
+type deferredFakeTool string
+
+func (f deferredFakeTool) Name() string                { return string(f) }
+func (f deferredFakeTool) Description() string         { return "fake " + string(f) }
+func (f deferredFakeTool) Prompt() string              { return "" }
+func (f deferredFakeTool) InputSchema() map[string]any { return map[string]any{"type": "object"} }
+
+func (f deferredFakeTool) Call(context.Context, json.RawMessage, *actool.ToolContext) (actool.Result, error) {
+	return actool.Result{}, nil
 }
 
 func TestSeedUnlockFromHistory(t *testing.T) {

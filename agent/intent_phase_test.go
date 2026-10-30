@@ -106,9 +106,8 @@ func faceBytes(tools []actool.CoreTool) int {
 func TestWorkerToolFaceBudget(t *testing.T) {
 	// 工具面预算（字符，不是 token；约 10 token / 32 B）。
 	//
-	// 口径与运行时一致：WorkerTools 先给出完整候选目录，再由 RouteToolFace 按
-	// 意图选 Top-N，最后才做 lean 瘦身。这里守的是「已匹配意图的最终下发面」；
-	// 与目录无实质交集时退全量是另一条显式安全阀，不拿它冒充常态体积。
+	// 口径与运行时一致：WorkerTools 给出完整候选目录，lean 瘦身是唯一一层体积
+	// 治理（能力路由已于 P4 批次 A 拆除）。这里守的是运行时真正下发的面。
 	const budgetBytes = 33000
 	seed := len(BuiltinPromptSeeds()["worker"])
 	sdk := defaultToolsExcept("MultiEdit", "LS", "Sleep", "Write", "Edit", "apply_patch")
@@ -126,7 +125,6 @@ func TestWorkerToolFaceBudget(t *testing.T) {
 	for _, f := range faces {
 		ts := &ToolSet{}
 		tools := append(append([]actool.CoreTool{}, ts.WorkerTools()...), sdk...)
-		tools = RouteToolFace(f.intent, tools)
 		got := faceBytes(tools) + seed
 		if got >= budgetBytes {
 			t.Fatalf("%s: face %d B ≈ %d tok, over the 10K budget (%d B)", f.name, got, got*10/32, budgetBytes)

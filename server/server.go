@@ -287,9 +287,9 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	s.initSideQuestions()
 	// AI 自我进化沉淀：任务终态/删除时把可复用的路径、证据与失败模式整理成技能。
 	// 钩子按调用时的设置决定「只生成提议」还是「直接落盘」，无需重启。
-	// Reviewer 的模型兑底接到 taskLLMRuntime：用 "reviewer" 角色解析（未绑定则回落任务链/全局），
-	// 所以它的调用会像其他角色一样计量、被熔断接住。
-	agent.ReviewerLLM = s.reviewerComplete
+	// 【B2 拆除】原为 agent.ReviewerLLM = s.reviewerComplete：Reviewer 的模型兑底，
+	// 用 "reviewer" 角色解析任务链。Reviewer 已删除，这个钩子没有消费者。
+	// reviewerComplete 方法本身随 server/reviewer.go 一起下线。
 	s.installSkillCuratorHooks()
 	// 应用内通知：把「漏洞落库」这条（唯一发生在 db 包的）业务时刻接上内存事件流。
 	// 其余三个收敛点（任务终态 / 子代理结算 / AI 回复结束）都在 server 包内直接发。
@@ -381,6 +381,14 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 		wireAgentAugment(m.pg, s.skillDir, s.hostTools) // 可见 skills/MCP + 流量/编排 host 工具装配进 agent 工具集
 		domainReg := buildDomainReg(m.Assets())
 		wireTools(m.pg, domainReg) // 内置工具表：按 agent 过滤 + 覆盖描述/schema + 注入默认值
+		// 【B1 环 2/6】新调度层需要从 Server 取两件事：agent 的轮次上限与运行时
+		// 上限。不注册的话 coordCfg() 恒为 nil，新链路会以「0 = 不限」跑——能跑，
+		// 但所有任务都不再有预算，这在真实使用里等于没有闸门。
+		// 注册必须在 wireTools 之后：AgentMaxTurns 读的是 agents 表。
+		RegisterCoordAgents(func() CoordAgents { return s })
+		// 启动自检：开关是否打开、注册是否成功、依赖的目录是否存在，都打一行日志。
+		// 它只读不修——目的是让"新链路为什么没跑起来"在日志里有一句明确答案。
+		s.engine.CoordSelfCheck()
 		seedPrompts(m.pg)          // 内置 agent 默认提示词正文播种进 agent_prompts(仅空时)
 		s.seedOrchestrationTools() // P2 跨任务编排工具 seed 进 tools 表(可按 agent 绑定)
 		if err := s.seedFindingRetester(); err != nil {
@@ -939,7 +947,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/tasks/{id}/assets", s.attachTaskAssets)
 	mux.HandleFunc("DELETE /api/tasks/{id}/assets/{assetID}", s.detachTaskAsset)
 	mux.HandleFunc("GET /api/tasks/{id}/intent-assets", s.taskIntentAssets)
-	mux.HandleFunc("GET /api/tasks/{id}/reviewer-verdicts", s.taskReviewerVerdicts) // 回顾者判决台账（只读）
+	// 【B2 拆除】GET /api/tasks/{id}/reviewer-verdicts 已下线：判决台账是 Reviewer
+	// 的产物，表保留为审计数据但没有新的写入方，前端也不再需要这个视图。
+	// 处理函数 taskReviewerVerdicts 随 server/reviewer_api.go 一起下线。
 
 	// 工作空间文件管理器（针对 workDir）
 	mux.HandleFunc("GET /api/workspace/list", s.wsList)
