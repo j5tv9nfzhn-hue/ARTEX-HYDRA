@@ -315,10 +315,10 @@ func (s *Server) interruptTaskCompaction(t *Task, cause error) {
 		return
 	}
 	b := s.agentsForTask(t)
-	if b == nil || b.pl == nil {
+	if b == nil || b.compactor == nil {
 		return
 	}
-	if c := b.pl.Compactor(); c != nil && t.ExpID > 0 {
+	if c := b.compactor; t.ExpID > 0 {
 		if c.Interrupt(t.ExpID, cause) {
 			log.Printf("[compaction] task %s 压缩已随任务暂停打断", t.ID)
 		}

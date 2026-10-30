@@ -13,7 +13,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/norma/llm"
 )
@@ -116,7 +115,17 @@ func TestChatMentionPagination(t *testing.T) {
 	}
 }
 
-func TestChatMentionWorkerReceivesServerDetails(t *testing.T) {
+// TestIntentMessagePathRetired pins the retirement of the intent-level continue-
+// conversation endpoint.
+//
+// 原用例验证的是"人工给暂停的 Worker 发消息 → Worker 收到引用详情"，为此它构造了
+// 一个真实的 agent.Worker 并在请求通道上断言。Worker 已随旧调度链路下线，这条
+// 通路现在没有执行者，端点改为明确返回 410。
+//
+// 测试保留而不是删除，是因为**它守的不变式仍然成立**：前端还留着那个入口，用户
+// 点下去必须拿到明确的原因，而不是一个静默成功。把断言从"worker 收到"改成
+// "请求被明确拒绝"，测的还是同一件事——不要让消息凭空消失。
+func TestIntentMessagePathRetired(t *testing.T) {
 	m, err := NewManager(t.TempDir(), "")
 	if err != nil {
 		t.Fatal(err)
@@ -135,7 +144,7 @@ func TestChatMentionWorkerReceivesServerDetails(t *testing.T) {
 		_ = s.waitTaskQuiescent(drain, task.ID)
 		_, _ = m.DeleteTask(task.ID, DeleteTaskOptions{})
 	}()
-	iid, err := task.Store.AddNode(db.KindIntent, map[string]any{"summary": "Read referenced records only"}, 1, "paused", "human", nil)
+	iid, err := task.Store.AddNode(db.KindIntent, map[string]any{"summary": "Read referenced records only"}, 1, "paused")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,15 +153,7 @@ func TestChatMentionWorkerReceivesServerDetails(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer m.pg.DeleteFinding(fid)
-	requests := make(chan llm.CompletionRequest, 10)
-	worker := agent.NewWorker(retestProvider{complete: func(_ context.Context, req llm.CompletionRequest) (llm.Message, string, llm.Usage, error) {
-		requests <- req
-		return llm.Message{Role: llm.RoleAssistant, Content: []llm.ContentBlock{llm.TextBlock("已读取引用")}}, "end_turn", llm.Usage{}, nil
-	}}, "test", m.dir, nil, 10000, 1)
-	worker.SetNonStreaming(func() bool { return true })
-	s.engine.SetAuthoritativeAgentResolver(func(*Task) (*agent.Planner, *agent.Worker) {
-		return nil, worker
-	})
+
 	send := func(message string) *httptest.ResponseRecorder {
 		body, _ := json.Marshal(map[string]string{"message": message, "request_id": "worker-mention-test"})
 		r := httptest.NewRequest("POST", "/", strings.NewReader(string(body)))
@@ -162,47 +163,26 @@ func TestChatMentionWorkerReceivesServerDetails(t *testing.T) {
 		s.sendWorkerMessage(w, r)
 		return w
 	}
+
+	// 正文非法仍然先在入口被拦下（400），不会因为端点下线而放宽校验。
 	if w := send("@[漏洞#9223372036854775807]"); w.Code != 400 {
 		t.Fatalf("invalid ref accepted: %d %s", w.Code, w.Body)
 	}
+	// 合法请求必须得到 410 + 可读原因，而不是 200。
+	message := fmt.Sprintf("请核对 @[漏洞#%d 测试]", fid)
+	w := send(message)
+	if w.Code != http.StatusGone {
+		t.Fatalf("retired path should answer 410, got %d %s", w.Code, w.Body)
+	}
+	if !strings.Contains(w.Body.String(), "编排者") {
+		t.Fatalf("410 body should point the user at the coordinator, got %s", w.Body.String())
+	}
+
+	// 意图保持 paused，且没有落任何人类回合 —— 请求不能凭空造出一条转录。
 	node, _ := task.Store.GetNode(iid)
 	items, _, _ := task.Store.ActivityList(&iid, 0, 100)
 	if node.State != "paused" || len(items) != 0 {
-		t.Fatal("invalid reference started worker or persisted a turn")
-	}
-	message := fmt.Sprintf("请核对 @[漏洞#%d 测试]", fid)
-	if w := send(message); w.Code != 200 {
-		t.Fatalf("send: %d %s", w.Code, w.Body)
-	}
-	select {
-	case req := <-requests:
-		blob, _ := json.Marshal(req.Messages)
-		if !strings.Contains(string(blob), "worker-hidden-proof") || !strings.Contains(string(blob), "用户引用的记录快照") {
-			t.Fatalf("worker missing reference details: %s", blob)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("worker did not receive a model request")
-	}
-	drain, stop := context.WithTimeout(context.Background(), 5*time.Second)
-	defer stop()
-	if err := s.waitTaskQuiescent(drain, task.ID); err != nil {
-		t.Fatal(err)
-	}
-	items, _, err = task.Store.ActivityList(&iid, 0, 100)
-	if err != nil {
-		t.Fatal(err)
-	}
-	userCount := 0
-	for _, item := range items {
-		if item.Kind == "user" {
-			userCount++
-			if item.Summary != message {
-				t.Fatalf("UI history contains expanded details: %s", item.Summary)
-			}
-		}
-	}
-	if userCount != 1 {
-		t.Fatalf("human turns=%d", userCount)
+		t.Fatalf("retired path mutated state: state=%s items=%d", node.State, len(items))
 	}
 }
 

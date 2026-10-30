@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/norma/harness"
 	"github.com/Autumn-27/norma/llm"
@@ -546,9 +545,10 @@ func TestEngineReadyForTaskOverride(t *testing.T) {
 	if e.Ready() {
 		t.Fatal("engine without a global provider must not be globally ready")
 	}
-	e.SetAgentResolver(func(*Task) (*agent.Planner, *agent.Worker) {
-		return &agent.Planner{}, &agent.Worker{}
-	})
+	// 【P4】SetAgentResolver 已随"可回落"语义一起删除：它唯一的区别是"返回
+	// nil,nil 时还能退到全局 provider"，而全局 provider 恰恰是耗尽型任务链最不该
+	// 悄悄滑进去的地方。现在只有 SetTaskRunnable 一条路径。
+	e.SetTaskRunnable(func(*Task) bool { return true })
 	if !e.ReadyFor(&Task{ID: "7"}) {
 		t.Fatal("task-specific provider chain must make that task ready")
 	}
@@ -601,17 +601,20 @@ func TestTaskRuntimeAvailableUnboundRoleFollowsChainThenGlobal(t *testing.T) {
 func TestAuthoritativeTaskResolverDoesNotFallBackWhenChainUnavailable(t *testing.T) {
 	t.Parallel()
 	e := &Engine{}
-	e.SetAuthoritativeAgentResolver(func(*Task) (*agent.Planner, *agent.Worker) {
-		return &agent.Planner{}, &agent.Worker{}
-	})
+	// 【P4】resolver 从"返回一对 planner/worker 指针"收敛成"返回能否运行"。
+	// 测的东西没变：可用即可运行，不可用就绝不能回落到全局 provider。
+	e.SetTaskRunnable(func(*Task) bool { return true })
 	if !e.ReadyFor(&Task{ID: "7"}) {
 		t.Fatal("an available authoritative chain should make the task ready")
 	}
-	e.SetAuthoritativeAgentResolver(func(*Task) (*agent.Planner, *agent.Worker) {
-		return nil, nil
-	})
+	e.SetTaskRunnable(func(*Task) bool { return false })
 	if e.ReadyFor(&Task{ID: "7"}) {
 		t.Fatal("unavailable authoritative task chain must not fall back to global provider")
+	}
+	// 没有装 resolver 时必须判为不可运行，而不是默认放行。
+	e2 := &Engine{}
+	if e2.ReadyFor(&Task{ID: "7"}) {
+		t.Fatal("a task must not be runnable before the resolver is installed")
 	}
 }
 

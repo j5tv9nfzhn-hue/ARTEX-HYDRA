@@ -23,27 +23,27 @@ var WrapupOverride func(agentKey string) (string, bool)
 // table. nil / ≤0 → the built-in per-agent default (wrapupTurnDefaults) is used.
 var WrapupMaxTurnsOverride func(agentKey string) (int, bool)
 
-// 内置默认收尾提示词,按 agent key 索引。worker 复用历史上硬编码的 settleWrapUpPrompt
-// (定义在 worker.go),planner/mainagent 各有一版;未命中的(自定义 agent)走通用兜底。
+// 内置默认收尾提示词,按 agent key 索引。
+//
+// 【P4 调整】旧的三个 key（worker/planner/mainagent）随角色下线。新调度层的两个
+// 角色各自需要不同的收尾语义：
+//   - coord_child（执行者）：复用 settleWrapUpPrompt——它要做的正是"先落库再收尾"，
+//     与旧 worker 完全一致；
+//   - coord_root（编排者）：用 generic 兜底即可。它不写库，收尾方式是 finish_task
+//     交一份结构化 Brief，不需要被叮嘱"去 insert_assets"。
+// 未命中的（chat/auto/pentest/自定义 agent）走通用兜底。
 var wrapupDefaults = map[string]string{
-	"worker":    settleWrapUpPrompt,
-	"planner":   plannerWrapUpDefault,
-	"mainagent": mainAgentWrapUpDefault,
+	"coord_child": settleWrapUpPrompt,
 }
 
 // wrapupTurnDefaults: 各 agent 收尾阶段【自身】的轮数预算内置默认(可被后台 >0 覆盖)。
 // 均给 10 轮,保证收尾阶段有足够步数落库。未命中走 genericWrapupTurns。
 var wrapupTurnDefaults = map[string]int{
-	"worker":    10,
-	"planner":   10,
-	"mainagent": 10,
+	"coord_child": 10,
+	"coord_root":  10,
 }
 
 const genericWrapupTurns = 10
-
-const plannerWrapUpDefault = "本轮规划的步数即将耗尽，但结束的只是【本轮】；系统仍会在态势变化时再次唤醒你继续规划。任务本身并未结束，因此不需要在这里收官整个计划。请落实本轮已经明确判断的结论，避免本轮白跑，但【不要为了收尾而强行编造意图】（本轮产生 0 个意图也是完全正常的结果）。(1) 如果已经确定【现在就该派发】的探索方向，使用一次 add_intent 批量提交，不要搁置已经决定的方向。(2) 已有事实或发现证明达成的目标，使用 prove_goal 标记为 met，不要遗漏。(3) 如果识别出需要分阶段执行的串行利用链，使用 TodoWrite 记录，以便下次唤醒后继续派发。处理完毕后直接结束本轮，不输出总结文本。"
-
-const mainAgentWrapUpDefault = "步数即将耗尽，本次交互即将结束。不要再开始新的探索或操作。**只用一句纯文本**，以简体中文向用户总结当前进展、核心结论和建议的下一步。"
 
 const genericWrapUpDefault = "即将因步数/时长上限而结束。先保存已经完成但尚未记录的结果，再**只用一句纯文本**，以简体中文总结做了什么以及得到的核心结论（这句话将作为本次执行结果展示）。"
 
@@ -124,14 +124,10 @@ var (
 	WrapupTaskTimeoutTurnsOverride func(agentKey string) (int, bool)
 )
 
-var taskTimeoutWrapupDefaults = map[string]string{
-	"worker":  workerTaskTimeoutDefault,
-	"planner": plannerTaskTimeoutDefault,
-}
-
-const workerTaskTimeoutDefault = "**整个任务已达到时间上限，即将结束**（不是本次 run 的步数/时长耗尽，而是整个探索结束）。这是最后一次机会：(1) 保存【全部】已经识别但尚未记录的结果：新资产使用 insert_assets，探索结论与事实使用 record_fact，已确认漏洞使用 report_finding。(2) 不要再启动任何新的命令或探测。(3) **最后只用一句纯文本**，以简体中文总结本意图获得的核心结论。"
-
-const plannerTaskTimeoutDefault = "**整个任务已达到时间上限，即将结束**（不是本轮结束，而是整个任务结束）。请根据目前的【全部】事实和发现进行最后一次目标判定。已有证据证明达成的目标，使用 prove_goal 标记为 met，不要遗漏。**不要再生成任何新意图**（现在派发也不会再执行）。完成判定后直接结束，不输出总结文本。"
+// 【P4】旧的 worker/planner 任务超时词随角色下线。coord 下到点收尾由引擎
+// 关闭整张图并合成 Brief（见 server/engine_coord.go 的 RunCoordTask 墙钟兜底），
+// 不再靠给某个角色注入"最后一轮"提示词，因此这里清空。
+var taskTimeoutWrapupDefaults = map[string]string{}
 
 // TaskTimeoutWrapupDefault 返回某 agent 的任务超时内置默认收尾词（供后台占位/恢复默认）。
 func TaskTimeoutWrapupDefault(agentKey string) string {

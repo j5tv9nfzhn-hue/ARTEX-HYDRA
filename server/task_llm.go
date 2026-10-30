@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"iter"
 	"log"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,17 +16,27 @@ import (
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/llmrec"
 	"github.com/Autumn-27/norma/llm"
-	"github.com/Autumn-27/norma/transcript"
 )
 
+// taskAgentBundle 是「一个任务身上挂的 LLM 运行时」的集合。
+//
+// 【P4】旧的三角色（planner/worker/mainagent）已下线，随之删除
+// plannerRuntime / mainRuntime / pl / wk / main 五个字段。保留下来的是两个
+// 仍然有真实归属的运行时：
+//
+//	runtime       —— goals 目标拆解（server/goals.go 的 createGoals 在任务
+//	                 创建时调一次，与调度链路无关）；
+//	workerRuntime —— coord 子 agent 的 provider 解析。名字沿用 "worker"
+//	                 是刻意的：它对应 agents 表里 key="worker" 的那一行，
+//	                 后台配置的模型/温度/流式开关仍然从那里读。
+//
+// compactor 独立成字段：它原先挂在 planner 上（pl.Compactor()），但冷节点
+// 压缩服务的是**图谱**而不是某个角色，任务暂停时打断压缩这件事在 coord 下
+// 同样需要，所以不能跟着 planner 一起删。
 type taskAgentBundle struct {
-	runtime        *taskLLMRuntime // goal decomposition runtime
-	plannerRuntime *taskLLMRuntime
-	workerRuntime  *taskLLMRuntime
-	mainRuntime    *taskLLMRuntime
-	pl             *agent.Planner
-	wk             *agent.Worker
-	main           *agent.MainAgent
+	runtime       *taskLLMRuntime // goal decomposition runtime
+	workerRuntime *taskLLMRuntime
+	compactor     *agent.Compactor
 }
 
 type llmAuditProfile struct {
@@ -667,63 +676,27 @@ func (s *Server) agentsForTask(t *Task) *taskAgentBundle {
 		return bundle
 	}
 	goalRuntime := &taskLLMRuntime{s: s, taskID: t.ID, agentKey: "goals"}
-	plannerRuntime := &taskLLMRuntime{s: s, taskID: t.ID, agentKey: "planner"}
 	workerRuntime := &taskLLMRuntime{s: s, taskID: t.ID, agentKey: "worker"}
-	mainRuntime := &taskLLMRuntime{s: s, taskID: t.ID, agentKey: "mainagent"}
-	tx := transcript.NewStore(filepath.Join(s.m.dir, "transcripts"))
-	window := workerRuntime.CompactionWindow()
-	wk := agent.NewWorker(workerRuntime, "task-router", s.m.dir, tx, window, s.agentMaxTurns("worker"))
-	wk.SetFindingRecorder(s.evidenceStore())
-	wk.SetCompactionWindowResolver(workerRuntime.CompactionWindow)
-	wk.SetNonStreaming(workerRuntime.nonStreaming) // 按任务当前激活 profile 的流式开关(每轮读)
-	wk.SetMaxTokens(workerRuntime.maxTokens)       // 同上,输出上限也跟随当前激活 profile
-	wk.SetRunTimeout(time.Duration(s.agentRunSeconds("worker")) * time.Second)
-	wk.SetProxy(s.m.ProxyAddr(), s.m.ProxyCACert())
-	if s.m.Traffic() != nil && s.m.TrafficEnabled() {
-		wk.SetTrafficStore(s.m.Traffic())
-	}
-	wk.SetWebSearch(s.webSearchFor("worker"))
-	wk.SetConstraintInject(s.constraintInjectWorker)              // 操作约束注入 worker(可配置,默认开)
-	wk.SetEnvBrief(func() string { return s.taskEnvBrief(t.ID) }) // 共享环境上下文（批次 6 / #19）
-	pl := agent.NewPlanner(plannerRuntime, "task-router", s.m.dir, tx, plannerRuntime.CompactionWindow(), s.agentMaxTurns("planner"))
-	pl.SetFindingRecorder(s.evidenceStore())
-	pl.SetCompactionWindowResolver(plannerRuntime.CompactionWindow)
-	pl.SetNonStreaming(plannerRuntime.nonStreaming)
-	pl.SetMaxTokens(plannerRuntime.maxTokens)
-	pl.SetKillWork(s.engine.KillWork)
-	pl.SetSteerWork(s.engine.SteerWork)
-	pl.SetDirectionGate(func() uint64 { return s.engine.DirectionEpoch(t.ID) }, func() { s.engine.AckDispatch(t.ID) }) // 方向代际门控 + 派发确认
-	pl.SetProxy(s.m.ProxyAddr(), s.m.ProxyCACert())
-	pl.SetWebSearch(s.webSearchFor("planner"))
-	pl.SetConstraintInject(s.constraintInjectPlanner)             // 操作约束注入 planner(可配置,默认开)
-	pl.SetEnvBrief(func() string { return s.taskEnvBrief(t.ID) }) // 共享环境上下文（批次 6 / #19）
-	// cold-digest §7: 冷节点后台压缩。引擎经权威解析器实际驱动的就是这套 per-task planner
-	// (agentsForTask),Compactor 必须接在这里。走任务路由的 planner provider(§4:与 agent
-	// 同模型,随任务 LLM 链解析),压缩用 Complete 一次性生成 body。
-	// 批次 6：观察压缩生命周期（compaction_state + 中断检查点），任务暂停时可打断。
-	cmp := agent.NewCompactor(plannerRuntime, "task-router")
-	// 摘要预算按「本次任务的窗口」推导（DigestBudgetTokens），与 planner 的压缩
-	// 触发线同源：两处用不同窗口会让摘要长度与触发点对不上账。
-	cmp.SetWindowResolver(plannerRuntime.CompactionWindow)
+
+	// 冷节点压缩（cold-digest §7）仍需要一套 provider：它按任务 LLM 链解析模型，
+	// 用 Complete 一次性生成摘要 body，不参与对话。原先这套 provider 借的是
+	// planner 的运行时；planner 下线后改用 workerRuntime——两者都是"任务当前激活
+	// profile"的同一条解析路径，换过来不改变任何模型选择结果。
+	cmp := agent.NewCompactor(workerRuntime, "task-router")
+	// 摘要预算按「本次任务的窗口」推导（DigestBudgetTokens），必须与压缩触发线
+	// 同源：两处用不同窗口会让摘要长度与触发点对不上账。
+	cmp.SetWindowResolver(workerRuntime.CompactionWindow)
 	cmp.SetObserver(s.compactionObserver(t))
-	pl.SetCompactor(cmp)
-	main := agent.NewMainAgent(mainRuntime, "task-router", s.m.dir, tx, mainRuntime.CompactionWindow(), s.agentMaxTurns("mainagent"))
-	main.SetFindingRecorder(s.evidenceStore())
-	main.SetCompactionWindowResolver(mainRuntime.CompactionWindow)
-	main.SetNonStreaming(mainRuntime.nonStreaming)
-	main.SetMaxTokens(mainRuntime.maxTokens)
-	main.SetProxy(s.m.ProxyAddr(), s.m.ProxyCACert())
-	main.SetWebSearch(s.webSearchFor("mainagent"))
-	main.SetSteerWork(s.engine.SteerWork)                        // steer_work：人对运行中 work 实时纠偏
-	main.SetKillWork(s.engine.KillWork)                          // kill_work：人结束指定 work
-	main.SetDirectionGate(func() { s.engine.AckDispatch(t.ID) }) // 直投成功解冻派发闸
+
 	bundle := &taskAgentBundle{
-		runtime: goalRuntime, plannerRuntime: plannerRuntime, workerRuntime: workerRuntime,
-		mainRuntime: mainRuntime, pl: pl, wk: wk, main: main,
+		runtime:       goalRuntime,
+		workerRuntime: workerRuntime,
+		compactor:     cmp,
 	}
 	s.taskAgents[t.ID] = bundle
 	return bundle
 }
+
 
 func (s *Server) syncTaskLLMState(pt *db.Task) {
 	if pt == nil {

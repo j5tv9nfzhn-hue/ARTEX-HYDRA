@@ -5,79 +5,50 @@ import (
 	"testing"
 )
 
+// 本文件在 P4 拆掉旧骨架后重新裁剪。
+//
+// 保留的是**与角色无关**的两类断言：
+//   1. renderSystem 的三级回落（无覆盖→内置默认；有覆盖→渲染；模板报错→回落）；
+//   2. langDirective 自身的语义（点名显示语言、保留原文、禁止镜像目标语言）。
+//
+// 换掉的是**角色清单**：原来的用例断言 worker/planner/mainagent 三条系统提示都
+// 带语言尾，这三个角色已随 agent/{worker,planner,mainagent}.go 下线。现在由
+// coord 的根/子 agent 接手"用户看得见"的位置，断言随之迁移到它们身上——
+// 这不是把测试放松，而是让它在新的角色集合上继续守同一条不变式。
 func TestRenderSystemOverrideAndFallback(t *testing.T) {
 	t.Cleanup(func() { PromptOverride = nil })
 
 	// no override → built-in default
 	PromptOverride = nil
-	if got := renderSystem("planner", "DEFAULT", PlannerVars{Goal: "g"}); got != "DEFAULT" {
+	if got := renderSystem("coord_root", "DEFAULT", CoordVars{}); got != "DEFAULT" {
 		t.Fatalf("no override should give default, got %q", got)
 	}
 
 	// override → rendered with vars
 	PromptOverride = func(k string) (string, bool) {
-		if k == "planner" {
+		if k == PromptKeyCoordRoot {
 			return "目标:{{.Goal}} 范围:{{.Scope}}", true
 		}
 		return "", false
 	}
-	if got := renderSystem("planner", "DEFAULT", PlannerVars{Goal: "拿下X", Scope: "*.x.com"}); got != "目标:拿下X 范围:*.x.com" {
+	if got := renderSystem(PromptKeyCoordRoot, "DEFAULT", CoordVars{Goal: "拿下X", Scope: "*.x.com"}); got != "目标:拿下X 范围:*.x.com" {
 		t.Fatalf("override render: %q", got)
 	}
 
 	// override referencing a non-catalog var → execution error → fallback to default
 	PromptOverride = func(k string) (string, bool) { return "{{.NotInCatalog}}", true }
-	if got := renderSystem("planner", "DEFAULT", PlannerVars{Goal: "x"}); got != "DEFAULT" {
+	if got := renderSystem(PromptKeyCoordRoot, "DEFAULT", CoordVars{Goal: "x"}); got != "DEFAULT" {
 		t.Fatalf("bad var should fall back to default, got %q", got)
 	}
 
-	// full plannerSystem path: DB body [A] is honored, then the code-owned tail
-	// [C] (中间产物输出规约) is ALWAYS appended — editing the body can't drop it.
-	PromptOverride = func(k string) (string, bool) { return "PLANNER {{.Goal}}", true }
-	got := plannerSystem("拿下X", "/data", "/data")
-	if !strings.HasPrefix(got, "PLANNER 拿下X") {
-		t.Fatalf("plannerSystem body not honored: %q", got)
+	// 真实路径：DB 覆盖的正文被采用，且代码自有的语言尾仍追加在最后。
+	PromptOverride = func(k string) (string, bool) { return "ROOT-BODY", true }
+	got := RootSystemPrompt(CoordVars{Goal: "g", DataDir: "/data"})
+	if !strings.HasPrefix(got, "ROOT-BODY") {
+		t.Fatalf("RootSystemPrompt body not honored: %q", got)
 	}
-	if !strings.Contains(got, "中间产物输出规约") || !strings.Contains(got, "/data") {
-		t.Fatalf("plannerSystem missing code-owned artifact tail: %q", got)
-	}
-
-	// worker dual-text via {{if .ProxyAddr}} in a user template, plus the code tail:
-	// [B] trafficTool present only when RECORDING (caCert set — the MITM is on, so
-	// the traffic_* tools exist), [C] artifact spec always present. The trafficTool
-	// block is gated on the CA (arg 2), NOT on ProxyAddr — a global egress proxy
-	// with capture off routes traffic but records nothing.
-	PromptOverride = func(k string) (string, bool) {
-		return "{{if .ProxyAddr}}走代理 {{.ProxyAddr}}{{else}}手动{{end}}", true
-	}
-	recording := workerSystem("127.0.0.1:8080", "/ca.pem", "/data", "/data")
-	if !strings.HasPrefix(recording, "走代理 127.0.0.1:8080") {
-		t.Fatalf("worker proxy branch body: %q", recording)
-	}
-	if !strings.Contains(recording, "traffic_search") {
-		t.Fatalf("worker while recording should inject trafficTool: %q", recording)
-	}
-	if strings.Contains(recording, "traffic_refs") {
-		t.Fatalf("worker bypassed shared optional evidence policy: %q", recording)
-	}
-	if !strings.Contains(recording, "中间产物输出规约") {
-		t.Fatalf("worker missing artifact tail: %q", recording)
-	}
-	// Egress proxy set but capture OFF (no CA): the ProxyAddr template branch still
-	// renders, but the trafficTool block must NOT — those tools are not registered.
-	egressOnly := workerSystem("127.0.0.1:8080", "", "/data", "/data")
-	if !strings.HasPrefix(egressOnly, "走代理 127.0.0.1:8080") {
-		t.Fatalf("worker egress-only branch body: %q", egressOnly)
-	}
-	if strings.Contains(egressOnly, "traffic_search") {
-		t.Fatalf("worker without recording must NOT inject trafficTool: %q", egressOnly)
-	}
-	noProxy := workerSystem("", "", "/data", "/data")
-	if !strings.HasPrefix(noProxy, "手动") {
-		t.Fatalf("worker no-proxy branch body: %q", noProxy)
-	}
-	if strings.Contains(noProxy, "traffic_search") {
-		t.Fatalf("worker without proxy must NOT inject trafficTool: %q", noProxy)
+	if !strings.Contains(got, "简体中文") {
+		t.Fatalf("RootSystemPrompt missing code-owned lang tail: %q", got)
 	}
 }
 
@@ -123,31 +94,26 @@ func TestLangDirectiveLocalized(t *testing.T) {
 }
 
 // TestLangDirectiveAppendedToUserFacingRoles pins the localization tail wiring:
-// every user-facing role's system prompt must end with the code-owned
-// output-language directive in the configured language, and a DB-edited body must
-// NOT be able to drop it. Exercised for each supported display language by driving
-// the OutputLanguage hook the roles resolve through.
+// every user-facing role's system prompt must carry the code-owned
+// output-language directive, and a DB-edited body must NOT be able to drop it.
+//
+// 【P4】角色集合换成 coord 的根/子两个 agent —— 它们现在是仅有的两个会把文本
+// 直接呈现到用户面前的角色（根的进度叙述、子的 finish_task 简报）。
 func TestLangDirectiveAppendedToUserFacingRoles(t *testing.T) {
 	t.Cleanup(func() { PromptOverride = nil; OutputLanguage = nil })
 
 	// Even with a DB body that is pure non-directive text, the code-owned tail is
-	// still appended for each user-facing builder — identical guarantee to the
-	// artifact tail. A custom body can never translate away the output-language mandate.
+	// still appended — a custom body can never translate away the mandate.
 	PromptOverride = func(string) (string, bool) { return "BODY-ONLY", true }
 
 	for _, code := range SupportedOutputLangs {
 		OutputLanguage = func() string { return code }
 		marker := langMarker[code]
 		cases := map[string]string{
-			"worker":    workerSystem("", "", "/data", "/data"),
-			"planner":   plannerSystem("g", "/data", "/data"),
-			"mainagent": mainAgentSystem("g", "/data", "/data"),
-			"chat":      chatSystem("chat", "/data", "/data"),
-			// goals is user-facing too: set_goals/set_constraints persist goal and
-			// constraint nodes shown in the UI graph/plan tab. withScope=true exercises
-			// the longer assembly (body + scope tail), so the language tail must still
-			// land last — after both the body and the code-owned scope tail.
-			"goals": goalsSystem("/data", true),
+			"coord_root":  RootSystemPrompt(CoordVars{Goal: "g", DataDir: "/data"}),
+			"coord_child": ChildSystemPrompt(CoordVars{Goal: "g", DataDir: "/data"}),
+			"chat":        chatSystem("chat", "/data", "/data"),
+			"goals":       goalsSystem("/data", true),
 		}
 		for role, sys := range cases {
 			if !strings.HasPrefix(sys, "BODY-ONLY") {

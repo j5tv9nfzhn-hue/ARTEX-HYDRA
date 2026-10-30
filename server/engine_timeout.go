@@ -2,9 +2,7 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -267,44 +265,58 @@ func (e *Engine) settleTask(ctx context.Context, t *Task) {
 // timeoutFinalRoundSummaryFmt 是无 node_id 的展示活动摘要，不进入模型回读路径。[[G132]]
 const timeoutFinalRoundSummaryFmt = "任务超时收尾与最终判定（第 %d 轮）"
 
-// runFinalPlannerRound 是超时收尾的「最后一轮 Planner」。
-// 【P4 / B4：正常情况下不可达】新链路里收尾是根 agent 的一次工具调用
-// （finish_task），不需要一个特殊轮次。保留是因为 engine_timeout.go 的
-// 其他函数（deadline 协调器）仍在旧链路上被引用。
+// runFinalPlannerRound 是超时收尾前的「最后一次目标判定」。
+//
+// 【P4 重写】原实现拉起一轮 Planner，让模型看着全部事实重新判一遍目标是否达成
+// （planner.Plan 带 Final 注入的"到点收尾"提示词）。Planner 已下线，模型不会再
+// 被为了这个判定单独叫醒。
+//
+// 现在改为**读库判定**：coord 下目标达成与否从来不是模型临场那一句话决定的——
+// 根 agent 在运行期间通过 prove_goal 把证据连到目标节点、把节点标成 met，这才是
+// 权威记录。到点时直接读它，比再叫一次模型更准（模型临场判定会受上下文窗口里
+// 剩多少内容影响，而库里的状态是单调累积的）。
+//
+// 语义上仍保留原函数的三条边界：
+//   - 任务在删除中 → 不判定；
+//   - 引擎已关停 → 不判定；
+//   - 判定期间要占一个 task operation 名额，避免与 delete 的静默检查赛跑。
+//
+// 返回值语义不变：true = 目标已达成（调用方会把终态落成 completed 而不是 timeout）。
 func (e *Engine) runFinalPlannerRound(ctx context.Context, t *Task) (met bool) {
 	if e.IsDeleting(t.ID) {
 		return false
 	}
-	planner, _ := e.snapshotFor(t)
-	for planner == nil {
-		if sleepCtx(ctx, deadlinePollInterval) {
-			return false
-		}
-		if isTerminalStatus(e.m.TaskStatus(t.ID)) {
-			return false
-		}
-		if e.IsDeleting(t.ID) {
-			return false
-		}
-		planner, _ = e.snapshotFor(t)
+	if sleepCtx(ctx, 0) {
+		return false // 引擎整体关停
 	}
-	// 独立 ctx(不挂 execCancel,避免 pause/硬 cancel 打断这最后一轮),带 Final 注入任务超时词。
-	fctx := e.clockCtx(ctx, t, true)
+	if isTerminalStatus(e.m.TaskStatus(t.ID)) {
+		return false // 常规路径已经落了终态，不必再判
+	}
 	if !e.beginTaskOperation(t.ID) {
 		return false
 	}
 	defer e.decInflight(t.ID)
-	emit := func(r db.Activity) { e.emitActivity(t, r) }
-	e.emitActivity(t, db.Activity{Worker: "planner", Kind: "round",
-		Summary: fmt.Sprintf(timeoutFinalRoundSummaryFmt, e.nextPlannerRound(t.ID))})
-	tTaskID, _ := strconv.ParseInt(t.ID, 10, 64)
-	e.BeginLLMCall(t.ID)
-	met, reason, err := planner.Plan(fctx, tTaskID, e.m.assets, t.Store, t.Goal, t.drainTriggers(), emit)
-	e.EndLLMCall(t.ID)
+
+	goals, err := t.Store.ListByKind(db.KindGoal, 10000)
 	if err != nil {
-		log.Printf("[deadline] task %s 终局规划出错: %v", t.ID, err)
-	} else if met {
-		log.Printf("[deadline] task %s 终局判定目标达成: %s", t.ID, reason)
+		log.Printf("[deadline] task %s 终局判定读取目标失败: %v", t.ID, err)
+		return false
 	}
-	return met
+	return goalsAllMet(goals)
+}
+
+// goalsAllMet reports whether every goal node is settled as met.
+//
+// 空集合返回 false：一条目标都没有的任务不能算"目标已达成"。原 Planner 版本
+// 在这点上也是 false（没有目标就没有可证明的东西），保持一致的语义。
+func goalsAllMet(goals []*db.Node) bool {
+	if len(goals) == 0 {
+		return false
+	}
+	for _, g := range goals {
+		if g == nil || g.State != "met" {
+			return false
+		}
+	}
+	return true
 }

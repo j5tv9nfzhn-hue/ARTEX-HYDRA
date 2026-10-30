@@ -294,12 +294,13 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	// Every task uses a stable task router. An empty explicit chain is resolved by
 	// that router through Agent bindings and then the global provider, so adding a
 	// first chain to a running task takes effect on its very next LLM call.
-	s.engine.SetAuthoritativeAgentResolver(func(t *Task) (*agent.Planner, *agent.Worker) {
-		if !s.taskRuntimeAvailable(t, "planner", "worker") {
-			return nil, nil
-		}
-		b := s.agentsForTask(t)
-		return b.pl, b.wk
+	// 【P4】原先这里返回一对 (*agent.Planner, *agent.Worker)，指针非空即视为可运行。
+	// 两个角色下线后，这一对指针只剩"非空"这一个被读取的信息，所以直接返回
+	// 判断结果。判据本身没变：任务绑定的 agent 里只要有一个拿不到 provider，
+	// 整个任务就算不可运行（不能拿全局 provider 兜底，否则一条耗尽的任务链会
+	// 悄悄绕过自己的边界继续花钱）。
+	s.engine.SetTaskRunnable(func(t *Task) bool {
+		return s.taskRuntimeAvailable(t, "worker")
 	})
 	// Global readiness (Ready()/llm_configured): a global active LLM provider is
 	// installed. Task-level runnability is separate (ReadyFor → the resolver above).
@@ -4332,47 +4333,11 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 		// 图不在（任务未运行/已结束）：退回普通对话回合，不假装能派活。
 	}
 
-	var ma *agent.MainAgent
-	if s.taskRuntimeAvailable(t, "mainagent") {
-		ma = s.agentsForTask(t).main
-	}
-	if ma != nil {
-		// Run the agent on a per-turn cancellable ctx (NOT r.Context()): the turn can
-		// take minutes (multi-tool loop), and binding it to the request lifecycle meant
-		// a page reload / proxy timeout cancelled it mid-run ("context canceled"). The
-		// steps + final answer stream back live via SSE (worker="mainagent"), so the
-		// handler returns immediately and the browser never needs to hold the request.
-		go func() {
-			defer func() {
-				s.finishTaskChat(t.ID, cancel)
-			}()
-			// emit every step (thinking/tool_use/tool_result/text/result) so the main
-			// agent session shows its work live, like worker/planner. The final answer
-			// is the captured "result" step — no separate reply emit (would duplicate).
-			emit := func(rec db.Activity) {
-				rec.MainSeg = segPtr
-				s.engine.emitActivity(t, rec)
-			}
-			maTaskID, _ := strconv.ParseInt(t.ID, 10, 64)
-			resume := func() { s.reviveTask(t) } // set_goals 新增目标 → 把任务拉回 running
-			// 把上传附件的【绝对路径】清单拼进发给 agent 的消息,它据此用 Read/Bash 打开文件。
-			// taskDir = agent 的工作目录(CWD),与 chatUpload 落盘、ensureRunDir 一致。
-			taskDir := filepath.Join(s.m.dir, "tasks", t.ID)
-			agentMsg := composeAgentMessage(agentMessage, req.Attachments, taskDir)
-			// 视觉桥：同一个 SDK 限制，任务主 Agent 侧同样需要先转写再喂给模型。
-			agentMsg = s.visionMessageForTask(ctx, t, req.Attachments, taskDir, agentMsg, emit)
-			s.engine.TraceChatTurn(t, mainSeg, "chat.turn.start", "")
-			s.engine.BeginLLMCall(t.ID)
-			_, err := ma.Chat(ctx, maTaskID, mainSeg, s.m.Assets(), t.Store, t.Goal, agentMsg, emit, t.Notify, resume, t.NotifyGoal, t.NotifyHint)
-			s.engine.EndLLMCall(t.ID)
-			s.engine.TraceChatTurn(t, mainSeg, "chat.turn.end", "")
-			if err != nil && ctx.Err() == nil {
-				s.engine.emitActivity(t, db.Activity{Worker: "mainagent", Kind: "text", IsError: true, Summary: transcriptErrorSummary("主 Agent", err.Error()), MainSeg: segPtr})
-			}
-		}()
-		writeJSON(w, 202, map[string]any{"status": "accepted", "mode": "llm"})
-		return
-	}
+	// 【P4】这里原本是 MainAgent 回合分支（运行一次主 Agent、把 steps 流式推回）。
+	// MainAgent 已下线，coord 模式下人类消息在上面的改道分支就已经投给根 agent；
+	// 走到这里只剩两种情况——图还没起来，或任务已结束——那种时候不该假装能派活，
+	// 直接落回下面的规则兜底回复。
+
 	reply := s.fallbackChat(t, req.Message)
 	s.engine.emitActivity(t, db.Activity{Worker: "mainagent", Kind: "text", Summary: reply, MainSeg: segPtr})
 	s.finishTaskChat(t.ID, cancel)
