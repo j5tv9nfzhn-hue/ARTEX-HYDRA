@@ -585,6 +585,7 @@ signals    go test / 语言检查 / 文档链接（continue-on-error，只报告
 - 更新源白名单只有 `j5tv9nfzhn-hue/ARTEX-HYDRA`：`selfupdate` 只接受该仓库的 Release，且保留**白名单 + SHA256 双闸门**。`jiwoochris/*`、`Autumn-27/artex` 已彻底移除，不得再进入检测或下载链路。
 - 自动更新（安装）**默认关**；自动检测默认开；两者都要有开关，且状态可持久化。
 - **发布说明必须写全量变更**：由 `scripts/gen-release-notes.py` 从 git 历史按类型分组生成，不再使用 `gh release create --generate-notes`（它只汇总 PR 标题，直接提交的改动会全部丢失）。正文上限 8 KB——它会进 `latest.json`，客户端每次检测都要下载。
+- **产物必须单一**：`latest.json` 的 `assets[]` 是客户端的**授权来源**——`selfupdate.AssetName()` 按 `artex-rea-<ver>-<goos>-<goarch>.zip` 拼名字，再用 `FindAsset` 精确匹配。清单里混进别的产物族虽不会被误装，但等于承认它"也是本仓库的正式发行物"，下游任何按前缀或模糊匹配的消费方都会被带偏。因此生成端用白名单硬拒绝（见第 8 节下方的「产物单一性」表），不做静默过滤。
 - 一次 tag 推送只应产生 **1 个**发布 run：只保留一个构建工作流后，一次 tag 推送只会产生 `release.yml` 这一次运行；`detections.yml` 用 `tags-ignore: ["v*"]` 排除 tag。
 
 #### 9. 提交粒度
@@ -665,8 +666,16 @@ rsync -a --delete web/out/ server/webui/dist/
 
 - 服务器版单目标：`dist/artex-rea-<os>-<arch>/artex-rea`（Windows 为 `artex-rea.exe`；可用 `ARTEX_OUTPUT`/`ARTEX_OUTPUT_DIR` 改路径）。
 - 服务器版发布包（`--release` 或 `ARTEX_PACKAGE=1`）：`dist/artex-rea-<版本>-<os>-<arch>.zip`，内含 `artex-rea`/`artex-rea.exe`（内嵌前端、去符号）、`start.bat`/`start.sh`（启动脚本）、`skills/`、`config.example.json`、`README.md`。
-- `dist/SHA256SUMS`：对 `dist/*.zip` 的校验和。
+- `dist/SHA256SUMS`：只对**本次构建实际打出的那几个包**求校验和，不扫 `dist/` 目录。目录里若残留别的产物族（历史桌面端、手工放进来的包），`build.sh` 直接报错要求先清理——用通配求校验和等于给脏产物盖章。
 - CI（`release.yml`）发布服务器版六端 zip。
+
+**产物单一性（只有一条产物线）**：本仓库的正式发行物有且只有 `artex-rea-<版本>-<os>-<arch>.zip`（Linux/macOS/Windows × amd64/arm64，共 6 个）加 `SHA256SUMS`、`latest.json`。这条约束在三个环节各有一道闸，任一处发现别族产物就**拒绝发布**，而不是过滤后继续：
+
+| 环节 | 位置 | 行为 |
+|---|---|---|
+| 求校验和 | `build.sh` `write_checksums()` | 只认 `PACKAGED_ARCHIVES`（本次真正打包的目标）；目录里多出的 zip 直接 `die` |
+| 上传 | `.github/workflows/release.yml` | 上传前先校验 `dist/` 只含六端包，再逐名上传，不用 `dist/*.zip` 通配 |
+| 生成清单 | `scripts/gen-update-manifest.py` | `expected_assets()` 白名单对账；多余包、缺平台包、`SHA256SUMS` 混入别族条目，全部 `return 2` 拒绝 |
 
 运行时文件落点：
 

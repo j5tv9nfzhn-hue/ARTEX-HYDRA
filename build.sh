@@ -238,6 +238,8 @@ package_binary() {
   if [ -f README.md ]; then cp README.md "$package_root/"; fi
   make_zip "$ARTEX_PACKAGE_DIR" "$(basename "$package_root")" "$(basename "$archive")"
   rm -rf "$package_root"
+  # 记下本次真正打过的包：write_checksums 只认这份清单，不扫目录。
+  PACKAGED_ARCHIVES="${PACKAGED_ARCHIVES:+$PACKAGED_ARCHIVES }$(basename "$archive")"
   ok "Release 压缩包：$archive"
 }
 
@@ -295,18 +297,33 @@ build_target() {
 }
 
 
+# 校验和只覆盖本次构建产出的包（PACKAGED_ARCHIVES），不再扫 *.zip：
+# 打包目录里若残留别的产物族（历史桌面端、手工放进来的包），用通配会把
+# 它们一并"认证"进 SHA256SUMS，等于给脏产物盖章。
 write_checksums() {
   [ "$ARTEX_PACKAGE" = "1" ] || return 0
+  if [ -z "${PACKAGED_ARCHIVES:-}" ]; then
+    warn "没有打包任何目标，跳过 SHA256SUMS"
+    return 0
+  fi
   checksum_file="$ARTEX_PACKAGE_DIR/SHA256SUMS"
+  # 目录里多出来的 zip 一律报错，提示人工清理，而不是静默忽略。
+  for archive in "$ARTEX_PACKAGE_DIR"/*.zip; do
+    [ -e "$archive" ] || continue
+    case " $PACKAGED_ARCHIVES " in
+      *" $(basename "$archive") "*) ;;
+      *) die "打包目录里有非本次构建的产物：$archive，请先清理" ;;
+    esac
+  done
   if command -v sha256sum >/dev/null 2>&1; then
-    (cd "$ARTEX_PACKAGE_DIR" && for archive in *.zip; do [ -e "$archive" ] && sha256sum "$archive"; done > "$(basename "$checksum_file")")
+    (cd "$ARTEX_PACKAGE_DIR" && sha256sum $PACKAGED_ARCHIVES > "$(basename "$checksum_file")")
   elif command -v shasum >/dev/null 2>&1; then
-    (cd "$ARTEX_PACKAGE_DIR" && for archive in *.zip; do [ -e "$archive" ] && shasum -a 256 "$archive"; done > "$(basename "$checksum_file")")
+    (cd "$ARTEX_PACKAGE_DIR" && shasum -a 256 $PACKAGED_ARCHIVES > "$(basename "$checksum_file")")
   else
     warn "未找到 sha256sum 或 shasum，跳过 SHA256SUMS"
     return 0
   fi
-  ok "校验和文件：$checksum_file"
+  ok "校验和文件：$checksum_file ← $PACKAGED_ARCHIVES"
 }
 
 mkdir -p "$ARTEX_OUTPUT_DIR"

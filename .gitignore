@@ -188,3 +188,5 @@ mcpd.lock
 
 # 本机临时探针脚本（与被测仓库无关，不入库）
 /probe_*.py
+# 提交信息草稿：git commit -F 用，提交完即删，不入库
+/_msg*.txt
