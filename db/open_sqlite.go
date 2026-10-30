@@ -243,13 +243,18 @@ func openSQLite(dsn string) (*DB, error) {
 		return nil, fmt.Errorf("ping sqlite (%s): %w", config.Redact(dsn), err)
 	}
 
-	// 连接池上限:每条 sqlite 连接都带自己的页缓存(DSN 里 cache_size=-64MiB),无上限
+	// 连接池上限:每条 sqlite 连接都带自己的页缓存(DSN 里 cache_size=-32768,即 32MiB),无上限
 	// 意味着空闲连接越多常驻内存越高。写全部走单写协程(db/writer.go),8 条读连接
 	// 足够覆盖页面查询与流式读取。
 	sqlDB.SetMaxOpenConns(8)
 	sqlDB.SetMaxIdleConns(4)
 
+	// 记下库文件路径：WAL 状态查询要按路径看 -wal 的大小，而 sql.DB 不暴露 DSN。
+	// 内存库留空：它没有 -wal 文件，WALStatus 会报一个「健康但无数据」的空状态。
 	d := &DB{DB: sqlDB}
+	if !strings.Contains(dsn, ":memory:") && !strings.Contains(dsn, "mode=memory") {
+		d.path = sqliteFilePathFromDSN(dsn)
+	}
 	// One connection for schema application and seeding, so the two cannot
 	// interleave and so a partially-created file is not left behind by a
 	// failed seed.
@@ -351,12 +356,8 @@ func openSQLite(dsn string) (*DB, error) {
 	// WAL 自愈：后台协程定期检查 WAL 大小，偏大就主动做一次更强的检查点。
 	// 挂在这里而不是 server 启动处，是因为任何走到 openSQLite 的入口（主库、
 	// 工具、转换流程）都应该享有同样的保护，而不是只有 GUI 启动路径。
-	// 内存库没有 -wal 文件，跳过。
-	if !strings.Contains(dsn, ":memory:") && !strings.Contains(dsn, "mode=memory") {
-		if p := sqliteFilePathFromDSN(dsn); p != "" {
-			d.StartWALMaintenance(context.Background(), p)
-		}
-	}
+	// 内存库没有 -wal 文件（path 为空），StartWALMaintenance 会直接返回。
+	d.StartWALMaintenance(context.Background())
 	return d, nil
 }
 
