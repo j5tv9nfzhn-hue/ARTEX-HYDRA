@@ -41,17 +41,11 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
       setAuthed(true);
       return;
     }
-    // 没有 token 不等于要登录：桌面壳的窗口本来就没有 token，也不该有。
-    // 问一次后端「这条连接要不要凭据」——窗口的请求带进程内标记，会回
-    // auth_disabled=true；浏览器（含桌面端 -lan 之后的局域网入口）为 false。
-    // 这样即使 artex_shell cookie 丢了，窗口也不会掉进登录页。
+    // 没有 token 就是要登录：纯 Web 部署下 auth_disabled 恒为 false，
+    // 仍问一次后端是为了区分「未初始化」与「未登录」两种情形。
     api
       .authStatus()
-      .then((st) => {
-        if (st.auth_disabled) {
-          setAuthed(true);
-          return;
-        }
+      .then(() => {
         // 客户端守卫认为未登录时，必须同时清掉 cookie：否则 proxy.ts 仅凭
         // “cookie 存在”就把我们从 /login 又重定向回主界面，与本守卫来回弹跳
         // 形成无限重定向 → 白屏（cookie 与 localStorage 不一致时触发）。

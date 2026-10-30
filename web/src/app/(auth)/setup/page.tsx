@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
-import { IS_DESKTOP } from "@/lib/platform";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -24,19 +23,9 @@ export default function SetupPage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // 桌面端窗口不需要登录（免校验只对窗口成立，见 server/authExempt），初始化页只属于浏览器侧。
-    if (IS_DESKTOP) {
-      window.location.replace("/function/tasks");
-      return;
-    }
     api
       .authStatus()
-      .then(({ initialized, auth_disabled }) => {
-        // 桌面壳窗口不该出现初始化页：后端按请求回 auth_disabled=true。
-        if (auth_disabled) {
-          window.location.replace("/function/tasks");
-          return;
-        }
+      .then(({ initialized }) => {
         if (initialized) router.replace("/login");
       })
       .catch(() => setError(t("setup.errorBackend")))

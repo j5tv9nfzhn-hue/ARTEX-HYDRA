@@ -3116,10 +3116,8 @@
     },
     "role": {
       "mainagent": "主 Agent",
-      "planner": "规划 Planner",
       "system": "系统审计",
-      "worker": "Worker",
-      "reviewer": "回顾者 Reviewer"
+      "worker": "Worker"
     },
     "sse": {
       "live": "实时",
@@ -3254,7 +3252,6 @@
       "tableCopied": "复制",
       "tableSkipped": "跳过",
       "restart": "已写入磁盘：请重启程序，让新的数据与主密钥完全生效。",
-      "kindDesktop": "桌面端",
       "kindWeb": "WEB 版",
       "kindUnknown": "未知形态",
       "toast": {

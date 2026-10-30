@@ -2,7 +2,7 @@
 # ARTEX-HYDRA cross-platform release builder.
 #
 # The default mode builds one target and embeds the already-exported frontend.
-# `./build.sh --release` builds and packages all supported desktop/server targets.
+# `./build.sh --release` builds and packages all supported server targets.
 #
 # Environment variables:
 #   ARTEX_TARGET_OS=linux             One target OS in single-target mode.
@@ -33,11 +33,9 @@ usage() {
   ./build.sh                         构建当前系统与架构
   ./build.sh --target linux/amd64     构建指定目标
   ./build.sh --release               构建并打包全部支持平台
-  ./build.sh --desktop               构建 Wails V2 桌面端（默认宿主机目标；macOS 可用 --target 跨到另一架构）
 
 选项：
   --release              构建 Linux、macOS、Windows 的受支持 amd64/arm64 目标并生成 zip
-  --desktop              构建桌面端 artex-hydra-desktop（CGO_ENABLED=1；目标=宿主机，macOS 例外见下）
   --target OS/ARCH       指定单一目标，如 windows/amd64
   --upx                  强制 UPX 压缩，可能影响部分 Linux 环境的兼容性
   --no-compress          禁用 UPX，仅通过 Go linker 去符号并压缩 zip
@@ -46,18 +44,11 @@ usage() {
 可通过 ARTEX_TARGETS 覆盖目标列表，例如：
   ARTEX_TARGETS=linux/amd64,windows/amd64 ./build.sh --release
 
-桌面端（--desktop）走独立 Go 模块 desktop/，产物是**单文件** artex-hydra-desktop
-（无 core、无 versions/，数据与它同目录），名字基名经 ldflags 注入 selfupdate；
-CGO 依赖平台原生 webview 库：Windows 与 Linux 必须在对应架构上原生构建；macOS
-两个架构在同一台 Apple Silicon 上出（x86_64 由 clang -arch 交叉；CI 的 darwin 行即走此路径，
-一个 macos-26 job 内先 arm64 后 amd64）。所有 darwin 构建一律带 -mmacosx-version-min=11.0。
-macOS 打包为 .app bundle，其余平台为 zip。产物名带 -desktop 后缀，与 WEB 版区分。
 EOF
 }
 
 RELEASE_TARGETS_DEFAULT="linux/amd64,linux/arm64,darwin/amd64,darwin/arm64,windows/amd64,windows/arm64"
 ARTEX_RELEASE="${ARTEX_RELEASE:-0}"
-ARTEX_DESKTOP="${ARTEX_DESKTOP:-0}"
 ARTEX_COMPRESS="${ARTEX_COMPRESS:-off}"
 ARTEX_PACKAGE="${ARTEX_PACKAGE:-0}"
 
@@ -83,10 +74,6 @@ while [ "$#" -gt 0 ]; do
       ;;
     --no-compress)
       ARTEX_COMPRESS=0
-      shift
-      ;;
-    --desktop)
-      ARTEX_DESKTOP=1
       shift
       ;;
     --upx)
@@ -132,13 +119,7 @@ if [ -n "$ARTEX_UPDATE_REPO" ]; then
   esac
 fi
 
-if [ "${ARTEX_DESKTOP}" = "1" ]; then
-  # 桌面端必须原生构建（CGO 依赖平台原生 webview 库）：默认取宿主机目标，
-  # CI 各 runner 显式传入自己的目标。
-  ARTEX_TARGET_OS="${ARTEX_TARGET_OS:-$(GOSUMDB="$ARTEX_GOSUMDB" go env GOOS)}"
-  ARTEX_TARGET_ARCH="${ARTEX_TARGET_ARCH:-$(GOSUMDB="$ARTEX_GOSUMDB" go env GOARCH)}"
-  ARTEX_TARGETS="${ARTEX_TARGETS:-${ARTEX_TARGET_OS}/${ARTEX_TARGET_ARCH}}"
-elif [ "${ARTEX_RELEASE}" = "1" ]; then
+if [ "${ARTEX_RELEASE}" = "1" ]; then
   ARTEX_TARGETS="${ARTEX_TARGETS:-$RELEASE_TARGETS_DEFAULT}"
 else
   ARTEX_TARGET_OS="${ARTEX_TARGET_OS:-$(GOSUMDB="$ARTEX_GOSUMDB" go env GOOS)}"
@@ -260,97 +241,6 @@ package_binary() {
   ok "Release 压缩包：$archive"
 }
 
-# package_desktop 打包桌面发行物：Windows/Linux 为 zip，macOS 为 .app bundle。
-#
-# 与服务器版的关键差别：桌面端是**单文件**发行——没有 artex-hydra-core、没有
-# versions/、没有 pointer.json。一个可执行文件就地运行，config/artex.db/skills
-# 就在它旁边，整目录拷走即完成迁移（新旧合并也不必对齐核心副本）。服务器版仍走
-# 「入口 + 核心两件套」，因为它换装时不能覆盖正在运行的 exe。
-#
-# 产物名带 -desktop 后缀，与 WEB 版（artex-rea-*）在同一个 Release 里一眼可分。
-package_desktop() {
-  binary="$1"
-  goos="$2"
-  goarch="$3"
-  stem="artex-hydra-desktop"
-  package_name="${stem}-${ARTEX_BUILD_VERSION}-${goos}-${goarch}"
-  package_root="${ARTEX_PACKAGE_DIR}/${package_name}"
-  archive="${ARTEX_PACKAGE_DIR}/${package_name}.zip"
-
-  rm -rf "$package_root" "$archive"
-  mkdir -p "$package_root"
-
-  case "$goos" in
-    windows)
-      core_ext=".exe"
-      cp "$binary" "$package_root/${stem}${core_ext}"
-      "$PYTHON_BIN" -I scripts/check-start-scripts.py || exit 1
-      # 启动脚本按桌面包改名：根目录脚本写的是 artex-rea，直接拷会找不到入口
-      sed 's/artex-rea/artex-hydra-desktop/g' start.bat > "$package_root/start.bat"
-      sed 's/artex-rea/artex-hydra-desktop/g' start-lan.bat > "$package_root/start-lan.bat"
-      ;;
-    darwin)
-      app_bundle="$package_root/${stem}.app"
-      mkdir -p "$app_bundle/Contents/MacOS" "$app_bundle/Contents/Resources"
-      cp "$binary" "$app_bundle/Contents/MacOS/${stem}"
-      chmod +x "$app_bundle/Contents/MacOS/${stem}"
-      sed 's/artex-rea/artex-hydra-desktop/g' start.sh > "$app_bundle/Contents/MacOS/start.sh"
-      chmod +x "$app_bundle/Contents/MacOS/start.sh"
-      cp -R skills "$app_bundle/Contents/MacOS/skills"
-      rm -f "$app_bundle/Contents/MacOS/skills/embed.go"
-      cp config.example.json "$app_bundle/Contents/MacOS/"
-      if [ -f README.md ]; then cp README.md "$app_bundle/Contents/MacOS/"; fi
-      cat > "$app_bundle/Contents/Info.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>CFBundleName</key>
-  <string>ARTEX-HYDRA</string>
-  <key>CFBundleDisplayName</key>
-  <string>ARTEX-HYDRA</string>
-  <key>CFBundleExecutable</key>
-  <string>${stem}</string>
-  <key>CFBundleIdentifier</key>
-  <string>io.github.j5tv9nfzhn-hue.artex-hydra</string>
-  <key>CFBundleVersion</key>
-  <string>1</string>
-  <key>CFBundleShortVersionString</key>
-  <string>${ARTEX_BUILD_VERSION}</string>
-  <key>LSMinimumSystemVersion</key>
-  <string>11.0</string>
-  <key>NSHighResolutionCapable</key>
-  <true/>
-</dict>
-</plist>
-PLIST
-      ;;
-    linux)
-      cp "$binary" "$package_root/${stem}"
-      chmod +x "$package_root/${stem}"
-      "$PYTHON_BIN" -I scripts/check-start-scripts.py || exit 1
-      sed 's/artex-rea/artex-hydra-desktop/g' start.sh > "$package_root/start.sh"
-      sed 's/artex-rea/artex-hydra-desktop/g' start-lan.sh > "$package_root/start-lan.sh"
-      chmod +x "$package_root/start.sh" "$package_root/start-lan.sh"
-      ;;
-    *) die "不支持的桌面目标系统：$goos" ;;
-  esac
-
-  # skills / config / README / 图标在 zip 模式下的统一收尾（.app 模式已在分支内完成）。
-  if [ "$goos" != "darwin" ]; then
-    cp -R skills "$package_root/"
-    rm -f "$package_root/skills/embed.go"
-    cp config.example.json "$package_root/"
-    if [ -f README.md ]; then cp README.md "$package_root/"; fi
-    # Windows 桌面端附带应用图标（exe 已内嵌品牌图标；解压后自建快捷方式时同样可用）
-    if [ "$goos" = "windows" ] && [ -f desktop/assets/artex-hydra.ico ]; then
-      cp desktop/assets/artex-hydra.ico "$package_root/${stem}.ico"
-    fi
-  fi
-  make_zip "$ARTEX_PACKAGE_DIR" "$(basename "$package_root")" "$(basename "$archive")"
-  rm -rf "$package_root"
-  ok "桌面端 Release 包：$archive"
-}
 
 build_target() {
   target="$1"
@@ -404,186 +294,6 @@ build_target() {
   ok "编译完成：$output"
 }
 
-# build_desktop_target 编译 Wails V2 桌面端（desktop/ 独立模块）。
-#
-# 与服务器版构建的差异：
- #   - CGO_ENABLED=1，目标默认取宿主机；唯一例外是 macOS（详见下面策略）；
-#   - 资产名 stem 经 ldflags 注入 selfupdate（artex-hydra-desktop），并置 singleFile=1：
-#     不做 versions/ 安装、不转交核心，GitHub 查询与 SHA256 闸门照旧可用；
-#   - 单文件发行：包内只有一个可执行文件，数据与它同目录，整目录即迁移单位。
-#   - 不跑 UPX（CGO 二进制压缩兼容性差，Release 优先可移植性）。
-build_desktop_target() {
-  target="$1"
-  goos="${target%%/*}"
-  goarch="${target##*/}"
-  host_goos="$(GOSUMDB="$ARTEX_GOSUMDB" go env GOOS)"
-  host_goarch="$(GOSUMDB="$ARTEX_GOSUMDB" go env GOARCH)"
-  # 桌面端默认必须原生构建：CGO 依赖平台原生 webview 库（Windows=WebView2、
-  # macOS=WebKit、Linux=webkit2gtk）。macOS 是唯一的例外——Apple 的 SDK 与 clang
-  # 在同一台机器上同时带 arm64 与 x86_64 两个 slice，加 -arch 就能在 Apple Silicon
-  # 上编出 Intel 目标。CI 的 darwin 行也走这条路径（同一个 macos-26 job 内先 arm64、后 amd64，
-  # 见 release.yml）；Windows 与 Linux 没有这种条件，跨架构请求一律拒绝。
-  #
-  # 最低系统版本对**所有** darwin 构建一律写死 11.0，不只交叉时给：clang 不带
-  # -mmacosx-version-min 时，产物 LC_BUILD_VERSION 的 minos 取 runner 那套 SDK 的
-  # 默认部署目标——在 macos-26 镜像上就是 26.x，等于发出去一个「只在新系统能开」
-  # 的包，而 Info.plist 的 LSMinimumSystemVersion 写的还是 11.0，两边互相打脸。
-  # 11.0 同时是 Go 1.26 darwin 与 wails 用到的 UTType 的下限，两个架构一致。
-  darwin_cflags=""
-  cross_env=""
-  if [ "$goos" = "darwin" ]; then
-    darwin_cflags="-mmacosx-version-min=11.0"
-  fi
-  if [ "$goos" != "$host_goos" ]; then
-    die "桌面端必须原生构建（CGO 依赖平台 webview 库）：目标 $goos 与宿主机 $host_goos 不一致"
-  fi
-  if [ "$goarch" != "$host_goarch" ]; then
-    if [ "$goos" != "darwin" ]; then
-      die "桌面端只有 macOS 允许同机跨架构（clang 双 slice）：目标 $goos/$goarch 与宿主机 $host_goos/$host_goarch 不一致"
-    fi
-    case "$goarch" in
-      amd64) cross_slice="x86_64" ;;
-      arm64) cross_slice="arm64" ;;
-      *) die "不支持的桌面目标架构：$goarch（支持 amd64、arm64）" ;;
-    esac
-    cross_env="GOOS=darwin GOARCH=$goarch"
-    darwin_cflags="-arch $cross_slice $darwin_cflags"
-    info "跨架构构建 macOS 目标：宿主 $host_goarch → 目标 $goarch（clang $darwin_cflags）"
-  fi
-  case "$goos" in
-    linux|darwin|windows) ;;
-    *) die "不支持的桌面目标系统：$goos（支持 linux、darwin、windows）" ;;
-  esac
-
-  binary_name="artex-hydra-desktop"
-  [ "$goos" = "windows" ] && binary_name="artex-hydra-desktop.exe"
-  if [ -n "${ARTEX_OUTPUT:-}" ] && [ "$ARTEX_RELEASE" != "1" ]; then
-    output="$ARTEX_OUTPUT"
-  else
-    output="${ARTEX_OUTPUT_DIR}/artex-hydra-desktop-${goos}-${goarch}/${binary_name}"
-  fi
-  mkdir -p "$(dirname "$output")"
-
-  ldflags="-s -w -buildid= -X main.version=${ARTEX_BUILD_VERSION}"
-  # Windows 必须链接 GUI 子系统。Go 的默认 PE 子系统是 CONSOLE：那样双击
-  # exe 会先分配一个控制台窗口，而且那个黑窗在进程整个生命周期里常驻
-  # （关掉黑窗等于杀掉应用）——对桌面端来说这就是"WEB 端残留"，正规桌面
-  # 应用不该有。wails 自己的 CLI 在 Windows 上恒定追加 -H windowsgui，本
-  # 脚本自建 ldflags 覆盖了 CLI 的默认值，所以必须显式补回来。
-  # 代价是进程没有控制台：stdout/stderr 无效，日志落盘与错误弹窗由
-  # desktop/main.go 的 setupDesktopLog / messageBox 负责。
-  if [ "$goos" = "windows" ]; then
-    ldflags="$ldflags -H windowsgui"
-  fi
-  ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.entryStem=artex-hydra-desktop"
-  ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.coreStem=artex-hydra-desktop"
-  # 单文件发行：不做 versions/ 安装、不转交核心，一键更新改为下载新版替换单文件。
-  ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.singleFile=1"
-  if [ -n "$ARTEX_UPDATE_REPO" ]; then
-    ldflags="$ldflags -X github.com/Autumn-27/artex/selfupdate.Repo=${ARTEX_UPDATE_REPO}"
-  fi
-
-  info "编译桌面端 ${goos}/${goarch}（CGO），版本 ${ARTEX_BUILD_VERSION}"
-  # go.mod/go.sum 可能被 CI 缓存恢复成不一致的组合（缓存里的 go.sum 是
-  # tidy 后的，而 workspace 的 go.mod 是未 tidy 的——go.mod 不在缓存路径
-  # 里时尤甚）：每次都跑 tidy 保证两者一致再交给 go build。模块缓存
-  # 预热后 tidy 开销很小；tidy 一致后也是 no-op。
-  (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" go mod tidy)
-
-  # Windows 的窗口图标（标题栏 / 任务栏 / Alt-Tab）来自 exe 里的资源，不是 webview
-  # 画出来的：rsrc 把品牌 .ico 与 DPI manifest 编成 .syso，go build 只链接
-  # desktop/ 目录下、文件名带 _windows_<arch> 的 syso。这套步骤原先只写在
-  # release.yml 里，于是 build.sh 本地打出来的 exe 没有图标——双击后标题栏与
-  # 任务栏都是系统默认图标。现在 CI 与本地共用这一段。
-  if [ "$goos" = "windows" ]; then
-    syso="desktop/rsrc_windows_${goarch}.syso"
-    if [ ! -f "$syso" ]; then
-      rsrc_bin="$(command -v rsrc 2>/dev/null || true)"
-      if [ -z "$rsrc_bin" ]; then
-        info "未找到 rsrc：尝试 go install github.com/akavel/rsrc@v0.10.2"
-        if go install github.com/akavel/rsrc@v0.10.2 >/dev/null 2>&1; then
-          rsrc_bin="$(go env GOPATH)/bin/rsrc"
-        fi
-      fi
-      if [ -n "$rsrc_bin" ] && [ -x "$rsrc_bin" ]; then
-        "$rsrc_bin" -ico desktop/assets/artex-hydra.ico \
-          -manifest desktop/assets/app.manifest \
-          -arch "$goarch" \
-          -o "$syso"
-        ok "图标资源已生成：$syso"
-      else
-        warn "rsrc 不可用：本次 exe 不带品牌图标（标题栏/任务栏为系统默认图标）"
-        warn "  补法：go install github.com/akavel/rsrc@v0.10.2 后重新构建"
-      fi
-    fi
-  fi
-
-  # 构建标签必须与官方 wails build 对齐（wails 的 CompileProject 恒定追加
-  # OutputType 与 production 两个标签）：wails 运行时的 CreateApp 按标签三选一——
-  # production 实现 / dev 实现 / 无标签时的 MessageBox 报错兜底。缺
-  # desktop,production 时启动只会弹 "Wails applications will not build
-  # without the correct build tags"。embedui 是服务器包的前端内嵌标签，两者叠加。
-  build_tags="embedui,desktop,production"
-  # 下面两项补的是 Wails V2 自身的平台缺口（不是本仓库代码的问题）：
-  #
-  # Linux：wails 默认 #cgo pkg-config webkit2gtk-4.0。Ubuntu 24.04+ / Debian 13
-  #   只提供 webkit2gtk-4.1，必须加 webkit2_41 标签才会改成链接 4.1，否则
-  #   pkg-config 直接报 "Package 'webkit2gtk-4.0' ... not found"。但 RHEL 系与
-  #   旧版 Debian 仍然只有 4.0，无条件加标签会把本来能过的构建弄挂——所以按
-  #   pkg-config 的实际存在情况选，而不是照抄 CI 的环境假设。
-  #
-  # macOS：wails v2.17 的 darwin 前端在 SDK 带 UniformTypeIdentifiers 头时会用到
-  #   UTType，但它自己的 #cgo LDFLAGS 没有链接该 framework，于是链接期报
-  #   "Undefined symbols for architecture arm64: _OBJC_CLASS_$_UTType"。
-  #   cgo LDFLAGS 在最终链接时跨包累加，这里补一条即解（wails 官方
-  #   troubleshooting 给的正是这个写法）。UTType 只在 macOS 11+ 存在，所以
-  #   Info.plist 的 LSMinimumSystemVersion 与 cgo 的 -mmacosx-version-min 都写 11.0。
-  extra_cgo_ldflags=""
-  case "$goos" in
-    linux)
-      if command -v pkg-config >/dev/null 2>&1; then
-        if pkg-config --exists webkit2gtk-4.1 && ! pkg-config --exists webkit2gtk-4.0; then
-          build_tags="$build_tags,webkit2_41"
-          info "检测到 webkit2gtk-4.1（无 4.0）：附加构建标签 webkit2_41"
-        fi
-      fi
-      ;;
-    darwin)
-      extra_cgo_ldflags="-framework UniformTypeIdentifiers"
-      ;;
-  esac
-
-  # GOOS/GOARCH 必须由 env 传：bash 只把「命令名之前原文即赋值」的词当赋值处理，
-  # 变量展开出来的 GOARCH=amd64 会被当成命令名。cross_env 为空时 env 直接透传。
-  # darwin_cflags（-arch 与 -mmacosx-version-min）要同时给编译与链接两端：只给一端
-  # 会得到「Go 侧是目标架构、cgo 对象是宿主架构」的混切片，链接期才报错且信息难读；
-  # 只给链接端则 minos 仍按 SDK 默认写进编译端产物。
-  (cd desktop && GOSUMDB="$ARTEX_GOSUMDB" CGO_ENABLED=1 \
-    env $cross_env \
-    CGO_CFLAGS="${CGO_CFLAGS:-} $darwin_cflags" \
-    CGO_LDFLAGS="${CGO_LDFLAGS:-} $extra_cgo_ldflags $darwin_cflags" \
-    go build \
-    -tags "$build_tags" \
-    -trimpath \
-    -ldflags "$ldflags" \
-    -o "../$output" \
-    .)
-
-  if [ -d "skills" ]; then
-    out_dir="$(dirname "$output")"
-    rm -rf "$out_dir/skills"
-    cp -R skills "$out_dir/skills"
-    rm -f "$out_dir/skills/embed.go"
-  fi
-  if command -v file >/dev/null 2>&1; then file "$output"; fi
-  # 跨架构最怕「-arch 没生效、产物其实是宿主架构」：那种包装到 Intel Mac 上直接
-  # 打不开，而构建全程绿灯。用仓库现成的文件头校验兜住——它读 Mach-O / PE / ELF
-  # 的机器类型码，与目标架构不符就非零退出（服务器版走的是同一个脚本）。
-  "$PYTHON_BIN" -I scripts/check-binary-headers.py \
-    --binary "$output" "$goos/$goarch" || exit 1
-  if [ "$ARTEX_PACKAGE" = "1" ]; then package_desktop "$output" "$goos" "$goarch"; fi
-  ok "编译完成：$output"
-}
 
 write_checksums() {
   [ "$ARTEX_PACKAGE" = "1" ] || return 0
@@ -610,11 +320,7 @@ IFS="$old_ifs"
 for target in "${targets[@]}"; do
   target="${target//[[:space:]]/}"
   [ -n "$target" ] || continue
-  if [ "${ARTEX_DESKTOP}" = "1" ]; then
-    build_desktop_target "$target"
-  else
-    build_target "$target"
-  fi
+  build_target "$target"
 done
 
 if [ "$ARTEX_PACKAGE" = "1" ]; then

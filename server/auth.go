@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -392,15 +391,8 @@ func isLoopbackAddr(addr string) bool {
 // WarnIfExposed logs a warning when the admin password is still unset and the
 // server accepts connections from other hosts.
 //
-// 桌面端不是例外：它同样能被 -lan 绑到局域网，而没设密码意味着别的设备能打开
-// 登录页却登不进去（门锁着，也没给钥匙）。这里必须说出来，不能因为「桌面端免
-// 登录」就静音——免登录只对窗口成立。
 func (s *Server) WarnIfExposed(addr string) {
 	if s.m == nil || s.m.pg == nil || s.cachedPassHash() != "" || isLoopbackAddr(addr) {
-		return
-	}
-	if s.authDisabled.Load() {
-		log.Printf(logT("[auth] 警告：桌面端已绑定 %q，但还没有设置登录密码——别的设备能打开登录页却登不进去。请在窗口内「系统设置 → 登录密码」设一次。"), addr)
 		return
 	}
 	log.Printf(logT("[auth] 警告：管理员密码尚未设置，但服务器绑定在 %q，其他主机也可以连接。虽然没有设置令牌无法初始化，但在完成初始设置之前请勿将此端口暴露到外部网络（默认 127.0.0.1:8787）"), addr)
@@ -418,56 +410,10 @@ func extractToken(r *http.Request) string {
 	return r.URL.Query().Get("token")
 }
 
-// desktopShellCtxKey 是「本请求来自桌面壳进程内窗口」的上下文标记键。
-//
-// 为什么用 context 而不是请求头：请求头可以被局域网里的任何客户端伪造，而
-// context 值由 desktop/shell.go 在把请求交给 Handler 之前塞进来，网络请求永远
-// 拿不到它。免鉴权只认这一个标记。
-type desktopShellCtxKey struct{}
-
-// MarkDesktopShellRequest 给进程内窗口发来的请求打标记，返回带标记的副本。
-// 只允许桌面壳在请求进入 Handler 之前调用。
-func MarkDesktopShellRequest(r *http.Request) *http.Request {
-	return r.WithContext(context.WithValue(r.Context(), desktopShellCtxKey{}, true))
-}
-
-// isDesktopShellRequest 报告请求是否由桌面壳的进程内窗口发起。
-func isDesktopShellRequest(r *http.Request) bool {
-	if r == nil {
-		return false
-	}
-	_, ok := r.Context().Value(desktopShellCtxKey{}).(bool)
-	return ok
-}
-
-// authExempt 报告这条请求是否可以不做 JWT 校验：只有桌面壳的进程内窗口。
-//
-// 看过来源地址再放行是不行的：桌面端绑定局域网（-lan）之后，同机浏览器发到
-// 127.0.0.1 的请求、以及同机反向代理转发的请求，RemoteAddr 都是回环，按地址
-// 放行等于给代理开一道后门。业界同款取舍：Syncthing 的 GUI 只允许 localhost
-// 免密码、跨主机访问必须显式打开 insecureAdminAccess；Jupyter 一旦绑定全接口
-// 就必须 token 登录，并要求配置密码。
-func (s *Server) authExempt(r *http.Request) bool {
-	return s.authDisabled.Load() && isDesktopShellRequest(r)
-}
-
-// SetAuthDisabled 打开桌面壳的「窗口免登录」开关（见 Server.authDisabled）。
-//
-// 它只对进程内窗口的请求生效（authExempt），不是把整个 /api 的鉴权关掉：
-// 桌面端一旦用 -lan 绑定局域网，任何网络来源的请求照样要 JWT。必须在 Handler()
-// 之前调用；服务器版（cmd/artex）从不调用它。
-func (s *Server) SetAuthDisabled(v bool) { s.authDisabled.Store(v) }
-
 // requireAuth wraps h with JWT validation.
 // /api/auth/* and /api/health are exempt.
 func (s *Server) requireAuth(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 桌面壳的进程内窗口直接用后端，不经过 token 流程；其它来源（同机浏览器、
-		// 反向代理、局域网设备）一律照常校验，判定见 authExempt。
-		if s.authExempt(r) {
-			h.ServeHTTP(w, r)
-			return
-		}
 		p := r.URL.Path
 		if strings.HasPrefix(p, "/api/auth/") || p == "/api/health" {
 			h.ServeHTTP(w, r)
@@ -498,12 +444,12 @@ func (s *Server) authStatus(w http.ResponseWriter, r *http.Request) {
 	if hash == "" {
 		s.currentSetupToken()
 	}
-	// auth_disabled 按请求计算：只有桌面壳的进程内窗口为 true（见 authExempt）。
-	// 绑定局域网之后，任何浏览器带来的请求都是 false——前端据此决定要不要走登录。
+	// 纯 Web 部署：任何请求都要凭据，auth_disabled 恒为 false。字段保留是因为
+	// 前端 authStatus 的响应类型里有它，删字段会让老客户端解析出 undefined。
 	writeJSON(w, 200, map[string]any{
 		"initialized":          hash != "",
 		"setup_token_required": hash == "",
-		"auth_disabled":        s.authExempt(r),
+		"auth_disabled":        false,
 	})
 }
 

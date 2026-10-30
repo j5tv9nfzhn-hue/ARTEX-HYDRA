@@ -7,7 +7,7 @@ package server
 //	POST /api/auth/change-password  改密码：要旧密码（auth.go 里本来就有的接口）
 //	POST /api/password/reset        重置：不要旧密码，但要一个已登录的会话
 //
-// 重置为什么不校验旧密码：桌面单用户场景里，「能登录进来」本身就等于「是操作者」，
+// 重置为什么不校验旧密码：「能登录进来」本身就等于「是操作者」，
 // 再问一次旧密码只是把「我忘了密码」这个真实困境原样弹回去。真正忘记密码、连会话
 // 都没有的人走 `artex-rea.exe -reset-password`（命令行版，见 cmd/artex）。
 //
@@ -55,15 +55,9 @@ func (s *Server) passwordReset(w http.ResponseWriter, r *http.Request) {
 	}
 	hash, ok, _ := pg.GetSetting(authPassKey)
 	if !ok || hash == "" {
-		// 没有已设密码时不该走重置：那是 /api/auth/init 的活（要 setup token）。
-		// 唯一例外是桌面壳的进程内窗口：那条路径从网络上来不了、伪造不了，而窗口
-		// 没有控制台，让用户去日志里抄一次性令牌并不现实；它同时是局域网访问的
-		// 前提——桌面端不设密码，-lan 之后别的设备连登录都做不到。
-		if !isDesktopShellRequest(r) {
-			writeErr(w, 403, authErrPasswordNotInit)
-			return
-		}
-		log.Printf("[auth] 桌面窗口内首次设置管理员密码 (client=%s)", clientLogID(r))
+		// 没有已设密码时不走重置：那是 /api/auth/init 的活（要 setup token）。
+		writeErr(w, 403, authErrPasswordNotInit)
+		return
 	}
 	newHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
