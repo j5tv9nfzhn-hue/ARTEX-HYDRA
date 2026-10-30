@@ -2336,9 +2336,9 @@ export type MigrateTableCount = { name: string; rows: number };
 /** 一个候选旧安装目录的体检结论。字段全是事实，不含"建议迁移"的判断。 */
 export type MigrateCandidate = {
   path: string;
-  /** web = artex-rea 两件套；desktop = artex-hydra-desktop 单文件；unknown = 只有库。 */
+  /** web = artex-rea 两件套；unknown = 只有库。后端可能仍回 desktop，前端按未知处理。 */
   kind: "web" | "desktop" | "unknown";
-  /** 取自 pointer.json；单文件发行没有该文件，为空串。 */
+  /** 取自 pointer.json；缺少该文件时为空串。 */
   version: string;
   has_db: boolean;
   db_size_bytes: number;

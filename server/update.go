@@ -28,7 +28,6 @@ const (
 	updateErrInProgress         = "已有更新正在进行"
 	updateErrRollbackInProgress = "正在更新，无法回滚"
 	updateErrDockerOneClick     = "容器内不支持一键换装（只改容器可写层，重建容器即回退），请拉取新镜像后重建容器。"
-	updateErrDesktopSingleFile  = "桌面端是单文件发行：请下载新版 artex-hydra-desktop，关闭窗口后替换本机这个可执行文件（数据在同目录，原样保留）。"
 )
 
 // 更新偏好的设置键。两个开关都存在 settings 表里（而不是浏览器 localStorage）：
@@ -334,13 +333,6 @@ func (s *Server) updateApply(w http.ResponseWriter, r *http.Request) {
 	// 这里不再要求"有脚本监护"：进程自己会拉新进程重开，start.sh / start.bat 只是可选兜底。
 	if selfupdate.InDocker() {
 		writeErr(w, 400, updateErrDockerOneClick)
-		return
-	}
-
-	// 桌面端单文件发行：没有 versions/ 也没有 pointer，一键换装无处落地；
-	// 硬装进去只会重新造出"入口 + 核心"两份常驻进程，正是要避免的形态。
-	if selfupdate.SingleFile() {
-		writeErr(w, 400, updateErrDesktopSingleFile)
 		return
 	}
 

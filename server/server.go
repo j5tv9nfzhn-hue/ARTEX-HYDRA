@@ -124,15 +124,6 @@ type Server struct {
 	skillDir string // root directory for skill subdirectories
 	jwtKey   []byte // HS256 signing key loaded from / generated into dataDir/jwt.key
 
-	// authDisabled 打开桌面壳的「窗口免登录」。唯一设置它的是 desktop/：窗口是
-	// 本机进程、由用户亲手启动，再输一次密码不增加任何信任边界。
-	//
-	// 它不等于「关掉 /api 的鉴权」：requireAuth 只对带进程内标记的窗口请求放行
-	// （实现见 authExempt），网络来源——同机浏览器、反向代理、局域网设备——照常
-	// 校验 JWT。服务器版（cmd/artex）永远不调用 SetAuthDisabled。
-	// 用 atomic 是因为它在 boot.Prepare 里设置、之后被各请求 goroutine 读取。
-	authDisabled atomic.Bool
-
 	// listenAddr 是 main 里真正拿去 ListenAndServe 的地址（-addr / -lan / config.json
 	// 压完之后的结果）。「局域网连接」页靠它判断别的设备现在到底连不连得上，见 lan_api.go。
 	listenAddr string

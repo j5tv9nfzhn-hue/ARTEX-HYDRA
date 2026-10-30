@@ -1,9 +1,8 @@
 // Package boot 承载 ARTEX 服务进程的共享启动骨架：凭据主密钥、进程树收口、
 // 双图库打开、server 装配与监听器启动，以及优雅停机。
 //
-// cmd/artex（服务器版 artex-rea）与 desktop（Wails 桌面壳 artex-hydra）都从这一处
-// 启动同构的后端。启动顺序与停机顺序是三条不变量，任何调整都必须同时改两端，
-// 不允许任何一边私自重排。
+// cmd/artex（服务器版 artex-rea）从这里启动后端。启动顺序与停机顺序是三条不变量，
+// 任何调整都必须同步 cmd/artex 一侧，不允许私自重排。
 package boot
 
 import (
@@ -44,13 +43,6 @@ type Options struct {
 	ExeDir string
 	// ListenAddr 是 HTTP 监听地址。
 	ListenAddr string
-	// ToleratePortInUse 为 true 时监听失败只记日志不致命：桌面壳的窗口渲染走
-	// 进程内 Handler、不依赖回环端口，端口被服务器版占用时窗口照常可用。
-	ToleratePortInUse bool
-	// DisableAuth 打开「桌面壳进程内窗口免登录」：只对 desktop/shell.go 打了标记的
-	// 请求生效（server.authExempt），网络来源（同机浏览器、反向代理、局域网设备）
-	// 照样校验 JWT。服务器版恒为 false（账号密码登录）。
-	DisableAuth bool
 }
 
 // App 是一次已启动的服务实例，持有监听器、server 与双图库。
@@ -63,9 +55,6 @@ type App struct {
 }
 
 // Handler 返回 server 的完整 HTTP 处理器（API + 静态前端 + SPA 兜底）。
-// 桌面壳把它挂到 wails AssetServer.Handler，并在交给它之前打「进程内窗口」标记
-// （见 server.MarkDesktopShellRequest）：页面内容与浏览器看到的完全一致，唯一差别
-// 是窗口的请求免登录，浏览器的请求仍要账号密码。
 func (a *App) Handler() http.Handler {
 	if a.srv == nil {
 		return http.NotFoundHandler()
@@ -114,7 +103,6 @@ func Prepare(ctx context.Context, opts Options) (*App, error) {
 
 	srv := server.New(ctx, mgr, skillDir, opts.DataDir, opts.ExeDir)
 	// 必须在 Handler()/监听器之前定下来：requireAuth 是构建期装配的中间件。
-	srv.SetAuthDisabled(opts.DisableAuth)
 	srv.SetListenAddr(opts.ListenAddr)
 	srv.WarnIfExposed(opts.ListenAddr)
 
@@ -128,12 +116,6 @@ func Prepare(ctx context.Context, opts Options) (*App, error) {
 			opts.Version, opts.ListenAddr, opts.DataDir, mgr.Workers())
 		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			if isAddrInUse(err) {
-				if opts.ToleratePortInUse {
-					// 桌面壳：窗口渲染走进程内 Handler，端口被占用不影响使用；
-					// Web 入口（浏览器地址）指向已运行的那个实例。
-					log.Printf("[boot] 监听 %s 失败：端口已被占用。桌面窗口不受影响；Web 入口指向已运行的实例。", opts.ListenAddr)
-					return
-				}
 				writePortInUse(os.Stderr, opts.ListenAddr, err)
 				os.Exit(ExitPortInUse)
 			}

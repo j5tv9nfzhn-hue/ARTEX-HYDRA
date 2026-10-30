@@ -65,20 +65,12 @@ const (
 	bundledRetiredSuffix = ".bundled-"
 )
 
-// entryStem / coreStem 是发行包入口与核心程序的文件名基名。服务器版默认
+// entryStem / coreStem 是发行包入口与核心程序的文件名基名，默认
 // artex-rea / artex-rea-core，保持「入口 + 核心两件套 + versions/ 版本化布局」
 // ——Windows 上换装不能覆盖运行中的 exe，只能靠"新增版本目录 + 原子改指针"。
-//
-// 桌面版（Wails 窗口）是**单文件**发行：没有核心、没有 versions/、没有 pointer，
-// 一个 exe 就地跑，数据就在它旁边（便于整目录搬走、新旧合并）。同一套代码用
-// singleFile 开关区分。
 var (
 	entryStem = "artex-rea"
 	coreStem  = "artex-rea-core"
-
-	// singleFile 由 ldflags 置为 "1" 时按单文件落地：不做版本化安装、不认
-	// pointer.json、不做入口→核心转交。用字符串是因为 -X 只能注入 string。
-	singleFile = "0"
 
 	// outerBackupPrefix 是替换引导程序时留下的备份前缀（<入口名>.old-<ts>），
 	// 下次启动清掉。
@@ -89,14 +81,6 @@ var (
 	// 也不在旧协议残留名单上——三套清理逻辑原先都不认，于是永远留在盘上。
 	stagedLoosePrefix = entryStem + ".staged"
 )
-
-// SingleFile 报告当前发行物是不是"单文件、无核心"的桌面版。
-//
-// 单文件模式下 selfupdate 只保留与布局无关的能力（GitHub 查询、SHA256 校验、
-// 版本比较）；安装 / 转交 / 回滚这些依赖 versions/ 与 pointer.json 的动作全部
-// 不走——那套机制的目的是"不覆盖运行中的 exe 而完成换装"，单文件里只能由用户
-// 替换文件完成，硬套只会重新变出"入口 + 核心"两份常驻进程。
-func SingleFile() bool { return singleFile == "1" }
 
 // Layout 是一次升级涉及的全部路径，全部挂在安装根目录下。
 type Layout struct {
@@ -351,9 +335,6 @@ func runningVersionDir(l Layout) string {
 // 之所以用"复制入口 + 指针"而不是符号链接：Windows 建符号链接需要管理员或开发者模式，
 // 目录 junction 又只对本地卷有效；而一个普通的指针文件任何环境都读得了。
 func Handoff() (int, bool) {
-	if SingleFile() {
-		return 0, false // 单文件发行：自己就是全部，没有可转交的核心
-	}
 	l, err := ResolveLayout()
 	if err != nil {
 		return 0, false

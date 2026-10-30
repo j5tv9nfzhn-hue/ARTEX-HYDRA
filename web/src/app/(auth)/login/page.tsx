@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
-import { IS_DESKTOP } from "@/lib/platform";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,11 +43,6 @@ export default function LoginPage() {
   }, [termsOpen]);
 
   useEffect(() => {
-    // 桌面壳没有登录流程：无论直接访问还是被别处带来，都直接进主页。
-    if (IS_DESKTOP) {
-      window.location.replace("/function/tasks");
-      return;
-    }
     // 已登录直接进主界面（静态导出下无 middleware 代劳这层跳转）。
     const token = auth.getToken();
     if (token) {
@@ -60,13 +54,7 @@ export default function LoginPage() {
     }
     api
       .authStatus()
-      .then(({ initialized, auth_disabled }) => {
-        // 桌面壳窗口就算走到这里（cookie 丢了、或被别处带过来），也不该看到登录页：
-        // auth_disabled 由后端按请求判定，窗口恒为 true。
-        if (auth_disabled) {
-          window.location.replace("/function/tasks");
-          return;
-        }
+      .then(({ initialized }) => {
         if (!initialized) router.replace("/setup");
       })
       .catch(() => setError(t("login.errorBackend")))

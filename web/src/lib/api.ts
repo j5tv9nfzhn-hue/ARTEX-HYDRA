@@ -5,7 +5,6 @@
 
 import type { ChatMention } from "@/lib/chat-mentions";
 import { MOCK } from "@/lib/mock/enabled";
-import { IS_DESKTOP } from "@/lib/platform";
 import { mockHandle } from "@/lib/mock/handler";
 import type {
   ActiveFindingRetest,
@@ -177,10 +176,8 @@ export async function http<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
   if (r.status === 401) {
-    // 桌面壳没有登录流程：把 401 当普通错误抛给调用方展示，不要把人送回
-    // 一个不存在的登录页（那是 Web 端的形态）。正常情况下桌面端的 /api
-    // 已关闭鉴权，走不到这里。
-    if (!IS_DESKTOP && typeof window !== "undefined") {
+    // 凭据失效：清掉本地会话并回到登录页。
+    if (typeof window !== "undefined") {
       localStorage.removeItem("artex_token");
       document.cookie = "artex_token=; path=/; max-age=0";
       window.location.href = "/login";
@@ -294,8 +291,7 @@ export const api = {
   health: () => get<{ ok: boolean; service: string; version: string; shell?: ShellCapability }>("/health"),
 
   // ---- auth ----
-  // auth_disabled 是「这条连接不需要凭据」：桌面壳窗口为 true，浏览器（含桌面端的
-  // -lan 局域网入口）为 false，见 server/authExempt。
+  // auth_disabled 在纯 Web 部署下恒为 false（后端保留该字段以兼容老客户端）。
   authStatus: () =>
     get<{ initialized: boolean; setup_token_required?: boolean; auth_disabled?: boolean }>("/auth/status"),
   login: (username: string, password: string) => post<{ token: string }>("/auth/login", { username, password }),

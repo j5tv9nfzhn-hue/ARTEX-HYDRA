@@ -14,7 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { auth } from "@/lib/auth";
-import { IS_DESKTOP } from "@/lib/platform";
 import { cn, getInitials } from "@/lib/utils";
 
 import { ChangePasswordDialog } from "./change-password-dialog";
@@ -85,13 +84,10 @@ export function AccountSwitcher({
             <KeyRound />
             {t("changePassword")}
           </DropdownMenuItem>
-          {/* 桌面壳里没有登录会话，退出登录只是把人送去登录页再弹回来。 */}
-          {IS_DESKTOP ? null : (
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
-              <LogOut />
-              {t("logout")}
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+            <LogOut />
+            {t("logout")}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <ChangePasswordDialog open={pwOpen} onOpenChange={setPwOpen} />

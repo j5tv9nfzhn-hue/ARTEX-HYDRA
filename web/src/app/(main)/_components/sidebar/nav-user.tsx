@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { auth } from "@/lib/auth";
-import { IS_DESKTOP } from "@/lib/platform";
 import { getInitials } from "@/lib/utils";
 
 import { ChangePasswordDialog } from "./change-password-dialog";
@@ -85,13 +84,10 @@ export function NavUser({
               {t("changePassword")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {/* 桌面壳没有登录这回事：留一个点了没反应的「退出登录」只会让人困惑。 */}
-            {IS_DESKTOP ? null : (
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
-                <LogOut />
-                {t("logout")}
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+              <LogOut />
+              {t("logout")}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

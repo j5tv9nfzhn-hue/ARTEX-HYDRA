@@ -201,8 +201,7 @@ python3 -I scripts/check-external-links.py --strict # 需要相应网络访问�
 - **gate：** 硬门禁——`go build`、`go vet`、`go vet -tags embedui`、`gofmt`、`golangci-lint`；失败即不出包。
 - **frontend：** 一次静态导出 `web/out`，含 TS 类型检查，上传 web-dist 供各目标复用。
 - **binaries：** linux/darwin/windows × amd64/arm64 交叉编译和 zip；runner 不执行非宿主平台二进制，改用文件头结构校验（PE/ELF/Mach-O 魔数与机器类型）。
-- **desktop：** Wails V2 三平台原生构建（CGO 不能交叉编译）＋ gofmt ＋ 打包（macOS 为 .app bundle）。
-- **release：** 汇总 6+3 个 zip、生成 `latest.json` 与 SHA256SUMS，创建 GitHub Release；失败即删草稿、保 tag。
+- **release：** 汇总 6 个 zip、生成 `latest.json` 与 SHA256SUMS，创建 GitHub Release；失败即删草稿、保 tag。
 - **signals：** `go test`、语言检查、文档链接与启动脚本检查——`continue-on-error`，只报告不拦发布。
 
 GitHub Release 发布三端（Linux/macOS/Windows）zip 包（amd64/arm64），不再发布 Docker 镜像；本地同样可用 `./build.sh --release` 产出（见 §9.3）。
@@ -211,7 +210,7 @@ GitHub Release 发布三端（Linux/macOS/Windows）zip 包（amd64/arm64），�
 
 - web-dist 放入 `server/webui/dist`，`server/webui_embed.go` 的 `//go:embed all:webui/dist` 内嵌它；binaries 用 `ARTEX_SKIP_FRONTEND=1` 防止重复编译前端。
 - `build.sh --target OS/ARCH` 输出 `dist/artex-rea-<版本>-<os>-<arch>/artex-rea`（Windows 为 `artex-rea.exe`）和发布用 zip；包含对应启动脚本（`start.bat` / `start.sh`）、skills、config.example.json、README。桌面端目标（`--desktop`）输出 `dist/artex-hydra-desktop-<版本>-<os>-<arch>/`，包内是**单文件** `artex-hydra-desktop`（无 `-core`、无 `versions/`；macOS 为 `artex-hydra-desktop.app`），`-desktop` 后缀用于与 WEB 版 `artex-rea-*` 区分。
-- 一键更新由 `selfupdate.AssetName` 按当前平台拼 `artex-rea-<版本>-<os>-<架构>.zip`（桌面端为 `artex-hydra-desktop-...`，`entryStem` 由 ldflags 注入），与 `package_binary` / `package_desktop` 命名一致。桌面端构建同时注入 `singleFile=1`：`Bootstrap` 直接放行、`Handoff` 永不转交、`/api/update/apply` 返回「下载新版替换单文件」，因此桌面端不产生 `versions/`、`pointer.json` 与核心副本。
+- 一键更新由 `selfupdate.AssetName` 按当前平台拼 `artex-rea-<版本>-<os>-<架构>.zip`，与 `package_binary`top` 命名一致。桌面端构建同时注入 `singleFile=1`：`Bootstrap` 直接放行、`Handoff` 永不转交、`/api/update/apply` 返回「下载新版替换单文件」，因此桌面端不产生 `versions/`、`pointer.json` 与核心副本。
 
 ### 9.4 不发布 tag 的本地验证
 

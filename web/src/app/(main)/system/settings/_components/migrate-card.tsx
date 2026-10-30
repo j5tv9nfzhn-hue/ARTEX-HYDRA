@@ -58,12 +58,9 @@ export function MigrateCard() {
   const [result, setResult] = React.useState<MigrateResult | null>(null);
 
   /** 目录形态的三种说法；放在组件里而不是顶层，t 的命名空间才对得上。 */
+  // 迁移只区分「本仓库的 WEB 版目录」与「认不出来的目录」。
   const kindText = (kind: MigrateCandidate["kind"]) =>
-    kind === "desktop"
-      ? t("migrate.kindDesktop")
-      : kind === "web"
-        ? t("migrate.kindWeb")
-        : t("migrate.kindUnknown");
+    kind === "web" ? t("migrate.kindWeb") : t("migrate.kindUnknown");
 
   const scan = React.useCallback(async () => {
     setScanning(true);

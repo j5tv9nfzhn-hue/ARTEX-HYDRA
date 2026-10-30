@@ -53,13 +53,6 @@ func Bootstrap(version string) (Action, State) {
 	if os.Getenv(smokeEnv) != "" {
 		return Continue, State{}
 	}
-	// 单文件发行（桌面端）：没有 versions/、没有 pointer、没有老协议残留，
-	// 启动就是启动。这里刻意什么都不做——否则会在用户目录里凭空造出
-	// versions/updates/staging 三个空目录，"一个 exe + 数据"就不再成立。
-	if SingleFile() {
-		return Continue, State{}
-	}
-
 	l, lerr := ResolveLayout()
 	if lerr == nil {
 		_ = EnsureLayoutDirs(l)
