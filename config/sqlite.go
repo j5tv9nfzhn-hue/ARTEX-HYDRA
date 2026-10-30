@@ -36,9 +36,18 @@ const (
 // 否则一次本来会等到锁的写入会被 ctx 提前打断成 "context deadline exceeded"。
 // server 侧的后台持久化统一下限见 server/sqlite_write.go。
 //
-// 10 秒是「桌面单机 + 慢盘」的取值：正常写入是毫秒级，只有磁盘抖动、杀毒扫描、
-// 检查点回写叠加时才会排到秒级；更长的等待对交互式操作已无意义。
-const SQLiteBusyTimeout = 10 * time.Second
+// 5 秒的取值把「等待」和「卡死」分开：正常写入是毫秒级；磁盘抖动、杀毒扫描、
+// 检查点回写叠加时会排到秒级，5 秒足够吸收这些毛刺。再长就没有意义了——超过
+// 这个量级说明有写事务本身出了问题（大归档、批量删除、误开的长事务），而继续
+// 等下去只会让用户看到一个没有任何错误提示的卡死界面。
+//
+// 何况写根本没有走"多条连接抢同一把锁"这条路：全部写经 db/writer.go 的单写
+// 协程合并成批提交，并发写不会互相等锁。这个预算真正覆盖的只剩下「某条没走写
+// 协程的写语句撞上了正在提交的批」这一种情况，5 秒绰绰有余。
+//
+// 注意 server/sqlite_write.go 的 sqliteWriteTimeout 由它推导（+5s 余量），
+// 改这里会自动跟着改，不需要两处同步。
+const SQLiteBusyTimeout = 5 * time.Second
 
 // SQLitePath resolves the on-disk database file.
 //
@@ -156,6 +165,25 @@ func SQLiteDSNFor(path string) string {
 		"&_pragma=mmap_size(268435456)" +
 		// 临时表/临时排序放内存:排序中间结果落盘会在每次大查询时制造新的写锁竞争。
 		"&_pragma=temp_store(MEMORY)" +
+		// wal_autocheckpoint(1000)：WAL 攒到 1000 页（4KB 页 ≈ 4MB）就在**提交路径上**
+		// 触发一次 PASSIVE 检查点，把帧回填进主库。
+		//
+		// 显式写出来的理由不是"改默认值"，而是把默认值变成契约：这个数与
+		// journal_size_limit 是一对，改一个不改另一个会让 WAL 要么疯狂增长、
+		// 要么频繁检查点拖慢提交。把两者写在同一处，改的人一定会看到对方。
+		"&_pragma=wal_autocheckpoint(1000)" +
+		// journal_size_limit(64MiB)：**WAL 文件的硬上限**，这是整套配置里唯一
+		// 能真正阻止 WAL 无限膨胀的开关。
+		//
+		// 没有它会发生什么：SQLite 的检查点只能回填「比最老的读事务还老」的帧。
+		// 本应用的读走独立连接池且 UI 持续轮询，读事务几乎从不完全消失；一旦
+		// 有读者钉住旧帧，检查点就推不动，WAL 只能一直追加。而 WAL 变大之后，
+		// 每次提交都要顺带做一次检查点，写入延迟被反过来拖垮——这是并发场景下
+		// 真实的劣化路径，不是理论风险。
+		//
+		// 设了上限之后，WAL 超过 64MiB 时 SQLite 会在检查点后把文件截断回来，
+		// 磁盘占用变成有界值而不是"只增不减"。
+		"&_pragma=journal_size_limit(67108864)" +
 		"&_texttotime=1" +
 		"&_time_format=" + sqliteTimeFormat +
 		"&_txlock=immediate"

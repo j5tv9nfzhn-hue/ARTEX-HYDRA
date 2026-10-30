@@ -21,13 +21,24 @@ import (
 )
 
 const (
-	// writeBatchWindow 是「凑批」的等待窗口:第一条写入到达后最多再等这么久收同伴。
+	// writeBatchWindow 是「凑批」的基础等待窗口:第一条写入到达后再等这么久收同伴。
 	// 5ms 远小于一次 fsync 的代价,攒到 2 条就已经回本。
+	//
+	// 它是**下限**而不是固定值：真实窗口由积压量动态决定，见 batchWindowFor。
 	writeBatchWindow = 5 * time.Millisecond
 	// writeBatchMax 是单批上限:太大时锁持有时间变长,读会被 WAL 写事务拖慢。
 	writeBatchMax = 200
 	// writeQueueDepth 是队列缓冲:满了以后 submit 阻塞在 channel 上(背压),不丢写。
+	//
+	// 并发任务开起来后这里会堆得比单任务高得多，512 意味着尖峰时可以吸收 512 条
+	// 待提交写入而不断背压。它不需要更大：真正的过载信号是「队列长期接近满」，
+	// 那时该做的是降低写入频率而不是加深队列。
 	writeQueueDepth = 512
+
+	// writeBatchWindowMax 是动态窗口的上限。积压再多也不会等超过这个时间——
+	// 窗口的意义是「等同伴」，不是「人为拖延」。20ms 仍在一次慢 fsync 的量级内，
+	// 但足以让 5 个并发 agent 的写入挤进同一批。
+	writeBatchWindowMax = 20 * time.Millisecond
 )
 
 type writeJob struct {
@@ -101,11 +112,38 @@ func (q *writeQueue) submit(ctx context.Context, run func(*sql.Tx) error) error 
 	}
 }
 
+// batchWindowFor 决定这一批的凑批窗口：积压越多等得越久，但有硬上限。
+//
+// 为什么需要动态窗口。固定 5ms 是为「单任务、写入稀疏」调的——那条路径上队列
+// 里通常只有 1~2 条，多等没有意义。但任务并发开起来后写入是成簇到达的：一个
+// 子 agent 的一次工具调用会连着写 activity + 若干图节点，5 个 agent 同时跑就是
+// 五簇交错。固定 5ms 只能随机捞到簇的一小部分，剩下的落进下一批——每批都只有
+// 三五条，fsync 次数跟着涨，而 fsync 正是 Windows 上最贵的那一步。
+//
+// 于是把窗口与积压量挂钩：积压说明「还有一批人马上要写」，那就多等一会儿把它们
+// 收进来，用一次 fsync 结掉。上界 20ms 保证不会为了凑批而人为拖慢交互——用户在
+// 界面上看到的一次写入等待，最坏也只是多这 20ms。
+//
+// 注意这不是"负载越高越慢"的退让：窗口变长换来的是**批更大、提交更少**，队列
+// 排空的总时间反而更短。它唯一的代价是单条写入的延迟上限从 5ms 抬到 20ms。
+func batchWindowFor(depth int) time.Duration {
+	switch {
+	case depth >= 64:
+		return writeBatchWindowMax
+	case depth >= 16:
+		return writeBatchWindow * 3 // 15ms
+	case depth >= 4:
+		return writeBatchWindow * 2 // 10ms
+	default:
+		return writeBatchWindow
+	}
+}
+
 // loop 是唯一执行写事务的协程。第一批之后窗口内到达的写入会并进同一批。
 func (q *writeQueue) loop() {
 	for first := range q.ch {
 		batch := []*writeJob{first}
-		timer := time.NewTimer(writeBatchWindow)
+		timer := time.NewTimer(batchWindowFor(len(q.ch)))
 	drain:
 		for len(batch) < writeBatchMax {
 			select {

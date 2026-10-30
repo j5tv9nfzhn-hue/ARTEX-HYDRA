@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -321,12 +322,39 @@ func openSQLite(dsn string) (*DB, error) {
 		}
 		rd, rerr := sql.Open("sqlite", dsn+sep+"_pragma=query_only(ON)")
 		if rerr == nil && rd.Ping() == nil {
-			rd.SetMaxOpenConns(3)
-			rd.SetMaxIdleConns(3)
+			// 读连接数由 CPU 核数决定，夹在 [4, 16]。
+			//
+			// 为什么不再固定 3 条：WAL 下读之间完全并行、且不阻塞写，所以读连接
+			// 几乎是可以白拿的并发。任务并发开起来后，同一时刻可能有多个子 agent
+			// 在查图、UI 在轮询活动流、后台在算统计——3 条会让这些查询互相排队，
+			// 而它们本可以同时跑。
+			//
+			// 上界 16 而不是更高：每条读连接各带一份页缓存（DSN 的 cache_size），
+			// 连接数直接乘进常驻内存。桌面应用不能为了用不满的并发把内存吃光。
+			// 下界 4 保证双核机器上也有基本的并行度。
+			readers := runtime.NumCPU()
+			if readers < 4 {
+				readers = 4
+			}
+			if readers > 16 {
+				readers = 16
+			}
+			rd.SetMaxOpenConns(readers)
+			rd.SetMaxIdleConns(readers)
 			d.rd = rd
 		} else if rd != nil {
 			rd.Close()
 			log.Printf("[db] 只读连接池打开失败（回落到主池）：%v", rerr)
+		}
+	}
+
+	// WAL 自愈：后台协程定期检查 WAL 大小，偏大就主动做一次更强的检查点。
+	// 挂在这里而不是 server 启动处，是因为任何走到 openSQLite 的入口（主库、
+	// 工具、转换流程）都应该享有同样的保护，而不是只有 GUI 启动路径。
+	// 内存库没有 -wal 文件，跳过。
+	if !strings.Contains(dsn, ":memory:") && !strings.Contains(dsn, "mode=memory") {
+		if p := sqliteFilePathFromDSN(dsn); p != "" {
+			d.StartWALMaintenance(context.Background(), p)
 		}
 	}
 	return d, nil
@@ -341,6 +369,11 @@ var sqliteMaintenancePragmas = []string{
 	"PRAGMA journal_mode = WAL",
 	"PRAGMA synchronous = NORMAL",
 	"PRAGMA foreign_keys = ON",
+	// WAL 的两条边界契约。它们同时出现在 config.SQLiteDSN 里；这里保留一份是
+	// 为了让「断言配置生效」的调用方（自检、测试、排障脚本）能拿到同一份清单。
+	// 任意一处改动都必须同步另一处，config/engine_test.go 会盯住 DSN 那份。
+	"PRAGMA wal_autocheckpoint = 1000",
+	"PRAGMA journal_size_limit = 67108864",
 }
 
 // openSQLiteTemp opens a throwaway database for tests and tooling.

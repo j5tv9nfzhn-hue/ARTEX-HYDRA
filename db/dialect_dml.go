@@ -137,26 +137,6 @@ UPDATE task_categories SET name=$2, nkey=$3 WHERE id=$1
 RETURNING id, name, nkey,
        (SELECT count(*) FROM tasks WHERE category_id=task_categories.id AND deleted_at IS NULL),
        created_at, updated_at`
-
-// taskCategoryAssignPG 是 SetTaskCategory 的 PostgreSQL 语句，逐字保留。
-//
-// 这是本文件里唯一必须保留 data-modifying CTE 的调用点：它要求
-// "**先读分类、再改任务、再用改完之后的口径统计 task_count**"三件事在一条
-// 语句里原子完成。SQLite 侧做不到（见 taskCategoryAssignSQLiteUpdate /
-// taskCategoryAssignSQLiteSelect），所以这里不做改写。
-const taskCategoryAssignPG = `
-WITH selected AS (
-    SELECT * FROM task_categories WHERE id=$2
-), updated AS (
-    UPDATE tasks SET category_id=$2
-    WHERE id=$1 AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM selected)
-    RETURNING id
-)
-SELECT selected.id, selected.name, selected.nkey,
-       (SELECT count(*) FROM tasks WHERE category_id=selected.id AND deleted_at IS NULL),
-       selected.created_at, selected.updated_at
-FROM selected, updated`
-
 // taskCategoryAssignSQLiteUpdate 是上面那条 CTE 语句在 SQLite 上的第 1 步：
 // 挂分类。`EXISTS(SELECT 1 FROM task_categories WHERE id=$2)` 就是原
 // `EXISTS (SELECT 1 FROM selected)` 的内联形式（SQLite 的 CTE 里不能放 DML，
@@ -178,21 +158,6 @@ FROM task_categories category
 LEFT JOIN tasks task ON task.category_id=category.id
 WHERE category.id=$1
 GROUP BY category.id`
-
-// taskCategoryBatchMovePG 是 SetTasksCategory 的 PostgreSQL 语句，逐字保留。
-//
-//	WHERE id=ANY($1::bigint[])
-//
-//	SQLite 既没有 ANY 这个函数（它是 PG 的数组运算符），现代驱动也无法把
-//	[]int64 绑成一个参数（"unsupported type []int64"）。展开成 IN ($2,$3,...)
-//	后每个值仍各自绑定，占位符编号由已有的
-//	dialect_arrays.go:appendInPlaceholders 顺序生成，不存在把值拼进 SQL 文本
-//	的机会。集合成员语义（"这批 id 里命中任意一个"）两边等价。
-const taskCategoryBatchMovePG = `
-UPDATE tasks SET category_id=$2
-WHERE id=ANY($1::bigint[]) AND deleted_at IS NULL
-RETURNING id`
-
 const taskCategoryBatchMoveSQLiteHead = `
 UPDATE tasks SET category_id=$1
 WHERE id IN (`
@@ -210,49 +175,21 @@ func taskCategoryBatchMoveStmt(args *[]any, taskIDs []int64, categoryID *int64) 
 	return taskCategoryBatchMoveSQLiteHead + appendInPlaceholders(args, taskIDs) + taskCategoryBatchMoveSQLiteTail
 }
 
-// ---------------------------------------------------------------------
-// B. task_scope 的范围匹配谓词
-// ---------------------------------------------------------------------
-
-// covTargetCTEPG 是「任务范围 → 资产」的匹配 CTE（PostgreSQL 逐字保留）。
+// covTargetCTESQLite 是「任务范围 → 资产」的匹配 CTE。
 //
-// 两处 PostgreSQL 专有表达式：
-//   - `ts.net >>= try_inet(a.ip)`：cidr 是否包含这个 inet（inet 传 NULL 时
-//     结果为 NULL，即不命中）；
-//   - `lower(regexp_replace(x, '[[:space:]]+', ”, 'g'))`：删掉所有空白再折叠
-//     大小写，用来对齐 ICP 备案号里的全角/多余空格。
-const covTargetCTEPG = `
-target AS (
-  SELECT DISTINCT a.id, a.type,
-         COALESCE(a.url, a.domain, a.ip, a.app_name, a.root_domain, '') AS label
-  FROM assets a
-  JOIN task_scope ts ON ts.task_id = $1 AND (
-       (ts.kind='company'     AND a.company_id = ts.company_id)
-    OR (ts.kind='root_domain' AND a.root_domain = ts.domain)
-    OR (ts.kind='subdomain'   AND a.domain = ts.domain)
-    OR (ts.kind IN ('ip','cidr') AND ts.net >>= try_inet(a.ip))
-    OR (ts.kind='icp' AND (
-         lower(regexp_replace(COALESCE(a.icp,''), '[[:space:]]+', '', 'g')) = ts.value
-         OR lower(regexp_replace(COALESCE(a.app_icp,''), '[[:space:]]+', '', 'g')) = ts.value
-       ))
-  )
-),
-tested AS (
-  SELECT DISTINCT ea.asset_id
-  FROM exploration_anchors ea
-  JOIN exploration_nodes en ON en.id = ea.node_id
-  WHERE en.exploration_id = $2 AND en.kind = 'fact'
-)`
-
-// covTargetCTESQLite 与 covTargetCTEPG 逐行相同，只有上面两处被换成函数调用：
+// 【P4】它原本还有一份 PostgreSQL 版本（covTargetCTEPG），逐行相同、只有两处
+// 表达式不同。ARTEX 只用 SQLite，那份没有调用方的副本已经删掉——保留一个
+// 永远不执行的 SQL 常量，只会让后来的人误以为存在第二条代码路径。
 //
-//	ts.net >>= try_inet(a.ip)
+// 与 PostgreSQL 写法的两处对应关系，记录在这里而不是留在代码里：
+//
+//	ts.net >>= try_inet(a.ip)                    （cidr 是否包含该 inet）
 //	    → artex_scope_net_contains(ts.net, a.ip)
-//	lower(regexp_replace(x, '[[:space:]]+', '', 'g'))
+//	lower(regexp_replace(x,'[[:space:]]+','','g')) （去空白 + 折叠大小写）
 //	    → artex_scope_icp_key(x)
 //
-// 其余（join 条件、五个 kind 分支、SELECT DISTINCT 投影、tested 的定义）都是
-// 同一段文字。等价性论证见 scopeNetContains / scopeICPKey 的注释。
+// 两个函数都是自定义 SQL 函数（见 scopeNetContains / scopeICPKey 的注释与
+// 注册处），语义与 PostgreSQL 原式等价，包括 inet 为 NULL 时不命中的行为。
 const covTargetCTESQLite = `
 target AS (
   SELECT DISTINCT a.id, a.type,
