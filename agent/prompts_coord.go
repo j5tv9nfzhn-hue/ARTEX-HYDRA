@@ -126,7 +126,7 @@ func RootSystemPrompt(v CoordVars) string {
 	if v.Now == "" {
 		v.Now = nowStr()
 	}
-	return renderTmplSafe("coord-root", rootTmpl, v)
+	return renderTmplSafe(PromptKeyCoordRoot, rootTmpl, v)
 }
 
 // ChildSystemPrompt 渲染执行者提示词。
@@ -134,7 +134,7 @@ func ChildSystemPrompt(v CoordVars) string {
 	if v.Now == "" {
 		v.Now = nowStr()
 	}
-	return renderTmplSafe("coord-child", childTmpl, v)
+	return renderTmplSafe(PromptKeyCoordChild, childTmpl, v)
 }
 
 // renderTmplSafe 复用 prompt.go 的渲染器（DB 覆盖 → 内置模板 → 原文）。
@@ -147,6 +147,15 @@ func renderTmplSafe(agentKey, def string, vars any) string {
 // 提示词覆盖用的 agent key。与旧的四套（goals/planner/reviewer/worker）刻意不同名：
 // 旧 key 的历史覆盖内容描述的是已删除的角色，混用会让 UI 里看起来还留着旧角色。
 const (
+	// 这两个 key 同时用于三处，必须逐字相同：
+	//   1. RootSystemPrompt/ChildSystemPrompt 里 renderTmplSafe 的第一个参数；
+	//   2. BuiltinPromptSeeds() 的 map key（决定 agent_prompts 里种不种）；
+	//   3. BuiltinPromptSeeds()[key] 被 pgResetPrompt 用来做"恢复默认"。
+	//
+	// 必须是**下划线**：agents.key 有 CHECK (regexp(key,'^[a-z][a-z0-9_]*$'))，
+	// 连字符会让该角色无法建行（见 db/schema_sqlite.sql 的 agents 表）。
+	// 之前渲染处硬编码的 "coord-root"/"coord-child" 与这里的值永不相等，
+	// 导致 UI 里既看不到也叫不出这两个角色——现在两处都改用常量。
 	PromptKeyCoordRoot  = "coord_root"
 	PromptKeyCoordChild = "coord_child"
 )

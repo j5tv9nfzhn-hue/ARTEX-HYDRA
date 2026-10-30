@@ -4296,6 +4296,42 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 		// 「本轮之前的上下文」。
 		s.captureTaskMainMessageCheckpoint(t, mainSeg, "用户消息："+firstLine(req.Message, 60), settled.ID)
 	}
+	// 【B1 环 3/6：对话入口改道】coord 模式下，人类这句话必须投给**根 agent**，
+	// 而不是另起一个 MainAgent 回合。
+	//
+	// 为什么这是硬性的：coord 下 planner 不参与调度，而 MainAgent 手上的
+	// add_intent / steer_work / kill_work 全部是旧链路的派发工具——它们写进库
+	// 之后没有任何角色会来领。用户说"去测一下那个接口"，意图落库即静止；
+	// 与此同时正在跑的根 agent 完全不知道有人说过话。两个 agent、两条互不相通
+	// 的上下文，是这次重构里最容易被忽略的一处断点。
+	//
+	// 投递用 instruction（而非 information）：人类在任务页说话是在**改变做法**，
+	// 不是提供背景。这与 nudgeCoordRoot 的语义选择一致（见 engine_coord_wire.go）。
+	if agent.CoordEnabled() {
+		if ct, ok := coordGet(s.engine, t.ID); ok && ct != nil && ct.run != nil && ct.run.Coord != nil {
+			taskDir := filepath.Join(s.m.dir, "tasks", t.ID)
+			agentMsg := composeAgentMessage(agentMessage, req.Attachments, taskDir)
+			// 视觉桥与旧路径同一口径：转写进度要出现在主 agent 泳道里，
+			// 否则用户上传图片后只会看到长时间无响应。
+			visEmit := func(rec db.Activity) {
+				rec.MainSeg = segPtr
+				s.engine.emitActivity(t, rec)
+			}
+			agentMsg = s.visionMessageForTask(ctx, t, req.Attachments, taskDir, agentMsg, visEmit)
+			if _, err := ct.run.Coord.Send("human", ct.run.RootID, agent.MsgInstruction, agentMsg); err != nil {
+				// 根已终结：图还在跑但根不再接收消息。这不是故障，如实告知用户
+				// 该看结论而不是继续指挥。
+				s.engine.emitActivity(t, db.Activity{Worker: "mainagent", Kind: "text", IsError: true, MainSeg: segPtr,
+					Summary: "编排者已收尾，无法再接收指令；请查看它的最终结论，或新开任务继续。",
+					Detail:  err.Error()})
+			}
+			s.finishTaskChat(t.ID, cancel)
+			writeJSON(w, 200, map[string]any{"status": "delivered", "mode": "coord"})
+			return
+		}
+		// 图不在（任务未运行/已结束）：退回普通对话回合，不假装能派活。
+	}
+
 	var ma *agent.MainAgent
 	if s.taskRuntimeAvailable(t, "mainagent") {
 		ma = s.agentsForTask(t).main

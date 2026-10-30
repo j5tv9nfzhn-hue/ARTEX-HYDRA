@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -577,11 +579,86 @@ func idSet(ids []int64) map[int64]bool {
 	return m
 }
 
+// seedCoordAgentRows 确保新调度层的两个可编辑角色（编排者/执行者）在 agents
+// 表里有行。
+//
+// 为什么需要这一步：seedPrompts 只给**已存在**的 agent 行播种提示词，而
+// coord_root / coord_child 不像 goals/planner/worker 那样写在建库脚本里——
+// 它们是这次重构新增的角色。不先建行，它们的提示词永远进不了 agent_prompts，
+// 用户在设置页就既看不到也改不了编排者的人格。
+//
+// 与 server/finding_verify.go 的 verifier 建行方式同构：INSERT ... ON CONFLICT
+// DO NOTHING + 写第一版提示词 + 回填 current_prompt_id。幂等，可重复执行。
+func seedCoordAgentRows(pg *db.DB) {
+	type row struct {
+		key, name, desc, tmpl string
+	}
+	rows := []row{
+		{
+			key:  agent.PromptKeyCoordRoot,
+			name: "编排者",
+			desc: "任务级根 agent：把目标拆成路线、派发给子 agent、读回结论并收尾。只持调度工具，不亲自执行。",
+			tmpl: agent.RootSystemPrompt(agent.CoordVars{}),
+		},
+		{
+			key:  agent.PromptKeyCoordChild,
+			name: "执行者",
+			desc: "子 agent：负责一条路线，把它走透，用 submit_report 如实交卷（confirmed / ruled_out / open_proof_gap）。",
+			tmpl: agent.ChildSystemPrompt(agent.CoordVars{}),
+		},
+	}
+	tx, err := pg.Begin()
+	if err != nil {
+		log.Printf("[prompts] coord 角色建行事务开启失败: %v", err)
+		return
+	}
+	defer tx.Rollback()
+	// 锁号与 verifier(7337741011)/retester 错开：三条播种互不相干。
+	if err = db.AdvisoryLock(context.Background(), tx, 7337741012); err != nil {
+		log.Printf("[prompts] coord 角色建行取锁失败: %v", err)
+		return
+	}
+	for _, r := range rows {
+		// role 用 'main'（编排者）与 'worker'（执行者）：agents.role 有 CHECK 约束，
+		// 只允许 goals/main/planner/worker/assistant。新角色复用既有枚举，
+		// 不为了一个展示字段去改表约束。
+		role := "main"
+		if r.key == agent.PromptKeyCoordChild {
+			role = "worker"
+		}
+		var id int64
+		err := tx.QueryRow(`INSERT INTO agents(key,name,description,role,builtin,enabled)
+VALUES ($1,$2,$3,$4,true,true)
+ON CONFLICT (key) DO NOTHING RETURNING id`, r.key, r.name, r.desc, role).Scan(&id)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("[prompts] 建 agent 行 %s 失败: %v", r.key, err)
+			continue
+		}
+		if id == 0 {
+			continue // 行已存在：提示词由下面的 seedPrompts 按"仅空时"补
+		}
+		var pid int64
+		if err := tx.QueryRow(`INSERT INTO agent_prompts(agent_id,version,template_text,note,updated_by)
+VALUES ($1,1,$2,'内置默认','system') RETURNING id`, id, r.tmpl).Scan(&pid); err != nil {
+			log.Printf("[prompts] 写 %s 首版提示词失败: %v", r.key, err)
+			continue
+		}
+		if _, err := tx.Exec(`UPDATE agents SET current_prompt_id=$1 WHERE id=$2`, pid, id); err != nil {
+			log.Printf("[prompts] 回填 %s current_prompt_id 失败: %v", r.key, err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("[prompts] coord 角色建行提交失败: %v", err)
+	}
+}
+
 // seedPrompts writes each built-in agent's code-default prompt body into
 // agent_prompts on startup — first-insert only (SeedPromptIfEmpty is a no-op once
 // any version exists), so the DB becomes the authoritative editable source while
 // user edits survive restarts. Runs after seedBuiltins has created the agent rows.
 func seedPrompts(pg *db.DB) {
+	// 新调度层的两个角色不在建库脚本里，先补行再播种。
+	seedCoordAgentRows(pg)
 	for key, tmpl := range agent.BuiltinPromptSeeds() {
 		a, err := pg.GetAgentByKey(key)
 		if err != nil || a == nil {
