@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -51,14 +52,23 @@ func TestSQLiteDSNCarriesRequiredPragmas(t *testing.T) {
 	dsn := SQLiteDSN()
 
 	// Each of these is load-bearing rather than tuning; see SQLiteDSN's comment.
+	//
+	// busy_timeout 的正确值从 config.SQLiteBusyTimeout 推导，不再写死数字：
+	// 硬编码会让"调小预算"这件事变成一次两处不同步的改动（DSN 改了、断言还在
+	// 等旧值，测试红给你看，而你很可能去改测试而不是改回预算）。
+	busyWant := "busy_timeout(" + strconv.FormatInt(SQLiteBusyTimeout.Milliseconds(), 10) + ")"
 	for _, want := range []string{
 		"file:",
 		"journal_mode(WAL)",   // readers must not block behind a writer
-		"busy_timeout(10000)", // contended writes wait instead of SQLITE_BUSY
+		busyWant,              // contended writes wait instead of SQLITE_BUSY
 		"synchronous(NORMAL)", // no per-commit fsync: a commit must not hog the write lock
 		"foreign_keys(ON)",    // SQLite ignores REFERENCES without this
-		"_texttotime=1",       // otherwise every time.Time scan fails
-		"_txlock=immediate",   // otherwise read-then-write has a race window
+		// WAL 的两条边界契约：没有 journal_size_limit，WAL 只增不减；没有显式的
+		// autocheckpoint，检查点频率就依赖一个我们没写下来的默认值。
+		"journal_size_limit(67108864)",
+		"wal_autocheckpoint(1000)",
+		"_texttotime=1",     // otherwise every time.Time scan fails
+		"_txlock=immediate", // otherwise read-then-write has a race window
 	} {
 		if !strings.Contains(dsn, want) {
 			t.Errorf("DSN 缺少 %q：%s", want, dsn)
