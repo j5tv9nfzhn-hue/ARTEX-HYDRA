@@ -199,10 +199,23 @@ jobs:
       # 校验可执行文件头与目标架构（PE/ELF/Mach-O 的魔数与机器类型）代替冒烟测试。
       - name: 校验可执行文件头与目标架构
         run: python3 -I scripts/check-binary-headers.py "${{ matrix.goos }}/${{ matrix.goarch }}"
+      # 包名里的版本段与 build.sh 第 106 行同源（ref_name 剥 v 前缀），
+      # 先算出来再当路径用：下面的 artifact 上传要精确到这一个文件。
+      - name: 计算本平台包名
+        id: pkg
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          name="artex-rea-${version}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
+          test -f "dist/$name" || { echo "::error::打包未产出 dist/$name"; exit 1; }
+          echo "name=$name" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v7
         with:
           name: pkg-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: "dist/*.zip"
+          # 只传本矩阵项的那一个包，不用 dist/*.zip：打包目录里若混入
+          # 别族产物，通配会把它一起塞进 artifact 带到下游。
+          path: dist/${{ steps.pkg.outputs.name }}
+          if-no-files-found: error
 
 
   # ③ 汇总 zip → 建草稿 → 传全部资产 → 校验数量 → 最后一步才公开。
@@ -235,14 +248,30 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
           missing=0
+          expected=""
           for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
             f="artex-rea-${version}-${t%%/*}-${t##*/}.zip"
+            expected="$expected $f"
             if [ -f "$f" ]; then echo "✓ $f"; else echo "::error::缺少 $f"; missing=1; fi
           done
           [ "$missing" = "0" ] || exit 1
+          # 产物单一性：dist 里只允许出现这六个 Web 版包，多一个都算污染。
+          for f in *.zip; do
+            case " $expected " in
+              *" $f "*) ;;
+              *) echo "::error::dist 里出现了非 Web 版产物：$f"; exit 1 ;;
+            esac
+          done
       - name: Generate checksums
         working-directory: dist
-        run: sha256sum -- *.zip > SHA256SUMS
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            echo "artex-rea-${version}-${t%%/*}-${t##*/}.zip"
+          done > .scope.txt
+          sha256sum -- $(cat .scope.txt) > SHA256SUMS
+          rm -f .scope.txt
       - name: 生成发布说明（完整变更）
         # 不用 --generate-notes：它只汇总 PR 标题，本仓库大量改动是直接提交，
         # 自动生成的结果常常只剩两三条（v2.2.0 首发即如此），等于没写。
@@ -271,7 +300,14 @@ jobs:
       - name: 上传 zip 与校验和
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" dist/*.zip dist/SHA256SUMS --clobber
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          files=""
+          for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            files="$files dist/artex-rea-${version}-${t%%/*}-${t##*/}.zip"
+          done
+          gh release upload "$GITHUB_REF_NAME" $files dist/SHA256SUMS --clobber
       - name: 生成并上传 latest.json
         env:
           GH_TOKEN: ${{ github.token }}

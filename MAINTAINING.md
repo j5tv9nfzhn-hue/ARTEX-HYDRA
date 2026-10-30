@@ -201,10 +201,12 @@ python3 -I scripts/check-external-links.py --strict # 需要相应网络访问�
 - **gate：** 硬门禁——`go build`、`go vet`、`go vet -tags embedui`、`gofmt`、`golangci-lint`；失败即不出包。
 - **frontend：** 一次静态导出 `web/out`，含 TS 类型检查，上传 web-dist 供各目标复用。
 - **binaries：** linux/darwin/windows × amd64/arm64 交叉编译和 zip；runner 不执行非宿主平台二进制，改用文件头结构校验（PE/ELF/Mach-O 魔数与机器类型）。
-- **release：** 汇总 6 个 zip、生成 `latest.json` 与 SHA256SUMS，创建 GitHub Release；失败即删草稿、保 tag。
+- **release：** 只汇总 6 个 `artex-rea` 平台包（先校验 `dist/` 里没有别族 zip，再逐名上传，不用 `dist/*.zip` 通配）、按同一份名单生成 SHA256SUMS、跑 `gen-update-manifest.py` 白名单对账后写 `latest.json`，创建 GitHub Release；失败即删草稿、保 tag。最后一步用 `diff` 把 Release 上的资产与 8 项预期名单（6 zip + SHA256SUMS + latest.json）逐字比对，多一个少一个都不转正。
 - **signals：** `go test`、语言检查、文档链接与启动脚本检查——`continue-on-error`，只报告不拦发布。
 
 GitHub Release 发布三端（Linux/macOS/Windows）zip 包（amd64/arm64），不再发布 Docker 镜像；本地同样可用 `./build.sh --release` 产出（见 §9.3）。
+
+**产物单一性**：正式发行物只有 `artex-rea-<版本>-<os>-<arch>.zip` 六件加 `SHA256SUMS`、`latest.json`。`build.sh`、`release.yml`、`gen-update-manifest.py` 三处各自设闸，发现别族产物（历史桌面端、手工放进去的包）一律**失败退出**而不是过滤后继续——清单是客户端的授权来源，静默过滤会让 Release 上仍挂着脏包。
 
 ### 9.3 构建路径与前置条件
 

@@ -24,6 +24,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+# 本仓库唯一的发行产物族：artex-rea-<版本>-<os>-<arch>.zip。
+# 与 scripts/gen-update-manifest.py 的 WEB_STEM/PLATFORMS 同一口径；
+# 发布说明只列这类包，别族的 zip 一律不展示。
+ASSET_RE = re.compile(
+    r"artex-rea-[0-9][^-]*(?:\.[0-9]+)*-(?:linux|darwin|windows)-(?:amd64|arm64)\.zip"
+)
+
 # 展示顺序即优先级：先新增、再修复，其余按重要性递减。
 GROUPS: list[tuple[str, str]] = [
     ("feat", "新增功能"),
@@ -121,16 +128,20 @@ def human_size(n: int) -> str:
 
 
 def build_assets_section(dist: Path, repo: str, tag: str) -> str:
-    zips = sorted(dist.glob("*.zip"))
+    # 只列 Web 版发布族 artex-rea-<版本>-<os>-<arch>.zip，不扫 *.zip：
+    # 打包目录里若混入别的产物族，发布说明会把它们当成正式发行物展示出去。
+    zips = sorted(
+        z for z in dist.glob("*.zip") if ASSET_RE.fullmatch(z.name)
+    )
     if not zips:
         return ""
     lines = ["## 发行产物", "", "| 平台 | 文件 | 大小 |", "|---|---|---|"]
     for z in zips:
         # artex-rea-2.2.0-linux-amd64.zip
-        parts = z.stem.split("-")
-        if len(parts) >= 2:
-            os_name = {"linux": "Linux", "darwin": "macOS", "windows": "Windows"}.get(parts[-2], parts[-2])
-            plat = f"{os_name} {parts[-1]}"
+        m = ASSET_RE.fullmatch(z.name)
+        if m and m.group("os") in {"linux", "darwin", "windows"}:
+            os_name = {"linux": "Linux", "darwin": "macOS", "windows": "Windows"}[m.group("os")]
+            plat = f"{os_name} {m.group('arch')}"
         else:
             plat = z.stem
         lines.append(f"| {plat} | [`{z.name}`]({repo_url(repo)}/releases/download/{tag}/{z.name}) | {human_size(z.stat().st_size)} |")
