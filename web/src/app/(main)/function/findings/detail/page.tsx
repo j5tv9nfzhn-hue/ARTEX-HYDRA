@@ -9,6 +9,8 @@ import { ArrowLeftIcon, ArrowUpRightIcon, ShieldAlertIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { KpiRow } from "@/components/editorial";
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { CopyButton } from "@/components/copy-button";
 import { FindingRetestPanel } from "@/components/finding-retest-panel";
 import { FindingTrafficPanel } from "@/components/finding-traffic-panel";
@@ -18,9 +20,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
@@ -133,34 +133,113 @@ function FindingDetailInner() {
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex flex-1 flex-col gap-0">
-      {/* Sticky header */}
-      <header className="sticky top-0 z-10 flex flex-col gap-2 border-b bg-background/95 px-4 py-2.5 backdrop-blur lg:px-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <SidebarTrigger className="-ml-1" />
-          <Button asChild variant="ghost" size="icon" className="size-7">
-            <Link href="/function/findings">
-              <ArrowLeftIcon />
-            </Link>
-          </Button>
-          <ShieldAlertIcon className="size-4 text-muted-foreground" />
-          <h1 className="max-w-md truncate text-sm font-semibold" title={title}>
-            {title}
-          </h1>
-          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">#{finding.id}</code>
-          <Separator orientation="vertical" className="mx-1 h-4" />
+      {/* 工具行：只剩「从哪儿来、能做什么」，其余交给书眉 */}
+      <div className="flex flex-wrap items-center gap-2 px-4 pt-2.5 lg:px-6">
+        <SidebarTrigger className="-ml-1" />
+        <Button asChild variant="ghost" size="icon" className="size-7">
+          <Link href="/function/findings">
+            <ArrowLeftIcon />
+          </Link>
+        </Button>
+        <span className="text-muted-foreground text-xs">{t("detail.back")}</span>
+        {finding.inherited && finding.source_task_id && (
+          <Badge variant="outline" className="ml-auto">
+            {t("detail.sourceTask", { id: finding.source_task_id })}
+          </Badge>
+        )}
+      </div>
+
+      {/* 书眉：编号 · 严重度 · 状态 · 复核 · 时间 / 标题 / 所属任务 */}
+      <div className="flex flex-col gap-1 px-4 pt-2 pb-2 lg:px-6">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground tabular-nums">
+          <code className="rounded-[2px] border border-border/60 px-1 py-px font-mono text-[10px]">#{finding.id}</code>
+          <span>{finding.vulnclass || t("table.unclassified")}</span>
+          <span className="h-2 w-px bg-border" />
           <StatusBadge domain="severity" value={finding.severity} dot />
+          <span className="h-2 w-px bg-border" />
           <StatusBadge domain="finding" value={finding.status} dot />
-          {/* 复核态单独一枚徽标：它决定这条发现进不进报告正文，必须在详情页一眼可见。 */}
-          <StatusBadge domain="validation" value={finding.validation ?? "unverified"} dot />
-          {finding.inherited && finding.source_task_id && (
-            <Badge variant="outline">{t("detail.sourceTask", { id: finding.source_task_id })}</Badge>
-          )}
+          <span className="h-2 w-px bg-border" />
+          <span>{fmtTime(finding.ts)}</span>
         </div>
-        <TabsList>
-          <TabsTrigger value="overview">{t("detail.tab.overview")}</TabsTrigger>
-          <TabsTrigger value="lineage">{t("detail.tab.lineage")}</TabsTrigger>
+        <h1 className="font-display text-[26px] font-semibold leading-tight tracking-[-0.02em]" title={title}>
+          {title}
+        </h1>
+        {finding.task_description && (
+          <p className="flex items-start gap-1.5 text-[13px] leading-relaxed text-muted-foreground">
+            <ShieldAlertIcon className="mt-[3px] size-3.5 shrink-0 text-primary" />
+            <Link
+              href={`/function/tasks/detail?id=${finding.task_id}`}
+              className="line-clamp-2 hover:text-foreground hover:underline"
+            >
+              {finding.task_description}
+            </Link>
+          </p>
+        )}
+      </div>
+
+      {/* 数字行：五格，无框，只靠竖线分开；每格点一下跳到对应位置 */}
+      <KpiRow className="mx-4 mb-3 grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:mx-6 lg:grid-cols-5">
+        <button
+          type="button"
+          onClick={() => setTab("overview")}
+          className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+        >
+          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("detail.fieldSeverity")}</span>
+          <span className="font-semibold text-[22px] leading-none tabular-nums">
+            {tStatus(`severity.${finding.severity}`)}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("overview")}
+          className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+        >
+          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("detail.fieldStatus")}</span>
+          <span className="font-semibold text-[22px] leading-none">
+            {tStatus(`finding.${finding.status}`)}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("overview")}
+          className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+        >
+          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">复核态</span>
+          <span className="font-semibold text-[22px] leading-none">
+            <StatusBadge domain="validation" value={finding.validation ?? "unverified"} dot />
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("overview")}
+          className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+        >
+          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{t("detail.fieldAssets")}</span>
+          <span className="font-semibold text-[22px] leading-none tabular-nums">{finding.assets?.length ?? 0}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("overview")}
+          className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+        >
+          <span className="text-[10px] tracking-[0.08em] text-muted-foreground">证据</span>
+          <span className="font-semibold text-[22px] leading-none tabular-nums">
+            {finding.evidence ? `${Math.max(1, Math.round(finding.evidence.length / 1024))}K` : "—"}
+          </span>
+        </button>
+      </KpiRow>
+
+      {/* 页签：下划线索引，吸顶 */}
+      <div className="no-scrollbar sticky top-0 z-10 overflow-x-auto bg-background/92 px-4 pt-1 backdrop-blur-md lg:px-6">
+        <TabsList variant="line" className="h-8 min-w-max gap-4 border-0 bg-transparent p-0">
+          <TabsTrigger value="overview" className="h-8 px-0 text-xs">
+            {t("detail.tab.overview")}
+          </TabsTrigger>
+          <TabsTrigger value="lineage" className="h-8 px-0 text-xs">
+            {t("detail.tab.lineage")}
+          </TabsTrigger>
         </TabsList>
-      </header>
+      </div>
 
       {/* Tab content */}
       <div className="flex-1 p-4 lg:p-6">
@@ -169,16 +248,14 @@ function FindingDetailInner() {
           <div className="grid gap-4 lg:grid-cols-3">
             {/* 左栏 */}
             <div className="flex flex-col gap-4 lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">{t("detail.summary")}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+              <Sheet>
+                <SheetHead title={t("detail.summary")} icon={ShieldAlertIcon} />
+                <div data-editorial="body" className="px-4 pt-2 pb-4">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
                     {finding.summary || t("detail.summaryEmpty")}
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </Sheet>
               <FindingVerifyPanel
                 key={id}
                 findingId={id}
@@ -187,20 +264,24 @@ function FindingDetailInner() {
                 onCompleted={load}
               />
               <FindingRetestPanel key={id} findingId={id} readOnly={finding.inherited} onCompleted={load} />
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">{t("detail.evidence")}</CardTitle>
-                </CardHeader>
-                <CardContent>
+              <Sheet>
+                <SheetHead
+                  title={t("detail.evidence")}
+                  count={finding.evidence ? `${finding.evidence.length.toLocaleString("zh-CN")} 字符` : undefined}
+                />
+                <div data-editorial="body" className="px-4 pt-2 pb-4">
                   {finding.evidence ? (
-                    <pre className="max-h-[46vh] overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap">
+                    <pre
+                      data-editorial="evidence"
+                      className="max-h-[46vh] overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap [overflow-wrap:anywhere]"
+                    >
                       {finding.evidence}
                     </pre>
                   ) : (
                     <p className="text-sm text-muted-foreground">{t("detail.evidenceEmpty")}</p>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </Sheet>
               <FindingTrafficPanel
                 key={id}
                 findingId={id}
@@ -209,12 +290,17 @@ function FindingDetailInner() {
                 onChanged={load}
               />
               {/* 证据下方：详细报告(Markdown 渲染) */}
-              <Card>
-                <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="text-sm">{t("table.detailReport")}</CardTitle>
-                  {finding.report && <CopyButton text={finding.report} successMessage={t("table.reportCopied")} />}
-                </CardHeader>
-                <CardContent>
+              <Sheet>
+                <SheetHead
+                  title={t("table.detailReport")}
+                  hint={finding.report ? `${finding.report.length.toLocaleString("zh-CN")} 字` : undefined}
+                  actions={
+                    finding.report ? (
+                      <CopyButton text={finding.report} successMessage={t("table.reportCopied")} />
+                    ) : undefined
+                  }
+                />
+                <div data-editorial="body" className="px-4 pt-2 pb-4">
                   {finding.report_stale ? (
                     <Alert>
                       <AlertDescription>{t("detail.reportStale")}</AlertDescription>
@@ -225,16 +311,14 @@ function FindingDetailInner() {
                   ) : (
                     <p className="text-sm text-muted-foreground">{t("table.reportEmpty")}</p>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </Sheet>
             </div>
 
             {/* 右栏：状态区 */}
-            <Card className="h-fit lg:sticky lg:top-24">
-              <CardHeader>
-                <CardTitle className="text-sm">{t("detail.statusTitle")}</CardTitle>
-              </CardHeader>
-              <CardContent className="divide-y">
+            <Sheet className="h-fit lg:sticky lg:top-24">
+              <SheetHead title={t("detail.statusTitle")} />
+              <div data-editorial="body" className="divide-y px-4">
                 {/* 漏洞 ID */}
                 <FieldRow label={t("detail.fieldId")}>
                   <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
@@ -334,8 +418,8 @@ function FindingDetailInner() {
                 <FieldRow label={t("detail.fieldTime")}>
                   <span className="tabular-nums">{fmtTime(finding.ts)}</span>
                 </FieldRow>
-              </CardContent>
-            </Card>
+              </div>
+            </Sheet>
           </div>
         </TabsContent>
 

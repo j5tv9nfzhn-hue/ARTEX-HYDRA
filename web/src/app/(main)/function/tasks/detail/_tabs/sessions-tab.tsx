@@ -4,7 +4,6 @@ import * as React from "react";
 
 import {
   ArrowUpIcon,
-  BrainIcon,
   ChevronDownIcon,
   CircleCheckIcon,
   CircleSlashIcon,
@@ -18,7 +17,6 @@ import {
   PlusIcon,
   RadioIcon,
   RotateCwIcon,
-  ScaleIcon,
   ShieldAlertIcon,
   SquareIcon,
   Trash2Icon,
@@ -372,10 +370,8 @@ function ReviewerVerdictPanel({ v }: { v: ReviewerVerdict }) {
 // SessionsTab); only the icon stays here since it is not a translatable string.
 const roleMeta = {
   mainagent: { icon: UserIcon },
-  planner: { icon: BrainIcon },
   worker: { icon: RadioIcon },
   system: { icon: HistoryIcon },
-  reviewer: { icon: ScaleIcon },
 } as const;
 
 // The main-agent session is the interactive entry point of this tab and has no
@@ -675,8 +671,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   const [workerFilter, setWorkerFilter] = React.useState<"all" | "running" | "paused" | "blocked">("all");
   // 回顾者判决：台账是只读的，按需轮询即可（不接 SSE——判决是低频事件）。
   const [reviewerVerdicts, setReviewerVerdicts] = React.useState<ReviewerVerdict[]>([]);
-  const [reviewerExpanded, setReviewerExpanded] = React.useState(false);
-  // 分区折叠：五栏（主/规划/回顾者/Worker/审计）在小屏上会把列表撑爆，
+  // 分区折叠：三栏（主/Worker/审计）在小屏上会把列表撑爆，
   // 所以每个分区头都可折叠，折叠状态按 role 记；默认全展开，行为与旧版一致。
   const [collapsedRoles, setCollapsedRoles] = React.useState<Set<string>>(() => new Set());
   const toggleRole = React.useCallback((role: string) => {
@@ -1393,22 +1388,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
     };
   }, [taskId]);
 
-  // 一条判决 = 一个只读会话；标题带意图号，状态跟随判决结论。
-  const reviewerSessions = React.useMemo<Session[]>(
-    () =>
-      reviewerVerdicts.map((v) => ({
-        id: `s-reviewer-${v.id}`,
-        role: "reviewer",
-        run_id: v.run_id,
-        title: t("title.reviewer", { id: v.intent_id }),
-        status:
-          v.verdict === "advance" ? "done" : v.verdict === "abandon" ? "stopped" : "paused",
-        live: false,
-        last_activity: v.created_at,
-      })),
-    [reviewerVerdicts, t],
-  );
-
   const workerSessions = React.useMemo(() => allIntents.map(intentToSession), [allIntents]);
   const intentsHasMore = hasLoadedOlderIntentsPage ? olderIntentsHasMore : firstIntentsHasMore;
 
@@ -1466,7 +1445,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
     [store],
   );
   const currentMainKey = mainSessionKey(currentSeg);
-  const plannerLive = recentLive("plan");
 
   // Which main segment is streaming RIGHT NOW. A main turn is serialized per task, so at
   // most one segment is live. Gate on the real running flag (sending / mainChatRunning)
@@ -1511,20 +1489,16 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   const sessions = React.useMemo(() => {
     const items = [
       ...mainSessions,
-      { ...PLANNER_SESSION, title: t("title.planner"), live: plannerLive },
-      ...reviewerSessions,
       ...workerSessions,
       { ...SYSTEM_SESSION, title: t("title.system") },
     ];
     const located = focusSession ?? retainedSession;
     if (located && !items.some((s) => s.id === located.id)) items.push(located);
     return items;
-  }, [mainSessions, reviewerSessions, workerSessions, plannerLive, focusSession, retainedSession, t]);
+  }, [mainSessions, workerSessions, focusSession, retainedSession, t]);
 
   const grouped = {
     mainagent: sessions.filter((s) => s.role === "mainagent"),
-    planner: sessions.filter((s) => s.role === "planner"),
-    reviewer: sessions.filter((s) => s.role === "reviewer"),
     worker: sessions.filter((s) => s.role === "worker"),
     system: sessions.filter((s) => s.role === "system"),
   };
@@ -2035,20 +2009,13 @@ export function SessionsTab({ taskId }: { taskId: string }) {
             )}
           >
             <div className="flex w-full flex-col gap-3 p-2">
-              {(["mainagent", "planner", "reviewer", "worker", "system"] as const).map((role) => {
+              {(["mainagent", "worker", "system"] as const).map((role) => {
                 const rawItems = grouped[role];
-                // 回顾者分区常驻：判决为空时也保留栏位并给出说明，
-                // 否则"没有判决"与"没有这个角色"在界面上无法区分。
-                if (!rawItems.length && role !== "reviewer") return null;
+                if (!rawItems.length) return null;
                 let items =
                   role === "worker" && workerFilter !== "all"
                     ? rawItems.filter((s) => s.id === activeId || s.status === workerFilter)
                     : rawItems;
-                // 回顾者可能积累几十上百条判决，默认只展示最近 8 条，
-                // 否则这个分区会把下面所有分区挤出可视区。
-                if (role === "reviewer" && !reviewerExpanded && items.length > 8) {
-                  items = items.slice(0, 8);
-                }
                 const Meta = roleMeta[role];
                 const collapsed = collapsedRoles.has(role);
                 return (
@@ -2071,11 +2038,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                       </button>
                       <Meta.icon className="size-3.5 text-primary/80" />
                       <span>{t(`role.${role}`)}</span>
-                      {role === "reviewer" && (
-                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs text-muted-foreground tabular-nums">
-                          {rawItems.length}
-                        </span>
-                      )}
                       {role === "worker" && (
                         <span className="ml-auto rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs text-muted-foreground tabular-nums">
                           {rawItems.length}
@@ -2164,23 +2126,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                           <RotateCwIcon className="size-3.5" />
                         )}
                         {t("worker.loadOlder")}
-                      </button>
-                    )}
-                    {role === "reviewer" && !rawItems.length && (
-                      <div className="px-2 py-1 text-muted-foreground text-xs">{t("reviewer.noneYet")}</div>
-                    )}
-                    {role === "reviewer" && rawItems.length > 8 && (
-                      <button
-                        type="button"
-                        onClick={() => setReviewerExpanded((v) => !v)}
-                        className="mt-0.5 flex items-center justify-center gap-1 rounded-md px-2 py-1 text-muted-foreground text-xs hover:bg-accent/50"
-                      >
-                        <ChevronDownIcon
-                          className={cn("size-3.5 transition-transform", reviewerExpanded && "rotate-180")}
-                        />
-                        {reviewerExpanded
-                          ? t("reviewer.collapse")
-                          : t("reviewer.showAll", { n: rawItems.length })}
                       </button>
                     )}
                       </>

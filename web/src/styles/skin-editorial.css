@@ -1,0 +1,703 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   双主题 · 新主题「纸本」(Editorial Skin)
+   ────────────────────────────────────────────────────────────────────────────
+   这里只做一件事：把整套 shadcn 组件语言，翻译成调试版前端里那套「纸本」语言。
+
+   分工（两层，互不越界）：
+
+     1. 令牌层 —— presets/paper.css 提供纸色 / 墨色 / 主色 / 危险色 / 零阴影。
+        skin 打开时会同时把 data-theme-preset 指到 paper（见 preferences/theme-utils），
+        所以色彩与调试版前端逐值一致，这一层不重复定义颜色。
+     2. 版式层 —— 本文件。把「卡片 / 表格 / 页签 / 徽标 / 按钮 / 浮层 / 侧栏」
+        从「描边的盒子」翻译成「发丝线与留白」。
+
+   规则一律 unlayered（不放进 @layer），这样才能压过 Tailwind 的 utilities，
+   不必到处加 !important；所有规则都挂在 :root[data-skin="editorial"] 之下，
+   所以 data-skin="classic" 时本文件一条都不生效 —— 老主题零影响。
+
+   参考基准：调试版前端（纸 #F5F2EB / 墨 #1B1610 / 主 oklch(.5 .078 200) /
+   危险 #B12C2E / 圆角 4px / 无阴影 / 发丝线 38%）。
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:root[data-skin="editorial"] {
+  /* 纸本的「一条线」只有两档：结构线（发丝）与重点线（墨）。
+     组件里凡是要画分隔的地方都引用这两个，不各自调透明度。 */
+  --ed-hairline: color-mix(in oklab, var(--border) 76%, transparent);
+  --ed-hairline-weak: color-mix(in oklab, var(--border) 46%, transparent);
+  --ed-rule: color-mix(in oklab, var(--foreground) 78%, transparent);
+  --ed-hover: color-mix(in oklab, var(--accent) 42%, transparent);
+
+  /* 衬线只在「标题层」出现：书眉、版块名、浮层标题、空态。
+     正文、表格、按钮、数字一律无衬线 —— 衬线在 12–13px 下辨识度更差。 */
+  --ed-serif:
+    "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "Source Han Serif CN", "SimSun", Georgia,
+    "Times New Roman", serif;
+
+  /* 等宽只给「机器产物」：路径、命令、ID、模型名。 */
+  --ed-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --ed-row: 30px;
+  --ed-pad: 22px;
+}
+
+@media (min-width: 1280px) {
+  :root[data-skin="editorial"] {
+    --ed-pad: 28px;
+  }
+}
+
+/* ══ 1. 版面骨架 ═══════════════════════════════════════════════════════════
+   调试版前端没有「内嵌卡片式」的侧栏与内容区：整页就是一张纸，
+   侧栏只用一条竖线分开。inset / floating 两档在新主题下统一摊平。 */
+
+:root[data-skin="editorial"] [data-slot="sidebar-inset"],
+:root[data-skin="editorial"] [data-slot="sidebar-container"] {
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+:root[data-skin="editorial"] [data-slot="sidebar-container"] {
+  background: var(--sidebar);
+  border-right: 1px solid var(--ed-hairline);
+}
+
+:root[data-skin="editorial"] [data-slot="sidebar-inset"] {
+  background: var(--background);
+  border-left: 0;
+}
+
+/* 内容区：书页的页边距。左右比上下宽一档，行才有「版心」的感觉。 */
+:root[data-skin="editorial"] [data-editorial="body"] {
+  padding: var(--ed-pad) var(--ed-pad) 56px;
+}
+
+/* ══ 2. 顶栏 ═══════════════════════════════════════════════════════════════
+   纸不透明：去掉毛玻璃与半透明底，换一条发丝线。 */
+
+/* 只认应用顶栏（SidebarInset 的第一个 header）——
+   别写成光秃秃的 `header`，那会把卡片头、浮层头一起改掉。 */
+:root[data-skin="editorial"] [data-slot="sidebar-inset"] > header {
+  background: var(--background);
+  border-bottom: 1px solid var(--ed-hairline);
+  backdrop-filter: none;
+}
+
+:root[data-skin="editorial"] [data-slot="sidebar-inset"] > header [class*="text-muted-foreground"] {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══ 3. 侧栏：目录，不是按钮堆 ═════════════════════════════════════════════
+   选中态从「填充圆角块」改成「左侧 2px 书脊 + 墨色文字」。
+   这是整套语言里最像「书」的一处：目录页上，当前章节是一条竖线。 */
+
+:root[data-skin="editorial"] [data-slot="sidebar"] [data-sidebar="group-label"] {
+  height: auto;
+  padding: 0 0 6px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--muted-foreground);
+}
+
+:root[data-skin="editorial"] [data-sidebar="menu"] {
+  gap: 1px;
+}
+
+:root[data-skin="editorial"] [data-sidebar="menu-button"] {
+  height: var(--ed-row);
+  min-height: var(--ed-row);
+  padding: 0 8px;
+  border-radius: 0;
+  border-left: 2px solid transparent;
+  color: var(--sidebar-foreground);
+  font-size: 12.5px;
+  font-weight: 400;
+  transition: background-color 120ms linear, color 120ms linear;
+}
+
+:root[data-skin="editorial"] [data-sidebar="menu-button"] svg {
+  width: 15px;
+  height: 15px;
+  color: color-mix(in oklab, var(--muted-foreground) 92%, transparent);
+}
+
+:root[data-skin="editorial"] [data-sidebar="menu-button"]:hover {
+  background: var(--ed-hover);
+  border-radius: 0;
+}
+
+:root[data-skin="editorial"] [data-sidebar="menu-button"][data-active="true"] {
+  background: color-mix(in oklab, var(--accent) 55%, transparent);
+  border-left-color: var(--primary);
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+:root[data-skin="editorial"] [data-sidebar="menu-button"][data-active="true"] svg {
+  color: var(--primary);
+}
+
+/* 分组之间的分隔：不要横线，用空白分卷 */
+:root[data-skin="editorial"] [data-sidebar="separator"] {
+  background: var(--ed-hairline);
+  height: 1px;
+}
+
+/* 侧栏底部的账号行：纸本的落款 */
+:root[data-skin="editorial"] [data-sidebar="footer"] {
+  border-top: 1px solid var(--ed-hairline);
+  padding-top: 8px;
+}
+
+/* ══ 4. 卡片 → 版块（.sheet）═══════════════════════════════════════════════
+   纸本没有卡片：没有底色、没有圆角、没有阴影，
+   一个版块 = 一条上沿发丝线 + 一个标题行。 */
+
+:root[data-skin="editorial"] [data-slot="card"] {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--ed-hairline);
+  border-radius: 0;
+  box-shadow: none;
+  gap: 0;
+  padding: 14px 0 4px;
+}
+
+:root[data-skin="editorial"] [data-slot="card-header"] {
+  padding: 0 0 8px;
+  gap: 2px;
+  border-bottom: 0;
+}
+
+:root[data-skin="editorial"] [data-slot="card-title"] {
+  font-family: var(--ed-serif);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+
+:root[data-skin="editorial"] [data-slot="card-description"] {
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+:root[data-skin="editorial"] [data-slot="card-content"],
+:root[data-skin="editorial"] [data-slot="card-footer"] {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* 键盘焦点：印刷品用「描边」不用「光晕」 */
+:root[data-skin="editorial"] :focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* ══ 5. 表格 → 记录行（.rec）═══════════════════════════════════════════════
+   报纸的表格没有网格、没有斑马纹：表头一条墨线压住，行间只有发丝线，
+   数字等宽右对齐。行高 34px，悬停整行浅 accent。 */
+
+:root[data-skin="editorial"] [data-slot="table-container"] {
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+:root[data-skin="editorial"] [data-slot="table"] {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  border-collapse: collapse;
+}
+
+:root[data-skin="editorial"] [data-slot="table-header"] {
+  background: transparent;
+}
+
+:root[data-skin="editorial"] [data-slot="table-header"] tr {
+  border-top: 1.5px solid var(--ed-rule);
+  border-bottom: 1px solid var(--ed-hairline);
+}
+
+:root[data-skin="editorial"] [data-slot="table-head"] {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--muted-foreground);
+  background: transparent;
+  white-space: nowrap;
+}
+
+:root[data-skin="editorial"] [data-slot="table-head"]:first-child,
+:root[data-skin="editorial"] [data-slot="table-cell"]:first-child {
+  padding-left: 2px;
+}
+
+:root[data-skin="editorial"] [data-slot="table-row"] {
+  border-bottom: 1px solid var(--ed-hairline-weak);
+  transition: background-color 100ms linear;
+}
+
+:root[data-skin="editorial"] [data-slot="table-row"]:hover {
+  background: var(--ed-hover);
+}
+
+:root[data-skin="editorial"] [data-slot="table-row"][data-state="selected"] {
+  background: color-mix(in oklab, var(--primary) 9%, transparent);
+}
+
+:root[data-skin="editorial"] [data-slot="table-cell"] {
+  height: 34px;
+  padding: 0 10px;
+  vertical-align: middle;
+}
+
+/* 单元格里的机器产物：等宽 */
+:root[data-skin="editorial"] [data-slot="table-cell"] .font-mono,
+:root[data-skin="editorial"] [data-slot="table-cell"] code {
+  font-family: var(--ed-mono);
+  font-size: 11px;
+}
+
+:root[data-skin="editorial"] [data-slot="table-footer"] {
+  background: transparent;
+  border-top: 1px solid var(--ed-hairline);
+  font-size: 10.5px;
+  color: var(--muted-foreground);
+}
+
+/* 手写 <table>（不在 ui/table 里的那些）同样收口 */
+:root[data-skin="editorial"] [data-editorial="body"] table {
+  width: 100%;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  border-collapse: collapse;
+}
+
+:root[data-skin="editorial"] [data-editorial="body"] thead th {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+  text-align: left;
+  border-bottom: 1px solid var(--ed-hairline);
+  padding: 8px 10px;
+}
+
+:root[data-skin="editorial"] [data-editorial="body"] tbody td {
+  border-bottom: 1px solid var(--ed-hairline-weak);
+  padding: 9px 10px;
+}
+
+/* ══ 6. 页签 → 下划线页签（.tbook-bar）════════════════════════════════════ */
+
+:root[data-skin="editorial"] [data-slot="tabs-list"] {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  gap: 18px;
+  height: auto;
+  border-bottom: 1px solid var(--ed-hairline);
+  align-items: stretch;
+  /* 任务详情 12 个页签在 1366 下放不下一行：让它横滚，而不是缩字或换行 */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+:root[data-skin="editorial"] [data-slot="tabs-list"]::-webkit-scrollbar {
+  display: none;
+}
+
+:root[data-skin="editorial"] [data-slot="tabs-trigger"] {
+  border-radius: 0;
+  white-space: nowrap;
+  padding: 7px 1px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 120ms linear, border-color 120ms linear;
+}
+
+:root[data-skin="editorial"] [data-slot="tabs-trigger"]:hover {
+  color: var(--foreground);
+}
+
+:root[data-skin="editorial"] [data-slot="tabs-trigger"][data-state="active"] {
+  color: var(--foreground);
+  font-weight: 600;
+  border-bottom-color: var(--primary);
+  box-shadow: none;
+  background: transparent;
+}
+
+:root[data-skin="editorial"] [data-slot="tabs-content"] {
+  padding-top: 14px;
+}
+
+/* 页签上的计数徽标（12 个页签的 n）收成小号等宽数字 */
+:root[data-skin="editorial"] [data-slot="tabs-trigger"] [data-slot="badge"] {
+  height: 15px;
+  padding: 0 4px;
+  font-size: 9.5px;
+  font-weight: 500;
+}
+
+/* ══ 7. 按钮 ═══════════════════════════════════════════════════════════════
+   纸本的按钮只有两种重量：实心（主操作）与一条线（其余）。
+   圆角 2px，动效 120ms 线性 —— 不做缩放、不做投影。 */
+
+:root[data-skin="editorial"] [data-slot="button"] {
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: background-color 120ms linear, border-color 120ms linear, color 120ms linear;
+  box-shadow: none;
+}
+
+:root[data-skin="editorial"] [data-slot="button"]:active {
+  transform: none;
+}
+
+:root[data-skin="editorial"] [data-slot="button"][data-size="sm"] {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 11.5px;
+}
+
+:root[data-skin="editorial"] [data-slot="button"][data-size="xs"] {
+  height: 22px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+
+:root[data-skin="editorial"] [data-slot="button"][data-size^="icon"] {
+  height: 26px;
+  width: 26px;
+}
+
+/* ══ 8. 徽标：小签（.pill），不是胶囊 ═════════════════════════════════════ */
+
+:root[data-skin="editorial"] [data-slot="badge"] {
+  border-radius: 2px;
+  height: 17px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+  color: var(--muted-foreground);
+  border: 1px solid transparent;
+}
+
+:root[data-skin="editorial"] [data-slot="badge"][data-variant="outline"] {
+  background: transparent;
+  border-color: var(--ed-hairline);
+}
+
+/* 状态点：纸本用 5px 圆点，不用整块底色 */
+:root[data-skin="editorial"] [data-slot="badge"] .size-1\.5,
+:root[data-skin="editorial"] [data-slot="badge"] .size-2 {
+  width: 5px;
+  height: 5px;
+}
+
+/* ══ 9. 表单控件 ═══════════════════════════════════════════════════════════
+   输入框是纸上的一条横线：透明底 + 发丝边，聚焦时边线转主色，不出光环。 */
+
+:root[data-skin="editorial"] [data-slot="input"],
+:root[data-skin="editorial"] [data-slot="textarea"],
+:root[data-skin="editorial"] [data-slot="select-trigger"],
+:root[data-skin="editorial"] [data-slot="input-group"] {
+  background: color-mix(in oklab, var(--card) 55%, transparent);
+  border: 1px solid var(--ed-hairline);
+  border-radius: 2px;
+  font-size: 12.5px;
+  box-shadow: none;
+}
+
+:root[data-skin="editorial"] [data-slot="input"]:focus-visible,
+:root[data-skin="editorial"] [data-slot="textarea"]:focus-visible,
+:root[data-skin="editorial"] [data-slot="select-trigger"]:focus-visible {
+  border-color: var(--primary);
+  outline: 2px solid color-mix(in oklab, var(--primary) 28%, transparent);
+  outline-offset: 0;
+  box-shadow: none;
+}
+
+:root[data-skin="editorial"] [data-slot="input"]::placeholder,
+:root[data-skin="editorial"] [data-slot="textarea"]::placeholder {
+  color: color-mix(in oklab, var(--muted-foreground) 82%, transparent);
+  font-size: 11.5px;
+}
+
+:root[data-skin="editorial"] [data-slot="label"] {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+/* 开关：32×18，与调试版前端的 .sw 同尺寸 */
+:root[data-skin="editorial"] [data-slot="switch"] {
+  width: 32px;
+  height: 18px;
+  border-radius: 99px;
+  border: 0;
+  box-shadow: none;
+}
+
+:root[data-skin="editorial"] [data-slot="switch"][data-state="checked"] {
+  background: var(--primary);
+}
+
+:root[data-skin="editorial"] [data-slot="switch"][data-state="unchecked"] {
+  background: color-mix(in oklab, var(--muted-foreground) 30%, transparent);
+}
+
+:root[data-skin="editorial"] [data-slot="switch-thumb"] {
+  width: 14px;
+  height: 14px;
+  background: var(--card);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.25);
+}
+
+/* 复选框 / 单选：方角 */
+:root[data-skin="editorial"] [data-slot="checkbox"],
+:root[data-skin="editorial"] [data-slot="radio-group-item"] {
+  border-radius: 2px;
+  border-color: var(--input);
+  box-shadow: none;
+}
+
+/* 下拉面板 */
+:root[data-skin="editorial"] [data-slot="select-content"],
+:root[data-skin="editorial"] [data-slot="dropdown-menu-content"],
+:root[data-skin="editorial"] [data-slot="popover-content"],
+:root[data-skin="editorial"] [data-slot="combobox-content"] {
+  border-radius: 3px;
+  border: 1px solid var(--ed-hairline);
+  background: var(--popover);
+  box-shadow: 0 8px 24px oklch(0 0 0 / 0.1);
+  padding: 4px;
+}
+
+:root[data-skin="editorial"] [data-slot="select-item"],
+:root[data-skin="editorial"] [data-slot="dropdown-menu-item"] {
+  border-radius: 0;
+  font-size: 12px;
+  min-height: 26px;
+}
+
+:root[data-skin="editorial"] [data-slot="select-item"][data-highlighted],
+:root[data-skin="editorial"] [data-slot="dropdown-menu-item"]:focus {
+  background: var(--ed-hover);
+}
+
+/* ══ 10. 浮层：纸张的一页 ══════════════════════════════════════════════════ */
+
+:root[data-skin="editorial"] [data-slot="dialog-content"],
+:root[data-skin="editorial"] [data-slot="alert-dialog-content"],
+:root[data-skin="editorial"] [data-slot="sheet-content"],
+:root[data-skin="editorial"] [data-slot="drawer-content"] {
+  border-radius: 3px;
+  border: 1px solid var(--ed-hairline);
+  background: var(--card);
+  box-shadow: 0 18px 48px oklch(0 0 0 / 0.16);
+  gap: 0;
+  padding: 18px 20px;
+}
+
+:root[data-skin="editorial"] [data-slot="dialog-title"],
+:root[data-skin="editorial"] [data-slot="alert-dialog-title"],
+:root[data-skin="editorial"] [data-slot="sheet-title"],
+:root[data-skin="editorial"] [data-slot="drawer-title"] {
+  font-family: var(--ed-serif);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+:root[data-skin="editorial"] [data-slot="dialog-description"],
+:root[data-skin="editorial"] [data-slot="alert-dialog-description"],
+:root[data-skin="editorial"] [data-slot="sheet-description"] {
+  font-size: 11.5px;
+  line-height: 1.6;
+  padding-top: 4px;
+}
+
+:root[data-skin="editorial"] [data-slot="dialog-footer"],
+:root[data-skin="editorial"] [data-slot="alert-dialog-footer"] {
+  border-top: 1px solid var(--ed-hairline);
+  padding-top: 12px;
+}
+
+:root[data-skin="editorial"] [data-slot="dialog-overlay"],
+:root[data-skin="editorial"] [data-slot="alert-dialog-overlay"],
+:root[data-skin="editorial"] [data-slot="sheet-overlay"],
+:root[data-skin="editorial"] [data-slot="drawer-overlay"] {
+  background: oklch(0 0 0 / 0.42);
+  backdrop-filter: none;
+}
+
+/* ══ 11. 标题层：书眉（.masthead）══════════════════════════════════════════
+   已有的 [data-editorial="masthead"] 由 editorial.css 负责纸本形态，
+   这里补「任何页面都能用」的标题腔调：衬线、紧字距、墨色。 */
+
+:root[data-skin="editorial"] [data-editorial="body"] h1,
+:root[data-skin="editorial"] [data-editorial="body"] [data-slot="card-title"] {
+  font-family: var(--ed-serif);
+  letter-spacing: -0.012em;
+}
+
+:root[data-skin="editorial"] [data-editorial="body"] h1 {
+  font-size: clamp(22px, 2.2vw, 28px);
+  font-weight: 600;
+  line-height: 1.12;
+}
+
+:root[data-skin="editorial"] [data-editorial="body"] h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+:root[data-skin="editorial"] [data-editorial="body"] h3 {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 正文：纸本的阅读节奏 */
+:root[data-skin="editorial"] [data-editorial="body"] p,
+:root[data-skin="editorial"] [data-editorial="body"] li {
+  line-height: 1.62;
+}
+
+/* 大写 + 超宽字距是机器感的来源；纸本收回到小标题的字距 */
+:root[data-skin="editorial"] [data-editorial="body"] .uppercase {
+  text-transform: none;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+/* 数字：页面上所有「读数字」的地方都等宽对位 */
+:root[data-skin="editorial"] [data-editorial="body"] .tabular-nums,
+:root[data-skin="editorial"] [data-editorial="body"] table,
+:root[data-skin="editorial"] [data-editorial="body"] [data-editorial="kpi-row"] {
+  font-feature-settings: "tnum" 1;
+}
+
+/* KPI 数字行：26px，靠一条上下发丝线定界，外面没有框 */
+:root[data-skin="editorial"] [data-editorial="kpi-row"] > * {
+  padding: 12px 14px;
+}
+
+:root[data-skin="editorial"] [data-editorial="kpi-row"] .font-display,
+:root[data-skin="editorial"] [data-editorial="kpi-row"] > * > div:first-child {
+  font-size: 26px;
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ══ 12. 分隔线 / 滚动条 / 选中 ═══════════════════════════════════════════ */
+
+:root[data-skin="editorial"] [data-slot="separator"] {
+  background: var(--ed-hairline);
+}
+
+:root[data-skin="editorial"] ::selection {
+  background: color-mix(in oklab, var(--primary) 22%, transparent);
+  color: var(--foreground);
+}
+
+/* 与调试版前端同一套滚动条：10px 透明轨 + 常驻细滑块。
+   标准属性写在前面，::-webkit-* 只作兜底（Chrome 121+ 用标准属性即可）。 */
+:root[data-skin="editorial"] {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--foreground) 26%, transparent) transparent;
+}
+
+:root[data-skin="editorial"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+:root[data-skin="editorial"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:root[data-skin="editorial"] ::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--foreground) 26%, transparent);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+:root[data-skin="editorial"] ::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--foreground) 44%, transparent);
+  background-clip: content-box;
+}
+
+/* ══ 13. 装饰动效静音 ═════════════════════════════════════════════════════
+   报纸不会淡入。保留 spin / 骨架屏（真实反馈），只关装饰性入场。 */
+
+:root[data-skin="editorial"] [data-editorial="body"] .animate-fade-up,
+:root[data-skin="editorial"] [data-editorial="body"] .animate-scale-in,
+:root[data-skin="editorial"] [data-editorial="body"] .animate-pulse-soft,
+:root[data-skin="editorial"] [data-editorial="body"] .animate-glow-once {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-skin="editorial"] * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ══ 14. 空态与加载 ═══════════════════════════════════════════════════════
+   空态在纸本里是一句「落款」，不是插画。 */
+
+:root[data-skin="editorial"] [data-slot="empty-title"] {
+  font-family: var(--ed-serif);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+:root[data-skin="editorial"] [data-slot="empty-description"] {
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+:root[data-skin="editorial"] [data-slot="skeleton"] {
+  background: color-mix(in oklab, var(--muted) 62%, transparent);
+  border-radius: 1px;
+}
+
+/* ══ 15. 小屏收口 ═════════════════════════════════════════════════════════
+   窄屏时纸本的页边距要收一档，否则正文只剩一半宽。 */
+
+@media (max-width: 1080px) {
+  :root[data-skin="editorial"] [data-editorial="body"] {
+    padding: 16px 14px 40px;
+  }
+
+  :root[data-skin="editorial"] [data-slot="tabs-list"] {
+    gap: 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  :root[data-skin="editorial"] [data-slot="tabs-list"]::-webkit-scrollbar {
+    display: none;
+  }
+}

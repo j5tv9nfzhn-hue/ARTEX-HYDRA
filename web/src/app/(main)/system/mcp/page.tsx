@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import Link from "next/link";
+
 import { PlusIcon, RefreshCwIcon, ServerIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -412,6 +414,12 @@ export default function MCPPage() {
                 {/* biome-ignore lint/a11y/noStaticElementInteractions: 此容器仅阻止向父卡片传播点击，本身不是交互元素；内部 Switch 和删除按钮均可由键盘操作。 */}
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: 仅阻止点击传播，无需额外键盘处理器。 */}
                 <div className="ml-auto flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  {/* 完整一页：连接方式 + 工具清单 + 可见性说明。 */}
+                  <Button asChild size="icon-sm" variant="ghost" className="shrink-0" aria-label={t("openDetailAria")}>
+                    <Link href={`/system/mcp/detail?id=${s.id}`}>
+                      <ArrowUpRightIcon className="size-4" />
+                    </Link>
+                  </Button>
                   <Switch checked={s.enabled} onCheckedChange={() => toggleEnabled(s)} aria-label={t("enableAria")} />
                   <Button
                     size="icon-sm"

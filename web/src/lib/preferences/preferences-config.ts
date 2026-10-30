@@ -14,7 +14,7 @@
 import type { FontKey } from "@/lib/fonts/registry";
 
 import type { ContentLayout, NavbarStyle, SidebarCollapsible, SidebarVariant } from "./layout";
-import type { ThemeMode, ThemePreset } from "./theme";
+import type { Skin, ThemeMode, ThemePreset } from "./theme";
 
 export type PreferencePersistence = "none" | "client-cookie" | "server-cookie" | "localStorage";
 
@@ -22,6 +22,7 @@ export type PreferencePersistence = "none" | "client-cookie" | "server-cookie" |
  * All available preference keys and their value types.
  */
 export type PreferenceValueMap = {
+  skin: Skin;
   theme_mode: ThemeMode;
   theme_preset: ThemePreset;
   font: FontKey;
@@ -66,6 +67,8 @@ type PreferencePersistenceConfig = {
  * Default preference values on first load.
  */
 export const PREFERENCE_DEFAULTS: PreferenceValueMap = {
+  // 默认给老主题：升级后第一眼仍是原来那套界面，新主题要自己打开。
+  skin: "classic",
   theme_mode: "dark",
   theme_preset: "command",
   font: "geist",
@@ -80,6 +83,7 @@ export const PREFERENCE_DEFAULTS: PreferenceValueMap = {
  * You can change these per-key.
  */
 export const PREFERENCE_PERSISTENCE: PreferencePersistenceConfig = {
+  skin: "client-cookie",
   theme_mode: "client-cookie",
   theme_preset: "client-cookie",
   font: "client-cookie",

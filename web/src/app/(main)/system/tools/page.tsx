@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import Link from "next/link";
+
 import { PlayIcon, PlusIcon, RotateCcwIcon, SaveIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -495,7 +497,15 @@ export default function ToolsPage() {
           {selected && (
             <>
               <SheetHeader className="px-4">
-                <SheetTitle className="font-mono">{selected.key}</SheetTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <SheetTitle className="font-mono">{selected.key}</SheetTitle>
+                  {/* 抽屉是主流程；「详情」把它铺成全宽的一页，便于外链与书签。 */}
+                  <Button asChild size="sm" variant="ghost" className="shrink-0">
+                    <Link href={`/system/tools/detail?key=${encodeURIComponent(selected.key)}`}>
+                      {t("openDetail")}
+                    </Link>
+                  </Button>
+                </div>
                 <SheetDescription>{t("editSheetDesc")}</SheetDescription>
               </SheetHeader>
               <ToolEditor

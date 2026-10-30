@@ -419,7 +419,8 @@
     "viewAuditFragmentNotSent": "查看会话审计片段（未发送模型）",
     "viewCommand": "查看命令内容",
     "viewContextAndResult": "查看上下文与执行结果",
-    "visibleContext": "可见会话上下文"
+    "visibleContext": "可见会话上下文",
+    "openPage": "独立页面"
   },
   "approvalFocus": {
     "cancel": "取消定位",
@@ -694,7 +695,8 @@
       "deleted": "已删除 {count} 条资产"
     },
     "totalAssets": "共 <n>{count}</n> 项资产",
-    "unassigned": "未归属"
+    "unassigned": "未归属",
+    "openDetailAria": "打开资产详情"
   },
   "auth": {
     "login": {
@@ -958,7 +960,8 @@
     "taskIdPlaceholder": "任务 ID",
     "title": "工具执行",
     "unitCalls": "次调用",
-    "unitTools": "个工具"
+    "unitTools": "个工具",
+    "subtitle": "Agent 执行过的每一条工具命令，含输入、输出与耗时。"
   },
   "components": {
     "approval-records": {
@@ -2050,7 +2053,8 @@
       "providerModels": "{n} 个模型",
       "proxy": "代理 {proxy}",
       "thinking": "思考 {effort}",
-      "thinkingOff": "关"
+      "thinkingOff": "关",
+      "detailAria": "打开模型配置详情"
     },
     "health": {
       "degraded": "异常，失败 {fails} 次",
@@ -2394,7 +2398,9 @@
     "taskBadge": "任务 #{id}",
     "taskEmpty": "暂无任务记录",
     "taskPlaceholder": "选择任务…",
-    "title": "LLM 录制"
+    "title": "LLM 录制",
+    "subtitle": "每次模型调用的请求与响应原文；关掉录制后不再落库。",
+    "openPage": "独立页面"
   },
   "logsPage": {
     "all": "全部",
@@ -2409,7 +2415,10 @@
     "subtitle": "后端实时日志流(planner / worker / 数据库 / 流量 …)",
     "title": "系统日志",
     "totalLines": "{count} 行",
-    "warnCount": "{count} 警告"
+    "warnCount": "{count} 警告",
+    "contextAround": "前后各 {n} 行",
+    "copyLine": "复制这一行",
+    "stackNote": "日志流不带调用栈；要看完整堆栈请到工具执行详情。"
   },
   "externalPage": {
     "harnessTitle": "已检测到的客户端",
@@ -2485,7 +2494,8 @@
     "urlLabel": "远程 URL",
     "visibilityGranted": "授予「{name}」可见",
     "visibilityLabel": "可见性（按 Agent 授权）",
-    "visibilityRevoked": "取消「{name}」可见"
+    "visibilityRevoked": "取消「{name}」可见",
+    "openDetailAria": "打开服务详情"
   },
   "mentionTextarea": {
     "allRecords": "全部记录",
@@ -3743,7 +3753,8 @@
     "userSkillBadge": "自建技能",
     "skillFamilyLabel": "技能目录",
     "skillFamilyAll": "全部类别",
-    "showMoreSkills": "继续加载（已显示 {shown}/{total}）"
+    "showMoreSkills": "继续加载（已显示 {shown}/{total}）",
+    "openDetailAction": "详情"
   },
   "sortableHead": {
     "active": "{label}当前{direction, select, asc {正序} other {倒序}}，点击切换排序方向",
@@ -4074,7 +4085,9 @@
       "trafficEvidence": "流量证据 {count} 条",
       "unclassified": "未分类",
       "updateFailed": "更新失败：{message}",
-      "viewDetail": "查看漏洞详情"
+      "viewDetail": "查看漏洞详情",
+      "foot": "共 {total} 条 · 分 {groups} 卷",
+      "footHint": "点条目展开证据，右侧进入详情"
     },
     "header": {
       "backToList": "返回任务列表",
@@ -4291,7 +4304,9 @@
       "copySuccess": "已复制 Markdown",
       "empty": "暂无报告",
       "loading": "加载中…",
-      "title": "渗透测试报告（Markdown）"
+      "title": "渗透测试报告（Markdown）",
+      "foot": "导出前请确认证据已归档",
+      "chars": "{n} 字"
     },
     "retests": {
       "emptyDesc": "本任务发现漏洞后，可在这里手动发起复测。",
@@ -4304,7 +4319,8 @@
       "retry": "重试",
       "selectAria": "选择漏洞：{name}",
       "selectDesc": "查看本任务漏洞的复测记录，或发起新的复测。",
-      "selectTitle": "选择漏洞"
+      "selectTitle": "选择漏洞",
+      "foot": "共 {total} 条 · 每页 {size}"
     },
     "tabs": {
       "software": "软件分析",
@@ -4322,7 +4338,13 @@
     },
     "timeline": {
       "description": "任务在准入、意图结束、暂停与压缩恢复时自动落检查点。回滚需先暂停任务；工具副作用与已落库的图产物不会回滚。",
-      "title": "检查点时间线"
+      "title": "检查点时间线",
+      "foot": "检查点按时间正序",
+      "footHint": "回滚要求任务已暂停"
+    },
+    "graph": {
+      "hint": "每 20 秒刷新",
+      "foot": "共 {nodes} 个节点 · {edges} 条边"
     }
   },
   "taskTemplate": {
@@ -4836,14 +4858,16 @@
     "timeoutLabel": "超时(ms，空=默认)",
     "title": "工具",
     "trafficGatedNote": "该工具依赖<b>流量捕获</b>。请先在「系统配置」开启流量捕获，才能绑定给 Agent 并启用。",
-    "useRecordingProxy": "走记录代理"
+    "useRecordingProxy": "走记录代理",
+    "openDetail": "详情"
   },
   "traffic": {
     "detail": {
       "loadFailed": "（无法加载报文）",
       "loadingMsg": "加载报文…",
       "request": "请求 Request",
-      "response": "响应 Response"
+      "response": "响应 Response",
+      "openPage": "独立页面"
     },
     "dialog": {
       "cancel": "取消",
@@ -5139,7 +5163,10 @@
     "tooLarge": "文件过大，不支持在线预览/编辑。",
     "upload": "上传",
     "uploadFailed": "上传失败：{msg}",
-    "uploaded": "已上传 {n} 个文件"
+    "uploaded": "已上传 {n} 个文件",
+    "title": "工作空间",
+    "subtitle": "任务产出的文件与目录；删除前可以先打包备份。",
+    "colHint": "说明"
   },
   "softwareRE": {
     "title": "软件分析工作台",
@@ -5540,5 +5567,345 @@
     "metaTask": "所属任务",
     "metaHref": "跳转地址",
     "sessionNote": "仅保留本次会话最近 {count} 条，刷新页面后清空。"
+  },
+  "commandsDetail": {
+    "title": "工具执行详情",
+    "back": "返回",
+    "notFound": "找不到这次调用（#{id}）——可能已经滚出当前窗口",
+    "fieldTool": "工具",
+    "fieldWorker": "Worker",
+    "fieldTask": "任务",
+    "fieldTime": "时间",
+    "fieldStatus": "状态",
+    "input": "输入",
+    "output": "输出",
+    "emptyOutput": "这次调用没有输出"
+  },
+  "taskSessionsPage": {
+    "title": "子代理运行",
+    "subtitle": "同一任务下的主 Agent、规划器与每个 Worker 的对话。"
+  },
+  "assetDetail": {
+    "title": "资产详情",
+    "back": "返回资产",
+    "loading": "载入中…",
+    "notFound": "找不到这个资产（#{id}）——可能已被删除，或不在当前企业范围内",
+    "kpi": {
+      "ports": "开放端口",
+      "tech": "技术栈",
+      "tasks": "任务",
+      "findings": "关联发现",
+      "status": "状态码"
+    },
+    "profile": "画像",
+    "profileHint": "类型 · 地址 · 指纹 · 来源",
+    "field": {
+      "type": "类型",
+      "addr": "地址",
+      "root": "根域",
+      "domains": "绑定域",
+      "port": "端口",
+      "icp": "备案",
+      "title": "页面标题",
+      "len": "响应体量",
+      "favicon": "图标指纹",
+      "company": "归属企业",
+      "seen": "最后出现",
+      "source": "来源"
+    },
+    "ports": "开放端口",
+    "portUnknown": "未知服务",
+    "findings": "关联发现",
+    "findingsHint": "按严重度标注，点箭头进详情",
+    "findingsEmpty": "还没有发现挂在这个资产上",
+    "openFinding": "打开发现详情",
+    "tasks": "出现过的任务",
+    "tasksEmpty": "还没有任务用过这个资产",
+    "openTask": "任务 #{id}",
+    "traffic": "关联流量",
+    "trafficRecent": "最近交换",
+    "trafficEmpty": "这台主机还没有抓到报文",
+    "trafficNoHost": "这条资产没有主机维度（区段 / 目录类），不参与流量关联",
+    "openTraffic": "打开报文详情",
+    "foot": {
+      "profile": "共 {n} 条字段",
+      "findings": "共 {n} 条发现",
+      "traffic": "最近 {n} 条"
+    },
+    "kind": {
+      "root_domain": "根域",
+      "ip": "IP",
+      "subdomain": "子域",
+      "app": "应用",
+      "service": "服务",
+      "endpoint": "端点"
+    }
+  },
+  "trafficDetailPage": {
+    "title": "报文详情",
+    "back": "返回流量",
+    "loading": "载入中…",
+    "notFound": "找不到报文 {id}——它可能已被清理",
+    "metaGone": "元信息已滚出当前窗口，这里只有原文",
+    "noContentType": "未标注内容类型",
+    "kpi": {
+      "status": "状态码",
+      "method": "方法",
+      "reqLines": "请求行数",
+      "respLines": "响应行数",
+      "size": "响应体量"
+    },
+    "request": "请求原文",
+    "requestHint": "头 + 体，原样保留",
+    "response": "响应原文",
+    "emptyRequest": "这次交换没有记下请求原文",
+    "emptyResponse": "这次交换没有记下响应原文",
+    "timing": "时序",
+    "timingHint": "DNS / TCP / TLS / TTFB",
+    "timingDns": "域名解析耗时",
+    "timingTcp": "建连耗时",
+    "timingTls": "握手耗时",
+    "timingTtfb": "首字节耗时",
+    "notCaptured": "未采集",
+    "timingFoot": "代理只落原文字节，不落各阶段耗时",
+    "findings": "引用它的发现",
+    "findingsHint": "反查索引",
+    "findingsEmpty": "后端没有做「报文 → 发现」的反查索引；请从发现详情里的流量绑定进入",
+    "findingsFoot": "如需反查，先增后端索引",
+    "footExchange": "状态 {status}"
+  },
+  "recordDetail": {
+    "title": "录制详情",
+    "back": "返回录制",
+    "loading": "载入中…",
+    "notFound": "找不到录制 #{id}——可能已随任务一起删除",
+    "statusOk": "成功",
+    "statusError": "失败",
+    "kpi": {
+      "input": "输入",
+      "output": "输出",
+      "cache": "缓存读",
+      "latency": "耗时",
+      "cost": "费用",
+      "total": "合计"
+    },
+    "input": "输入",
+    "output": "输出",
+    "raw": "原文",
+    "emptyContent": "这条记录没有留下内容",
+    "rawAvailable": "有 provider 原文",
+    "rawMissing": "旧记录没有原文",
+    "account": "token 账",
+    "accountHint": "入 / 出 / 缓存",
+    "row": {
+      "model": "模型",
+      "tokens": "token",
+      "cache": "缓存",
+      "error": "错误",
+      "cost": "费用",
+      "task": "任务",
+      "session": "会话"
+    },
+    "costNote": "按全局价格表读时计算",
+    "openTask": "任务 #{id}",
+    "cacheRead": "缓存读 {n}",
+    "cost": "计费",
+    "costHint": "价格表命中即算，未命中留空",
+    "footAccount": "口径与后端预算闸一致",
+    "footCost": "只读账本",
+    "footChars": "{n} 字符",
+    "replayOff": "重放未开放"
+  },
+  "approvalDetailPage": {
+    "title": "审批票详情",
+    "back": "返回审批记录",
+    "loading": "载入中…",
+    "notFound": "找不到这张审批票（#{id}）——可能已被清理",
+    "taskLine": "任务 #{id}",
+    "noTask": "没有关联任务",
+    "kpi": {
+      "status": "裁决",
+      "source": "命中来源",
+      "agent": "发起方",
+      "requested": "申请时间",
+      "decided": "裁决时间"
+    },
+    "body": "上下文与审计链",
+    "bodyHint": "执行轨迹 · 影响范围 · 模型判定",
+    "foot": "审批 #{id}"
+  },
+  "toolDetail": {
+    "title": "工具详情",
+    "back": "返回工具",
+    "loading": "载入中…",
+    "notFound": "找不到工具 {key}",
+    "system": "系统工具",
+    "custom": "自定义",
+    "enabled": "已启用",
+    "disabled": "已停用",
+    "deferred": "schema 延迟",
+    "kpi": {
+      "properties": "参数",
+      "required": "必填",
+      "agents": "绑定 Agent",
+      "calls": "调用次数",
+      "kind": "类型"
+    },
+    "schema": "参数 schema",
+    "props": "个参数",
+    "schemaEmpty": "这个工具不接受参数",
+    "requiredTag": "必填",
+    "optionalTag": "可选",
+    "schemaFoot": "JSON-Schema 原文即事实",
+    "agents": "绑定 Agent",
+    "agentsHint": "只有这些 Agent 能调用",
+    "agentsEmpty": "没有 Agent 绑定这个工具",
+    "recent": "最近调用",
+    "recentHint": "按命令原文匹配",
+    "recentEmpty": "还没查到调用记录",
+    "open": "详情",
+    "callOk": "成功",
+    "callFailed": "失败",
+    "footRecent": "最多 5 条"
+  },
+  "skillDetail": {
+    "title": "技能详情",
+    "back": "返回技能",
+    "loading": "载入中…",
+    "notFound": "找不到技能 {name}",
+    "originUnknown": "来源未知",
+    "outOfSync": "与内置版本不一致",
+    "callsMeta": "调用 {n} 次",
+    "kpi": {
+      "calls": "调用",
+      "tasks": "任务",
+      "files": "文件",
+      "agents": "用过它的 Agent",
+      "mcps": "依赖 MCP"
+    },
+    "body": "正文",
+    "bodyEmpty": "这个技能目录里没有 Markdown 正文",
+    "chars": "字符",
+    "bodyFoot": "步骤与验收标准写在正文里",
+    "chat": "对话",
+    "files": "文件",
+    "filesEmpty": "目录是空的",
+    "usage": "最近调用",
+    "usageHint": "来自 skill_usage 账本",
+    "usageEmpty": "还没有调用记录",
+    "argsLen": "参数 {n} 字节",
+    "usageFoot": "最多 20 条",
+    "agents": "用过的 Agent"
+  },
+  "mcpDetail": {
+    "title": "MCP 服务详情",
+    "back": "返回 MCP",
+    "loading": "载入中…",
+    "notFound": "找不到 MCP 服务 #{id}",
+    "enabled": "已启用",
+    "disabled": "已停用",
+    "insecure": "跳过证书校验",
+    "kpi": {
+      "tools": "工具",
+      "transport": "传输",
+      "env": "环境变量",
+      "args": "启动参数",
+      "state": "状态"
+    },
+    "connection": "连接方式",
+    "row": {
+      "command": "命令",
+      "env": "环境变量",
+      "handshake": "握手"
+    },
+    "envHint": "只显示键名，值不回传前端",
+    "handshakeNotCaptured": "握手日志未落库，工具清单来自上次刷新",
+    "connectionFoot": "配置即事实",
+    "tools": "工具清单",
+    "toolsHint": "由上次握手缓存",
+    "toolsEmpty": "还没有拉到工具，先在列表页点一次刷新",
+    "toolsFoot": "名字与说明来自服务端",
+    "exposureNote": "可见性按 Agent 单独配置"
+  },
+  "llmProfileDetail": {
+    "title": "模型配置详情",
+    "back": "返回模型配置",
+    "loading": "载入中…",
+    "notFound": "找不到配置 {id}",
+    "defaultTag": "默认",
+    "noProvider": "未归属供应商",
+    "kpi": {
+      "context": "上下文",
+      "rate": "限速 / 分",
+      "maxTokens": "输出上限",
+      "calls": "近 30 天调用",
+      "cost": "近 30 天费用"
+    },
+    "params": "参数",
+    "paramsHint": "思考 · 流式 · 模态",
+    "row": {
+      "model": "模型",
+      "rate": "限速",
+      "thinking": "思考",
+      "streaming": "流式",
+      "modalities": "输入模态",
+      "pool": "故障转移",
+      "provider": "供应商",
+      "baseUrl": "Base URL",
+      "proxy": "代理",
+      "key": "Key",
+      "sessionHeader": "会话头",
+      "input": "输入",
+      "output": "输出",
+      "cache": "缓存",
+      "tasks": "任务数",
+      "tokensIn": "输入 token",
+      "tokensOut": "输出 token",
+      "tasksNote": "加载过这条配置的任务"
+    },
+    "thinkingNote": "留空 = 不发送该字段",
+    "streamingNote": "关掉即真·非流式",
+    "modalitiesNote": "文本始终隐含",
+    "excluded": "不参与",
+    "poolNote": "仍可被显式绑定",
+    "on": "开",
+    "off": "关",
+    "paramsFoot": "参数即事实",
+    "endpoint": "端点",
+    "keyNote": "只回指纹，不回明文",
+    "endpointFoot": "端点住在供应商这一层",
+    "usage": "近 30 天用量",
+    "usageHint": "token 账本",
+    "cacheWrite": "写入 {n}",
+    "usageFoot": "含对话会话",
+    "chain": "回退链",
+    "chainHint": "按优先级从高到低",
+    "chainOrder": "激活配置恒为链首",
+    "chainFoot": "拖动排序在设置页编辑",
+    "here": "当前",
+    "open": "进入",
+    "inPool": "在池中"
+  },
+  "agentDetailPage": {
+    "title": "Agent 详情",
+    "back": "返回 Agent 列表",
+    "metaEditor": "人设 / 工具 / 模型",
+    "subtitle": "主流程在列表页的抽屉里；这一页是把同一个编辑器铺成全宽，便于外链与书签。"
+  },
+  "notificationCenter": {
+    "title": "通知中心",
+    "aria": "通知中心（{count} 条待处理）",
+    "refresh": "刷新",
+    "loading": "刷新中…",
+    "pending": "待裁决",
+    "pendingEmpty": "没有等着的审批票",
+    "severe": "高危发现",
+    "severeEmpty": "最近没有 critical / high 级别的发现",
+    "all": "全部",
+    "foot": "只看要动手的：待裁决 + 高危发现。已处理的留在各自列表里。",
+    "justNow": "刚刚",
+    "minsAgo": "{n} 分钟前",
+    "hoursAgo": "{n} 小时前",
+    "daysAgo": "{n} 天前"
   }
 }

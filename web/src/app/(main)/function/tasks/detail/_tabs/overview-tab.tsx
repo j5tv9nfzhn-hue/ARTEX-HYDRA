@@ -24,6 +24,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/empty-state";
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
 import {
@@ -695,13 +696,9 @@ export function OverviewTab({ taskId }: { taskId: string }) {
         </DialogContent>
       </Dialog>
       {/* Heartbeat */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <ActivityIcon className="size-4 text-blue-500" /> {t("heartbeat.title")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <Sheet>
+        <SheetHead icon={ActivityIcon} iconClassName="text-blue-500" title={t("heartbeat.title")} />
+        <div data-editorial="body" className="grid grid-cols-2 gap-4 sm:grid-cols-4 px-4 pt-2 pb-4">
           <div>
             <div className="text-muted-foreground text-xs">{t("heartbeat.engineState")}</div>
             <StatusBadge
@@ -737,8 +734,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
               </div>
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </Sheet>
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label={t("stat.pending")} value={open.length} icon={ShieldCheckIcon} sub={t("stat.pendingSub")} />
@@ -769,13 +766,9 @@ export function OverviewTab({ taskId }: { taskId: string }) {
       </div>
       {/* Work set */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <TargetIcon className="size-4" /> {t("running.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
+        <Sheet>
+          <SheetHead icon={TargetIcon} title={t("running.title")} />
+          <div data-editorial="body" className="flex flex-col gap-2 px-4 pt-2 pb-4">
             {running.slice(0, 6).map((i) => (
               <div key={i.id} className="flex items-center gap-2 text-sm">
                 <StatusBadge domain="intent" value={i.state} />
@@ -785,16 +778,12 @@ export function OverviewTab({ taskId }: { taskId: string }) {
             {running.length === 0 && (
               <EmptyState compact illustration="flag" className="py-4" title={t("running.empty")} />
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <AlertTriangleIcon className="size-4 text-amber-500" /> {t("attention.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3 text-sm">
+        <Sheet>
+          <SheetHead icon={AlertTriangleIcon} iconClassName="text-amber-500" title={t("attention.title")} />
+          <div data-editorial="body" className="grid grid-cols-2 gap-3 text-sm px-4 pt-2 pb-4">
             <div>
               <div className="font-semibold text-2xl text-red-600 tabular-nums">{taskFindings.length}</div>
               <div className="text-muted-foreground text-xs">{t("attention.confirmedVuln")}</div>
@@ -811,16 +800,12 @@ export function OverviewTab({ taskId }: { taskId: string }) {
               <div className="font-semibold text-2xl text-red-600 tabular-nums">{blocked.length}</div>
               <div className="text-muted-foreground text-xs">{t("attention.blockedIntent")}</div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <BugIcon className="size-4 text-red-500" /> {t("recent.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
+        <Sheet>
+          <SheetHead icon={BugIcon} iconClassName="text-red-500" title={t("recent.title")} />
+          <div data-editorial="body" className="flex flex-col gap-2 px-4 pt-2 pb-4">
             {taskFindings.slice(0, 6).map((f) => (
               <div key={f.id} className="flex items-center gap-2 text-sm">
                 <StatusBadge domain="severity" value={f.severity} dot />
@@ -830,18 +815,13 @@ export function OverviewTab({ taskId }: { taskId: string }) {
             {taskFindings.length === 0 && (
               <EmptyState compact illustration="radar" className="py-4" title={t("recent.empty")} />
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       </div>
       {coverage?.enabled && coverage.scope_rows > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <TargetIcon className="size-4 text-emerald-500" /> {t("coverage.title")}
-              <span className="font-normal text-muted-foreground text-xs">{t("coverage.rough")}</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+        <Sheet>
+          <SheetHead icon={TargetIcon} iconClassName="text-emerald-500" title={t("coverage.title")} hint={t("coverage.rough")} />
+          <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
             <div className="flex items-baseline gap-3">
               <span className="font-semibold text-2xl tabular-nums">
                 {coverage.pct != null ? `${Math.round(coverage.pct * 100)}%` : "—"}
@@ -863,19 +843,15 @@ export function OverviewTab({ taskId }: { taskId: string }) {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       )}
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
         <div className="flex flex-col gap-4 xl:col-span-6">
           {/* 创建时的原始任务描述、目标放在顶部，便于随时查看。 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <TargetIcon className="size-4 text-primary" /> {t("desc.title")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Sheet>
+            <SheetHead icon={TargetIcon} iconClassName="text-primary" title={t("desc.title")} />
+            <div data-editorial="body" className="grid grid-cols-1 gap-4 sm:grid-cols-2 px-4 pt-2 pb-4">
               <div className="flex flex-col gap-1.5">
                 <div className="font-medium text-muted-foreground text-xs">{t("desc.descLabel")}</div>
                 <p className="whitespace-pre-wrap break-words text-sm">{task?.description?.trim() || "—"}</p>
@@ -884,22 +860,15 @@ export function OverviewTab({ taskId }: { taskId: string }) {
                 <div className="font-medium text-muted-foreground text-xs">{t("desc.goalLabel")}</div>
                 <p className="whitespace-pre-wrap break-words text-sm">{task?.goal?.trim() || "—"}</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </Sheet>
           {/**
            * 目标管理支持查询、添加、修改、删除。添加、修改通知 Planner 并恢复任务；
            * 删除只通知 Planner，不恢复。目标是最终可验证成果，而非执行步骤或侦察动作。
            */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ListChecksIcon className="size-4 text-primary" /> {t("goals.title")}
-                <span className="font-normal text-muted-foreground text-xs">
-                  {t("goals.hint", { count: goals.length })}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+          <Sheet>
+            <SheetHead icon={ListChecksIcon} iconClassName="text-primary" title={t("goals.title")} hint={t("goals.hint", { count: goals.length })} />
+            <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
               {/* 添加表单。 */}
               <div className="flex flex-wrap items-center gap-2">
                 <Input
@@ -1013,24 +982,17 @@ export function OverviewTab({ taskId }: { taskId: string }) {
               ) : (
                 <p className="text-muted-foreground text-sm">{t("goals.empty")}</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </Sheet>
         </div>
         <div className="flex flex-col gap-4 xl:col-span-6">
           {/**
            * 行为约束：allow=允许、deny=禁止。下一轮将约束注入 Planner、Worker 系统提示，
            * 各角色是否注入由系统设置控制。修改不会立即中断运行，下一轮自然读取。
            */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ShieldAlertIcon className="size-4 text-amber-500" /> {t("constraints.title")}
-                <span className="font-normal text-muted-foreground text-xs">
-                  {t("constraints.hint", { count: constraints.length })}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+          <Sheet>
+            <SheetHead icon={ShieldAlertIcon} iconClassName="text-amber-500" title={t("constraints.title")} hint={t("constraints.hint", { count: constraints.length })} />
+            <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
               {/* 添加表单。 */}
               <div className="flex flex-wrap items-center gap-2">
                 <NativeSelect
@@ -1142,19 +1104,12 @@ export function OverviewTab({ taskId }: { taskId: string }) {
               ) : (
                 <p className="text-muted-foreground text-sm">{t("constraints.empty")}</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </Sheet>
           {/* 测试范围既是覆盖率分母，也是授权边界，可手工添加、删除。 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ShieldCheckIcon className="size-4 text-emerald-500" /> {t("scope.title")}
-                <span className="font-normal text-muted-foreground text-xs">
-                  {t("scope.hint", { count: scope.length })}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+          <Sheet>
+            <SheetHead icon={ShieldCheckIcon} iconClassName="text-emerald-500" title={t("scope.title")} hint={t("scope.hint", { count: scope.length })} />
+            <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
               {/* 添加表单。 */}
               <div className="flex flex-wrap items-center gap-2">
                 <NativeSelect
@@ -1232,8 +1187,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
               ) : (
                 <p className="text-muted-foreground text-sm">{t("scope.empty")}</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </Sheet>
         </div>
       </div>
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
@@ -1242,16 +1197,9 @@ export function OverviewTab({ taskId }: { taskId: string }) {
         </div>
         <div className="flex flex-col gap-4 xl:col-span-7">
           {/* LLM token 用量按模型分组，来自 llm_usage 计量账本，不依赖是否开启 LLM 录制。 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <CoinsIcon className="size-4 text-amber-500" /> {t("tokens.title")}
-                <span className="font-normal text-muted-foreground text-xs">
-                  {t("tokens.hint", { calls: tokenTotals.calls })}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+          <Sheet>
+            <SheetHead icon={CoinsIcon} iconClassName="text-amber-500" title={t("tokens.title")} hint={t("tokens.hint", { calls: tokenTotals.calls })} />
+            <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
               {/* 任务级 Token 预算:按 llm_usage 累计 input+output 计量,与后端预算闸同口径;
               达到预算时后端自动暂停任务。这里的编辑是「调高预算后恢复」的回环入口,0=不限。 */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border bg-muted/40 px-3 py-2">
@@ -1431,8 +1379,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
               ) : (
                 <p className="text-muted-foreground text-sm">{t("tokens.empty")}</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </Sheet>
         </div>
       </div>
     </div>
@@ -1551,14 +1499,9 @@ function TaskInterceptRulesCard({ taskId }: { taskId: string }) {
   const placeholder = TASK_RULE_KIND_OPTIONS.find((o) => o.value === newKind)?.placeholder ?? "";
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <ShieldCheckIcon className="size-4 text-sky-500" /> {t("rule.title")}
-          <span className="font-normal text-muted-foreground text-xs">{t("rule.hint", { count: rules.length })}</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+    <Sheet>
+      <SheetHead icon={ShieldCheckIcon} iconClassName="text-sky-500" title={t("rule.title")} hint={t("rule.hint", { count: rules.length })} />
+      <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
         {/* 添加表单。 */}
         <div className="flex flex-wrap items-center gap-2">
           <NativeSelect size="sm" value={newAction} onChange={(e) => setNewAction(e.target.value as "block" | "allow")}>
@@ -1698,7 +1641,7 @@ function TaskInterceptRulesCard({ taskId }: { taskId: string }) {
         ) : (
           <p className="text-muted-foreground text-sm">{t("rule.empty")}</p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </Sheet>
   );
 }

@@ -173,6 +173,64 @@ for (const p of pages) {
 }
 console.log(`  ✓ 页面 ${pages.length} 个，其中 ${mastheads} 个使用报头原语`);
 
+// ── 4. 双主题「外观」层的作用域 ──────────────────────────────────────────────
+// 与第 1 条同一条纪律：skin-editorial.css 里每一条规则都必须挂在
+// :root[data-skin="editorial"] 之下，否则切回老主题时会有样式漏出去。
+
+const skin = read(join(web, "src/styles/skin-editorial.css"));
+if (!skin) {
+  errors.push("缺少 web/src/styles/skin-editorial.css");
+} else {
+  const stripped = skin.replace(/\/\*[\s\S]*?\*\//g, "");
+  const selectors = [];
+  let depth = 0;
+  let buf = "";
+  for (const ch of stripped) {
+    if (ch === "{") {
+      if (depth === 0) selectors.push(buf.trim());
+      depth++;
+      buf = "";
+    } else if (ch === "}") {
+      depth = Math.max(0, depth - 1);
+      buf = "";
+    } else if (depth === 0) {
+      buf += ch;
+    }
+  }
+  let unscoped = 0;
+  for (const sel of selectors) {
+    if (!sel || sel.startsWith("@")) continue;
+    for (const part of sel.split(",").map((x) => x.trim()).filter(Boolean)) {
+      if (part.includes('[data-skin="editorial"]')) continue;
+      unscoped++;
+      errors.push(`skin-editorial.css 存在未限定外观的选择器：${part}`);
+    }
+  }
+  if (unscoped === 0) console.log(`  ✓ skin-editorial.css 全部规则限定在外观作用域内（${selectors.length} 块）`);
+}
+
+// ── 5. 双主题的接线必须齐全 ──────────────────────────────────────────────────
+// 少任何一处，都会出现「切了没生效」或者「刷新后变回老主题」的幽灵 bug：
+// 首帧脚本负责不闪烁，layout 负责 SSR 默认值，provider 负责运行时同步。
+
+const wiring = [
+  ["web/src/lib/preferences/theme.ts", "SKIN_OPTIONS", "外观选项未定义"],
+  ["web/src/lib/preferences/preferences-config.ts", "skin:", "偏好表里没有 skin 键"],
+  ["web/src/lib/preferences/theme-utils.ts", "applySkin", "缺少 applySkin"],
+  ["web/src/scripts/theme-boot.tsx", '"data-skin"', "首帧脚本没有写 data-skin（会闪烁 / 刷新后掉回老主题）"],
+  ["web/src/app/layout.tsx", "data-skin={skin}", "<html> 上没有 data-skin（SSR 默认值缺失）"],
+  ["web/src/stores/preferences/preferences-provider.tsx", "applySkin(", "provider 没有同步外观变化"],
+  ["web/src/app/globals.css", "skin-editorial.css", "globals.css 没有引入外观层"],
+];
+for (const [file, needle, msg] of wiring) {
+  const src = read(join(root, file));
+  if (!src) errors.push(`缺少 ${file}`);
+  else if (!src.includes(needle)) errors.push(`${msg}（${file}）`);
+}
+if (!errors.some((e) => e.includes("data-skin") || e.includes("applySkin") || e.includes("skin"))) {
+  console.log("  ✓ 双主题接线完整（首帧 / SSR / provider / 样式层）");
+}
+
 // ── 汇总 ────────────────────────────────────────────────────────────────────
 console.log("");
 for (const w of warns) console.log(`  ! ${w}`);

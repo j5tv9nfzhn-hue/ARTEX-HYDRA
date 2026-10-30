@@ -8,15 +8,15 @@ import { ArrowDownIcon, ArrowUpIcon, ArrowUpRightIcon, ChevronRightIcon } from "
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { GroupHead, RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api";
 import { useStoredSortPreference } from "@/lib/sort-preference";
-import type { Finding, FindingStatus } from "@/lib/types";
+import type { Finding, FindingStatus, Severity } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type FindingSortField = "time";
@@ -42,6 +42,21 @@ const FINDING_STATUSES: FindingStatus[] = [
   "risk_accepted",
 ];
 
+// 分卷顺序与发现页一致：严重 → 高危 → 中危 → 低危 → 其余。
+// 「其余」收纳 info / 未定级，避免有的条目无处可去。
+const SEVERITY_GROUPS = ["critical", "high", "medium", "low"] as const;
+type SeverityGroup = (typeof SEVERITY_GROUPS)[number];
+
+function groupOf(severity: Severity | undefined): SeverityGroup | "other" {
+  return (SEVERITY_GROUPS as readonly string[]).includes(severity ?? "")
+    ? (severity as SeverityGroup)
+    : "other";
+}
+
+/**
+ * 一条发现：标签是严重度（整页唯一的色点），正文是名称 + 摘要，
+ * 右侧三列是证据数、复核态、时间。展开后是证据原文（纸本里是一段引文）。
+ */
 function Row({
   f,
   contextTaskId,
@@ -54,48 +69,57 @@ function Row({
   const t = useTranslations("taskDetail.findings");
   const tStatus = useTranslations("status");
   const [open, setOpen] = React.useState(false);
+
   return (
-    <div className="border-b last:border-b-0">
-      <div className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-accent/40">
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="flex min-w-0 flex-1 items-center gap-3 text-left"
-        >
+    <div data-editorial="record-wrap">
+      <RecordRow
+        expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        cols="56px minmax(0,1fr) 62px 74px 92px"
+        lead={<StatusBadge domain="severity" value={f.severity} dot />}
+        values={[
+          <span key="ev" className="text-muted-foreground">
+            {t("trafficEvidence", { count: f.traffic_count ?? 0 })}
+          </span>,
+          <span key="val" className="hidden sm:inline-flex">
+            {f.finding_id ? <StatusBadge domain="validation" value={f.validation ?? "unverified"} /> : null}
+          </span>,
+          <span key="ts" className="hidden text-muted-foreground md:inline">
+            {new Date(f.ts).toLocaleString("zh-CN")}
+          </span>,
+        ]}
+      >
+        <div className="flex min-w-0 items-center gap-2">
           <ChevronRightIcon
-            className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")}
+            className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")}
           />
-          <StatusBadge domain="severity" value={f.severity} dot />
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="truncate font-medium">{findingLabel(f, t("unclassified"))}</span>
-              {f.inherited && f.source_task_id && (
-                <Badge variant="outline" className="shrink-0">
-                  {t("sourceReadonly", { id: f.source_task_id })}
-                </Badge>
-              )}
-            </div>
-            <span className="truncate text-xs text-muted-foreground">{f.summary}</span>
-          </div>
-        </button>
-        <Badge variant="outline">{t("trafficEvidence", { count: f.traffic_count ?? 0 })}</Badge>
-        {f.assets && f.assets.length > 0 && (
-          <div className="hidden shrink-0 flex-wrap justify-end gap-1 sm:flex">
-            {f.assets.slice(0, 2).map((a) => (
-              <code
-                key={a.id}
-                className="max-w-[10rem] truncate rounded bg-muted px-1.5 py-0.5 font-mono text-xs"
-                title={`${a.type} / ${a.label}`}
-              >
+          <span className="truncate font-medium text-[13px]">{findingLabel(f, t("unclassified"))}</span>
+          {f.inherited && f.source_task_id && (
+            <Badge variant="outline" className="shrink-0">
+              {t("sourceReadonly", { id: f.source_task_id })}
+            </Badge>
+          )}
+        </div>
+        <RecordSub
+          items={[
+            <span key="sum" className="line-clamp-1 max-w-full">
+              {f.summary}
+            </span>,
+            ...(f.assets ?? []).slice(0, 2).map((a) => (
+              <code key={a.id} className="font-mono text-[10.5px]" title={`${a.type} / ${a.label}`}>
                 {a.label}
               </code>
-            ))}
-            {f.assets.length > 2 && <span className="text-xs text-muted-foreground">+{f.assets.length - 2}</span>}
-          </div>
-        )}
+            )),
+            f.assets && f.assets.length > 2 ? <span key="more">+{f.assets.length - 2}</span> : null,
+          ]}
+        />
+      </RecordRow>
+
+      {/* 行内第二排：状态与详情入口。点状态不展开，点其余区域展开证据。 */}
+      <div className="-mt-1 flex items-center justify-end gap-2 px-4 pb-2">
         {f.finding_id && !f.inherited ? (
           <Select value={f.status} onValueChange={(v) => onStatus(f, v as FindingStatus)}>
-            <SelectTrigger size="sm" className="h-7 w-28 shrink-0 border-none px-1 shadow-none focus-visible:ring-0">
+            <SelectTrigger size="sm" className="h-6 w-auto shrink-0 border-none px-1 shadow-none focus-visible:ring-0">
               <StatusBadge domain="finding" value={f.status} dot />
             </SelectTrigger>
             <SelectContent position="popper" align="end">
@@ -111,11 +135,6 @@ function Row({
         ) : (
           <StatusBadge domain="finding" value={f.status} dot />
         )}
-        {/* 复核态与处置态正交：任务内也照实显示，否则同一条发现在两个页面口径不一。 */}
-        {f.finding_id ? <StatusBadge domain="validation" value={f.validation ?? "unverified"} /> : null}
-        <span className="hidden shrink-0 text-xs text-muted-foreground md:block">
-          {new Date(f.ts).toLocaleString("zh-CN")}
-        </span>
         {f.finding_id && (
           <Link
             href={
@@ -123,7 +142,7 @@ function Row({
                 ? `/function/findings/detail?id=${f.finding_id}&context_task=${contextTaskId}`
                 : `/function/findings/detail?id=${f.finding_id}`
             }
-            className="text-muted-foreground hover:text-primary inline-flex shrink-0 items-center gap-0.5 text-xs"
+            className="inline-flex shrink-0 items-center gap-0.5 text-muted-foreground text-xs hover:text-primary"
             title={t("viewDetail")}
           >
             {t("detail")}
@@ -131,10 +150,14 @@ function Row({
           </Link>
         )}
       </div>
+
       {open && (
-        <div className="bg-muted/30 px-4 pb-4 pl-11">
-          <div className="mb-1 text-xs font-medium text-muted-foreground">{t("evidencePoc")}</div>
-          <pre className="overflow-auto rounded-md border bg-background p-3 font-mono text-xs whitespace-pre-wrap">
+        <div className="px-4 pb-3 pl-14">
+          <div className="mb-1 text-[10px] text-muted-foreground tracking-[0.06em]">{t("evidencePoc")}</div>
+          <pre
+            data-editorial="evidence"
+            className="overflow-auto whitespace-pre-wrap rounded-md border bg-muted/25 p-3 font-mono text-xs"
+          >
             {f.evidence}
           </pre>
         </div>
@@ -146,6 +169,7 @@ function Row({
 export function FindingsTab({ taskId }: { taskId: string }) {
   const t = useTranslations("taskDetail.findings");
   const tStatus = useTranslations("status");
+  const tSev = useTranslations("findings.severity");
   const [findings, setFindings] = React.useState<Finding[]>([]);
   const [sortPreference, setSortPreference] = useStoredSortPreference(
     FINDING_SORT_PREFERENCE_KEY,
@@ -178,22 +202,42 @@ export function FindingsTab({ taskId }: { taskId: string }) {
     [t, tStatus],
   );
 
-  const items = findings
-    .filter((f) => f.task_id === taskId || f.inherited)
-    .sort((a, b) => {
-      const compared = Date.parse(a.ts) - Date.parse(b.ts);
-      if (compared !== 0) return sortPreference.direction === "asc" ? compared : -compared;
-      return b.id.localeCompare(a.id, undefined, { numeric: true });
-    });
+  const items = React.useMemo(
+    () =>
+      findings
+        .filter((f) => f.task_id === taskId || f.inherited)
+        .sort((a, b) => {
+          const compared = Date.parse(a.ts) - Date.parse(b.ts);
+          if (compared !== 0) return sortPreference.direction === "asc" ? compared : -compared;
+          return b.id.localeCompare(a.id, undefined, { numeric: true });
+        }),
+    [findings, taskId, sortPreference.direction],
+  );
+
+  // 分卷：同一批发现按严重度切开，每卷自带计数，空卷不出现。
+  const groups = React.useMemo(() => {
+    const map = new Map<SeverityGroup | "other", Finding[]>();
+    for (const f of items) {
+      const key = groupOf(f.severity);
+      const bucket = map.get(key);
+      if (bucket) bucket.push(f);
+      else map.set(key, [f]);
+    }
+    return [...map.entries()];
+  }, [items]);
+
+  const toneOf = (g: SeverityGroup | "other") =>
+    g === "critical" || g === "high" ? "red" : g === "medium" ? "amber" : g === "low" ? "green" : "muted";
 
   return (
-    <Card className="overflow-hidden py-0">
-      <CardContent className="px-0">
-        <div className="flex items-center border-b px-4 py-2 text-xs text-muted-foreground">
-          <span className="min-w-0 flex-1">{t("columnFinding")}</span>
+    <Sheet>
+      <SheetHead
+        title={t("columnFinding")}
+        count={items.length}
+        actions={
           <button
             type="button"
-            className="inline-flex items-center gap-1 outline-none focus-visible:underline"
+            className="inline-flex items-center gap-1 rounded-sm text-muted-foreground text-xs outline-none hover:text-foreground focus-visible:underline"
             aria-label={t("sortAria", {
               order: sortPreference.direction === "asc" ? t("orderAsc") : t("orderDesc"),
             })}
@@ -211,12 +255,28 @@ export function FindingsTab({ taskId }: { taskId: string }) {
               <ArrowDownIcon className="size-3.5" />
             )}
           </button>
-        </div>
-        {items.map((f) => (
-          <Row key={f.id} f={f} contextTaskId={taskId} onStatus={onStatus} />
+        }
+      />
+
+      <div className="px-4">
+        {groups.map(([g, list]) => (
+          <React.Fragment key={g}>
+            <GroupHead
+              tone={toneOf(g) as "red" | "amber" | "green" | "muted"}
+              title={g === "other" ? t("unclassified") : tSev(g)}
+              count={list.length}
+            />
+            {list.map((f) => (
+              <Row key={f.id} f={f} contextTaskId={taskId} onStatus={onStatus} />
+            ))}
+          </React.Fragment>
         ))}
         {items.length === 0 && <EmptyState illustration="radar" title={t("empty")} />}
-      </CardContent>
-    </Card>
+      </div>
+
+      {items.length > 0 && (
+        <SheetFoot left={t("foot", { total: items.length, groups: groups.length })} right={t("footHint")} />
+      )}
+    </Sheet>
   );
 }

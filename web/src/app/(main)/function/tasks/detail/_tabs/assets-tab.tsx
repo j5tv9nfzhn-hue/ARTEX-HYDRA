@@ -19,6 +19,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { AssetDslSearch } from "@/components/asset-dsl-search";
+import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { ScopeTextEditor } from "@/components/scope-text-editor";
 import {
@@ -33,7 +34,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
@@ -206,8 +206,11 @@ function AssetCard({
     );
   }
   return (
-    <Card className="flex min-h-0 flex-1 flex-col py-0">
-      <CardContent className="scrollbar-thin scrollbar-track-transparent min-h-0 flex-1 overflow-auto p-0">
+    <PaperSheet className="flex min-h-0 flex-1 flex-col">
+      <div
+        data-editorial="body"
+        className="scrollbar-thin scrollbar-track-transparent min-h-0 flex-1 overflow-auto"
+      >
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-card">
             <TableRow>
@@ -218,9 +221,12 @@ function AssetCard({
           </TableHeader>
           <TableBody>{tableRows}</TableBody>
         </Table>
-      </CardContent>
+      </div>
       {total > 0 ? (
-        <CardFooter className="gap-2 px-3 py-1.5 text-muted-foreground text-xs">
+        <div
+          data-editorial="sheet-foot"
+          className="flex flex-wrap items-center gap-2 border-t px-3 py-1.5 text-muted-foreground text-xs"
+        >
           <Select
             value={String(size)}
             onValueChange={(value) => {
@@ -268,9 +274,9 @@ function AssetCard({
               </Button>
             </div>
           ) : null}
-        </CardFooter>
+        </div>
       ) : null}
-    </Card>
+    </PaperSheet>
   );
 }
 

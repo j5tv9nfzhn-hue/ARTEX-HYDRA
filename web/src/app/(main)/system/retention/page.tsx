@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { AlertTriangleIcon, DatabaseIcon, EyeIcon, RefreshCwIcon, ShieldCheckIcon, Trash2Icon } from "lucide-react";
+import { Masthead } from "@/components/editorial";
 import { useTranslations } from "next-intl";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -51,13 +52,12 @@ export default function RetentionPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6" aria-busy={pending}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-semibold text-xl tracking-tight">{t("title")}</h1>
-            <Badge variant="secondary">{t(model.envelope ? "automaticOff" : "manualOnly")}</Badge>
-          </div>
-          <p className="mt-1 max-w-3xl text-muted-foreground text-sm">{t("subtitle")}</p>
-        </div>
+        <Masthead
+          title={t("title")}
+          subtitle={t("subtitle")}
+          meta={<Badge variant="secondary">{t(model.envelope ? "automaticOff" : "manualOnly")}</Badge>}
+          titleClassName="text-xl"
+        />
         <Button variant="outline" disabled={pending} onClick={refreshPolicy}>
           <RefreshCwIcon className="size-4" />
           {t("reload")}

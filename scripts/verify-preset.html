@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="zh-CN" data-theme-preset="two-inks">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>two-inks.css 渲染验证 v2</title>
+
+<style>
+/* ===== 1) Tailwind v4 的 @theme 令牌（真机由 tailwindcss 插件输出） ===== */
+:root{
+  --radius:.625rem;
+  --background:#fff; --foreground:#0a0a0a; --card:#fff; --card-foreground:#0a0a0a;
+  --popover:#fff; --popover-foreground:#0a0a0a; --primary:#171717; --primary-foreground:#fafafa;
+  --secondary:#f5f5f5; --secondary-foreground:#171717; --muted:#f5f5f5; --muted-foreground:#737373;
+  --accent:#f5f5f5; --accent-foreground:#171717; --destructive:#e7000b;
+  --border:#e5e5e5; --input:#e5e5e5; --ring:#a1a1a1;
+  --chart-1:#f54a00; --chart-2:#009689; --chart-3:#104e64; --chart-4:#ffb900; --chart-5:#fe9a00;
+  --sidebar:#fafafa; --sidebar-foreground:#0a0a0a;
+  --spot:var(--primary); --spot-weak:var(--accent);   /* 未选双墨时的回退 */
+
+  --color-red-50:#fef2f2; --color-red-100:#ffe2e2; --color-red-200:#ffc9c9; --color-red-300:#ffa2a2;
+  --color-red-400:#ff6467; --color-red-500:#fb2c36; --color-red-600:#e7000b; --color-red-700:#c10007;
+  --color-red-800:#9f0712; --color-red-900:#82181a; --color-red-950:#460809;
+  --color-orange-400:#ff8904; --color-orange-500:#ff6900; --color-orange-600:#f54a00; --color-orange-700:#ca3500;
+  --color-amber-100:#fef3c6; --color-amber-300:#ffd236; --color-amber-400:#fcbb00;
+  --color-amber-500:#f99c00; --color-amber-600:#e17100; --color-amber-700:#b75000; --color-amber-900:#7b3306;
+  --color-emerald-100:#d0fae5; --color-emerald-300:#5ee9b5; --color-emerald-400:#00d492;
+  --color-emerald-500:#00bc7d; --color-emerald-600:#009966; --color-emerald-700:#007a55;
+  --color-blue-400:#51a2ff; --color-blue-500:#2b7fff; --color-blue-600:#155dfc;
+  --color-sky-400:#00bcfe; --color-sky-500:#00a6f4; --color-sky-600:#0084d1;
+  --color-violet-400:#a684ff; --color-violet-500:#8e51ff; --color-violet-600:#7f22fe;
+  --color-teal-400:#00d5be; --color-teal-500:#00bba7; --color-teal-600:#009689;
+  --color-slate-300:#cad5e2; --color-slate-400:#90a1b9; --color-slate-500:#62748e;
+  --color-slate-600:#45556c; --color-slate-700:#314158;
+  --color-green-500:#00c950; --color-green-600:#00a63e;
+  --color-rose-400:#ff637e; --color-rose-500:#ff2056; --color-rose-600:#e7000b;
+  --color-neutral-400:#a1a1a1; --color-neutral-500:#737373; --color-neutral-600:#525252;
+  --text-xs:.75rem; --text-sm:.875rem;
+}
+
+/* ===== 2) 模拟 Tailwind v4 真实输出：工具类全部在 @layer utilities 内 ===== */
+@layer utilities{
+  .text-xs{font-size:var(--text-xs);line-height:calc(1/.75); color:inherit}
+  .text-sm{font-size:var(--text-sm);line-height:calc(1.25/.875)}
+  .uppercase{text-transform:uppercase}
+  .tracking-widest{letter-spacing:.1em}
+  .tracking-wider{letter-spacing:.05em}
+  .shadow-sm{box-shadow:0 1px 3px 0 #0000001a,0 1px 2px -1px #0000001a}
+  .shadow-md{box-shadow:0 4px 6px -1px #0000001a,0 2px 4px -2px #0000001a}
+  .rounded-md{border-radius:calc(var(--radius) - 2px)}
+  .rounded-lg{border-radius:var(--radius)}
+  .rounded-xl{border-radius:calc(var(--radius) + 4px)}
+  .rounded-full{border-radius:9999px}
+  .animate-fade-up{animation:fade-up .4s ease both}
+  .animate-scale-in{animation:scale-in .2s ease both}
+  .animate-pulse-soft{animation:pulse-soft 2.4s ease-in-out infinite}
+  .animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}
+  .animate-spin{animation:spin 1s linear infinite}
+  .text-red-600{color:var(--color-red-600)}
+  .text-red-400{color:var(--color-red-400)}
+  .text-orange-700{color:var(--color-orange-700)}
+  .text-amber-500{color:var(--color-amber-500)}
+  .text-emerald-400{color:var(--color-emerald-400)}
+  .text-emerald-600{color:var(--color-emerald-600)}
+  .text-blue-500{color:var(--color-blue-500)}
+  .text-violet-500{color:var(--color-violet-500)}
+  .text-sky-500{color:var(--color-sky-500)}
+  .text-slate-600{color:var(--color-slate-600)}
+  .text-slate-400{color:var(--color-slate-400)}
+  .bg-red-600\/10{background-color:color-mix(in oklab,var(--color-red-600) 10%,transparent)}
+  .bg-amber-500\/10{background-color:color-mix(in oklab,var(--color-amber-500) 10%,transparent)}
+  .bg-emerald-500\/10{background-color:color-mix(in oklab,var(--color-emerald-500) 10%,transparent)}
+  .bg-slate-500\/10{background-color:color-mix(in oklab,var(--color-slate-500) 10%,transparent)}
+  .bg-blue-500\/10{background-color:color-mix(in oklab,var(--color-blue-500) 10%,transparent)}
+  .border-red-600\/20{border-color:color-mix(in oklab,var(--color-red-600) 20%,transparent)}
+  .border-amber-500\/20{border-color:color-mix(in oklab,var(--color-amber-500) 20%,transparent)}
+  .border-slate-500\/20{border-color:color-mix(in oklab,var(--color-slate-500) 20%,transparent)}
+  .bg-chart-1{background-color:var(--chart-1)} .bg-chart-2{background-color:var(--chart-2)}
+  .bg-chart-3{background-color:var(--chart-3)} .bg-chart-4{background-color:var(--chart-4)}
+  .bg-chart-5{background-color:var(--chart-5)}
+  .bg-primary{background-color:var(--primary)} .text-primary{color:var(--primary)}
+  .bg-card{background-color:var(--card)} .border-border{border-color:var(--border)}
+  /* 变体：真实存在的漏网类名 */
+  .md\:text-xs{font-size:var(--text-xs);line-height:calc(1/.75)}
+}
+@keyframes fade-up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes scale-in{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+@keyframes pulse-soft{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes pulse{50%{opacity:.5}}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+
+<!-- ===== 3) 真身：仓库里那份预设文件（无 @layer，故压过上面整个 utilities 层） ===== -->
+<link rel="stylesheet" href="../web/src/styles/presets/two-inks.css"/>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:26px 26px 60px;background:var(--background);color:var(--foreground);
+  font-family:Inter,system-ui,"PingFang SC","Noto Sans CJK SC",sans-serif;transition:background .25s,color .25s}
+h1{font-size:19px;margin:0 0 5px;letter-spacing:-.02em;font-weight:600}
+.sub{font-size:12px;line-height:1.6;color:var(--muted-foreground);margin:0 0 22px;max-width:760px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:14px}
+.box{border:1px solid var(--border);border-radius:var(--radius);padding:13px;background:var(--card)}
+.box h2{font-size:11px;margin:0 0 10px;color:var(--muted-foreground);font-weight:500;letter-spacing:0}
+.row{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:8px}
+.chip{font-size:12px;padding:3px 8px;border:1px solid;border-radius:var(--radius);line-height:1.5}
+.note{font-size:11px;line-height:1.65;color:var(--muted-foreground);margin:7px 0 0}
+.bar{height:24px;display:flex;border-radius:2px;overflow:hidden}
+.bar span{flex:1}
+.toolbar{position:fixed;right:18px;top:18px;display:flex;gap:8px;z-index:9}
+.toolbar button{font:inherit;font-size:12px;padding:7px 12px;cursor:pointer;border-radius:var(--radius);
+  border:1px solid var(--border);background:var(--card);color:var(--foreground)}
+.toolbar button[aria-pressed="true"]{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
+.dot{width:7px;height:7px;border-radius:999px;display:inline-block}
+tag{font-family:ui-monospace,Menlo,monospace;font-size:10px;opacity:.65}
+.sect{margin:26px 0 12px;font-size:11px;letter-spacing:.06em;color:var(--muted-foreground);
+  border-top:1px solid var(--border);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button id="presetBtn" aria-pressed="true">双墨预设</button>
+  <button id="darkBtn" aria-pressed="false">深色</button>
+</div>
+
+<h1>two-inks.css 渲染验证 <tag>v2 · 真实类名 + @layer utilities</tag></h1>
+<p class="sub">工具类按 Tailwind v4 真实输出的方式写在 <code>@layer utilities</code> 里，类名不加前缀。预设文件无 <code>@layer</code> 包装，因此理应压过整个工具层——本页检验的正是这一点。</p>
+
+<div class="grid">
+  <div class="box">
+    <h2>① 严重度药丸 <tag>severity.ts</tag></h2>
+    <div class="row">
+      <span class="chip bg-red-600/10 border-red-600/20 text-red-600">critical</span>
+      <span class="chip bg-amber-500/10 border-amber-500/20 text-orange-700">high</span>
+      <span class="chip bg-amber-500/10 border-amber-500/20 text-amber-500">medium</span>
+      <span class="chip bg-slate-500/10 border-slate-500/20 text-slate-600">low</span>
+    </div>
+    <p class="note">预期：只有 critical 残留专色，其余三个是墨阶。</p>
+  </div>
+
+  <div class="box">
+    <h2>② 状态点 <tag>LiveDot 等 160 处</tag></h2>
+    <div class="row">
+      <span class="dot bg-emerald-500/10" style="background:var(--color-emerald-600)"></span><span class="text-xs text-emerald-600">运行中</span>
+      <span class="dot" style="background:var(--color-blue-500)"></span><span class="text-xs text-blue-500">SSE 在线</span>
+      <span class="dot" style="background:var(--color-violet-500)"></span><span class="text-xs text-violet-500">planner</span>
+      <span class="dot" style="background:var(--color-sky-500)"></span><span class="text-xs text-sky-500">worker</span>
+    </div>
+    <p class="note">预期：绿/蓝/紫/青四种状态色压缩成同一族墨色，靠文字区分。</p>
+  </div>
+
+  <div class="box">
+    <h2>③ 装饰类收口 <tag>§3.2 §3.3 §3.1</tag></h2>
+    <div class="row">
+      <span class="text-xs uppercase tracking-widest text-slate-400">active tasks</span>
+      <span class="text-xs tracking-wider text-slate-400">带 tracking-wider</span>
+    </div>
+    <div class="row">
+      <span class="dot animate-pulse-soft" style="background:var(--color-emerald-500)"></span>
+      <span class="text-xs animate-pulse-soft text-emerald-500">animate-pulse-soft</span>
+      <span class="dot animate-pulse" style="background:var(--color-red-500)"></span>
+      <span class="text-xs animate-pulse text-red-500">animate-pulse</span>
+    </div>
+    <div class="row"><div class="shadow-md border border-border rounded-lg text-xs" style="padding:9px 11px;background:var(--card)">shadow-md 卡片</div></div>
+    <p class="note">预期：不转大写、字距被压到 0.04em、两个脉冲点静止、卡片无阴影。</p>
+  </div>
+
+  <div class="box">
+    <h2>④ 字号刻度 <tag>§3.4 text-xs</tag></h2>
+    <div class="row text-xs">text-xs → 应为 12.8px / 1.55</div>
+    <div class="row text-sm">text-sm → 保持 14px</div>
+    <div class="row md:text-xs text-slate-400">md:text-xs → <b>漏网</b>，仍是 12px</div>
+    <p class="note">全站 1178 处基础 text-xs 被抬起；2 处变体不进选择器。</p>
+  </div>
+
+  <div class="box">
+    <h2>⑤ 图表五槽 <tag>chart-1..5</tag></h2>
+    <div class="bar"><span class="bg-chart-1"></span><span class="bg-chart-2"></span><span class="bg-chart-3"></span><span class="bg-chart-4"></span><span class="bg-chart-5"></span></div>
+    <p class="note">五级灰阶，最左最深，靠明度差读数据而非色相差。</p>
+  </div>
+
+  <div class="box">
+    <h2>⑥ 圆角 <tag>§3.5</tag></h2>
+    <div class="row">
+      <span class="rounded-md border border-border text-xs" style="padding:6px 10px">rounded-md</span>
+      <span class="rounded-lg border border-border text-xs" style="padding:6px 10px">rounded-lg</span>
+      <span class="rounded-xl border border-border text-xs" style="padding:6px 10px">rounded-xl</span>
+    </div>
+    <div class="row"><span class="rounded-full border border-border text-xs" style="padding:6px 12px">rounded-full 必须仍是圆的</span></div>
+  </div>
+
+  <div class="box">
+    <h2>⑦ 专色 <tag>--primary / --spot</tag></h2>
+    <div class="row">
+      <span class="text-primary text-xs">--primary</span>
+      <span class="bg-primary" style="width:26px;height:26px;border-radius:var(--radius)"></span>
+      <span style="font-size:11px;color:var(--muted-foreground)">全屏唯一彩色</span>
+    </div>
+    <p class="note">暗色态自动提亮一档以维持对比度。</p>
+  </div>
+
+  <div class="box">
+    <h2>⑧ 功能性动效必须保留 <tag>§3.2</tag></h2>
+    <div class="row">
+      <span class="dot animate-spin" style="background:var(--color-slate-500);border-radius:2px"></span>
+      <span class="text-xs text-slate-500">animate-spin 加载态（应继续转）</span>
+    </div>
+    <p class="note">48 处 spin 是真实加载反馈，不在裁撤名单。</p>
+  </div>
+</div>
+
+<script>
+const html = document.documentElement;
+const pb = document.getElementById("presetBtn");
+const db = document.getElementById("darkBtn");
+pb.addEventListener("click", () => {
+  const on = pb.getAttribute("aria-pressed") === "true";
+  pb.setAttribute("aria-pressed", String(!on));
+  if (on) delete html.dataset.themePreset; else html.dataset.themePreset = "two-inks";
+});
+db.addEventListener("click", () => {
+  const on = html.classList.toggle("dark");
+  db.setAttribute("aria-pressed", String(on));
+});
+</script>
+</body>
+</html>

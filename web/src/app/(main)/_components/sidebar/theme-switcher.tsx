@@ -1,9 +1,10 @@
 "use client";
 
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Monitor, Moon, Sun, Type } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { persistPreference } from "@/lib/preferences/preferences-storage";
+import { applySkin } from "@/lib/preferences/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 const THEME_CYCLE = ["light", "dark", "system"] as const;
@@ -15,6 +16,33 @@ const THEME_NAMES: Record<(typeof THEME_CYCLE)[number], string> = {
   dark: "深色",
   system: "跟随系统",
 };
+
+/**
+ * 外观一键切换：老主题（九套预设）↔ 新主题（纸本）。
+ * 与偏好浮层里的「外观」是同一个偏好，这里只是给一个不用开浮层的入口。
+ */
+export function SkinSwitcher() {
+  const skin = usePreferencesStore((s) => s.skin);
+  const themePreset = usePreferencesStore((s) => s.themePreset);
+  const setSkin = usePreferencesStore((s) => s.setSkin);
+
+  const next = skin === "editorial" ? "classic" : "editorial";
+  return (
+    <Button
+      size="icon"
+      onClick={() => {
+        setSkin(next);
+        applySkin(next, themePreset);
+        void persistPreference("skin", next);
+      }}
+      aria-label={skin === "editorial" ? "当前为新主题（纸本），点击切回老主题" : "当前为老主题，点击切到新主题（纸本）"}
+      title={skin === "editorial" ? "新主题 · 纸本" : "老主题"}
+      data-skin-state={skin}
+    >
+      <Type className="size-4" />
+    </Button>
+  );
+}
 
 export function ThemeSwitcher() {
   const themeMode = usePreferencesStore((s) => s.themeMode);

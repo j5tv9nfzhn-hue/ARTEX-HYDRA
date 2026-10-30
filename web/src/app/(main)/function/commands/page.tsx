@@ -2,7 +2,10 @@
 
 import * as React from "react";
 
-import { BarChart3Icon, ChevronLeftIcon, ChevronRightIcon, Loader2Icon, SearchIcon, TerminalIcon } from "lucide-react";
+import Link from "next/link";
+
+import { BarChart3Icon, ChevronLeftIcon, ChevronRightIcon, Loader2Icon, SearchIcon } from "lucide-react";
+import { Masthead } from "@/components/editorial";
 import { useTranslations } from "next-intl";
 
 import { EmptyState } from "@/components/empty-state";
@@ -158,14 +161,16 @@ export default function CommandsPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <TerminalIcon className="h-5 w-5 text-muted-foreground" />
-          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
-          <Badge variant="secondary">{total}</Badge>
-        </div>
-      </div>
+      <Masthead
+        title={t("title")}
+        subtitle={t("subtitle")}
+        meta={
+          <>
+            共 <span className="tabular-nums">{total}</span> 条
+          </>
+        }
+        titleClassName="text-xl"
+      />
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
@@ -244,18 +249,19 @@ export default function CommandsPage() {
                   <TableHead className="w-[110px]">{t("colTool")}</TableHead>
                   <TableHead>{t("colInput")}</TableHead>
                   <TableHead className="w-[60px]">{t("colStatus")}</TableHead>
+                  <TableHead className="w-[52px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading && commands.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-12 text-center">
+                    <TableCell colSpan={7} className="py-12 text-center">
                       <Loader2Icon className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : commands.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="p-0">
+                    <TableCell colSpan={7} className="p-0">
                       <EmptyState illustration="terminal" title={t("empty")} />
                     </TableCell>
                   </TableRow>
@@ -295,6 +301,15 @@ export default function CommandsPage() {
                             {t("success")}
                           </Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="w-[52px] text-right">
+                        <Link
+                          href={`/function/commands/detail?id=${cmd.id}${taskFilter ? `&task=${encodeURIComponent(taskFilter)}` : ""}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-muted-foreground text-xs hover:text-primary hover:underline"
+                        >
+                          {t("detailTitle")}
+                        </Link>
                       </TableCell>
                     </TableRow>
                   ))

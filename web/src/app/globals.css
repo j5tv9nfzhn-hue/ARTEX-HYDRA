@@ -15,6 +15,10 @@
 /* 编辑排版层：只在 data-theme-preset="paper" 下生效，其余预设零影响 */
 @import "../styles/editorial.css";
 
+/* 双主题的「新主题」：只在 data-skin="editorial" 下生效（老主题零影响）。
+   令牌取 presets/paper.css，版式（卡片/表格/页签/侧栏/浮层）在这里翻译。 */
+@import "../styles/skin-editorial.css";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

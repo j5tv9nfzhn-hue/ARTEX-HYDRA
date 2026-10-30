@@ -15,6 +15,7 @@ import {
   TriangleAlertIcon,
   UploadIcon,
 } from "lucide-react";
+import { Masthead } from "@/components/editorial";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -190,6 +191,7 @@ export default function WorkspacePage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <Masthead title={t("title")} subtitle={t("subtitle")} titleClassName="text-xl" />
       {/* 页头：路径面包屑与操作。 */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1 text-sm">

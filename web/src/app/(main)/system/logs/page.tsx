@@ -13,6 +13,11 @@ import { MOCK } from "@/lib/mock/enabled";
 import type { LogLine } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+/** 去掉行首重复的 [tag] 前缀——tag 已经单独占一列。 */
+function bodyOf(l: LogLine) {
+  return l.tag && l.text.startsWith("[" + l.tag + "]") ? l.text.slice(l.tag.length + 2).trimStart() : l.text;
+}
+
 // Mock 演示没有后端 SSE，填入少量示例日志。
 const MOCK_LOGS: LogLine[] = [
   {
@@ -172,6 +177,9 @@ export default function LogsPage() {
     if (stick.current && !paused) bottom.current?.scrollIntoView();
   }, [filtered, paused]);
 
+  // 展开的日志行（一次只展开一行：串扰容易看错上下文）。
+  const [openSeq, setOpenSeq] = React.useState<number | null>(null);
+
   const counts = React.useMemo(() => {
     let warn = 0,
       error = 0;
@@ -247,17 +255,63 @@ export default function LogsPage() {
           {filtered.length === 0 ? (
             <EmptyState compact illustration="terminal" title={t("empty")} />
           ) : (
-            filtered.map((l) => {
-              const body =
-                l.tag && l.text.startsWith("[" + l.tag + "]") ? l.text.slice(l.tag.length + 2).trimStart() : l.text;
+            filtered.map((l, idx) => {
+              const body = bodyOf(l);
+              const expanded = openSeq === l.seq;
+              // 前后各取 3 行：定位问题时真正需要的是「这条之前发生了什么」。
+              const around = expanded ? filtered.slice(Math.max(0, idx - 3), idx + 4) : [];
               return (
-                <div key={l.seq} className="flex items-start gap-2 px-1 py-0.5 hover:bg-muted/40">
-                  <span className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", levelDot[l.level])} />
-                  <span className="shrink-0 tabular-nums text-muted-foreground">{fmtTime(l.ts)}</span>
-                  {l.tag && (
-                    <span className="shrink-0 rounded bg-muted px-1 text-xs text-foreground/70">{l.tag}</span>
-                  )}
-                  <span className={cn("min-w-0 whitespace-pre-wrap break-words", levelTone[l.level])}>{body}</span>
+                <div key={l.seq}>
+                  <button
+                    type="button"
+                    aria-expanded={expanded}
+                    onClick={() => setOpenSeq(expanded ? null : l.seq)}
+                    className={cn(
+                      "flex w-full items-start gap-2 px-1 py-0.5 text-left hover:bg-muted/40",
+                      expanded && "bg-muted/40",
+                    )}
+                  >
+                    <span className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", levelDot[l.level])} />
+                    <span className="shrink-0 tabular-nums text-muted-foreground">{fmtTime(l.ts)}</span>
+                    {l.tag && (
+                      <span className="shrink-0 rounded bg-muted px-1 text-xs text-foreground/70">{l.tag}</span>
+                    )}
+                    <span className={cn("min-w-0 whitespace-pre-wrap break-words", levelTone[l.level])}>{body}</span>
+                  </button>
+                  {expanded ? (
+                    <div
+                      data-editorial="evidence"
+                      className="mx-1 mb-1 rounded-[2px] border-border/70 border-l-2 bg-muted/20 px-3 py-2"
+                    >
+                      <div className="mb-1 flex flex-wrap items-center gap-2 text-[10.5px] text-muted-foreground">
+                        <span>{t("contextAround", { n: 3 })}</span>
+                        <span className="tabular-nums">#{l.seq}</span>
+                        <span>{l.level}</span>
+                        {l.tag ? <span>{l.tag}</span> : null}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="ml-auto h-6 px-1.5 text-[10.5px]"
+                          onClick={() => void navigator.clipboard?.writeText(l.text)}
+                        >
+                          {t("copyLine")}
+                        </Button>
+                      </div>
+                      {around.map((x) => (
+                        <div
+                          key={x.seq}
+                          className={cn(
+                            "flex items-start gap-2 whitespace-pre-wrap break-words",
+                            x.seq === l.seq && "rounded-[2px] bg-background/70 font-semibold",
+                          )}
+                        >
+                          <span className="shrink-0 text-muted-foreground tabular-nums">{fmtTime(x.ts)}</span>
+                          <span className={cn("min-w-0", levelTone[x.level])}>{bodyOf(x)}</span>
+                        </div>
+                      ))}
+                      <div className="mt-1 text-[10.5px] text-muted-foreground">{t("stackNote")}</div>
+                    </div>
+                  ) : null}
                 </div>
               );
             })

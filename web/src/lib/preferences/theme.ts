@@ -8,6 +8,31 @@ export const THEME_MODE_VALUES = THEME_MODE_OPTIONS.map((o) => o.value);
 export type ThemeMode = (typeof THEME_MODE_VALUES)[number];
 export type ResolvedThemeMode = "light" | "dark";
 
+// ── 外观（双主题）────────────────────────────────────────────────────────────
+//
+// 「外观」与「主题预设」是两个维度，不要混：
+//
+//   skin = classic    老主题。九套预设（默认 / 琥珀终端 / 粗野主义 / 深空指挥室 /
+//                     矩阵绿 / 纸本 / 柔和流行 / 柑橘 / 双墨）各自保持改造前的观感，
+//                     一条样式都不动。
+//   skin = editorial  新主题「纸本」。整套界面换成调试版前端那套语言：
+//                     纸底墨字、发丝线、下划线页签、等宽数字、无卡片、无阴影。
+//                     颜色固定取 presets/paper.css（与调试版前端逐值一致），
+//                     版式由 styles/skin-editorial.css 负责。
+//
+// 两者都存在 cookie 里；切回 classic 时，会恢复切走之前选的那套预设。
+
+export const SKIN_OPTIONS = [
+  { label: "经典", value: "classic", hint: "原本的九套预设" },
+  { label: "纸本", value: "editorial", hint: "书刊排版 · 发丝线 · 等宽数字" },
+] as const;
+
+export const SKIN_VALUES = SKIN_OPTIONS.map((o) => o.value);
+export type Skin = (typeof SKIN_VALUES)[number];
+
+/** 新主题固定使用的令牌预设。 */
+export const EDITORIAL_SKIN_PRESET = "paper" as const;
+
 // --- generated:themePresets:start ---
 
 export const THEME_PRESET_OPTIONS = [

@@ -7,21 +7,17 @@ import { HistoryIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { CheckpointTimeline } from "@/components/checkpoint-timeline";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 
 export function TimelineTab({ taskId, onReverted }: { taskId: string; onReverted?: () => void }) {
   const t = useTranslations("taskDetail.timeline");
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <HistoryIcon className="size-4" /> {t("title")}
-        </CardTitle>
-        <CardDescription>{t("description")}</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Sheet>
+      <SheetHead icon={HistoryIcon} title={t("title")} hint={t("description")} />
+      <div className="px-4 pt-1">
         <CheckpointTimeline scope="task" id={taskId} onReverted={onReverted} />
-      </CardContent>
-    </Card>
+      </div>
+      <SheetFoot left={t("foot")} right={t("footHint")} />
+    </Sheet>
   );
 }

@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import Link from "next/link";
+
 import {
   Loader2Icon,
   PlugZapIcon,
@@ -1211,6 +1213,16 @@ function ProviderCard({
                   }}
                 >
                   {p.is_default ? t("card.active") : t("card.activate")}
+                </Button>
+                {/* 详情页：端点、参数、近 30 天用量与回退链位置。 */}
+                <Button asChild size="icon" variant="ghost" className="size-7" title={t("card.detailAria")}>
+                  <Link
+                    href={`/system/llm/detail?id=${encodeURIComponent(p.id)}`}
+                    aria-label={t("card.detailAria")}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ArrowUpRightIcon className="size-3.5" />
+                  </Link>
                 </Button>
                 {/* 激活中的、以及供应商下最后一条模型都能删：删完激活位自动
                     交接，一条不剩就留个空供应商等以后再加。 */}

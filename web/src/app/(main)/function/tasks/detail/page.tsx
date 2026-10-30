@@ -6,14 +6,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
-  ActivityIcon,
   ArchiveIcon,
   ArrowLeftIcon,
   BrainIcon,
   CheckIcon,
   CircleAlertIcon,
   CrosshairIcon,
-  FlameIcon,
+  MessagesSquareIcon,
   PauseIcon,
   PlayIcon,
   ShieldAlertIcon,
@@ -22,6 +21,7 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { KpiRow } from "@/components/editorial";
 import { StatusBadge } from "@/components/status-badge";
 import { TaskLLMProfileChain } from "@/components/task-llm-profile-chain";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -69,19 +69,22 @@ import { SessionsTab } from "./_tabs/sessions-tab";
 import { SoftwareRETab } from "./_tabs/software-re-tab";
 import { TimelineTab } from "./_tabs/timeline-tab";
 
-// Tactical tab clusters: preserves all 11 tabs and their URL/value contracts while
-// grouping them visually by operational mental model (Command | Findings | Surface | Governance).
-const SOFTWARE_RE_TAB_CLUSTERS = [
-  ["software", "sessions", "overview", "graph"],
-  ["report"],
-  ["intercept", "timeline"],
-] as const;
+// 页签顺序沿用原来的分簇顺序，只是不再画簇与簇之间的竖线：
+// 纸本主题里，页签是书页上的下划线索引，不是一排按钮。
+const SOFTWARE_RE_TABS = ["software", "sessions", "overview", "graph", "report", "intercept", "timeline"] as const;
 
-const TAB_CLUSTERS = [
-  ["sessions", "overview", "graph"],
-  ["findings", "retests", "report"],
-  ["assets", "coverage", "broadcast"],
-  ["intercept", "timeline"],
+const WEB_TABS = [
+  "sessions",
+  "overview",
+  "graph",
+  "findings",
+  "retests",
+  "report",
+  "assets",
+  "coverage",
+  "broadcast",
+  "intercept",
+  "timeline",
 ] as const;
 
 function taskProfileIDs(task: Task): string[] {
@@ -415,85 +418,25 @@ function TaskDetailInner() {
           <AlertDescription>{t("analysisDomain.hint")}</AlertDescription>
         </Alert>
       )}
-      {/* Unified Mission Control Header */}
-      <header className="sticky top-0 z-10 flex flex-col gap-2 border-border/80 border-b bg-background/90 px-4 py-2 backdrop-blur-md lg:px-6">
-        <div className="flex flex-wrap items-center gap-2">
+      {/* ── 封面：工具行 → 书眉 → 数字行 ────────────────────────────────────
+          纸本主题下这一块就是任务册的封面：编号/分类/状态一行，
+          26px 标题压住目标，下面一条五格数字行。 */}
+      <header className="border-border/80 border-b">
+        <div className="flex flex-wrap items-center gap-2 px-4 pt-2 lg:px-6">
           <SidebarTrigger className="-ml-1" />
           <Button asChild variant="ghost" size="icon-sm" className="size-7 rounded-lg">
             <Link href="/function/tasks">
               <ArrowLeftIcon className="size-4" />
             </Link>
           </Button>
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <h1 className="min-w-0 truncate font-semibold text-sm tracking-tight" title={task.name || task.description}>
-              {task.name || task.description}
-            </h1>
-            <code className="hidden shrink-0 rounded-md border border-border/60 bg-muted/70 px-1.5 py-0.5 font-mono text-xs text-muted-foreground sm:inline">
-              #{task.id}
-            </code>
-            <Badge variant="outline">
-              {t(task.analysis_domain === "software_re" ? "analysisDomain.software" : "analysisDomain.web")}
-            </Badge>
-            <StatusBadge domain={terminal ? "task" : "engine"} value={terminal ? task.status : engineMode} dot />
-            {openBranches > 0 && (
-              <Badge variant="destructive" title={t("openBranchesTip")}>
-                {t("openBranches", { n: openBranches })}
-              </Badge>
-            )}
-          </div>
-
-          {/* Live Mission Pulse Pills (Quick-Switch Telemetry) */}
-          <div className="hidden items-center gap-1.5 md:flex">
-            {task.analysis_domain !== "software_re" && (
-              <button
-                type="button"
-                onClick={() => setTab("findings")}
-                className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 font-medium text-xs tabular-nums transition-colors",
-                  totalFindings > 0
-                    ? "border-rose-500/35 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 dark:text-rose-400"
-                    : "border-border/70 bg-muted/40 text-muted-foreground hover:bg-accent hover:text-foreground",
-                )}
-                title={t("tabs.findings")}
-              >
-                <FlameIcon className="size-3.5" />
-                <span>{t("tabs.findings")}</span>
-                <span className="font-semibold">{totalFindings}</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setTab("graph")}
-              className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 font-medium text-xs tabular-nums transition-colors",
-                inFlightCount > 0
-                  ? "border-sky-500/35 bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 dark:text-sky-400"
-                  : "border-border/70 bg-muted/40 text-muted-foreground hover:bg-accent hover:text-foreground",
-              )}
-              title={t("tabs.graph")}
-            >
-              <ActivityIcon className="size-3.5" />
-              <span>Worker</span>
-              <span className="font-semibold">{inFlightCount}</span>
-            </button>
-
-            {goalsTotal > 0 && (
-              <button
-                type="button"
-                onClick={() => setTab("overview")}
-                className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-border/70 bg-muted/40 px-2.5 font-medium text-muted-foreground text-xs tabular-nums transition-colors hover:bg-accent hover:text-foreground"
-                title={t("tabs.overview")}
-              >
-                <CrosshairIcon className="size-3.5 text-primary" />
-                <span>
-                  {goalsMet}/{goalsTotal}
-                </span>
-              </button>
-            )}
-          </div>
-
+          <div className="min-w-0 flex-1" />
           <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
+          <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 rounded-lg px-2.5 text-xs">
+            <Link href={`/function/tasks/session?id=${encodeURIComponent(id)}`}>
+              <MessagesSquareIcon className="size-3.5" data-icon="inline-start" />
+              <span className="hidden sm:inline">主 Agent 对话</span>
+            </Link>
+          </Button>
           <TaskLLMControl task={task} profiles={profiles} onUpdated={loadTask} />
 
           {interceptPendingCount > 0 && (
@@ -562,43 +505,98 @@ function TaskDetailInner() {
           </Button>
         </div>
 
-        {/* Sub-row: Compact target goal pill + Clustered Tactical Tabs */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="no-scrollbar min-w-0 flex-1 overflow-x-auto">
-            <TabsList variant="default" className="h-8 min-w-max gap-0.5 bg-muted/55 p-0.5">
-              {(task.analysis_domain === "software_re" ? SOFTWARE_RE_TAB_CLUSTERS : TAB_CLUSTERS).map(
-                (cluster, clusterIdx) => (
-                  <React.Fragment key={cluster[0]}>
-                    {clusterIdx > 0 && <span className="mx-1 h-4 w-px shrink-0 self-center bg-border/80" />}
-                    {cluster.map((value) => (
-                      <TabsTrigger key={value} value={value} className="h-7 px-2.5 text-xs">
-                        {t(`tabs.${value}`)}
-                        {value === "findings" && totalFindings > 0 && (
-                          <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500/20 px-1 font-mono font-semibold text-xs text-rose-600 leading-none dark:text-rose-400">
-                            {totalFindings > 99 ? "99+" : totalFindings}
-                          </span>
-                        )}
-                        {value === "intercept" && interceptPendingCount > 0 && (
-                          <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-500 px-1 font-semibold text-xs text-white leading-none">
-                            {interceptPendingCount > 99 ? "99+" : interceptPendingCount}
-                          </span>
-                        )}
-                      </TabsTrigger>
-                    ))}
-                  </React.Fragment>
-                ),
-              )}
-            </TabsList>
+        {/* 书眉：编号 · 分类 · 状态 / 标题 / 目标 */}
+        <div className="flex flex-col gap-1 px-4 pt-3 pb-2 lg:px-6">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground tabular-nums">
+            <code className="rounded-[2px] border border-border/60 px-1 py-px font-mono text-[10px]">#{task.id}</code>
+            <span>{t(task.analysis_domain === "software_re" ? "analysisDomain.software" : "analysisDomain.web")}</span>
+            <span className="h-2 w-px bg-border" />
+            <StatusBadge domain={terminal ? "task" : "engine"} value={terminal ? task.status : engineMode} dot />
+            {openBranches > 0 && (
+              <span className="text-amber-600 dark:text-amber-400" title={t("openBranchesTip")}>
+                {t("openBranches", { n: openBranches })}
+              </span>
+            )}
+            {task.created_at && <span className="h-2 w-px bg-border" />}
+            {task.created_at && <span>{task.created_at}</span>}
           </div>
+          <h1 className="font-display text-[26px] leading-tight font-semibold tracking-[-0.02em]" title={task.name || task.description}>
+            {task.name || task.description}
+          </h1>
           {task.goal && (
-            <div
-              className="hidden max-w-md items-center gap-1.5 truncate rounded-lg border border-border/60 bg-muted/35 px-2.5 py-1 text-muted-foreground text-xs xl:flex"
-              title={task.goal}
-            >
-              <CrosshairIcon className="size-3 shrink-0 text-primary" />
-              <span className="truncate">{task.goal}</span>
-            </div>
+            <p className="flex items-start gap-1.5 text-[13px] leading-relaxed text-muted-foreground">
+              <CrosshairIcon className="mt-[3px] size-3.5 shrink-0 text-primary" />
+              <span className="line-clamp-2">{task.goal}</span>
+            </p>
           )}
+        </div>
+
+        {/* 数字行：五格，没有框，只靠竖线分开 */}
+        <KpiRow className="mx-4 mb-3 grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:mx-6 lg:grid-cols-5">
+          <button
+            type="button"
+            onClick={() => setTab("overview")}
+            className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+          >
+            <span className="text-[10px] tracking-[0.08em] text-muted-foreground">目标达成</span>
+            <span className="font-semibold text-[22px] leading-none tabular-nums">
+              {goalsMet}
+              <span className="ml-0.5 font-normal text-[12px] text-muted-foreground">/ {goalsTotal}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("graph")}
+            className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+          >
+            <span className="text-[10px] tracking-[0.08em] text-muted-foreground">在途 Worker</span>
+            <span className="font-semibold text-[22px] leading-none tabular-nums">{inFlightCount}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("findings")}
+            className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+          >
+            <span className="text-[10px] tracking-[0.08em] text-muted-foreground">已确认发现</span>
+            <span className="font-semibold text-[22px] leading-none tabular-nums">{totalFindings}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("intercept")}
+            className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+          >
+            <span className="text-[10px] tracking-[0.08em] text-muted-foreground">待审批</span>
+            <span className="font-semibold text-[22px] leading-none tabular-nums">{interceptPendingCount}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("timeline")}
+            className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+          >
+            <span className="text-[10px] tracking-[0.08em] text-muted-foreground">未收口分支</span>
+            <span className="font-semibold text-[22px] leading-none tabular-nums">{openBranches}</span>
+          </button>
+        </KpiRow>
+
+        {/* 页签：下划线索引，吸顶 */}
+        <div className="no-scrollbar sticky top-0 z-10 overflow-x-auto bg-background/92 px-4 pt-1 backdrop-blur-md lg:px-6">
+          <TabsList variant="line" className="h-8 min-w-max gap-4 border-0 bg-transparent p-0">
+            {(task.analysis_domain === "software_re" ? SOFTWARE_RE_TABS : WEB_TABS).map((value) => (
+              <TabsTrigger key={value} value={value} className="h-8 px-0 text-xs">
+                {t(`tabs.${value}`)}
+                {value === "findings" && totalFindings > 0 && (
+                  <span className="ml-1 text-[10px] font-semibold text-rose-600 tabular-nums dark:text-rose-400">
+                    {totalFindings > 99 ? "99+" : totalFindings}
+                  </span>
+                )}
+                {value === "intercept" && interceptPendingCount > 0 && (
+                  <span className="ml-1 text-[10px] font-semibold text-amber-600 tabular-nums dark:text-amber-400">
+                    {interceptPendingCount > 99 ? "99+" : interceptPendingCount}
+                  </span>
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
         </div>
       </header>
 
