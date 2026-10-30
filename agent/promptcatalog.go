@@ -126,12 +126,26 @@ const ReporterDefaultPrompt = `你是一个授权渗透测试系统里的**漏�
 // source while the same string stays as the in-code render fallback.
 func BuiltinPromptSeeds() map[string]string {
 	return map[string]string{
+		// ── 新调度层（coord，默认模式）────────────────────────────────────
+		// 这两个 key 与 prompts_coord.go 的 PromptKeyCoordRoot/Child 必须逐字
+		// 相同：它们是 renderSystem 查覆盖、seedPrompts 播种、pgResetPrompt
+		// 恢复默认这三处的共同索引。
+		PromptKeyCoordRoot:  rootTmpl,
+		PromptKeyCoordChild: childTmpl,
+
+		// ── 旧四角色 ──────────────────────────────────────────────────────
+		// 仍然保留：ARTEX_SCHED=legacy 时它们才会被真正调度，截图/排障也还
+		// 需要能改。coord 模式下它们不参与运行，但删掉会让 legacy 回退路径
+		// 失去可编辑提示词。B4 删除旧骨架时一并移除。
 		"goals":     goalsDefaultTmpl,
 		"planner":   plannerDefaultTmpl,
 		"mainagent": mainAgentDefaultTmpl,
 		"worker":    workerDefaultTmpl,
-		"auto":      autoDefaultTmpl,
-		"pentest":   pentestDefaultTmpl,
-		"reviewer":  reviewerDefaultTmpl,
+
+		// ── 独立/自定义角色 ───────────────────────────────────────────────
+		"auto":    autoDefaultTmpl,
+		"pentest": pentestDefaultTmpl,
+		// reviewer 已下线（agent/reviewer.go 是 //go:build decommissioned 桩），
+		// 它的提示词常量随之消失。这里不能再列出该 key，否则本行是悬空引用。
 	}
 }

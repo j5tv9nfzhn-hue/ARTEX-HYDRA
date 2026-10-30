@@ -3,13 +3,14 @@ package agent
 // 协调器工具面 —— 取代旧架构里 Planner 的 add_intent / kill_work / steer_work
 // 与 Worker 的交接单这三套控制接口。
 //
-// 设计要点：**只给四个动作**，且每个动作都对应一次真实的状态迁移，不提供"设置字段"
-// 式的松接口。工具越少，模型选错的概率越低，也不需要工具路由去裁剪工具面。
+// 设计要点：每个动作都对应一次真实的状态迁移，不提供"设置字段"式的松接口。
+// 工具越少，模型选错的概率越低，也不需要工具路由去裁剪工具面。
 //
 //	delegate_task    派一个子 agent（唯一的并行来源）
 //	send_to_agent    给在跑的 agent 追加 query / instruction / information
 //	wait_for_agents  等一次（同一 turn 只允许一次）
-//	agents_graph     看整张图（只读）
+//	agents_graph     看整张图（只读，含各 agent 交卷的结构化产物 id）
+//	stop_agent       停一个子 agent（不是停整棵树）
 //
 // 收尾动作在 root/child 两套工具面的尾部分别接 finish_task / submit_report。
 
@@ -32,6 +33,7 @@ const (
 	ToolSendToAgent    = "send_to_agent"
 	ToolWaitForAgents  = "wait_for_agents"
 	ToolAgentsGraph    = "agents_graph"
+	ToolStopAgent      = "stop_agent"
 	ToolSubmitReport   = "submit_report"
 	ToolFinishTask     = "finish_task"
 )
@@ -68,6 +70,9 @@ func (t *ToolSet) ChildCoordTools() []actool.CoreTool {
 		t.sendToAgent(),
 		t.waitForAgents(),
 		t.agentsGraph(),
+		// 停单个子代理。子代理也拿得到：它能停自己派生的下级，
+		// 亲缘判定保证越不了级（见 isDescendantOf）。
+		t.stopAgent(),
 		t.submitReport(),
 	}
 }
@@ -267,6 +272,98 @@ func (t *ToolSet) waitForAgents() actool.CoreTool {
 
 // ---------- agents_graph ----------
 
+// isDescendantOf 判断 target 是否在 ancestor 的子树里（含间接后代）。
+//
+// 沿 ParentID 向上走，遇空即到根。maxDepth 兜底防环：Coordinator 的父子边
+// 由 Register 建立，理论上无环，但一个错误的 Write 可能就是无限循环——
+// 这条路径在工具调用里，卡住会让整个 agent 循环停摆。
+func isDescendantOf(c *Coordinator, target, ancestor string) bool {
+	if target == "" || ancestor == "" || target == ancestor {
+		return false
+	}
+	const maxDepth = 64
+	cur := target
+	for i := 0; i < maxDepth; i++ {
+		v, ok := c.View(cur)
+		if !ok {
+			return false
+		}
+		if v.ParentID == "" {
+			return false // 走到根仍没遇到 ancestor
+		}
+		if v.ParentID == ancestor {
+			return true
+		}
+		cur = v.ParentID
+	}
+	return false
+}
+
+// stopAgent 停掉一个在跑的子 agent。
+//
+// 为什么必须有这个工具：Coordinator.Stop 一直存在，但没暴露成工具，于是
+// "一个子代理跑飞了"这件事在根的视角里无解——它只能干等 wait_for_agents 返回，
+// 或者直接 finish_task 把整张图关掉。strix 的 stop_agent、opencode 的
+// task_cancel 都独立成工具，正是为了让"停一个分支"不必等于"停整棵树"。
+//
+// 语义边界：
+//   - 只能停**自己的后代**（RootID 必须一致），否则根能停别人的图；
+//   - 停根自己无意义（那是 finish_task 的职责），直接拒绝；
+//   - 已终结的 agent 会被 Stop 拒绝（unknown/已关闭），照实报错不复述。
+func (t *ToolSet) stopAgent() actool.CoreTool {
+	desc := "停掉一个正在跑的子 agent（不是停整个任务）。它会收到取消信号，状态记为 stopped，\n" +
+		"已经在库里的产出保留。停单个分支用它；要结束整个任务用 finish_task。\n" +
+		"停完先看 agents_graph 确认状态，不要立刻重发同一个任务——先弄清它为什么需要被停。"
+	return t.writeObjTool(ToolStopAgent, desc,
+		obj(map[string]any{
+			"agent_id": str("要停的 agent id（agents_graph 里看到的，delegate_task 返回的）。"),
+			"reason":   str("停它的原因，一句话。会记进该 agent 的状态与活动流，供事后再看。"),
+		}, "agent_id", "reason"),
+		func(ctx context.Context, in json.RawMessage) (actool.Result, error) {
+			var a struct {
+				AgentID string `json:"agent_id"`
+				Reason  string `json:"reason"`
+			}
+			if err := json.Unmarshal(in, &a); err != nil {
+				return actool.Errorf("参数解析失败：" + err.Error()), nil
+			}
+			sp, err := SpawnerFrom(ctx)
+			if err != nil {
+				return actool.Errorf("当前没有可用的调度层"), nil
+			}
+			target := strings.TrimSpace(a.AgentID)
+			if target == "" {
+				return actool.Errorf("agent_id 不能为空"), nil
+			}
+			me := AgentIDFrom(ctx)
+			if target == me {
+				return actool.Errorf("不能用 stop_agent 停自己：结束整个任务请用 finish_task"), nil
+			}
+			// 只允许停自己的后代：跨图操作会让"谁负责派发"失去唯一答案。
+			// AgentView.Root 是 bool（"它本身是不是根"），不是根 id，所以判定
+			// 亲缘关系必须沿 ParentID 往上走，不能拿 Root 当 id 比。
+			if _, ok := sp.Coord.View(target); !ok {
+				return actool.Errorf("找不到 agent " + target + "：先用 agents_graph 看当前有哪些"), nil
+			}
+			if !isDescendantOf(sp.Coord, target, me) {
+				return actool.Errorf(target + " 不是你派生的 agent，不能停"), nil
+			}
+			reason := strings.TrimSpace(a.Reason)
+			if reason == "" {
+				reason = "编排者主动停止"
+			}
+			if err := sp.Coord.Stop(target, reason); err != nil {
+				return actool.Errorf(err.Error()), nil
+			}
+			return jsonResult(map[string]any{
+				"stopped":  target,
+				"reason":   reason,
+				"note":     "状态已置为 stopped；它的历史产出保留，可读 agents_graph 看结论。",
+				"remaining": sp.Coord.ActiveCount(),
+			})
+		})
+}
+
 func (t *ToolSet) agentsGraph() actool.CoreTool {
 	desc := "看整张 agent 图：谁在跑、谁已交卷、各自结论与消耗。派活前后各看一次即可，" +
 		"不要用它代替 wait_for_agents。"
@@ -300,6 +397,33 @@ func (t *ToolSet) agentsGraph() actool.CoreTool {
 					row["outcome"] = v.Brief.Outcome
 					row["summary"] = preview(v.Brief.Summary, 240)
 					row["open_items"] = len(v.Brief.OpenItems)
+					// 交卷的**结构化产物**优先于自述：summary 是被截断的散文，
+					// 而 facts / evidence / asset_ids 是能拿去核对的东西。
+					// strix 的 _filed_reports_by 读报告库而不是读 narrative，
+					// 理由相同——父 agent 要据此行动，就不能只信"我说我做完了"。
+					if len(v.Brief.Facts) > 0 {
+						facts := make([]map[string]any, 0, len(v.Brief.Facts))
+						for i, f := range v.Brief.Facts {
+							if i >= 8 { // 上限：图是概览，不是全文
+								break
+							}
+							row2 := map[string]any{"summary": preview(f.Summary, 120)}
+							if f.IntentID != 0 {
+								row2["intent_id"] = f.IntentID
+							}
+							if len(f.AssetIDs) > 0 {
+								row2["asset_ids"] = f.AssetIDs
+							}
+							facts = append(facts, row2)
+						}
+						row["facts"] = facts
+						row["facts_total"] = len(v.Brief.Facts)
+					}
+					if len(v.Brief.Evidence) > 0 {
+						row["evidence_total"] = len(v.Brief.Evidence)
+						row["evidence"] = preview(strings.Join(v.Brief.Evidence, " | "), 200)
+					}
+					row["has_counter_view"] = v.Brief.CounterView != ""
 				}
 				if v.LastError != "" {
 					row["last_error"] = preview(v.LastError, 200)

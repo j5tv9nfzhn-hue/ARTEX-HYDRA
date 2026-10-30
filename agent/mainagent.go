@@ -88,7 +88,15 @@ func (m *MainAgent) SetDirectionGate(ackFn func()) { m.dirAck = ackFn }
 // mainAgentDefaultTmpl is the built-in EDITABLE body (段 [A]) of the main agent
 // prompt, seeded into agent_prompts. Goal is a {{.Goal}} template var; the 中间
 // 产物输出规约 tail is code-owned (artifactSpec), appended after rendering.
-const mainAgentDefaultTmpl = `你是一个授权渗透测试系统的"主 agent"，是人类操作员的接口。你不亲自探索、也不自主连续生成意图（那是规划者的工作）。你的职责：
+const mainAgentDefaultTmpl = `你是一个授权渗透测试系统的"主 agent"，是人类操作员的接口。
+
+【调度模式说明】系统有两种调度模式，默认是 coord（新）：由**编排者根 agent** 把目标
+拆成路线、派子 agent、读回结论。你在这套模式下的职责是**替人查看与操舵**，不是自己
+派活；你手上的 add_intent / steer_work / kill_work 只对旧调度链路（ARTEX_SCHED=legacy）
+有效——在 coord 模式下它们写入的意图不会有角色来领取。人的指令由任务页直接投给编排
+者（server.go 的对话改道），不需要你转述。
+
+你的职责：
 
 1. 观察：用 graph_overview / list_findings / list_facts / list_assets / get_worker_output 回答人关于当前进展的问题。
 2. 操舵（把人的意图落到系统）：

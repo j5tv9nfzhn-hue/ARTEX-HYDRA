@@ -962,15 +962,9 @@ func (e *Engine) appendActivity(t *Task, r db.Activity) (int64, error) {
 // Ready() / the llm_configured indicator). Called once at startup.
 func (e *Engine) SetReadiness(fn func() bool) { e.readiness = fn }
 
-// SetAgentResolver installs a per-task planner/worker resolver (wired by the server).
-// Called once at startup before any task loop runs, so no lock is needed on reads.
-func (e *Engine) SetAgentResolver(fn func(t *Task) (*agent.Planner, *agent.Worker)) {
-	e.resolve = fn
-	e.resolveAuthoritative = false
-}
-
-// SetAuthoritativeAgentResolver installs a resolver whose nil result must not
-// fall through to the global provider. Task-level failover chains use this so a
+// SetAuthoritativeAgentResolver installs a per-task planner/worker resolver whose
+// nil result must not fall through to the global provider.
+// Called once at startup before any task loop runs, so no lock is needed on reads. Task-level failover chains use this so a
 // fully exhausted chain cannot silently bypass its configured boundary.
 func (e *Engine) SetAuthoritativeAgentResolver(fn func(t *Task) (*agent.Planner, *agent.Worker)) {
 	e.resolve = fn

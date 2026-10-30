@@ -197,6 +197,37 @@ var DecommissionTable = []DecomEntry{
 	},
 }
 
+// ── B4 执行现状（2026-10-30 审计后逐项核对，勿凭本表盲目删除）───────────
+//
+// 上表是按「新架构跑通后应删什么」写的。核对代码后发现其中若干项**不能直接
+// 按字面执行**，因为它们在 coord 模式下仍有活跃调用方。这里把实测结果记下来，
+// 免得下一个人再从头评估一遍：
+//
+//	可以删（已删）：Engine.SetAgentResolver —— 零外部引用，resolver 只经
+//	  SetAuthoritativeAgentResolver 安装。
+//
+//	不能删 —— 有活跃调用链：
+//	  · runIntent         被 server/intent_intervention.go:150 的
+//	                      POST /api/tasks/{id}/intents/{iid}/messages 依赖，
+//	                      那是界面上"给某条 work 发消息"的功能。
+//	  · runDetachedIntent 同上（它就是上面那个端点的执行体）。
+//	  · plannerLoop / workerLoop / runWorkerStep / claimNext
+//	                      仅被 Engine.Run 的 legacy 分支调用，而该分支在
+//	                      coord 下不可达；删除它们是**纯收益**，但四者共约
+//	                      400 行且互相引用，必须整体删除、不能分批——
+//	                      这在禁止编译验证的环境里风险过高，留给能跑 go build
+//	                      的环境一次做完。
+//	  · ToolSet.Frontier() 是 ExplorationStore 的通用查询，服务于
+//	                      GET /api/exploration/frontier 与 graph_overview，
+//	                      与规划器无关，**不是**旧架构遗留。
+//	  · snapshotFor/SetAuthoritativeAgentResolver/dirGate/bumpDirection/AckDispatch
+//	                      仍被 task_llm.go 的 agent 装配与 engine 的控制流调用。
+//
+//	风险已记录：Task.Notify() 在 coord 下只往 pendingTriggers 里堆事件，
+//	没有消费者会 drainTriggers——但它被 20+ 处调用，且其中多数是"某个写操作
+//	之后叫醒调度"的通用习惯。删掉它需要逐个判断该处是否另有唤醒路径，
+//	这是 B4 真正的难点，不是删函数本身。
+
 // DecommissionSummary 统计清单规模，供提交信息与进度看板使用。
 func DecommissionSummary() (files, lines int) {
 	seen := make(map[string]bool, len(DecommissionTable))
