@@ -18,13 +18,13 @@ import { useTranslations } from "next-intl";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { KpiBand, KpiRow, Masthead, SectionHead } from "@/components/editorial";
+import { Sheet } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { useNewFindingsAlert } from "@/components/finding-alert";
 import { LiveDot } from "@/components/live-dot";
 import { Stagger } from "@/components/motion";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Progress } from "@/components/ui/progress";
 import { usePolling } from "@/hooks/use-polling";
@@ -487,7 +487,7 @@ export default function DashboardPage() {
         {/* 主 KPI:活跃任务(running 大排印,数字走 Space Grotesk + 等宽数字)。
             进场用 .animate-fade-up 直接挂 Card(不包 div)—— 该卡是栅格子项、要跟着
             右侧矩阵拉伸对齐,包装层会把"卡片本身"替换成 div、破坏等高。 */}
-        <Card className="animate-fade-up justify-between gap-4 p-5">
+        <Sheet className="animate-fade-up justify-between gap-4 p-5">
           <div className="flex items-center gap-1.5 font-medium text-xs text-muted-foreground uppercase tracking-widest">
             <TargetIcon className="size-3" /> {t("activeTasks")}
           </div>
@@ -515,22 +515,22 @@ export default function DashboardPage() {
             )}
             {tasks.length === 0 && <span className="text-muted-foreground">{t("noTasks")}</span>}
           </div>
-        </Card>
+        </Sheet>
 
         {/* 次级紧凑指标 2×2:确认发现 / 资产节点 / 流量交互 / Token 用量。
             整块作为一个"面板"错峰进场(60ms):FadeIn 的包装层直接带上原本的 grid 类,
             与不包时的布局逐像素一致,不引入等高问题。 */}
         <KpiRow delay={60} className="grid grid-cols-2 gap-3">
           {/* 确认发现 */}
-          <Card size="sm" className="gap-1">
-            <CardHeader className="pb-0">
+          <Sheet className="gap-1 py-3">
+            <div className="grid auto-rows-min items-start gap-1 px-3 pb-0">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <BugIcon className="size-3" /> {t("confirmedFindings")}
               </div>
               <div className="font-display font-semibold text-2xl tabular-nums leading-none">{findings.length}</div>
-            </CardHeader>
+            </div>
             {/* 严重度色统一走 lib/severity.ts(修旧版 critical=rose-500 / high=red-400 的亮度倒挂) */}
-            <CardContent className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs">
+            <div className="flex flex-wrap gap-x-2 gap-y-0.5 px-3 text-xs">
               <span className={severityTextClass("critical")}>
                 {tStatus("severity.critical")} {findingsBySev.critical}
               </span>
@@ -543,29 +543,29 @@ export default function DashboardPage() {
               <span className={severityTextClass("low")}>
                 {tStatus("severity.low")} {findingsBySev.low}
               </span>
-            </CardContent>
-          </Card>
+            </div>
+          </Sheet>
 
           {/* 资产节点 */}
-          <Card size="sm" className="gap-1">
-            <CardHeader className="pb-0">
+          <Sheet className="gap-1 py-3">
+            <div className="grid auto-rows-min items-start gap-1 px-3 pb-0">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <NetworkIcon className="size-3" /> {t("assetNodes")}
               </div>
               <div className="font-display font-semibold text-2xl tabular-nums leading-none">{totalAssets}</div>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">{t("crossTaskShared")}</CardContent>
-          </Card>
+            </div>
+            <div className="px-3 text-xs text-muted-foreground">{t("crossTaskShared")}</div>
+          </Sheet>
 
           {/* 流量交互 */}
-          <Card size="sm" className="gap-1">
-            <CardHeader className="pb-0">
+          <Sheet className="gap-1 py-3">
+            <div className="grid auto-rows-min items-start gap-1 px-3 pb-0">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <ActivityIcon className="size-3" /> {t("trafficExchanges")}
               </div>
               <div className="font-display font-semibold text-2xl tabular-nums leading-none">{traffic.length}</div>
-            </CardHeader>
-            <CardContent className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            </div>
+            <div className="flex items-center gap-1.5 px-3 text-xs text-muted-foreground">
               {settings?.traffic_capture ? (
                 <>
                   <LiveDot />
@@ -574,32 +574,32 @@ export default function DashboardPage() {
               ) : (
                 <span>{t("captureOff")}</span>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </Sheet>
 
           {/* LLM 用量 */}
-          <Card size="sm" className="gap-1">
-            <CardHeader className="pb-0">
+          <Sheet className="gap-1 py-3">
+            <div className="grid auto-rows-min items-start gap-1 px-3 pb-0">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <ZapIcon className="size-3" /> {t("tokenUsage")}
               </div>
               <div className="font-display font-semibold text-2xl tabular-nums leading-none">
                 {fmtTokens(displayedTokens.input + displayedTokens.output) || "—"}
               </div>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">
+            </div>
+            <div className="px-3 text-xs text-muted-foreground">
               {t("statTokenDetail", {
                 input: fmtTokens(displayedTokens.input),
                 cache: fmtTokens(displayedTokens.cacheRead),
                 output: fmtTokens(displayedTokens.output),
               })}
-            </CardContent>
-          </Card>
+            </div>
+          </Sheet>
         </KpiRow>
       </KpiBand>
 
       {/* ── Row 2: LLM Token 消耗 ── */}
-      <Card className="animate-fade-up p-4" style={{ animationDelay: "120ms" }}>
+      <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "120ms" }}>
         {/* Header */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold">
@@ -856,12 +856,12 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-      </Card>
+      </Sheet>
 
       {/* ── Row 3: 活动流 | 发现(不等宽:活动流更宽,减少摘要截断) ── */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         {/* 活动流 */}
-        <Card className="animate-fade-up p-4" style={{ animationDelay: "160ms" }}>
+        <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "160ms" }}>
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-semibold">
               <ActivityIcon className="size-3.5 text-muted-foreground" />
@@ -922,10 +922,10 @@ export default function DashboardPage() {
               ))
             )}
           </div>
-        </Card>
+        </Sheet>
 
         {/* 发现 */}
-        <Card className="animate-fade-up p-4" style={{ animationDelay: "200ms" }}>
+        <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "200ms" }}>
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-semibold">
               <BugIcon className="size-3.5 text-muted-foreground" />
@@ -966,11 +966,11 @@ export default function DashboardPage() {
               ))
             )}
           </div>
-        </Card>
+        </Sheet>
       </div>
 
       {/* ── Row 4: 任务表格 ── */}
-      <Card className="animate-fade-up overflow-hidden p-0" style={{ animationDelay: "240ms" }}>
+      <Sheet className="animate-fade-up gap-4 overflow-hidden p-0" style={{ animationDelay: "240ms" }}>
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-1.5 text-xs font-semibold">
             <ClockIcon className="size-3.5 text-muted-foreground" />
@@ -1068,12 +1068,12 @@ export default function DashboardPage() {
             )}
           </tbody>
         </table>
-      </Card>
+      </Sheet>
 
       {/* ── Row 5: 资产分布 | 流量状态码 | 拦截 & 待审批 ── */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {/* 资产分布 */}
-        <Card className="animate-fade-up p-4" style={{ animationDelay: "280ms" }}>
+        <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "280ms" }}>
           <SectionHead index="01" icon={NetworkIcon} sub={t("byType")}>
             {t("assetDistribution")}
           </SectionHead>
@@ -1102,10 +1102,10 @@ export default function DashboardPage() {
           <div className="mt-3 border-t pt-3 text-xs text-muted-foreground">
             {t("totalNodes", { count: totalAssets })}
           </div>
-        </Card>
+        </Sheet>
 
         {/* 流量状态码 */}
-        <Card className="animate-fade-up p-4" style={{ animationDelay: "320ms" }}>
+        <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "320ms" }}>
           <SectionHead index="02" icon={ActivityIcon} sub={t("requestCount", { count: traffic.length })}>
             {t("trafficStatusCodes")}
           </SectionHead>
@@ -1154,10 +1154,10 @@ export default function DashboardPage() {
               </div>
             </>
           )}
-        </Card>
+        </Sheet>
 
         {/* 系统状态 & 待审批 */}
-        <Card className="animate-fade-up p-4" style={{ animationDelay: "360ms" }}>
+        <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "360ms" }}>
           <SectionHead index="03" icon={ShieldCheckIcon}>{t("systemStatus")}</SectionHead>
 
           <div className="flex flex-col gap-2">
@@ -1237,11 +1237,11 @@ export default function DashboardPage() {
               {t("noPendingIntercepts")}
             </div>
           )}
-        </Card>
+        </Sheet>
       </div>
 
       {/* ── Row 6: 可靠性（工具调用/崩溃重放/中断恢复，#1–3、#36、#165–171） ── */}
-      <Card className="animate-fade-up p-4" style={{ animationDelay: "400ms" }}>
+      <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "400ms" }}>
         <SectionHead index="04" icon={ShieldCheckIcon} sub={t("sinceStart")}>
           {t("reliability")}
         </SectionHead>
@@ -1358,7 +1358,7 @@ export default function DashboardPage() {
             )}
           </div>
         )}
-      </Card>
+      </Sheet>
     </div>
   );
 }
