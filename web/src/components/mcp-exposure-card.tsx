@@ -6,9 +6,9 @@ import { CheckIcon, CopyIcon, KeyRoundIcon, RefreshCwIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { GroupHead, Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
@@ -184,17 +184,18 @@ export function MCPExposureCard() {
   };
 
   return (
-    <Card className="gap-3">
-      <CardHeader className="pb-1">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <KeyRoundIcon className="size-4 shrink-0 text-primary/80" />
-            <CardTitle className="text-base">{t("title")}</CardTitle>
+    <Sheet>
+      <SheetHead
+        icon={KeyRoundIcon}
+        title={t("title")}
+        hint={t("subtitle")}
+        actions={
+          <>
             {status ? (
-              <Badge variant={status.enabled ? "default" : "secondary"}>{status.enabled ? t("on") : t("off")}</Badge>
+              <Badge variant={status.enabled ? "default" : "secondary"}>
+                {status.enabled ? t("on") : t("off")}
+              </Badge>
             ) : null}
-          </div>
-          <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={load} disabled={busy}>
               <RefreshCwIcon className="size-4" />
               {t("refresh")}
@@ -205,29 +206,27 @@ export function MCPExposureCard() {
               disabled={busy || !status}
               aria-label={t("title")}
             />
-          </div>
-        </div>
-        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-      </CardHeader>
-
-      <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <div className="rounded-lg border border-border/70 p-3">
-            <div className="mb-1 text-muted-foreground text-xs">{t("endpointLabel")}</div>
+          </>
+        }
+      />
+      <div className="flex flex-col gap-4 px-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <span className="text-muted-foreground text-xs">{t("endpointLabel")}</span>
             <div className="flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">{endpoint}</code>
               <Button variant="ghost" size="icon" onClick={() => copy("endpoint", endpoint)} aria-label={t("copy")}>
                 {copied === "endpoint" ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
               </Button>
             </div>
-            <div className="mt-2 text-muted-foreground text-xs">{t("stdioHint")}</div>
+            <span className="text-muted-foreground text-xs">{t("stdioHint")}</span>
             <code className="mt-1 block truncate rounded bg-muted px-2 py-1 font-mono text-xs">
               "{exe}" mcp serve --stdio --addr {endpoint}
             </code>
           </div>
 
-          <div className="rounded-lg border border-border/70 p-3">
-            <div className="mb-1 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground text-xs">{t("tokenLabel")}</span>
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="sm" onClick={() => setRevealed((v) => !v)}>
@@ -249,7 +248,7 @@ export function MCPExposureCard() {
             <code className="block truncate rounded bg-muted px-2 py-1 font-mono text-xs">
               {revealed ? (status?.token ?? "") : (status?.token_mask ?? "")}
             </code>
-            <div className="mt-2 text-muted-foreground text-xs">{t("tokenHint")}</div>
+            <span className="text-muted-foreground text-xs">{t("tokenHint")}</span>
           </div>
         </div>
 
@@ -276,7 +275,6 @@ export function MCPExposureCard() {
               </button>
             );
           })}
-          <span className="text-muted-foreground text-xs">{t("toolCount", { count: status?.tool_count ?? 0 })}</span>
         </div>
 
         {status && status.tiers.includes("L2") ? (
@@ -286,7 +284,7 @@ export function MCPExposureCard() {
         ) : null}
 
         <div>
-          <div className="mb-2 font-medium text-sm">{t("clientsTitle")}</div>
+          <GroupHead title={t("clientsTitle")} />
           <Tabs defaultValue="codex">
             <TabsList className="flex-wrap">
               <TabsTrigger value="codex">Codex</TabsTrigger>
@@ -318,7 +316,10 @@ export function MCPExposureCard() {
           </Tabs>
           <p className="mt-2 text-muted-foreground text-xs">{t("clientsHint")}</p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      {status ? (
+        <SheetFoot left={t("toolCount", { count: status.tool_count ?? 0 })} right={t("footHint")} />
+      ) : null}
+    </Sheet>
   );
 }

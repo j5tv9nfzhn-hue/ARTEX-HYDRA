@@ -22,6 +22,7 @@
     "l2Warning": "已开放 L2 主动探测：外部 harness 可以对目标出网发起 DNS/TCP/TLS/HTTP 验证。请确认授权范围，并优先在隔离环境验证。",
     "clientsTitle": "客户端接入配置（点复制）",
     "clientsHint": "工具名在各客户端的呈现不同（如 Claude Code 为 mcp__artex__pe_info）；Cursor 对总工具数有上限，工具多时收窄档位。",
+    "footHint": "stdio 只是转发，控制台需与客户端同时在线",
     "rotated": "token 已轮换"
   },
   "agentEditor": {
