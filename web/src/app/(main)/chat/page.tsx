@@ -1091,12 +1091,12 @@ function ChatViewImpl({
                 <span
                   title={
                     enforced
-                      ? `本条会话累计 token 预算：已用 ${fmtTokens(used)} / 上限 ${fmtTokens(budget.limit)}。达到上限后本轮自动收尾（可在系统配置调整 default_conversation_token_budget）。`
-                      : `仅统计，不拦截：已用 ${fmtTokens(used)}（参考上限 ${fmtTokens(budget.limit)}）。在系统配置填写 default_conversation_token_budget 后才启用收尾。`
+                      ? t("budgetTitleEnforced", { used: fmtTokens(used), limit: fmtTokens(budget.limit) })
+                      : t("budgetTitleStats", { used: fmtTokens(used), limit: fmtTokens(budget.limit) })
                   }
                   className={`rounded-md border bg-muted/60 px-2 py-0.5 text-xs tabular-nums ${cls}`}
                 >
-                  {tier === "exhausted" ? "预算用尽" : enforced ? "预算" : "用量"} {fmtTokens(used)}/
+                  {t(tier === "exhausted" ? "budgetExhausted" : enforced ? "budgetLabel" : "usageLabel")} {fmtTokens(used)}/
                   {fmtTokens(budget.limit)}
                 </span>
               );

@@ -2,6 +2,8 @@
 
 import { Ellipsis, Folder, Forward, type LucideIcon, Trash2 } from "lucide-react";
 
+import { useTranslations } from "next-intl";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,10 +31,11 @@ export function NavDocuments({
   }[];
 }) {
   const { isMobile } = useSidebar();
+  const t = useTranslations("nav");
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>文档</SidebarGroupLabel>
+      <SidebarGroupLabel>{t("documents.title")}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
@@ -46,7 +49,7 @@ export function NavDocuments({
               <DropdownMenuTrigger asChild>
                 <SidebarMenuAction showOnHover className="rounded-sm data-[state=open]:bg-accent">
                   <Ellipsis />
-                  <span className="sr-only">更多</span>
+                  <span className="sr-only">{t("documents.more")}</span>
                 </SidebarMenuAction>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -56,16 +59,16 @@ export function NavDocuments({
               >
                 <DropdownMenuItem>
                   <Folder />
-                  <span>打开</span>
+                  <span>{t("documents.open")}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Forward />
-                  <span>分享</span>
+                  <span>{t("documents.share")}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive">
                   <Trash2 />
-                  <span>删除</span>
+                  <span>{t("documents.delete")}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -74,7 +77,7 @@ export function NavDocuments({
         <SidebarMenuItem>
           <SidebarMenuButton className="text-sidebar-foreground/70">
             <Ellipsis className="text-sidebar-foreground/70" />
-            <span>更多</span>
+            <span>{t("documents.more")}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

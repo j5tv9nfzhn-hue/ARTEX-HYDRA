@@ -2,6 +2,8 @@
 
 import { Settings } from "lucide-react";
 
+import { useTranslations } from "next-intl";
+
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -23,6 +25,7 @@ import { applySkin, applyThemePreset } from "@/lib/preferences/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 export function LayoutControls() {
+  const t = useTranslations("layoutControls");
   const skin = usePreferencesStore((s) => s.skin);
   const setSkin = usePreferencesStore((s) => s.setSkin);
   const themeMode = usePreferencesStore((s) => s.themeMode);
@@ -116,13 +119,13 @@ export function LayoutControls() {
       <PopoverContent align="end">
         <div className="flex flex-col gap-5">
           <div className="space-y-1.5">
-            <h4 className="font-medium text-sm leading-none">偏好设置</h4>
-            <p className="text-muted-foreground text-xs">自定义仪表盘布局偏好。</p>
+            <h4 className="font-medium text-sm leading-none">{t("title")}</h4>
+            <p className="text-muted-foreground text-xs">{t("desc")}</p>
           </div>
           <div className="space-y-3 **:data-[slot=toggle-group]:w-full **:data-[slot=toggle-group-item]:flex-1 **:data-[slot=toggle-group-item]:text-xs">
             {/* 双主题：老主题（九套预设）/ 新主题（纸本）。放在最上面，因为它是总开关。 */}
             <div className="space-y-1">
-              <Label className="font-medium text-xs">外观</Label>
+              <Label className="font-medium text-xs">{t("appearance")}</Label>
               <ToggleGroup type="single" value={skin} onValueChange={onSkinChange} variant="outline" size="sm">
                 {SKIN_OPTIONS.map((option) => (
                   <ToggleGroupItem key={option.value} value={option.value} title={option.hint}>
@@ -132,16 +135,16 @@ export function LayoutControls() {
               </ToggleGroup>
               <p className="text-muted-foreground text-xs leading-snug">
                 {skin === "editorial"
-                  ? "纸本：书刊排版、发丝线、等宽数字；配色固定为纸本预设。"
-                  : "经典：沿用下方主题预设的原始观感。"}
+                  ? t("skinPaperHint")
+                  : t("skinClassicHint")}
               </p>
             </div>
 
             <div className="space-y-1">
-              <Label className="font-medium text-xs">主题预设</Label>
+              <Label className="font-medium text-xs">{t("themePreset")}</Label>
               <Select value={skin === "editorial" ? "paper" : themePreset} onValueChange={onThemePresetChange} disabled={skin === "editorial"}>
                 <SelectTrigger size="sm" className="w-full text-xs disabled:opacity-50">
-                  <SelectValue placeholder="预设" />
+                  <SelectValue placeholder={t("presetPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
@@ -163,10 +166,10 @@ export function LayoutControls() {
             </div>
 
             <div className="space-y-1">
-              <Label className="font-medium text-xs">字体</Label>
+              <Label className="font-medium text-xs">{t("font")}</Label>
               <Select value={font} onValueChange={onFontChange}>
                 <SelectTrigger size="sm" className="w-full text-xs">
-                  <SelectValue placeholder="选择字体" />
+                  <SelectValue placeholder={t("fontPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
@@ -181,7 +184,7 @@ export function LayoutControls() {
             </div>
 
             <div className="space-y-1">
-              <Label className="font-medium text-xs">主题模式</Label>
+              <Label className="font-medium text-xs">{t("themeMode")}</Label>
               <ToggleGroup
                 size="sm"
                 spacing={0}
@@ -190,20 +193,20 @@ export function LayoutControls() {
                 value={themeMode}
                 onValueChange={onThemeModeChange}
               >
-                <ToggleGroupItem value="light" aria-label="切换为浅色">
-                  浅色
+                <ToggleGroupItem value="light" aria-label={t("modeLightAria")}>
+                  {t("modeLight")}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="dark" aria-label="切换为深色">
-                  深色
+                <ToggleGroupItem value="dark" aria-label={t("modeDarkAria")}>
+                  {t("modeDark")}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="system" aria-label="切换为跟随系统">
-                  跟随系统
+                <ToggleGroupItem value="system" aria-label={t("modeSystemAria")}>
+                  {t("modeSystem")}
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
 
             <div className="space-y-1">
-              <Label className="font-medium text-xs">页面布局</Label>
+              <Label className="font-medium text-xs">{t("contentLayout")}</Label>
               <ToggleGroup
                 size="sm"
                 spacing={0}
@@ -212,17 +215,17 @@ export function LayoutControls() {
                 value={contentLayout}
                 onValueChange={onContentLayoutChange}
               >
-                <ToggleGroupItem value="centered" aria-label="切换为居中">
-                  居中
+                <ToggleGroupItem value="centered" aria-label={t("layoutCenteredAria")}>
+                  {t("layoutCentered")}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="full-width" aria-label="切换为全宽">
-                  全宽
+                <ToggleGroupItem value="full-width" aria-label={t("layoutFullWidthAria")}>
+                  {t("layoutFullWidth")}
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
 
             <div className="space-y-1">
-              <Label className="font-medium text-xs">导航栏行为</Label>
+              <Label className="font-medium text-xs">{t("navbar")}</Label>
               <ToggleGroup
                 size="sm"
                 spacing={0}
@@ -231,17 +234,17 @@ export function LayoutControls() {
                 value={navbarStyle}
                 onValueChange={onNavbarStyleChange}
               >
-                <ToggleGroupItem value="sticky" aria-label="切换为吸顶">
-                  吸顶
+                <ToggleGroupItem value="sticky" aria-label={t("navbarStickyAria")}>
+                  {t("navbarSticky")}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="scroll" aria-label="切换为随滚动">
-                  随滚动
+                <ToggleGroupItem value="scroll" aria-label={t("navbarScrollAria")}>
+                  {t("navbarScroll")}
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
 
             <div className="space-y-1">
-              <Label className="font-medium text-xs">侧边栏样式</Label>
+              <Label className="font-medium text-xs">{t("sidebarVariant")}</Label>
               <ToggleGroup
                 size="sm"
                 spacing={0}
@@ -250,20 +253,20 @@ export function LayoutControls() {
                 value={variant}
                 onValueChange={onSidebarStyleChange}
               >
-                <ToggleGroupItem value="inset" aria-label="切换为内嵌">
-                  内嵌
+                <ToggleGroupItem value="inset" aria-label={t("variantInsetAria")}>
+                  {t("variantInset")}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="sidebar" aria-label="切换为侧边">
-                  侧边
+                <ToggleGroupItem value="sidebar" aria-label={t("variantSidebarAria")}>
+                  {t("variantSidebar")}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="floating" aria-label="切换为浮动">
-                  浮动
+                <ToggleGroupItem value="floating" aria-label={t("variantFloatingAria")}>
+                  {t("variantFloating")}
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
 
             <div className="space-y-1">
-              <Label className="font-medium text-xs">侧边栏折叠模式</Label>
+              <Label className="font-medium text-xs">{t("collapse")}</Label>
               <ToggleGroup
                 size="sm"
                 spacing={0}
@@ -272,17 +275,17 @@ export function LayoutControls() {
                 value={collapsible}
                 onValueChange={onSidebarCollapseModeChange}
               >
-                <ToggleGroupItem value="icon" aria-label="切换为仅图标">
-                  仅图标
+                <ToggleGroupItem value="icon" aria-label={t("collapseIconAria")}>
+                  {t("collapseIcon")}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="offcanvas" aria-label="切换为隐藏式">
-                  隐藏式
+                <ToggleGroupItem value="offcanvas" aria-label={t("collapseOffcanvasAria")}>
+                  {t("collapseOffcanvas")}
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
 
             <Button type="button" size="sm" variant="outline" className="w-full text-xs" onClick={handleRestore}>
-              恢复默认
+              {t("restore")}
             </Button>
           </div>
         </div>
