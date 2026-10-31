@@ -268,10 +268,22 @@ web/src/
   | `tasks/detail/_tabs/overview-tab.tsx` | 13 | `notify/_components/notify-inbox-list.tsx` | 4 |
   | `function/sync/page.tsx` | 10 | 其余 9 个文件 | 各 1–2 |
 
-  已改完：`system/notify/page.tsx`。改法与 B 类一致，只多一条——页面已经从
-  `ui/sheet` 引入 `Sheet` 时，用仓库惯例 `import { Sheet as PaperSheet }` 避开同名
-  （`tasks/detail/_tabs/assets-tab.tsx` 先例）。它们连壳子里的菜单、列表、表单、
-  代码块一起是报纸腔调，**缺的就是页面骨架这一层**。
+  **已改完 14 个文件**（零散的先清完）：`system/notify/page.tsx` 与其
+  `notify-inbox-list` / `delivery-list`、`function/commands`、`function/traffic`、
+  `function/assets`、`function/workspace`、`function/tasks`（含
+  `tasks/detail/_tabs/retests-tab`）、`system/llm`、`system/mcp`、`system/agents`、
+  `system/intercept/assets`、`_components/sidebar/sidebar-support-card`。
+
+  **剩下的 10 个都是骨架级别的**：`system/settings`（75）、`system/storage`（40）、
+  `system/lan`（23）、`dashboard`（21）、`function/findings`（15）、
+  `system/retention`（15）、`tasks/detail/_tabs/overview-tab`（13）、
+  `function/sync`（10）、`system/tools`（10）、`system/intercept`（6）。
+
+  改法与 B 类一致，只多一条——页面已经从 `ui/sheet` 引入 `Sheet` 时，用仓库惯例
+  `import { Sheet as PaperSheet }` 避开同名（`tasks/detail/_tabs/assets-tab.tsx`
+  先例）。另外两处刻意保留原样：整块可点、行内还嵌着按钮的容器不能换成
+  `RecordRow`（会渲染成 `<button>` 套 `<button>`，非法 HTML），以及外层用了
+  `px-0` 让内部工具栏自己控制边距的表格外壳（再加内边距会挤）。
 - **C 类全局浮层：6 个已核对。** ⌘K 命令面板、偏好浮层、用户菜单、新建任务、导出，以及本批新建的通知中心；同样只补了入口与文案，没有重写。
 - **中文衬线依赖系统字体。** Windows 上 `Songti SC` / `Noto Serif CJK SC` 多半缺失，标题会落到 `SimSun`（观感偏硬但仍是衬线）。统一观感需要在 `next/font` 里引入中文衬线 Web Font，子集化后仍有 3–8MB，代价较大，未做。
 - **`.uppercase` 的作用域不能扩大。** 它已收窄到 `[data-editorial="body"]`；新页面接入时必须挂 body 锚点，否则既拿不到正文腔调，也容易误伤侧栏与顶栏这些「机器外壳」。
