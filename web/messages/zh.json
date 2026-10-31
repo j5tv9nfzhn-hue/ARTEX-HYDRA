@@ -3554,6 +3554,11 @@
     "stopAnswer": "停止旁路回答",
     "title": "旁路提问"
   },
+  "sidebarSupport": {
+    "title": "寻找更多？",
+    "desc": "欢迎提交 issue，或在 X 上联系作者<x>。</x>",
+    "xAria": "在 X 上联系作者"
+  },
   "skillsPage": {
     "allUsed": "所有 Skill 都被调用过。",
     "bodyHint": "（留空自动生成骨架）",

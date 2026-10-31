@@ -22,6 +22,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Masthead } from "@/components/editorial";
+import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { AssetDslSearch } from "@/components/asset-dsl-search";
 import { EmptyState } from "@/components/empty-state";
 import { ScopeTextEditor } from "@/components/scope-text-editor";
@@ -38,7 +39,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -356,7 +356,7 @@ export default function AssetsPage() {
 
         {/* 公司。 */}
         <TabsContent value="company" className="mt-0 flex min-h-0 flex-1 flex-col">
-          <Card className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
+          <PaperSheet className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
             <div className="min-h-0 flex-1 overflow-auto">
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-card">
@@ -420,7 +420,7 @@ export default function AssetsPage() {
                 </TableBody>
               </Table>
             </div>
-          </Card>
+          </PaperSheet>
         </TabsContent>
 
         {/* 根域名。 */}
@@ -931,7 +931,7 @@ function AssetCard({
   const someSelected = selected != null && pageIds.some((id) => selected.has(id));
 
   return (
-    <Card className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
+    <PaperSheet className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
       <div className="min-h-0 flex-1 overflow-auto scrollbar-thin scrollbar-track-transparent">
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-card">
@@ -1015,7 +1015,7 @@ function AssetCard({
           )}
         </div>
       )}
-    </Card>
+    </PaperSheet>
   );
 }
 

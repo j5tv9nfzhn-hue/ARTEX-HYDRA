@@ -8,7 +8,7 @@ import { ChevronDown, ExternalLink, Inbox, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { useNotifyInbox } from "@/hooks/use-notify-inbox";
 import {
   BUCKET_ORDER,
@@ -108,13 +108,11 @@ export function NotifyInboxList() {
   };
 
   return (
-    <Card className="gap-3">
-      <CardHeader>
-        <div className="flex flex-wrap items-center gap-2">
-          <CardTitle className="text-base">{tp("inbox.title")}</CardTitle>
-          <span className="text-muted-foreground text-xs tabular-nums">
-            {tp("inbox.total", { count: events.length })}
-          </span>
+    <Sheet className="gap-3">
+      <SheetHead
+        title={tp("inbox.title")}
+        count={events.length}
+        actions={
           <Button
             variant="outline"
             size="sm"
@@ -124,9 +122,9 @@ export function NotifyInboxList() {
           >
             {t("clearAll")}
           </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-3">
+        }
+      />
+      <div className="grid gap-3 px-4 py-3">
         <div className="flex flex-wrap items-center gap-1">
           {FILTERS.map((f) => {
             const active = filter === f;
@@ -185,8 +183,8 @@ export function NotifyInboxList() {
         </div>
 
         <p className="text-xs text-muted-foreground leading-4">{t("sessionNote", { count: MAX_KEPT })}</p>
-      </CardContent>
-    </Card>
+      </div>
+    </Sheet>
   );
 }
 
