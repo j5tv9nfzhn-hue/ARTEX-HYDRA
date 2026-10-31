@@ -406,11 +406,30 @@ func streamTaskLLM(ctx context.Context, taskID string, req llm.CompletionRequest
 	}
 }
 
+// streamEventCommitsOutput 判断这条流事件是否已经**不可撤回**。
+//
+// 文本增量当然算：吐出去的字已经在用户眼前，重放会让同一句话出现两次。
+//
+// 工具调用同样算，而且更严重 —— 这一条曾经漏掉，代价是真实副作用：
+//
+//	SEToolUseStart 表示工具**已经（或即将）开始执行**。它不是"待校验的候选
+//	答案"，而是一次已经开始的动作。若把它当可缓冲事件，一旦后续流出错并且
+//	走了"未提交 → 换 profile / 同 provider 重放"的分支，整段请求就会被重放，
+//	而重放前的工具调用**不会被交给调用方**（事件被丢弃），于是：
+//	  · 工具可能已经真实执行（本地命令、发包、写文件），但调用方从未看到它；
+//	  · 重放后同一个工具会被再执行一次 —— 直接的双重副作用。
+//	上层专门有一条测试守这件事（TestTaskLLMStreamMarkFailureAfterToolStart
+//	SkipsWorkerReplay），它当时正是因为这里返回 false 而变红。
+//
+// thinking 块、协议/停止元数据仍然保持缓冲：它们不代表任何已经开始的动作。
 func streamEventCommitsOutput(event llm.StreamEvent) bool {
-	// Only user-facing assistant text is an irreversible commit here. Thinking
-	// blocks, tool arguments, and protocol/stop metadata remain buffered until a
-	// complete response is validated; none of them is a final answer by itself.
-	return event.Type == llm.SETextDelta && event.Text != ""
+	switch event.Type {
+	case llm.SETextDelta:
+		return event.Text != ""
+	case llm.SEToolUseStart, llm.SEToolInputJSON:
+		return true
+	}
+	return false
 }
 
 // 提交前安全窗口内、对同一 provider 的【默认】重试次数。SDK 的 doStream 只重试建连
@@ -696,7 +715,6 @@ func (s *Server) agentsForTask(t *Task) *taskAgentBundle {
 	s.taskAgents[t.ID] = bundle
 	return bundle
 }
-
 
 func (s *Server) syncTaskLLMState(pt *db.Task) {
 	if pt == nil {

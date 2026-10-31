@@ -96,7 +96,17 @@ func (m *meteredSkill) renderListing() string {
 	return b.String()
 }
 
-// Prefer an exact visible custom name before applying historical aliases.
+// canonicalVisibleSkillName 把一个用户/模型写的技能名解析成注册表里的规范名。
+//
+// 顺序是**精确名优先于别名**（不是反过来）：
+//
+//	技能库里存在名为 "api" 的技能（以及用户自己建的同名技能）时，写
+//	`{"skill":"api"}` 必须解析到它，而不是别名表里的 "performing-api-…"。
+//	用户自己起的名永远比历史别名更权威 —— 这条有独立测试守着
+//	（TestSkillExactVisibleCustomNamePrecedesAlias），改顺序会让真实用户
+//	的技能被别名悄悄换掉。
+//
+// 精确名不存在时才走别名，再按大小写不敏感回匹配注册表。
 func canonicalVisibleSkillName(reg *skill.Registry, name string) string {
 	name = strings.TrimSpace(name)
 	if reg != nil {

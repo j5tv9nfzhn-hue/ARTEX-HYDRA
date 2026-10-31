@@ -26,6 +26,7 @@ package agent
 type CoordVars struct {
 	Goal       string // 任务目标（人写的原话，不做改写）
 	Scope      string // 授权范围/操作约束（可空）
+	DataDir    string // 任务工作目录（cwd；空 = 不提示）
 	Now        string // 本轮时间
 	MaxTurns   int    // 轮次上限（0 = 不提示）
 	ChildSlots int    // 并行子 agent 上限（0 = 不提示）
@@ -71,6 +72,9 @@ const rootTmpl = `你是这次授权渗透测试任务的**编排者**（root ag
 
 ━━ 任务上下文 ━━
 目标：{{.Goal}}
+{{- if .DataDir}}
+工作目录：{{.DataDir}}（你的 cwd 就是它；产物、脚本、下载结果都写在这里）
+{{- end}}
 {{- if .Scope}}
 授权范围 / 操作约束：{{.Scope}}
 {{- end}}
@@ -110,6 +114,10 @@ const childTmpl = `你是这次授权渗透测试任务里的**执行者**（chi
 
 ━━ 任务 ━━
 {{.Goal}}
+{{- if .DataDir}}
+
+工作目录：{{.DataDir}}（你的 cwd 就是它；脚本、扫描结果、下载的样本都写在这里）
+{{- end}}
 {{- if .Scope}}
 
 ━━ 约束 ━━

@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -224,9 +224,35 @@ func TestCompactionTriggerCapEnv(t *testing.T) {
 }
 
 // 态势注入的字节预算必须随窗口变化：32K 窗口给 24KB 地板，200K 窗口给 64KB 上限。
-// 这条把 contextWindowFrom(ctx) → OverviewBudgetBytes → marshalOverviewCapped 串起来，
-// 防止「函数改了但调用方没传窗口」这种半截修复。
+//
+// 这条曾经串的是 contextWindowFrom(ctx) → OverviewBudgetBytes → renderGraphOverview。
+// renderGraphOverview（连同 agent/planner.go）在 P4 下线后，本测试一度只引用一个
+// 不存在的符号而整包编译不过。**但它守的性质仍然有效且仍然需要守**：
+//   - 预算必须随窗口缩放（否则自适应窗口等于没做）；
+//   - 必须夹在 [floor, ceil] 之间（否则小窗口被态势块挤死、大窗口又不敢给）；
+//   - 窗口未知时必须退回保守值（早期写死的 16KB 就是那个保守值）。
+//
+// 现在直接测预算函数与"按预算压缩"这两段仍活着的实现。
 func TestOverviewBudgetScalesWithWindow(t *testing.T) {
+	// 1) 纯预算：地板 / 线性区间 / 上限 / 未知窗口回退。
+	if got := OverviewBudgetBytes(32000); got != overviewFloorBytes {
+		t.Errorf("32K 窗口预算 %d，期望地板 %d", got, overviewFloorBytes)
+	}
+	small := OverviewBudgetBytes(128000)
+	big := OverviewBudgetBytes(200000)
+	if big <= small {
+		t.Errorf("大窗口预算 %d 没有比 128K 窗口 %d 更多——窗口没传到预算里", big, small)
+	}
+	if got := OverviewBudgetBytes(4 << 20); got != overviewCeilBytes {
+		t.Errorf("超大窗口预算 %d，期望上限 %d", got, overviewCeilBytes)
+	}
+	// 窗口未知时按默认窗口（200K）取满预算 —— 早先写死的 16KB 已被窗口自适应取代。
+	if got, want := OverviewBudgetBytes(0), OverviewBudgetBytes(200000); got != want {
+		t.Errorf("窗口未知时应按默认窗口取值 %d，实际 %d", want, got)
+	}
+
+	// 2) 压缩：把同一份数据按"未知窗口"与"200K 窗口"两次序列化，
+	//    大窗口必须给得更多，且谁都不许超过自己的预算（+固定开销）。
 	data := map[string]any{}
 	list := make([]map[string]any, 0, 400)
 	for i := 0; i < 400; i++ {
@@ -234,20 +260,33 @@ func TestOverviewBudgetScalesWithWindow(t *testing.T) {
 	}
 	data["open_intents"] = list
 
-	small := renderGraphOverview(WithContextWindow(context.Background(), 32000), data)
-	big := renderGraphOverview(WithContextWindow(context.Background(), 200000), data)
-	none := renderGraphOverview(context.Background(), data)
-
-	if len(small) > overviewFloorBytes+512 {
-		t.Errorf("32K 窗口注入 %d 字节，超过地板 %d", len(small), overviewFloorBytes)
+	tight := marshalOverviewCapped(data, 16<<10)
+	roomy := marshalOverviewCapped(data, OverviewBudgetBytes(200000))
+	if len(roomy) <= len(tight) {
+		t.Errorf("大预算序列化 %d 字节没有比小预算 %d 字节更多", len(roomy), len(tight))
 	}
-	if len(big) > overviewCeilBytes+512 {
-		t.Errorf("200K 窗口注入 %d 字节，超过上限 %d", len(big), overviewCeilBytes)
+	if len(tight) > 16<<10+512 {
+		t.Errorf("16KB 预算下注入了 %d 字节，超出预算太多", len(tight))
 	}
-	if len(big) <= len(small) {
-		t.Errorf("大窗口注入 %d 字节没有比小窗口 %d 字节更多——窗口没传到预算里", len(big), len(small))
+	if len(roomy) > overviewCeilBytes+512 {
+		t.Errorf("200K 窗口注入了 %d 字节，超过上限 %d", len(roomy), overviewCeilBytes)
 	}
-	if len(none) > 16<<10+512 {
-		t.Errorf("窗口未知时应退回旧的 16KB 上限，实际 %d", len(none))
+	// 压缩后的产物是「JSON 正文 + 一行中略尾注」（见 marshalOverviewCapped 末尾）：
+	// 尾注是给人/模型看的提示，不属于 JSON。两段都必须完好：
+	//   - 正文是合法 JSON（模型若按 JSON 解析，半截正文会整轮作废）；
+	//   - 尾注确实存在（否则模型不知道自己缺了什么）。
+	body := tight
+	if i := strings.Index(tight, "\n"+overviewTruncatedNote); i >= 0 {
+		body = tight[:i]
+	} else {
+		t.Errorf("压缩后缺少中略尾注")
 	}
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(body), &parsed); err != nil {
+		t.Errorf("压缩后的态势块不是合法 JSON: %v", err)
+	}
+	if _, ok := parsed["open_intents"]; !ok {
+		t.Errorf("mustKeep 键 open_intents 被整键丢弃了——规划者会看不见自己在做什么")
+	}
+	t.Logf("16KB 预算 → %d 字节；200K 窗口 → %d 字节", len(tight), len(roomy))
 }

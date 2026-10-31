@@ -111,11 +111,11 @@ func (k MsgKind) Interrupt() bool { return k == MsgInstruction }
 type WaitOutcome string
 
 const (
-	WaitOK            WaitOutcome = ""                 // 正常收尾，可以继续推理
-	WaitAlreadyWaited WaitOutcome = "already_waited"   // 本轮已经等过一次
-	WaitNoTargets     WaitOutcome = "no_live_targets"  // 目标全都死了，别等
-	WaitCancelled     WaitOutcome = "cancelled"        // 任务被暂停/删除
-	WaitTimeoutFx     WaitOutcome = "timeout"          // 等待窗口用尽，但目标还活着
+	WaitOK            WaitOutcome = ""                // 正常收尾，可以继续推理
+	WaitAlreadyWaited WaitOutcome = "already_waited"  // 本轮已经等过一次
+	WaitNoTargets     WaitOutcome = "no_live_targets" // 目标全都死了，别等
+	WaitCancelled     WaitOutcome = "cancelled"       // 任务被暂停/删除
+	WaitTimeoutFx     WaitOutcome = "timeout"         // 等待窗口用尽，但目标还活着
 )
 
 // Message 是 agent 之间唯一的通信载荷。它永远以一条「用户可见文本」的形式
@@ -134,33 +134,33 @@ type Message struct {
 // Brief 是子 agent 交卷时的结构化产出。它不是散文：报告存在即被下游当作结论，
 // 所以「确认 / 排除 / 未闭环」三态必须显式给，缺失信息不等于安全。
 type Brief struct {
-	State       AgentState     `json:"state"` // completed | failed | crashed | stopped
-	Outcome     string         `json:"outcome"`
-	Summary     string         `json:"summary"`
-	Evidence    []string       `json:"evidence,omitempty"`
-	OpenItems   []string       `json:"open_items,omitempty"` // 既不能确认也不能排除的东西
-	CounterView string         `json:"counter_view,omitempty"` // 反证 pass 的结论
-	Facts       []BriefFact    `json:"facts,omitempty"`
-	Usage       Usage          `json:"usage"`
-	FinishedAt  time.Time      `json:"finished_at"`
+	State       AgentState  `json:"state"` // completed | failed | crashed | stopped
+	Outcome     string      `json:"outcome"`
+	Summary     string      `json:"summary"`
+	Evidence    []string    `json:"evidence,omitempty"`
+	OpenItems   []string    `json:"open_items,omitempty"`   // 既不能确认也不能排除的东西
+	CounterView string      `json:"counter_view,omitempty"` // 反证 pass 的结论
+	Facts       []BriefFact `json:"facts,omitempty"`
+	Usage       Usage       `json:"usage"`
+	FinishedAt  time.Time   `json:"finished_at"`
 }
 
 // BriefFact 是一条可入库的事实（对应旧的 fact 概念，但由提交者自己写，
 // 不再需要 Reviewer 从原始输出里重构）。
 type BriefFact struct {
-	Summary  string `json:"summary"`
-	Detail   string `json:"detail,omitempty"`
+	Summary  string  `json:"summary"`
+	Detail   string  `json:"detail,omitempty"`
 	AssetIDs []int64 `json:"asset_ids,omitempty"`
-	IntentID int64  `json:"intent_id,omitempty"`
+	IntentID int64   `json:"intent_id,omitempty"`
 }
 
 // Usage 是子 agent 自报的消耗，供父 agent 判断「值不值」。
 type Usage struct {
-	ToolCalls int    `json:"tool_calls"`
-	InputTok  int    `json:"input_tokens"`
-	OutputTok int    `json:"output_tokens"`
-	Turns     int    `json:"turns"`
-	ElapsedMS int64  `json:"elapsed_ms"`
+	ToolCalls int   `json:"tool_calls"`
+	InputTok  int   `json:"input_tokens"`
+	OutputTok int   `json:"output_tokens"`
+	Turns     int   `json:"turns"`
+	ElapsedMS int64 `json:"elapsed_ms"`
 }
 
 // Runtime 是一个被调度 agent 的运行态。它的所有字段都由协调器在锁内改写，
@@ -179,7 +179,23 @@ type Runtime struct {
 	waitedTurn int   // 记录在哪一轮已经 wait 过（0 = 从未）
 	noticeSent int32 // 终局通知是否已被占坑（原子，避免报告/崩溃双发）
 	doneClosed bool  // done 通道是否已关闭（受 c.mu 保护，确保只 close 一次）
-	resumable  bool
+
+	// interrupted / resumedBelow 是「预算中断可恢复」的账本，取代了早先那个
+	// 永远为 true 的 resumable 布尔位。
+	//
+	// 为什么不能用一个布尔位（旧实现的缺陷）：Register 把 resumable 写死成 true，
+	// 于是 `State.IsTerminal() && !resumable` 恒为假 —— 投递守卫形同虚设，
+	// 往一个已经 crashed/failed 的 agent 发消息照样成功，消息进了一个永远没人读
+	// 的邮箱。这正是本文件头第 1 条硬约束要禁的事。
+	//
+	// 现在把「可恢复」限定成两种来源，且都必须显式记账：
+	//   - interrupted：本 agent 是被预算/暂停打断的（runner 交回 Brief 时声明），
+	//     它**曾经活着**，上层把额度调大后可以重跑；重跑那一刻由 ResumeBelow 记账；
+	//   - resumedBelow：注册期指定的恢复序号（MapID），只可能由上层显式给出。
+	// completed / stopped / crashed / failed 四条路径都不写这两个字段，因此它们的
+	// 邮箱从此永久拒收。
+	interrupted  bool
+	resumedBelow int64
 
 	wake    chan struct{}
 	done    chan struct{}
@@ -187,8 +203,8 @@ type Runtime struct {
 	started time.Time
 	lastAct time.Time
 
-	brief  *Brief
-	usage  Usage
+	brief   *Brief
+	usage   Usage
 	lastErr string
 }
 
@@ -327,18 +343,17 @@ func (c *Coordinator) Register(id, parentID, role string, root bool, skills []st
 		}
 	}
 	rt := &Runtime{
-		ID:        id,
-		ParentID:  parentID,
-		TaskID:    c.TaskID,
-		Root:      root,
-		State:     StateRunning,
-		Role:      role,
-		Skills:    append([]string(nil), skills...),
-		resumable: true,
-		wake:      make(chan struct{}, 1),
-		done:      make(chan struct{}),
-		started:   time.Now(),
-		lastAct:   time.Now(),
+		ID:       id,
+		ParentID: parentID,
+		TaskID:   c.TaskID,
+		Root:     root,
+		State:    StateRunning,
+		Role:     role,
+		Skills:   append([]string(nil), skills...),
+		wake:     make(chan struct{}, 1),
+		done:     make(chan struct{}),
+		started:  time.Now(),
+		lastAct:  time.Now(),
 	}
 	c.agents[id] = rt
 	c.seq++
@@ -378,7 +393,7 @@ func (c *Coordinator) Send(from, to string, kind MsgKind, body string) (Message,
 		c.mu.Unlock()
 		return Message{}, fmt.Errorf("%w: unknown agent %q", ErrUnreachable, to)
 	}
-	if rt.State.IsTerminal() && !rt.resumable {
+	if rt.State.IsTerminal() && !rt.resumableLocked() {
 		st := rt.State
 		c.mu.Unlock()
 		return Message{}, fmt.Errorf("%w: %q is %s and will never read this message", ErrUnreachable, to, st)
@@ -439,7 +454,37 @@ func (c *Coordinator) Peek(id string) int {
 
 // ---------- 状态迁移 ----------
 
-// SetState 是该 agent 唯一的合法状态迁移入口。终态不可逆（除 resumable 的人工恢复）。
+// resumableLocked 报告这个终态 agent 是否还可能被上层重新拉起来干活。
+//
+// 调用方必须持有 c.mu。判定规则（与 Runtime 里那段字段注释互为表里）：
+//   - 非终态：永远可投递（它就是活的）；
+//   - stopped / crashed：永不恢复。停止是"上层让它别再干了"，崩溃是"它已经坏了"，
+//     这两种情况下把指令塞进邮箱只会制造"以为送达了"的错觉；
+//   - completed：只有**被打断而非自己交卷**的那种才可能重跑。runner 在预算耗尽时
+//     会把 State 写成 completed 但 Outcome 记 open_proof_gap，那不算真的交卷；
+//     这里用 interrupted 标记区分，没有标记的一律视为真的做完了；
+//   - failed / 其它：同 crashed。
+func (rt *Runtime) resumableLocked() bool {
+	if !rt.State.IsTerminal() {
+		return true
+	}
+	return rt.interrupted || rt.resumedBelow > 0
+}
+
+// MarkInterrupted 由 runner 在「被预算/暂停打断、但没死」的交卷路径上调用。
+// 它只登记"这个终态是可恢复的"，不改状态——状态仍由 Finish/Crash 决定。
+//
+// 为什么不把这件事写进 Brief：Brief 是给父级读的结论文本，它的字段会进入
+// 父级上下文；"我被打断了"是调度层的账，不该出现在模型读到的报告里。
+func (c *Coordinator) MarkInterrupted(id string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if rt, ok := c.agents[id]; ok {
+		rt.interrupted = true
+	}
+}
+
+// SetState 是该 agent 唯一的合法状态迁移入口。终态不可逆（除显式登记的恢复）。
 func (c *Coordinator) SetState(id string, st AgentState, note string) {
 	c.mu.Lock()
 	rt, ok := c.agents[id]
@@ -536,18 +581,29 @@ func (c *Coordinator) Finish(id string, b Brief) error {
 	c.mu.Unlock()
 
 	// 先抢通知权：崩溃路径同样会抢。谁先抢到谁负责外发，另一方只落状态。
+	//
+	// **落 brief 也必须在抢到之后**：先写后抢会让后到的重复交卷覆盖掉已经
+	// 发给父级的那份报告——邮箱里是 A、agents_graph 里是 B，排查时互相矛盾。
 	won := c.claimNotice(id)
 	c.SetState(id, b.State, b.Outcome)
-
-	c.mu.Lock()
-	if cur, ok := c.agents[id]; ok {
-		cur.brief = &b
-		cur.usage = b.Usage
+	if won {
+		c.mu.Lock()
+		if cur, ok := c.agents[id]; ok {
+			cur.brief = &b
+			cur.usage = b.Usage
+		}
+		c.mu.Unlock()
 	}
-	c.mu.Unlock()
 
 	if !won {
-		// 崩溃通知已经先到：本次报告只记录不外发，避免父级收到两条互相矛盾的终局。
+		// 另一条终局路径已经先占了通知权（崩溃通知，或重复交卷）。本次报告
+		// 只落一份"后到"的痕迹，绝不覆盖已经外发的那份——否则父级邮箱里是 A，
+		// agents_graph 里显示 B，排查时两条信息互相矛盾。
+		c.mu.Lock()
+		if cur, ok := c.agents[id]; ok && cur.brief != nil {
+			cur.lastErr = "后到的终局报告（未外发）: " + b.Outcome
+		}
+		c.mu.Unlock()
 		return nil
 	}
 	if parent != "" && b.State != StateStopped {
@@ -618,37 +674,42 @@ func (c *Coordinator) WaitFor(ctx context.Context, from string, targets []string
 		return WaitAlreadyWaited, nil
 	}
 	me.waitedTurn = turn
-
-	live := make([]*Runtime, 0, len(targets))
-	pending := make([]Message, 0, 4)
-	for _, t := range targets {
-		rt, ok := c.agents[t]
-		if !ok {
-			continue
-		}
-		pending = append(pending, rt.mailbox...)
-		if !rt.State.IsTerminal() || rt.Pending() > 0 {
-			live = append(live, rt)
-		}
-	}
-	if len(pending) > 0 {
-		c.mu.Unlock()
-		return WaitOK, nil
-	}
-	if len(live) == 0 {
-		c.mu.Unlock()
-		return WaitNoTargets, nil
-	}
-	prevState := me.State
-	me.State = StateWaiting
 	wake := me.wake
 	c.mu.Unlock()
-	c.emit(Event{Kind: "agent.state", AgentID: from, State: StateWaiting, Summary: "waiting for children"})
 
+	// ── 收哪里的信：**自己的邮箱** ───────────────────────────────────────────
+	//
+	// 这里曾经取的是 targets 的邮箱，那是个方向性错误：agent 之间所有载荷
+	// （交卷报告、崩溃通知、send_to_agent 的消息）都由 Send 落到**接收方**的邮箱，
+	// 也就是等在这里的父级自己。去读被等的子 agent 的邮箱，等于去看它收到了什么，
+	// 而不是看它交了卷——于是 wait_for_agents 的 reports 永远为空，父级只能靠
+	// 下一轮上下文注入被动收到报告，"wait 完先读 reports"这条工具说明是假的。
+	//
+	// 只取来自 targets 的那些：父级自己的邮箱里也可能有人类/系统的指令，
+	// 那是本轮的输入，不该被当成"子 agent 的报告"交回。
+	c.mu.Lock()
+	outcome, out := c.collectReportsLocked(me, targets)
+	c.mu.Unlock()
+	if len(out) > 0 {
+		return outcome, out
+	}
+	if outcome != WaitOK {
+		return outcome, nil
+	}
+
+	c.mu.Lock()
+	if cur, still := c.agents[from]; still && cur.State == StateRunning {
+		cur.State = StateWaiting
+	}
+	c.mu.Unlock()
+
+	// 进入 waiting：只有从 running 进来才需要标，且退出时必须还原成 running
+	// （wait 是「这一轮暂时没别的事」，不是终态，也不是 budget_paused）。
+	c.emit(Event{Kind: "agent.state", AgentID: from, State: StateWaiting, Summary: "waiting for children"})
 	defer func() {
 		c.mu.Lock()
-		if cur, ok := c.agents[from]; ok && cur.State == StateWaiting {
-			cur.State = prevState
+		if cur, still := c.agents[from]; still && cur.State == StateWaiting {
+			cur.State = StateRunning
 			cur.lastAct = time.Now()
 		}
 		c.mu.Unlock()
@@ -664,23 +725,85 @@ func (c *Coordinator) WaitFor(ctx context.Context, from string, targets []string
 	case <-ctx.Done():
 		return WaitCancelled, nil
 	case <-timer.C:
+		// 窗口用尽前最后再看一眼：唤醒信号可能与超时同时到达。
+		c.mu.Lock()
+		_, out := c.collectReportsLocked(c.agents[from], targets)
+		c.mu.Unlock()
+		if len(out) > 0 {
+			return WaitOK, out
+		}
 		return WaitTimeoutFx, nil
 	case <-wake:
 	}
 
-	// 醒来后把「目标的」待处理消息一并取出（不含自己的）：父级需要看到子级交卷。
+	// 醒来了。**必须在这里把报告取走并交回调用方**，原因有二：
+	//   1. 唤醒是「图变了」的边沿信号，可能根本不是消息（子 agent 刚 spawn、
+	//      状态变化、或与上一轮竞争）；醒来却什么都不返回，就等于白等一轮。
+	//   2. 父级邮箱里的报告如果没有在这一刻交出去，下一次注入才有机会读到它，
+	//      而模型此刻拿到的 wait 结果只能是一个空数组 —— 与工具说明不符。
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	out := make([]Message, 0, 4)
-	for _, t := range targets {
-		if rt, ok := c.agents[t]; ok {
-			out = append(out, rt.mailbox...)
-		}
-	}
+	_, out = c.collectReportsLocked(c.agents[from], targets)
 	if len(out) == 0 {
 		return WaitOK, nil // 边沿到了但没消息：交给上层下一轮判定
 	}
 	return WaitOK, out
+}
+
+// collectReportsLocked 从 me 的邮箱里取走「来自 targets」的消息并返回结果码。
+//
+// 调用方必须持有 c.mu。targets 为空表示"全部直接子 agent"。取走是破坏性的：
+// 同一条报告不能被交回两次（那会让父级以为子 agent 交了两遍卷）。
+func (c *Coordinator) collectReportsLocked(me *Runtime, targets []string) (WaitOutcome, []Message) {
+	if me == nil {
+		return WaitNoTargets, nil
+	}
+	want := make(map[string]bool, len(targets))
+	for _, id := range targets {
+		want[id] = true
+	}
+	match := func(m Message) bool {
+		if len(want) > 0 {
+			return want[m.From]
+		}
+		if child, ok := c.agents[m.From]; ok {
+			return child.ParentID == me.ID
+		}
+		return false
+	}
+	out := make([]Message, 0, 4)
+	kept := make([]Message, 0, len(me.mailbox))
+	for _, m := range me.mailbox {
+		if match(m) {
+			out = append(out, m)
+			continue
+		}
+		kept = append(kept, m)
+	}
+	me.mailbox = kept
+	if len(out) > 0 {
+		return WaitOK, out
+	}
+	// 没有报告可交：既没有活着、也没在排队的子 agent 才是「没得等」。
+	if len(c.liveTargetsLocked(targets)) == 0 {
+		return WaitNoTargets, nil
+	}
+	return WaitOK, nil
+}
+
+// liveTargetsLocked 返回仍在跑、或还有待读消息的目标。调用方必须持有 c.mu。
+func (c *Coordinator) liveTargetsLocked(targets []string) []*Runtime {
+	live := make([]*Runtime, 0, len(targets))
+	for _, id := range targets {
+		rt, ok := c.agents[id]
+		if !ok {
+			continue
+		}
+		if !rt.State.IsTerminal() || rt.Pending() > 0 {
+			live = append(live, rt)
+		}
+	}
+	return live
 }
 
 // MarkTurn 由 runner 在每一轮 LLM 调用开始时调用：推进轮次并重置 wait 配额。

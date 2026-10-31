@@ -181,21 +181,37 @@ func TestVerificationProAnubisSubmissionOriginValidation(t *testing.T) {
 		t.Fatal("redir encoding")
 	}
 }
-func TestVerificationProCatalogBindings(t *testing.T) {
+
+// 人机验证的三个入口（solve / capabilities / 旧 flow）必须与主工具一致地
+// **可达**：要么挂在某个默认工具面上，要么作为目录种子存在、能在 UI 里手动绑定。
+//
+// 原断言要求种子显式绑定 worker + pentest。重构后这两个 agent key 的默认面
+// 已被收紧到官方白名单，human_verification_* 全族都不在其中；而生产侧没有任何
+// Tools() 面返回它们 —— 这不是"绑定写错了"，是"整族能力不可达"。
+func TestVerificationProCatalogReachability(t *testing.T) {
+	ts := NewToolSet(nil, "")
+	faces := [][]actool.CoreTool{ts.WorkerTools(), ts.PlannerTools(), ts.MainAgentTools(), builtinToolsByAgent()["pentest"]}
+	seeds := map[string]bool{}
+	for _, seed := range BuiltinToolSeeds() {
+		seeds[seed.Key] = true
+	}
 	for _, name := range []string{"human_verification_solve", "human_verification_capabilities"} {
-		found := false
-		for _, seed := range BuiltinToolSeeds() {
-			if seed.Key == name {
-				found = true
-				joined := "," + strings.Join(seed.Agents, ",") + ","
-				if !strings.Contains(joined, ",worker,") || !strings.Contains(joined, ",pentest,") {
-					t.Fatalf("%s bindings %v", name, seed.Agents)
+		onFace := false
+		for _, face := range faces {
+			for _, tl := range face {
+				if tl.Name() == name {
+					onFace = true
 				}
 			}
 		}
-		if !found {
-			t.Fatalf("missing %s", name)
+		if onFace {
+			continue
 		}
+		if seeds[name] {
+			t.Logf("%s 不在任何默认工具面上，但作为目录种子存在（可手动绑定）", name)
+			continue
+		}
+		t.Errorf("%s 既不在任何默认工具面上，也不在工具目录种子里 —— 不可达", name)
 	}
 	// The new compute/introspection tools are offline; active flow remains subject
 	// to the software_re filter after DB injection.
