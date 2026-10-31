@@ -19,6 +19,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Masthead } from "@/components/editorial";
+import { RecordSub, Sheet as PaperSheet, SheetHead } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import {
   AlertDialog,
@@ -32,7 +33,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1071,24 +1071,54 @@ function ProviderCard({
   };
 
   return (
-    <Card className="gap-0 overflow-hidden py-0">
-      <div className="flex items-start gap-2 border-b bg-muted/30 px-4 py-3">
-        <PlugZapIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate font-medium text-sm">{provider?.name ?? t("page.orphanTitle")}</span>
-            {provider && (
+    <PaperSheet className="gap-0 overflow-hidden py-0">
+      <SheetHead
+        icon={PlugZapIcon}
+        title={<span className="truncate">{provider?.name ?? t("page.orphanTitle")}</span>}
+        actions={
+          <>
+            {provider ? (
               <Badge variant="outline" className="uppercase">
                 {provider.format}
               </Badge>
-            )}
+            ) : null}
             <Badge variant="outline" className="text-muted-foreground">
               {t("card.providerModels", { n: models.length })}
             </Badge>
-          </div>
-          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground text-xs">
-            {provider?.base_url && <code className="truncate font-mono">{provider.base_url}</code>}
-            {provider?.key_error ? (
+            {provider ? (
+              <>
+            <div className="flex shrink-0 gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-7"
+                aria-label={t("provider.edit")}
+                title={t("provider.edit")}
+                onClick={() => onEditProvider(provider)}
+              >
+                <SaveIcon className="size-3.5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-7"
+                aria-label={t("provider.deleteAria")}
+                title={t("provider.deleteAria")}
+                onClick={() => onDeleteProvider(provider)}
+              >
+                <Trash2Icon className="size-3.5 text-destructive" />
+              </Button>
+            </div>
+              </>
+            ) : null}
+          </>
+        }
+      />
+      <div className="px-4 pt-2">
+        <RecordSub
+          items={[
+            provider?.base_url ? <code className="truncate font-mono">{provider.base_url}</code> : null,
+            provider?.key_error ? (
               // 读不出 Key 与「没配 Key」是两回事：前者要用户重填或找回主密钥，
               // 后者才是去填一把新的。混成一句会让人反复填正确的 Key。
               <span className="text-destructive" title={provider.key_error}>
@@ -1098,40 +1128,16 @@ function ProviderCard({
               <span>{provider.api_key_hint}</span>
             ) : provider ? (
               <span className="text-destructive">{t("health.noKey.label")}</span>
-            ) : null}
-            {provider && (
+            ) : null,
+            provider ? (
               <span>
                 {provider.rate_per_second}/s / {provider.rate_per_minute}/min
               </span>
-            )}
-            {provider?.proxy && <span className="truncate">{t("card.proxy", { proxy: provider.proxy })}</span>}
-            {provider?.session_header_key && <span className="font-mono">{provider.session_header_key}</span>}
-          </div>
-        </div>
-        {provider && (
-          <div className="flex shrink-0 gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-7"
-              aria-label={t("provider.edit")}
-              title={t("provider.edit")}
-              onClick={() => onEditProvider(provider)}
-            >
-              <SaveIcon className="size-3.5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-7"
-              aria-label={t("provider.deleteAria")}
-              title={t("provider.deleteAria")}
-              onClick={() => onDeleteProvider(provider)}
-            >
-              <Trash2Icon className="size-3.5 text-destructive" />
-            </Button>
-          </div>
-        )}
+            ) : null,
+            provider?.proxy ? <span className="truncate">{t("card.proxy", { proxy: provider.proxy })}</span> : null,
+            provider?.session_header_key ? <span className="font-mono">{provider.session_header_key}</span> : null,
+          ]}
+        />
       </div>
 
       <div className="divide-y">
@@ -1257,7 +1263,7 @@ function ProviderCard({
           </Button>
         </div>
       )}
-    </Card>
+    </PaperSheet>
   );
 }
 

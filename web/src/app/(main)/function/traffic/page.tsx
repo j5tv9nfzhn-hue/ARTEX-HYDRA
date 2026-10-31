@@ -21,6 +21,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Masthead } from "@/components/editorial";
+import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { HttpCodeBlock } from "@/components/http-code-block";
 import { LinkTrafficDialog } from "@/components/link-traffic-dialog";
@@ -37,7 +38,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -617,7 +617,7 @@ export default function TrafficPage() {
       </div>
       {/* History table */}
       <div className="flex h-[calc(100vh-15rem)] min-h-0 flex-col">
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
+        <PaperSheet className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
           <div className="min-h-0 flex-1 overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-card">
@@ -723,7 +723,7 @@ export default function TrafficPage() {
               </TableBody>
             </Table>
           </div>
-        </Card>
+        </PaperSheet>
       </div>
 
       {linking ? (

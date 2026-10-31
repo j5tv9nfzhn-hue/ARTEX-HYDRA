@@ -6,11 +6,11 @@ import { RefreshCwIcon, RotateCcwIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Sheet } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
@@ -114,7 +114,7 @@ export function DeliveryList({ channels }: { channels: NotificationChannel[] }) 
         <span className="text-muted-foreground ml-auto text-xs">{t("delivery.totalCount", { total })}</span>
       </div>
 
-      <Card className="py-0">
+      <Sheet className="py-0">
         <Table>
           <TableHeader>
             <TableRow>
@@ -177,7 +177,7 @@ export function DeliveryList({ channels }: { channels: NotificationChannel[] }) 
             )}
           </TableBody>
         </Table>
-      </Card>
+      </Sheet>
 
       {maxPage > 1 && (
         <div className="flex items-center justify-end gap-2">

@@ -960,6 +960,7 @@
     "success": "成功",
     "taskIdPlaceholder": "任务 ID",
     "title": "工具执行",
+    "totalItems": "共 {total} 条",
     "unitCalls": "次调用",
     "unitTools": "个工具",
     "subtitle": "Agent 执行过的每一条工具命令，含输入、输出与耗时。"

@@ -13,7 +13,6 @@ import { FindingRetestPanel } from "@/components/finding-retest-panel";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
@@ -120,7 +119,7 @@ export function RetestsTab({ taskId }: { taskId: string }) {
             ) : null}
           </div>
           {data && data.total > PAGE_SIZE ? (
-            <CardFooter className="justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 border-t px-4 py-2">
               <Button
                 variant="outline"
                 size="icon-sm"
@@ -142,7 +141,7 @@ export function RetestsTab({ taskId }: { taskId: string }) {
               >
                 <ChevronRightIcon />
               </Button>
-            </CardFooter>
+            </div>
           ) : null}
           <SheetFoot left={t("retests.foot", { total: data?.total ?? 0, size: PAGE_SIZE })} />
         </Sheet>

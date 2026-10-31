@@ -6,12 +6,12 @@ import Link from "next/link";
 
 import { BarChart3Icon, ChevronLeftIcon, ChevronRightIcon, Loader2Icon, SearchIcon } from "lucide-react";
 import { Masthead } from "@/components/editorial";
+import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { useTranslations } from "next-intl";
 
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -164,11 +164,7 @@ export default function CommandsPage() {
       <Masthead
         title={t("title")}
         subtitle={t("subtitle")}
-        meta={
-          <>
-            共 <span className="tabular-nums">{total}</span> 条
-          </>
-        }
+        meta={<span className="tabular-nums">{t("totalItems", { total })}</span>}
         titleClassName="text-xl"
       />
 
@@ -238,7 +234,7 @@ export default function CommandsPage() {
 
       {/* History table */}
       <div className="flex h-[calc(100vh-13rem)] min-h-0 flex-col">
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
+        <PaperSheet className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
           <div className="min-h-0 flex-1 overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-card">
@@ -317,7 +313,7 @@ export default function CommandsPage() {
               </TableBody>
             </Table>
           </div>
-        </Card>
+        </PaperSheet>
       </div>
 
       {/* 工具调用统计：与表格相同过滤记录，不分页。 */}
