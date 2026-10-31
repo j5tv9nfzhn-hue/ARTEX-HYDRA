@@ -385,4 +385,9 @@ jobs:
       - name: 启动脚本未被写坏（编码/换行/首行/chcp 位置）
         if: always()
         run: python3 -I scripts/check-start-scripts.py
+      # 键缺失在真机上不报错，只会把键名渲染到界面并刷 MISSING_MESSAGE，
+      # 编译与类型检查都发现不了——所以放进 signals，只报告不拦。
+      - name: i18n 键齐备（页面用到的键都在 zh.json 里）
+        if: always()
+        run: python3 -I scripts/check-i18n-keys.py
 
