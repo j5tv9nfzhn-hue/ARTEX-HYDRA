@@ -2981,7 +2981,9 @@
         "verified": "已复核"
       },
       "viewRunning": "查看正在进行的复核会话",
-      "viewSession": "查看会话"
+      "viewSession": "查看会话",
+      "foot": "共 {total} 次复核",
+      "footHint": "每次复核都是一次独立会话"
     }
   },
   "scopeEditor": {

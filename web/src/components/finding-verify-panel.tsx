@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ShieldCheckIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { FindingVerifyDialog } from "@/components/finding-verify-dialog";
 import { Markdown } from "@/components/markdown";
@@ -14,7 +15,6 @@ import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
@@ -80,28 +80,31 @@ export function FindingVerifyPanel({
   const running = items?.find(active);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1.5">
-          <CardTitle>{t("title")}</CardTitle>
-          <CardDescription>{t("desc")}</CardDescription>
-        </div>
-        {running?.conversation_id != null ? (
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/chat?c=${running.conversation_id}`} title={t("viewRunning")}>
-              <Spinner data-icon="inline-start" aria-hidden="true" />
-              {t("status.running")}
-            </Link>
-          </Button>
-        ) : null}
-        {!running && !readOnly ? (
-          <Button size="sm" onClick={() => setOpen(true)} disabled={items === null || !!error}>
-            <ShieldCheckIcon data-icon="inline-start" />
-            {t("start")}
-          </Button>
-        ) : null}
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+    <Sheet>
+      <SheetHead
+        title={t("title")}
+        count={items ? items.length : undefined}
+        hint={t("desc")}
+        actions={
+          <>
+            {running?.conversation_id != null ? (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/chat?c=${running.conversation_id}`} title={t("viewRunning")}>
+                  <Spinner data-icon="inline-start" aria-hidden="true" />
+                  {t("status.running")}
+                </Link>
+              </Button>
+            ) : null}
+            {!running && !readOnly ? (
+              <Button size="sm" onClick={() => setOpen(true)} disabled={items === null || !!error}>
+                <ShieldCheckIcon data-icon="inline-start" />
+                {t("start")}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+      <div className="flex flex-col gap-3 px-4">
         {error ? (
           <Alert variant="destructive">
             <AlertDescription>
@@ -118,33 +121,42 @@ export function FindingVerifyPanel({
         ) : null}
         {!error && items
           ? items.map((item) => (
-              <div key={item.id} className="flex min-w-0 flex-col gap-2 rounded-lg border p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  {item.status === "completed" && item.verdict ? (
+              <RecordRow
+                key={item.id}
+                cols="88px minmax(0,1fr) auto auto"
+                lead={
+                  item.status === "completed" && item.verdict ? (
                     <StatusBadge
                       domain="validation"
                       value={item.verdict === "inconclusive" ? "unverified" : item.verdict}
                       dot
                     />
-                  ) : null}
-                  <Badge variant="secondary">{t(`status.${item.status}`)}</Badge>
-                  {item.status === "completed" && item.verdict ? (
-                    <span className="text-xs font-medium">{t(`verdict.${item.verdict}`)}</span>
-                  ) : null}
-                  <span className="text-muted-foreground text-xs">
-                    #{item.id} / {new Date(item.created_at).toLocaleString()}
-                  </span>
-                  {item.reason ? (
-                    <span className="text-muted-foreground text-xs">/ {t(`reason.${reasonKey(item.reason)}`)}</span>
-                  ) : null}
-                  {item.conversation_id != null ? (
-                    <Button asChild variant="ghost" size="sm" className="ml-auto">
+                  ) : (
+                    <Badge variant="secondary">{t(`status.${item.status}`)}</Badge>
+                  )
+                }
+                values={[
+                  <span className="text-muted-foreground">
+                    {new Date(item.created_at).toLocaleString()}
+                  </span>,
+                  item.conversation_id != null ? (
+                    <Button asChild variant="ghost" size="sm">
                       <Link href={`/chat?c=${item.conversation_id}`}>{t("viewSession")}</Link>
                     </Button>
                   ) : (
-                    <span className="text-muted-foreground text-xs">{t("sessionDeleted")}</span>
-                  )}
-                </div>
+                    <span className="text-muted-foreground">{t("sessionDeleted")}</span>
+                  ),
+                ]}
+              >
+                <div className="flex min-w-0 flex-col gap-1">
+                  <RecordSub
+                    items={[
+                      `#${item.id}`,
+                      t(`status.${item.status}`),
+                      item.status === "completed" && item.verdict ? t(`verdict.${item.verdict}`) : null,
+                      item.reason ? t(`reason.${reasonKey(item.reason)}`) : null,
+                    ]}
+                  />
                 {item.status === "completed" && item.summary ? (
                   <p className="whitespace-pre-wrap break-words text-sm">{item.summary}</p>
                 ) : null}
@@ -164,10 +176,14 @@ export function FindingVerifyPanel({
                     </div>
                   </details>
                 ) : null}
-              </div>
+                </div>
+              </RecordRow>
             ))
           : null}
-      </CardContent>
+      </div>
+      {!error && items && items.length > 0 ? (
+        <SheetFoot left={t("foot", { total: items.length })} right={t("footHint")} />
+      ) : null}
       {open ? (
         <FindingVerifyDialog
           findingId={findingId}
@@ -183,7 +199,7 @@ export function FindingVerifyPanel({
           }}
         />
       ) : null}
-    </Card>
+    </Sheet>
   );
 }
 
