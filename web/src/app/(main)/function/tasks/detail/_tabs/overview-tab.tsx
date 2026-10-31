@@ -36,7 +36,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Progress } from "@/components/ui/progress";
@@ -116,15 +115,15 @@ function StatCard({
   icon: React.ElementType;
 }) {
   return (
-    <Card className="gap-1.5">
-      <CardHeader className="pb-0">
-        <CardDescription className="flex items-center gap-1.5">
+    <Sheet className="gap-1.5">
+      <div className="grid auto-rows-min items-start gap-1 px-4 pb-0">
+        <p className="flex items-center gap-1.5 text-muted-foreground text-sm">
           <Icon className="size-3.5" /> {label}
-        </CardDescription>
-        <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
-      </CardHeader>
-      {sub && <CardContent className="text-muted-foreground text-xs">{sub}</CardContent>}
-    </Card>
+        </p>
+        <div className="font-heading text-2xl font-medium leading-snug tabular-nums">{value}</div>
+      </div>
+      {sub && <div className="px-4 text-muted-foreground text-xs">{sub}</div>}
+    </Sheet>
   );
 }
 
@@ -556,20 +555,26 @@ export function OverviewTab({ taskId }: { taskId: string }) {
        * 任务为终态或暂停时会自动恢复。
        */}
       {blocked.length > 0 && (
-        <Card className="border-red-500/30">
-          <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <AlertTriangleIcon className="size-4 text-red-500" /> {t("blocked.title")}
-              <span className="font-normal text-muted-foreground text-xs">
-                {t("blocked.hint", { count: blocked.length })}
+        <Sheet className="border-red-500/30">
+          <SheetHead
+            icon={AlertTriangleIcon}
+            iconClassName="size-4 text-red-500"
+            title={
+              <span className="flex items-center gap-2">
+                {t("blocked.title")}
+                <span className="font-normal text-muted-foreground text-xs">
+                  {t("blocked.hint", { count: blocked.length })}
+                </span>
               </span>
-            </CardTitle>
-            <Button size="sm" variant="outline" disabled={rerunning.has("__all__")} onClick={() => void rerunAll()}>
-              <RefreshCwIcon className={`size-3.5 ${rerunning.has("__all__") ? "animate-spin" : ""}`} />
-              {t("blocked.rerunAll")}
-            </Button>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
+            }
+            actions={
+              <Button size="sm" variant="outline" disabled={rerunning.has("__all__")} onClick={() => void rerunAll()}>
+                            <RefreshCwIcon className={`size-3.5 ${rerunning.has("__all__") ? "animate-spin" : ""}`} />
+                            {t("blocked.rerunAll")}
+                            </Button>
+            }
+          />
+          <div className="flex flex-col gap-2 px-4 py-3">
             {blocked.slice(0, 20).map((i) => (
               <div key={i.id} className="flex items-center gap-2 text-sm">
                 <StatusBadge domain="intent" value={i.state} />
@@ -589,34 +594,35 @@ export function OverviewTab({ taskId }: { taskId: string }) {
             {blocked.length > 20 && (
               <p className="text-muted-foreground text-xs">{t("blocked.truncated", { rest: blocked.length - 20 })}</p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       )}
       {/* 未收口分支：跑崩/耗尽/被停但没人收口。P2 会自动回炉，到上限转人工。 */}
       {branches.length > 0 && (
-        <Card className="border-amber-500/30">
-          <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <ShieldAlertIcon className="size-4 text-amber-500" /> {t("branches.title")}
-              <span className="font-normal text-muted-foreground text-xs">
-                {t("branches.hint", { count: branches.length })}
+        <Sheet className="border-amber-500/30">
+          <SheetHead
+            icon={ShieldAlertIcon}
+            iconClassName="size-4 text-amber-500"
+            title={
+              <span className="flex items-center gap-2">
+                {t("branches.title")}
+                <span className="font-normal text-muted-foreground text-xs">
+                  {t("branches.hint", { count: branches.length })}
+                </span>
+                {abandonedBranches > 0 && (
+                  <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-xs">
+                    {t("branches.abandoned", { n: abandonedBranches })}
+                  </Badge>
+                )}
               </span>
-              {abandonedBranches > 0 && (
-                <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-xs">
-                  {t("branches.abandoned", { n: abandonedBranches })}
-                </Badge>
-              )}
-            </CardTitle>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 shrink-0 px-2 text-xs"
-              onClick={() => setForceOpen(true)}
-            >
-              <ShieldAlertIcon className="size-3.5" /> {t("branches.forceDone")}
-            </Button>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
+            }
+            actions={
+              <Button size="sm" variant="outline" className="h-7 shrink-0 px-2 text-xs" onClick={() => setForceOpen(true)}>
+                <ShieldAlertIcon className="size-3.5" /> {t("branches.forceDone")}
+              </Button>
+            }
+          />
+          <div className="flex flex-col gap-2 px-4 py-3">
             {branches.slice(0, 20).map((b) => (
               <div key={b.intent_id} className="flex items-center gap-2 text-sm">
                 <StatusBadge domain="intent" value={b.end_state} />
@@ -665,8 +671,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
                 {t("branches.truncated", { rest: branches.length - 20 })}
               </p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       )}
       <HandoffDialog
         taskId={taskId}
