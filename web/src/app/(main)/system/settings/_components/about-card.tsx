@@ -6,9 +6,9 @@ import Link from "next/link";
 
 import { BotIcon, LayersIcon, ShieldCheckIcon, SparklesIcon, TargetIcon } from "lucide-react";
 
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { APP_CONFIG } from "@/config/app-config";
 import { api } from "@/lib/api";
 
@@ -38,18 +38,13 @@ export function AboutCard() {
 
   return (
     // 设置页是多列瀑布流布局，卡片自己负责行间距并禁止跨列断开（见 page.tsx 的注释）。
-    <Card className="mb-4 break-inside-avoid md:mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <LayersIcon className="size-4" />
-          项目简介与架构概览
-        </CardTitle>
-        <CardDescription>
+    <Sheet className="mb-4 break-inside-avoid md:mb-6">
+      <SheetHead icon={LayersIcon} title="项目简介与架构概览" />
+      <div className="flex flex-col gap-4 px-4 py-3">
+        <p className="text-muted-foreground text-sm">
           <b>ARTEX-HYDRA</b> 是一套由大语言模型驱动的自主渗透测试与自适应编排协同平台，融合图驱动探索、证据链复测闭环与 AI
           自我进化技能沉淀。
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </p>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Badge variant="secondary" className="font-mono">
             {APP_CONFIG.name}
@@ -108,7 +103,7 @@ export function AboutCard() {
             </Link>
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </Sheet>
   );
 }
