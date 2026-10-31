@@ -5521,6 +5521,7 @@
       "detail": "已知字段摘要",
       "plan": "计划摘要",
       "actorLimit": "当前操作者标签为单用户 authenticated_operator，不是多用户实名归属；SQL 追加限制不是对本机高权限改库的防篡改保证。",
+      "foot": "共 {total} 条审计记录",
       "otherAction": "其他事件",
       "countDetail": "{table}：候选 {selected}，删除 {deleted}，跳过 {skipped}",
       "policyDetail": "人工执行{enabled}；用量 {usage} 天 / 日志 {logs} 天 / 通知 {notifications} 天（0 为永久保留）；每表上限 {maximum}。",

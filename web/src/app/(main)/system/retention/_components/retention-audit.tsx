@@ -3,8 +3,8 @@
 import { RefreshCwIcon, ScrollTextIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { parseRetentionPolicy, RETENTION_TABLES, type RetentionAuditEntry, type RetentionTable } from "@/lib/retention";
 
@@ -113,21 +113,19 @@ export function RetentionAudit({
   let emptyMessage: string | null = null;
   if (!busy && !error) emptyMessage = loaded ? t("audit.empty") : t("audit.notLoaded");
   return (
-    <Card>
-      <CardHeader className="flex flex-wrap items-start justify-between gap-3 sm:flex-row">
-        <div className="space-y-1.5">
-          <CardTitle className="flex items-center gap-2">
-            <ScrollTextIcon className="size-4" />
-            {t("audit.title")}
-          </CardTitle>
-          <CardDescription>{t("audit.description")}</CardDescription>
-        </div>
-        <Button variant="outline" size="sm" disabled={disabled || busy} onClick={refresh}>
-          <RefreshCwIcon className="size-4" />
-          {t("audit.refresh")}
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-3" aria-busy={busy}>
+    <Sheet>
+      <SheetHead
+        icon={ScrollTextIcon}
+        title={t("audit.title")}
+        hint={t("audit.description")}
+        actions={
+          <Button variant="outline" size="sm" disabled={disabled || busy} onClick={refresh}>
+            <RefreshCwIcon className="size-4" />
+            {t("audit.refresh")}
+          </Button>
+        }
+      />
+      <div className="flex flex-col gap-3 px-4 py-3" aria-busy={busy}>
         {error && (
           <p role="alert" className="text-destructive text-sm">
             {t("audit.loadFailed", { error })}
@@ -181,7 +179,10 @@ export function RetentionAudit({
           <p className="text-muted-foreground text-sm">{emptyMessage}</p>
         )}
         <p className="text-muted-foreground text-xs">{t("audit.actorLimit")}</p>
-      </CardContent>
-    </Card>
+      </div>
+      {loaded && entries.length > 0 ? (
+        <SheetFoot left={t("audit.foot", { total: entries.length })} />
+      ) : null}
+    </Sheet>
   );
 }
