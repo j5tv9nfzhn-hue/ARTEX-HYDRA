@@ -28,7 +28,7 @@ from pathlib import Path
 # 与 scripts/gen-update-manifest.py 的 WEB_STEM/PLATFORMS 同一口径；
 # 发布说明只列这类包，别族的 zip 一律不展示。
 ASSET_RE = re.compile(
-    r"artex-rea-[0-9][^-]*(?:\.[0-9]+)*-(?:linux|darwin|windows)-(?:amd64|arm64)\.zip"
+    r"artex-rea-[0-9][^-]*(?:\.[0-9]+)*-(?P<os>linux|darwin|windows)-(?P<arch>amd64|arm64)\.zip"
 )
 
 # 展示顺序即优先级：先新增、再修复，其余按重要性递减。
