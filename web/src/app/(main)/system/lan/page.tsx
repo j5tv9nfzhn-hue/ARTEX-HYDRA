@@ -6,10 +6,10 @@ import { RefreshCwIcon, ShieldAlertIcon, WifiIcon, WifiOffIcon } from "lucide-re
 import { useTranslations } from "next-intl";
 
 import { Masthead } from "@/components/editorial";
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { CopyButton } from "@/components/copy-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { http } from "@/lib/api";
 
 // 系统 → 局域网连接
@@ -137,26 +137,24 @@ export default function LanPage() {
       </div>
 
       {error ? (
-        <Card>
-          <CardContent className="p-4 text-destructive text-sm">{error}</CardContent>
-        </Card>
+        <Sheet>
+          <div className="p-4 text-destructive text-sm">{error}</div>
+        </Sheet>
       ) : null}
 
       {switching ? (
-        <Card>
-          <CardContent className="flex items-center gap-2 p-4 text-sm">
+        <Sheet>
+          <div className="flex items-center gap-2 p-4 text-sm">
             <RefreshCwIcon className="animate-spin" />
             {t("restarting")}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("statusTitle")}</CardTitle>
-          <CardDescription>{t("statusDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Sheet>
+        <SheetHead title={t("statusTitle")} />
+        <div className="px-4 py-3">
+          <p className="text-muted-foreground text-sm">{t("statusDesc")}</p>
           <InfoRow label={t("listenLabel")}>{info?.listen_addr ?? "-"}</InfoRow>
           <InfoRow label={t("lanLabel")}>
             {lanOpen ? (
@@ -168,16 +166,14 @@ export default function LanPage() {
           <InfoRow label={t("passwordLabel")}>
             {info?.password_set ? t("passwordSet") : t("passwordUnset")}
           </InfoRow>
-        </CardContent>
-      </Card>
+        </div>
+      </Sheet>
 
       {lanOpen ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("webEntryTitle")}</CardTitle>
-            <CardDescription>{t("webEntryHint")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <Sheet>
+          <SheetHead title={t("webEntryTitle")} />
+          <div className="space-y-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("webEntryHint")}</p>
             <div className="flex flex-wrap items-center gap-2">
               <code className="block select-all break-all rounded bg-muted p-2 text-xs">{primary}</code>
               <CopyButton text={primary} />
@@ -209,15 +205,13 @@ export default function LanPage() {
               </Button>
             </div>
             <p className="text-muted-foreground text-xs">{t("disableNote")}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("enableTitle")}</CardTitle>
-            <CardDescription>{t("enableDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <Sheet>
+          <SheetHead title={t("enableTitle")} />
+          <div className="space-y-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("enableDesc")}</p>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
@@ -253,23 +247,19 @@ export default function LanPage() {
                 <CopyButton text={info?.restart_cmd} />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <span className="flex items-center gap-2 font-medium text-foreground">
-              <ShieldAlertIcon />
-              {t("securityTitle")}
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Sheet>
+        <SheetHead
+          icon={ShieldAlertIcon}
+          title={<span className="font-medium text-foreground">{t("securityTitle")}</span>}
+        />
+        <div className="px-4 py-3">
           <p className="text-sm font-normal leading-relaxed text-muted-foreground">{t("securityBody")}</p>
-        </CardContent>
-      </Card>
+        </div>
+      </Sheet>
 
       <p className="flex items-center gap-2 text-muted-foreground text-xs">
         {loading ? t("loading") : `${t("versionLabel")} ${info?.version ?? "-"}`}
