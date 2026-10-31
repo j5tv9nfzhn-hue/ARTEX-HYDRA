@@ -66,6 +66,7 @@
 - **通知中心与日志行内展开。** 顶栏铃铛只列「要动手的」两件事：待裁决的审批票与最近 10 条 critical / high 发现，数字即待办数，关掉面板不轮询；日志页点一行展开前后各 3 行上下文，一次只展开一行。
 - **排版门禁。** 字号 12px 门禁：9 / 10 / 11 / 11.5px 全部收敛到 `text-xs`；元数据分隔符去掉中点「·」，展示层改用间距，历史协议串的解析兼容保持不变。
 - **可复跑的守卫。** `scripts/audit-editorial.mjs` 守五条不变量：`editorial.css` 规则必须限定在 `[data-theme-preset="paper"]` 下、`paper.css` 覆盖 37 项令牌契约且浅深两套都在、每个页面必须挂 `data-editorial="body"`、`skin-editorial.css` 必须挂在 `[data-skin="editorial"]` 下、双主题接线七处齐全。
+- **B 类面板结构改造开张：复测面板先换成版块原语。** `components/finding-retest-panel.tsx` 的卡片与自绘描边盒子换成 `Sheet` + `SheetHead` + `RecordRow` + `RecordSub` + `SheetFoot`：徽标在左、编号与正文在中、时间与会话入口在右，第二行走 `RecordSub`，底部补「共 N 次复测」落款；补 `retest.panel.foot` / `footHint` 两个词条。`Sheet` 在老主题下仍渲染成卡片（带 `data-slot="card"`），classic 零影响。这是「卡片 → 版块原语」这条结构改造线的第一刀，其余面板按同一套语法跟进。
 - **B 类深层面板接入报纸语言（皮肤层）。** `skin-editorial.css` 新增第 16 组：面板头尾压发丝线、右上角 ✕ 改成细描边小方钮（限定直接子元素，避免把页脚「取消」一起压成图标钮）、命令面板的检索行压一条墨线、菜单项改成记录行（悬停浅面 / 勾选用左侧主色竖线）、`item` / `field` / `accordion` / `scroll-area` / `progress` / `kbd` 与面板内的代码块、表格容器一并收口。只动版式与描边，不改 `display` / `position` / `overflow`、不写死尺寸上限；全部锁在 `[data-skin="editorial"]` 下，切回老主题一条都不生效。
 - **配色令牌化，规则里不再出现色值。** 原先散在规则里的 4 处色值字面量（三档抬升阴影 + 一层遮罩）收进皮肤令牌块 `--ed-lift-1/2/3` 与 `--ed-scrim`。它们是中性色而不是主题色——主题色仍然只在 `presets/paper.css` 定义；抬升与遮罩刻意不用 `--foreground` 推导，否则深色主题下会从「压暗」变成「发光」。
 - **守卫补一条不变量，并修掉一处自身缺陷。** `scripts/audit-editorial.mjs` 新增「皮肤层令牌块之外不得出现硬编码色值」（`#hex` / `oklch()` / `rgb()` / `hsl()`）；同时修正：接线文件缺失时错误文本里不含 "skin"，脚本却仍会打印「双主题接线完整」，改为按计数判断。

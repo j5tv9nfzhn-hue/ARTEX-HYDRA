@@ -2933,7 +2933,9 @@
         "reproduced": "仍可复现"
       },
       "viewRunning": "查看正在进行的复测会话",
-      "viewSession": "查看会话"
+      "viewSession": "查看会话",
+      "foot": "共 {total} 次复测",
+      "footHint": "每次复测都是一次独立会话"
     }
   },
   "verify": {

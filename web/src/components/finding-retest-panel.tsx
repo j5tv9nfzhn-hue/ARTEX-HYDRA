@@ -7,13 +7,13 @@ import Link from "next/link";
 import { RotateCcwIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { FindingRetestDialog } from "@/components/finding-retest-dialog";
 import { Markdown } from "@/components/markdown";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
@@ -74,28 +74,31 @@ export function FindingRetestPanel({
   const running = items?.find(active);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1.5">
-          <CardTitle>{t("title")}</CardTitle>
-          <CardDescription>{t("desc")}</CardDescription>
-        </div>
-        {running?.conversation_id != null ? (
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/chat?c=${running.conversation_id}`} title={t("viewRunning")}>
-              <Spinner data-icon="inline-start" aria-hidden="true" />
-              {t("status.running")}
-            </Link>
-          </Button>
-        ) : null}
-        {!running && !readOnly ? (
-          <Button size="sm" onClick={() => setOpen(true)} disabled={items === null || !!error}>
-            <RotateCcwIcon data-icon="inline-start" />
-            {t("start")}
-          </Button>
-        ) : null}
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+    <Sheet>
+      <SheetHead
+        title={t("title")}
+        count={items ? items.length : undefined}
+        hint={t("desc")}
+        actions={
+          <>
+            {running?.conversation_id != null ? (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/chat?c=${running.conversation_id}`} title={t("viewRunning")}>
+                  <Spinner data-icon="inline-start" aria-hidden="true" />
+                  {t("status.running")}
+                </Link>
+              </Button>
+            ) : null}
+            {!running && !readOnly ? (
+              <Button size="sm" onClick={() => setOpen(true)} disabled={items === null || !!error}>
+                <RotateCcwIcon data-icon="inline-start" />
+                {t("start")}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+      <div className="flex flex-col gap-3 px-4">
         {error ? (
           <Alert variant="destructive">
             <AlertDescription>
@@ -112,8 +115,10 @@ export function FindingRetestPanel({
         ) : null}
         {!error && items
           ? items.map((item) => (
-              <div key={item.id} className="flex min-w-0 flex-col gap-2 rounded-lg border p-3">
-                <div className="flex flex-wrap items-center gap-2">
+              <RecordRow
+                key={item.id}
+                cols="76px minmax(0,1fr) auto auto"
+                lead={
                   <Badge
                     variant={item.status === "completed" && item.verdict === "reproduced" ? "destructive" : "secondary"}
                   >
@@ -121,17 +126,22 @@ export function FindingRetestPanel({
                       ? t(`verdict.${item.verdict}`)
                       : t(`status.${item.status}`)}
                   </Badge>
-                  <span className="text-muted-foreground text-xs">
-                    #{item.id} / {new Date(item.created_at).toLocaleString("zh-CN")}
-                  </span>
-                  {item.conversation_id != null ? (
-                    <Button asChild variant="ghost" size="sm" className="ml-auto">
+                }
+                values={[
+                  <span className="text-muted-foreground">
+                    {new Date(item.created_at).toLocaleString("zh-CN")}
+                  </span>,
+                  item.conversation_id != null ? (
+                    <Button asChild variant="ghost" size="sm">
                       <Link href={`/chat?c=${item.conversation_id}`}>{t("viewSession")}</Link>
                     </Button>
                   ) : (
-                    <span className="text-muted-foreground text-xs">{t("sessionDeleted")}</span>
-                  )}
-                </div>
+                    <span className="text-muted-foreground">{t("sessionDeleted")}</span>
+                  ),
+                ]}
+              >
+                <div className="flex min-w-0 flex-col gap-1">
+                  <RecordSub items={[`#${item.id}`]} />
                 {item.status === "completed" && item.summary ? (
                   <p className="whitespace-pre-wrap break-words text-sm">{item.summary}</p>
                 ) : null}
@@ -151,10 +161,14 @@ export function FindingRetestPanel({
                     </div>
                   </details>
                 ) : null}
-              </div>
+                </div>
+              </RecordRow>
             ))
           : null}
-      </CardContent>
+      </div>
+      {!error && items && items.length > 0 ? (
+        <SheetFoot left={t("foot", { total: items.length })} right={t("footHint")} />
+      ) : null}
       {open ? (
         <FindingRetestDialog
           findingId={findingId}
@@ -170,6 +184,6 @@ export function FindingRetestPanel({
           }}
         />
       ) : null}
-    </Card>
+    </Sheet>
   );
 }
