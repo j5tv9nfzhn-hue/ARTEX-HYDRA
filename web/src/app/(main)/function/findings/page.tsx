@@ -19,6 +19,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Masthead } from "@/components/editorial";
+import { Sheet } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { useNewFindingsAlert } from "@/components/finding-alert";
 import { FindingRetestDialog } from "@/components/finding-retest-dialog";
@@ -27,7 +28,6 @@ import { useStaggerOnce } from "@/components/motion";
 import { StatusBadge } from "@/components/status-badge";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -842,8 +842,8 @@ export default function FindingsPage() {
 
   // 平铺视图与资产视图右侧是同一张表 + 同一份分页,只是筛选条件不同。
   const flatListCard = (
-    <Card className="gap-0 py-0">
-      <CardContent className="px-0">
+    <Sheet className="gap-0 py-0">
+      <div className="px-0">
         {flat.loading && !flat.loaded ? (
           <div className="flex min-h-36 items-center justify-center">
             <Spinner />
@@ -864,8 +864,8 @@ export default function FindingsPage() {
             />
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </Sheet>
   );
 
   return (
@@ -885,19 +885,19 @@ export default function FindingsPage() {
           {statCards.map((stat, index) => {
             const StatIcon = stat.icon;
             return (
-              <Card
+              <Sheet
                 key={stat.label}
                 className="animate-fade-up gap-1 py-4"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                <CardHeader className="px-4">
-                  <CardDescription>{stat.label}</CardDescription>
-                  <CardTitle className={cn("flex items-center gap-2 text-2xl tabular-nums", stat.tone)}>
+                <div className="grid auto-rows-min items-start gap-1 px-4">
+                  <p className="text-muted-foreground text-sm">{stat.label}</p>
+                  <div className={cn("flex items-center gap-2 font-heading text-2xl font-medium tabular-nums", stat.tone)}>
                     <StatIcon className="size-5" aria-hidden="true" />
                     {stat.value}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
+                  </div>
+                </div>
+              </Sheet>
             );
           })}
         </div>
@@ -1025,8 +1025,8 @@ export default function FindingsPage() {
 
         {view === "asset" && (
           <div className="grid min-h-0 items-start gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)]">
-            <Card className="gap-0 py-3 lg:sticky lg:top-4">
-              <CardContent className="flex flex-col px-3">
+            <Sheet className="gap-0 py-3 lg:sticky lg:top-4">
+              <div className="flex flex-col px-3">
                 {assetTree.loading && !assetTree.loaded ? (
                   <div className="flex min-h-36 items-center justify-center">
                     <Spinner />
@@ -1043,8 +1043,8 @@ export default function FindingsPage() {
                     onRefresh={() => void loadAssetTree()}
                   />
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </Sheet>
             <div className="flex min-w-0 flex-col gap-2">
               <div className="flex min-w-0 flex-wrap items-center gap-1 text-sm text-muted-foreground">
                 <button
@@ -1093,8 +1093,8 @@ export default function FindingsPage() {
                 loading: false,
               };
               return (
-                <Card key={key} className="gap-0 py-0">
-                  <CardHeader className="px-4 py-3">
+                <Sheet key={key} className="gap-0 py-0">
+                  <div className="grid auto-rows-min items-start gap-1 px-4 py-3">
                     <div className="flex min-w-0 flex-wrap items-center gap-3">
                       <button
                         type="button"
@@ -1109,16 +1109,16 @@ export default function FindingsPage() {
                           )}
                         />
                         <div className="flex min-w-0 flex-col gap-1">
-                          <CardTitle className="truncate text-sm">
+                          <div className="truncate font-heading text-sm font-medium leading-snug">
                             {group.task_id === null
                               ? t("task.unassigned")
                               : group.task_name
                                 ? t("group.withName", { name: group.task_name, id: group.task_id })
                                 : t("group.taskOnly", { id: group.task_id })}
-                          </CardTitle>
-                          <CardDescription className="truncate" title={group.task_description}>
+                          </div>
+                          <p className="truncate text-muted-foreground text-sm" title={group.task_description}>
                             {group.task_description || t("group.sourceUnavailable")}
-                          </CardDescription>
+                          </p>
                         </div>
                       </button>
                       <div className="flex flex-wrap items-center gap-2">
@@ -1148,9 +1148,9 @@ export default function FindingsPage() {
                         )}
                       </div>
                     </div>
-                  </CardHeader>
+                  </div>
                   {groupOpen && (
-                    <CardContent className="px-0">
+                    <div className="px-0">
                       {state.loading && !state.loaded ? (
                         <div className="flex min-h-36 items-center justify-center">
                           <Spinner />
@@ -1167,17 +1167,17 @@ export default function FindingsPage() {
                           />
                         </>
                       )}
-                    </CardContent>
+                    </div>
                   )}
-                </Card>
+                </Sheet>
               );
             })}
             {groups.length === 0 && (
-              <Card>
-                <CardContent className="p-0">
+              <Sheet>
+                <div className="p-0">
                   <EmptyState illustration="radar" title={t("empty")} />
-                </CardContent>
-              </Card>
+                </div>
+              </Sheet>
             )}
             <TablePagination
               page={page}
