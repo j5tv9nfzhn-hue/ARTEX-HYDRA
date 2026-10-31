@@ -38,6 +38,15 @@
 
   --ed-row: 30px;
   --ed-pad: 22px;
+
+  /* 抬升与遮罩：全站只有这四档「中性暗」，一律收在这里，规则里只引用名字。
+     刻意不用 --foreground 推导：阴影与遮罩的作用是压暗下方，跟着前景色走
+     会在深色主题里反过来变成光晕（浅色下压暗、深色下提亮）。
+     它们是中性色而不是主题色，主题色仍然只在 presets/paper.css 定义。 */
+  --ed-lift-1: 0 1px 2px oklch(0 0 0 / 0.25);
+  --ed-lift-2: 0 8px 24px oklch(0 0 0 / 0.1);
+  --ed-lift-3: 0 18px 48px oklch(0 0 0 / 0.16);
+  --ed-scrim: oklch(0 0 0 / 0.42);
 }
 
 @media (min-width: 1280px) {
@@ -467,7 +476,7 @@
   width: 14px;
   height: 14px;
   background: var(--card);
-  box-shadow: 0 1px 2px oklch(0 0 0 / 0.25);
+  box-shadow: var(--ed-lift-1);
 }
 
 /* 复选框 / 单选：方角 */
@@ -486,7 +495,7 @@
   border-radius: 3px;
   border: 1px solid var(--ed-hairline);
   background: var(--popover);
-  box-shadow: 0 8px 24px oklch(0 0 0 / 0.1);
+  box-shadow: var(--ed-lift-2);
   padding: 4px;
 }
 
@@ -511,7 +520,7 @@
   border-radius: 3px;
   border: 1px solid var(--ed-hairline);
   background: var(--card);
-  box-shadow: 0 18px 48px oklch(0 0 0 / 0.16);
+  box-shadow: var(--ed-lift-3);
   gap: 0;
   padding: 18px 20px;
 }
@@ -544,7 +553,7 @@
 :root[data-skin="editorial"] [data-slot="alert-dialog-overlay"],
 :root[data-skin="editorial"] [data-slot="sheet-overlay"],
 :root[data-skin="editorial"] [data-slot="drawer-overlay"] {
-  background: oklch(0 0 0 / 0.42);
+  background: var(--ed-scrim);
   backdrop-filter: none;
 }
 
@@ -701,3 +710,340 @@
     display: none;
   }
 }
+
+/* ══ 16. B 类深层面板：对话框 / 抽屉 / 命令面板 / 小浮层 ═══════════════════
+   第 10 组只翻译了「外壳」。B 类面板真正露怯的是壳子里面：一堆描边卡片、
+   胶囊菜单、填充色块——切到纸本后外壳是纸，里面还是科技风。
+
+   这一组只碰「壳子里那一层」，并且只动版式、描边与间距：
+   不写死任何尺寸上限，不改 display / position / overflow。
+   万一某条规则命中了没预料到的元素，最坏也只是「看起来朴素一点」，不会错位。
+
+   颜色一律走令牌（--ed-* 或 paper.css 的 --*），本组不出现任何色值字面量；
+   抬升与遮罩收在文件头的令牌块里，规则里只引用名字。                       */
+
+/* 16.1 面板头尾：书眉与落款，中间留给正文呼吸 */
+:root[data-skin="editorial"] [data-slot="dialog-header"],
+:root[data-skin="editorial"] [data-slot="alert-dialog-header"],
+:root[data-skin="editorial"] [data-slot="sheet-header"],
+:root[data-skin="editorial"] [data-slot="drawer-header"],
+:root[data-skin="editorial"] [data-slot="popover-header"] {
+  border-bottom: 1px solid var(--ed-hairline);
+  padding-bottom: 12px;
+  text-align: left;
+}
+
+:root[data-skin="editorial"] [data-slot="sheet-footer"],
+:root[data-skin="editorial"] [data-slot="drawer-footer"] {
+  border-top: 1px solid var(--ed-hairline);
+  padding-top: 12px;
+}
+
+/* 16.2 右上角 ✕：一枚不带填充的细描边小方钮。
+   必须限定「面板内容的直接子元素」：页脚那排「取消 / 确定」同样用 DialogClose
+   包着，不限定的话整排按钮都会被压成一枚图标钮。 */
+:root[data-skin="editorial"] [data-slot="dialog-content"] > [data-slot="dialog-close"],
+:root[data-skin="editorial"] [data-slot="sheet-content"] > [data-slot="sheet-close"],
+:root[data-skin="editorial"] [data-slot="drawer-content"] > [data-slot="drawer-close"] {
+  border: 1px solid var(--ed-hairline);
+  border-radius: 2px;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root[data-skin="editorial"] [data-slot="dialog-content"] > [data-slot="dialog-close"]:hover,
+:root[data-skin="editorial"] [data-slot="sheet-content"] > [data-slot="sheet-close"]:hover,
+:root[data-skin="editorial"] [data-slot="drawer-content"] > [data-slot="drawer-close"]:hover {
+  background: var(--ed-hover);
+  border-color: var(--ed-rule);
+}
+
+/* 16.3 命令面板（⌘K）：检索框是一条墨线，结果是一条条记录行 */
+:root[data-skin="editorial"] [data-slot="command"] {
+  background: transparent;
+}
+
+/* 检索行下沿压一条墨线——报纸的检索框不是「一个输入框」 */
+:root[data-skin="editorial"] [data-slot="command-input-wrapper"] {
+  border-bottom: 1px solid var(--ed-rule);
+  border-radius: 0;
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+}
+
+:root[data-skin="editorial"] [data-slot="command-input"] {
+  background: transparent;
+  font-size: 13px;
+}
+
+:root[data-skin="editorial"] [data-slot="command-input"]::placeholder {
+  color: var(--muted-foreground);
+}
+
+/* cmdk 的分组标题没有 data-slot，只有 [cmdk-group-heading] 属性 */
+:root[data-skin="editorial"] [cmdk-group-heading] {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 8px 8px 4px;
+}
+
+:root[data-skin="editorial"] [data-slot="command-item"] {
+  border-radius: 0;
+  font-size: 12px;
+  min-height: 28px;
+  gap: 8px;
+}
+
+/* 选中态用左侧一道主色竖线，不用填充块——和侧栏、下拉是同一套语法 */
+:root[data-skin="editorial"] [data-slot="command-item"][data-selected="true"] {
+  background: var(--ed-hover);
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+:root[data-skin="editorial"] [data-slot="command-empty"] {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  padding: 14px 8px;
+}
+
+/* 快捷键：等宽小字，不是一枚键帽 */
+:root[data-skin="editorial"] [data-slot="command-shortcut"] {
+  font-family: var(--ed-mono);
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+}
+
+/* 16.4 尚未覆盖的小浮层外壳：右键菜单 / 悬浮卡 / 提示气泡 / 菜单栏 / 导航菜单。
+   下拉与弹出面板在第 9 组已经收口，这里不重复。 */
+:root[data-skin="editorial"] [data-slot="context-menu-content"],
+:root[data-skin="editorial"] [data-slot="context-menu-sub-content"],
+:root[data-skin="editorial"] [data-slot="dropdown-menu-sub-content"],
+:root[data-skin="editorial"] [data-slot="hover-card-content"],
+:root[data-skin="editorial"] [data-slot="tooltip-content"],
+:root[data-skin="editorial"] [data-slot="menubar-content"],
+:root[data-skin="editorial"] [data-slot="menubar-sub-content"],
+:root[data-skin="editorial"] [data-slot="navigation-menu-content"] {
+  border-radius: 3px;
+  border: 1px solid var(--ed-hairline);
+  box-shadow: var(--ed-lift-2);
+  padding: 4px;
+}
+
+/* 16.5 菜单项：记录行，不是胶囊。
+   下拉与 select 的条目在第 9 组已收口，这里补齐右键、菜单栏、导航与 combobox。 */
+:root[data-skin="editorial"] [data-slot="context-menu-item"],
+:root[data-skin="editorial"] [data-slot="context-menu-checkbox-item"],
+:root[data-skin="editorial"] [data-slot="context-menu-radio-item"],
+:root[data-skin="editorial"] [data-slot="context-menu-sub-trigger"],
+:root[data-skin="editorial"] [data-slot="menubar-item"],
+:root[data-skin="editorial"] [data-slot="menubar-checkbox-item"],
+:root[data-skin="editorial"] [data-slot="menubar-radio-item"],
+:root[data-skin="editorial"] [data-slot="menubar-sub-trigger"],
+:root[data-skin="editorial"] [data-slot="navigation-menu-link"],
+:root[data-skin="editorial"] [data-slot="combobox-item"] {
+  border-radius: 0;
+  font-size: 12px;
+  min-height: 26px;
+}
+
+:root[data-skin="editorial"] [data-slot="context-menu-item"][data-highlighted],
+:root[data-skin="editorial"] [data-slot="context-menu-checkbox-item"][data-highlighted],
+:root[data-skin="editorial"] [data-slot="context-menu-radio-item"][data-highlighted],
+:root[data-skin="editorial"] [data-slot="context-menu-sub-trigger"][data-state="open"],
+:root[data-skin="editorial"] [data-slot="menubar-item"][data-highlighted],
+:root[data-skin="editorial"] [data-slot="menubar-checkbox-item"][data-highlighted],
+:root[data-skin="editorial"] [data-slot="menubar-radio-item"][data-highlighted],
+:root[data-skin="editorial"] [data-slot="menubar-sub-trigger"][data-state="open"],
+:root[data-skin="editorial"] [data-slot="combobox-item"][data-highlighted],
+:root[data-skin="editorial"] [data-slot="dropdown-menu-item"][data-highlighted] {
+  background: var(--ed-hover);
+  color: var(--foreground);
+}
+
+/* 勾选项：左侧一道主色竖线，代替「打勾 + 填充」 */
+:root[data-skin="editorial"] [data-slot="context-menu-checkbox-item"][data-state="checked"],
+:root[data-skin="editorial"] [data-slot="context-menu-radio-item"][data-state="checked"],
+:root[data-skin="editorial"] [data-slot="menubar-checkbox-item"][data-state="checked"],
+:root[data-skin="editorial"] [data-slot="menubar-radio-item"][data-state="checked"] {
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+/* 16.6 菜单里的分组标题、分隔线与快捷键提示 */
+:root[data-skin="editorial"] [data-slot="dropdown-menu-label"],
+:root[data-skin="editorial"] [data-slot="context-menu-label"],
+:root[data-skin="editorial"] [data-slot="select-label"],
+:root[data-skin="editorial"] [data-slot="combobox-label"],
+:root[data-skin="editorial"] [data-slot="menubar-label"] {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+:root[data-skin="editorial"] [data-slot="dropdown-menu-separator"],
+:root[data-skin="editorial"] [data-slot="context-menu-separator"],
+:root[data-skin="editorial"] [data-slot="menubar-separator"],
+:root[data-skin="editorial"] [data-slot="select-separator"],
+:root[data-skin="editorial"] [data-slot="combobox-separator"] {
+  background: var(--ed-hairline);
+  margin: 4px 0;
+}
+
+:root[data-skin="editorial"] [data-slot="dropdown-menu-shortcut"],
+:root[data-skin="editorial"] [data-slot="context-menu-shortcut"],
+:root[data-skin="editorial"] [data-slot="menubar-shortcut"] {
+  font-family: var(--ed-mono);
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+}
+
+/* 16.7 item 原语：面板里的列表项。纸本里它是「一行记录」，不是一张小卡片。 */
+:root[data-skin="editorial"] [data-slot="item"] {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid var(--ed-hairline-weak);
+  background: transparent;
+  box-shadow: none;
+}
+
+:root[data-skin="editorial"] [data-slot="item-group"] > [data-slot="item"]:last-child,
+:root[data-skin="editorial"] [data-slot="item"]:last-child {
+  border-bottom: 0;
+}
+
+:root[data-skin="editorial"] [data-slot="item-title"] {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+:root[data-skin="editorial"] [data-slot="item-description"] {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+:root[data-skin="editorial"] [data-slot="item-media"] {
+  background: transparent;
+  border-radius: 2px;
+}
+
+/* 16.8 field 原语：面板里的表单行。标签退成注脚，输入区自己说话。
+   只改排版：field 的错误态走 --destructive 令牌，不动它的语义色。 */
+:root[data-skin="editorial"] [data-slot="field-label"] {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+:root[data-skin="editorial"] [data-slot="field-description"] {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+:root[data-skin="editorial"] [data-slot="field-error"] {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+:root[data-skin="editorial"] [data-slot="field-separator"] {
+  background: var(--ed-hairline);
+}
+
+/* 16.9 alert：只改排版，不动边框与底色。
+   alert 的危险态是靠 border / text 上的 destructive 类表达的，用 data-slot
+   一刀切会把「这是条错误」的信号一起抹掉——那不是朴素，是丢信息。 */
+:root[data-skin="editorial"] [data-slot="alert-title"] {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+:root[data-skin="editorial"] [data-slot="alert-description"] {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* 16.10 accordion：章节折叠，行间一条发丝线 */
+:root[data-skin="editorial"] [data-slot="accordion-item"] {
+  border-bottom: 1px solid var(--ed-hairline);
+}
+
+:root[data-skin="editorial"] [data-slot="accordion-trigger"] {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 0;
+}
+
+:root[data-skin="editorial"] [data-slot="accordion-content"] {
+  font-size: 12px;
+  line-height: 1.7;
+  padding-bottom: 10px;
+}
+
+/* 16.11 滚动区 / 进度 / 键帽：与全局同一套「细」的语法 */
+:root[data-skin="editorial"] [data-slot="scroll-area-thumb"] {
+  background: color-mix(in oklab, var(--foreground) 26%, transparent);
+  border-radius: 99px;
+}
+
+:root[data-skin="editorial"] [data-slot="progress"] {
+  height: 3px;
+  border-radius: 0;
+  background: var(--ed-hairline-weak);
+}
+
+:root[data-skin="editorial"] [data-slot="progress-indicator"] {
+  border-radius: 0;
+  background: var(--primary);
+}
+
+:root[data-skin="editorial"] [data-slot="kbd"] {
+  border: 1px solid var(--ed-hairline);
+  border-radius: 2px;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--ed-mono);
+  font-size: 12px;
+}
+
+/* 16.12 面板里的代码块：一段引文，不是一个深色盒子。
+   只认 pre（含 pre code）——行内 code 若也加边框，正文会被割碎。 */
+:root[data-skin="editorial"] [data-slot="dialog-content"] pre,
+:root[data-skin="editorial"] [data-slot="alert-dialog-content"] pre,
+:root[data-skin="editorial"] [data-slot="sheet-content"] pre,
+:root[data-skin="editorial"] [data-slot="drawer-content"] pre,
+:root[data-skin="editorial"] [data-slot="popover-content"] pre,
+:root[data-skin="editorial"] [data-slot="dialog-content"] pre code,
+:root[data-skin="editorial"] [data-slot="sheet-content"] pre code,
+:root[data-skin="editorial"] [data-slot="drawer-content"] pre code {
+  border: 1px solid var(--ed-hairline);
+  border-left: 2px solid var(--ed-rule);
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--muted) 55%, transparent);
+  font-family: var(--ed-mono);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+/* 16.13 面板里的表格与空态：表头压线、空态一句落款。
+   表格语法在第 5 组已按 data-slot 收口（面板里同样命中），这里只补面板内
+   表格容器的边距与空态的语气。 */
+:root[data-skin="editorial"] [data-slot="dialog-content"] [data-slot="table-container"],
+:root[data-skin="editorial"] [data-slot="sheet-content"] [data-slot="table-container"],
+:root[data-skin="editorial"] [data-slot="drawer-content"] [data-slot="table-container"] {
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--ed-rule);
+}
+
+:root[data-skin="editorial"] [data-slot="dialog-content"] [data-slot="empty-description"],
+:root[data-skin="editorial"] [data-slot="sheet-content"] [data-slot="empty-description"] {
+  color: var(--muted-foreground);
+}
+
