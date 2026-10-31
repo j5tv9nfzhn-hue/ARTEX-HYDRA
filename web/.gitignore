@@ -36,7 +36,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# i18n 生成物：提交 zh.json 与兼容 ko.json，但忽略键来源（文件、行号）索引。
+# i18n 生成物：只提交 zh.json（仓库统一简体中文，ko / en / es 词库已移除），但忽略键来源（文件、行号）索引。
 # 索引较大，每次编辑均改变行号，不适合追踪到 Git。
 # 可通过 npm run extract:i18n 随时重新生成。
 /messages/zh.sources.json
