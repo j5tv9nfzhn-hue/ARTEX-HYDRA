@@ -270,6 +270,66 @@ if (!skin) {
   }
 }
 
+// ── 4c. 小字号白名单：只有「机器外壳标签」允许小于 12px ────────────────────────
+// 12px 门禁（6a116f90）收敛的是组件层，样式层不在门禁范围内：侧栏分组标题、
+// 表头这类「刻度与坐标」本来就该压到最低存在感，抬到 12px 反而喧宾夺主。
+//
+// 但白名单必须冻结——否则「就这一次」会一路松到正文上去。新增规则一律 ≥12px，
+// 要进这张表，必须先在 docs/skin-dual-theme.md 的 7-5 里写明位置与理由。
+
+{
+  const SMALL_FONT_ALLOW = [
+    '[data-slot="sidebar-inset"] > header [class*="text-muted-foreground"]',
+    '[data-sidebar="group-label"]',
+    '[data-slot="card-description"]',
+    '[data-slot="table-head"]',
+    '[data-slot="table-cell"] code',
+    '[data-slot="table-footer"]',
+    "thead th",
+    '[data-slot="button"][data-size="sm"]',
+    '[data-slot="button"][data-size="xs"]',
+    '[data-slot="badge"]',
+    '[data-slot="textarea"]::placeholder',
+    '[data-slot="label"]',
+    '[data-slot="sheet-description"]',
+    ".uppercase",
+    '[data-slot="empty-description"]',
+  ];
+
+  const strippedForFont = skin.replace(/\/\*[\s\S]*?\*\//g, "");
+  const fontBlocks = [];
+  let fd = 0;
+  let fbuf = "";
+  let fsel = "";
+  let fbody = "";
+  for (const ch of strippedForFont) {
+    if (fd === 0) {
+      if (ch === "{") { fsel = fbuf.trim(); fbuf = ""; fbody = ""; fd = 1; } else fbuf += ch;
+    } else if (ch === "{") { fd++; fbody += ch; }
+    else if (ch === "}") { fd--; if (fd === 0) fontBlocks.push({ fsel, fbody }); else fbody += ch; }
+    else fbody += ch;
+  }
+
+  const SMALL = /font-size:\s*(\d+(?:\.\d+)?)px/g;
+  let smallTotal = 0;
+  let smallViolations = 0;
+  for (const b of fontBlocks) {
+    let m;
+    SMALL.lastIndex = 0;
+    while ((m = SMALL.exec(b.fbody)) !== null) {
+      if (parseFloat(m[1]) >= 12) continue;
+      smallTotal++;
+      if (!SMALL_FONT_ALLOW.some((a) => b.fsel.includes(a))) {
+        smallViolations++;
+        errors.push(`skin-editorial.css 出现白名单外的小字号（${m[1]}px）：${b.fsel.slice(0, 80)}`);
+      }
+    }
+  }
+  if (smallViolations === 0) {
+    console.log(`  ✓ skin-editorial.css 小字号均在白名单内（${smallTotal} 处，白名单已冻结）`);
+  }
+}
+
 
 // ── 5. 双主题的接线必须齐全 ──────────────────────────────────────────────────
 // 少任何一处，都会出现「切了没生效」或者「刷新后变回老主题」的幽灵 bug：
