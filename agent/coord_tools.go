@@ -81,7 +81,7 @@ func (t *ToolSet) ChildCoordTools() []actool.CoreTool {
 
 func (t *ToolSet) delegateTask() actool.CoreTool {
 	desc := "派一个子 agent 去执行一件**自包含**的任务（唯一的并行来源）。\n" +
-		"子 agent 看不到你的会话历史，所以 task 必须把背景、目标、已知资产、约束、"
+		"子 agent 看不到你的会话历史，所以 task 必须把背景、目标、已知资产、约束、" +
 		"判定标准一次写全；写得含糊，子 agent 就只能靠猜，回来的是废结论。\n" +
 		"派发是异步的：调用立刻返回 agent id，你可以继续做别的事，或稍后 wait_for_agents。\n" +
 		"**同一个面不要派两个 agent 去做**——重复覆盖既烧钱又会让结论互相矛盾。"

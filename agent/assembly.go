@@ -268,10 +268,6 @@ func (g *guardedTool) Call(ctx context.Context, in json.RawMessage, tc *actool.T
 	if g.breaker != nil {
 		res = g.breaker.inspect(callCtx, name, in, res, err)
 	}
-	// 软提醒 / 强制收尾指令随本次 tool_result 一起进入对话流。
-	if len(budgetExtra) > 0 {
-		res.Extra = append(res.Extra, budgetExtra...)
-	}
 	return res, err
 }
 
