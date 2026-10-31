@@ -22,9 +22,9 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Masthead } from "@/components/editorial";
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -443,15 +443,10 @@ export default function SystemSettingsPage() {
         <PasswordCard />
         <AboutCard />
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <RadioTowerIcon className="size-4" />
-              {t("trafficCapture.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("trafficCapture.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between gap-4">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={RadioTowerIcon} title={t("trafficCapture.title")} />
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t.rich("trafficCapture.desc", richTags)}</p>
             <Label htmlFor="traffic-capture" className="text-sm font-normal text-muted-foreground">
               {trafficCapture ? t("trafficCapture.on") : t("trafficCapture.off")}
             </Label>
@@ -461,20 +456,16 @@ export default function SystemSettingsPage() {
               disabled={!loaded || saving}
               onCheckedChange={toggleTraffic}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <RadioTowerIcon className="size-4" />
-              {t("agentBinding.title")}
-            </CardTitle>
-            <CardDescription id="agent-traffic-binding-description">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={RadioTowerIcon} title={t("agentBinding.title")} />
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <p className="text-muted-foreground text-sm" id="agent-traffic-binding-description">
               {t.rich("agentBinding.desc", richTags)}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between gap-4">
+
+            </p>
             <Label htmlFor="agent-traffic-binding" className="text-sm font-normal text-muted-foreground">
               {agentTrafficBinding ? t("agentBinding.on") : t("agentBinding.off")}
             </Label>
@@ -485,20 +476,16 @@ export default function SystemSettingsPage() {
               disabled={!loaded || saving}
               onCheckedChange={toggleAgentTrafficBinding}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheckIcon className="size-4" />
-              {t("verifyGate.title")}
-            </CardTitle>
-            <CardDescription id="verify-gate-description">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={ShieldCheckIcon} title={t("verifyGate.title")} />
+          <div className="flex flex-col gap-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm" id="verify-gate-description">
               {t.rich("verifyGate.desc", richTags)}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+
+            </p>
             <div className="flex flex-col gap-1.5">
               <Label
                 htmlFor="verify-gate-threshold"
@@ -553,18 +540,13 @@ export default function SystemSettingsPage() {
                 {t("save")}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <RadioTowerIcon className="size-4" />
-              {t("globalProxy.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("globalProxy.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={RadioTowerIcon} title={t("globalProxy.title")} />
+          <div className="flex flex-col gap-2 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t.rich("globalProxy.desc", richTags)}</p>
             <Label htmlFor="global-proxy" className="text-sm font-normal text-muted-foreground">
               {t("globalProxy.addrLabel")}
             </Label>
@@ -584,18 +566,13 @@ export default function SystemSettingsPage() {
             <p className="text-muted-foreground text-xs">
               {globalProxyInput.trim() ? t("globalProxy.configured") : t("globalProxy.notConfigured")}
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldAlertIcon className="size-4" />
-              {t("constraints.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("constraints.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={ShieldAlertIcon} title={t("constraints.title")} />
+          <div className="flex flex-col gap-4 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t.rich("constraints.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
               <Label htmlFor="inject-planner" className="text-sm font-normal text-muted-foreground">
                 {t("constraints.injectPlanner")}
@@ -620,18 +597,13 @@ export default function SystemSettingsPage() {
                 onCheckedChange={toggleInjectWorker}
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FlaskConicalIcon className="size-4" />
-              {t("experimental.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("experimental.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={FlaskConicalIcon} title={t("experimental.title")} />
+          <div className="flex flex-col gap-4 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t.rich("experimental.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
               <Label htmlFor="branch-gate" className="text-sm font-normal text-muted-foreground">
                 {t("experimental.branchGateLabel")}
@@ -648,18 +620,13 @@ export default function SystemSettingsPage() {
               </Select>
             </div>
             <p className="text-xs text-muted-foreground">{t("experimental.branchGateHint")}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <SparklesIcon className="size-4" />
-              {t("skillEvolution.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("skillEvolution.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={SparklesIcon} title={t("skillEvolution.title")} />
+          <div className="flex flex-col gap-4 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t.rich("skillEvolution.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
               <Label htmlFor="skill-auto-distill" className="text-sm font-normal text-muted-foreground">
                 {t("skillEvolution.autoDistill")}
@@ -709,18 +676,13 @@ export default function SystemSettingsPage() {
                 </Link>
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <SearchIcon className="size-4" />
-              {t("webSearch.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("webSearch.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={SearchIcon} title={t("webSearch.title")} />
+          <div className="flex flex-col gap-4 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t.rich("webSearch.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
               <Label htmlFor="web-search" className="text-sm font-normal text-muted-foreground">
                 {webSearch ? t("webSearch.on") : t("webSearch.off")}
@@ -873,18 +835,13 @@ export default function SystemSettingsPage() {
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <RadioTowerIcon className="size-4" />
-              {t("python.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("python.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={RadioTowerIcon} title={t("python.title")} />
+          <div className="flex flex-col gap-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t.rich("python.desc", richTags)}</p>
             <div className="flex items-center gap-2">
               <Input
                 className="font-mono text-sm"
@@ -900,18 +857,13 @@ export default function SystemSettingsPage() {
                 {t("save")}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <TerminalIcon className="size-4" />
-              {t("shell.title")}
-            </CardTitle>
-            <CardDescription>{t("shell.desc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={TerminalIcon} title={t("shell.title")} />
+          <div className="flex flex-col gap-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("shell.desc")}</p>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="shell-mode">{t("shell.mode")}</Label>
               <div className="flex items-center gap-2">
@@ -968,18 +920,13 @@ export default function SystemSettingsPage() {
                 <span>{t("shell.latency", { ms: shellInfo.runtime.last_latency_ms })}</span>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CpuIcon className="size-4" />
-              {t("workers.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("workers.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={CpuIcon} title={t("workers.title")} />
+          <div className="flex flex-col gap-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t.rich("workers.desc", richTags)}</p>
             <div className="flex items-center gap-2">
               <Input
                 type="number"
@@ -994,18 +941,13 @@ export default function SystemSettingsPage() {
                 {t("save")}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CoinsIcon className="size-4" />
-              {t("budget.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("budget.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={CoinsIcon} title={t("budget.title")} />
+          <div className="flex flex-col gap-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t.rich("budget.desc", richTags)}</p>
             <div className="flex items-center gap-2">
               <Input
                 type="number"
@@ -1022,18 +964,13 @@ export default function SystemSettingsPage() {
                 {t("save")}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CircleDollarSignIcon className="size-4" />
-              {t("pricing.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("pricing.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={CircleDollarSignIcon} title={t("pricing.title")} />
+          <div className="flex flex-col gap-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t.rich("pricing.desc", richTags)}</p>
             {/* 等宽多行文本框；示例 JSON 用 t.raw 取原文，避免 ICU 把大括号当占位符解析。 */}
             <Textarea
               className="min-h-28 font-mono text-xs"
@@ -1048,31 +985,21 @@ export default function SystemSettingsPage() {
                 {t("save")}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <LanguagesIcon className="size-4" />
-              {t("language.title")}
-            </CardTitle>
-            <CardDescription>{t("language.desc")}</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={LanguagesIcon} title={t("language.title")} />
+          <div className="flex flex-col gap-2 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("language.desc")}</p>
             <p className="text-sm text-muted-foreground">{LOCALE_LABELS.zh}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card className="mb-4 break-inside-avoid md:mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <KeyboardIcon className="size-4" />
-              {t("sendKey.title")}
-            </CardTitle>
-            <CardDescription>{t.rich("sendKey.desc", richTags)}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between gap-4">
+        <Sheet className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead icon={KeyboardIcon} title={t("sendKey.title")} />
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t.rich("sendKey.desc", richTags)}</p>
             <Label htmlFor="chat-send-mode" className="text-sm font-normal text-muted-foreground">
               {t("sendKey.label")}
             </Label>
@@ -1088,8 +1015,8 @@ export default function SystemSettingsPage() {
                 ))}
               </SelectContent>
             </Select>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       </div>
     </div>
   );
