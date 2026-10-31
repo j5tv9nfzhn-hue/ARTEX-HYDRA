@@ -10,7 +10,7 @@ import { Masthead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Sheet } from "@/components/editorial-sheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -195,8 +195,8 @@ function JudgeCard() {
       {cfg.enabled && (
         <div className="grid gap-4 lg:grid-cols-5">
           {/* 左侧：默认展开的主要提示编辑区。 */}
-          <Card className="lg:col-span-3">
-            <CardContent className="flex h-full flex-col gap-2 p-4">
+          <Sheet className="lg:col-span-3">
+            <div className="flex h-full flex-col gap-2 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">{t("judge.promptTitle")}</p>
@@ -216,12 +216,12 @@ function JudgeCard() {
               <p className="text-right text-xs text-muted-foreground">
                 {t("judge.charCount", { count: cfg.prompt.length })}
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </Sheet>
 
           {/* 右侧：判定参数设置。 */}
-          <Card className="lg:col-span-2">
-            <CardContent className="space-y-5 p-4">
+          <Sheet className="lg:col-span-2">
+            <div className="space-y-5 p-4">
               <div className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("judge.modelAndPolicy")}
@@ -301,8 +301,8 @@ function JudgeCard() {
                   </Select>
                 </Field>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </Sheet>
         </div>
       )}
 
@@ -586,8 +586,8 @@ export default function InterceptPage() {
             </Button>
           </div>
 
-          <Card>
-            <CardContent className="p-0">
+          <Sheet>
+            <div className="p-0">
               {loading ? (
                 <p className="p-6 text-sm text-muted-foreground">{t("rules.loading")}</p>
               ) : rules.length === 0 ? (
@@ -663,8 +663,8 @@ export default function InterceptPage() {
                   </TableBody>
                 </Table>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </Sheet>
         </TabsContent>
 
         {/* ---- tab: model ---- */}
