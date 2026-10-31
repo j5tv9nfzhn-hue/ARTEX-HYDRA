@@ -6,6 +6,8 @@ import Link from "next/link";
 
 import { ArrowUpCircleIcon } from "lucide-react";
 
+import { useTranslations } from "next-intl";
+
 import { api } from "@/lib/api";
 import type { UpdateStatus } from "@/lib/types";
 
@@ -17,6 +19,7 @@ import type { UpdateStatus } from "@/lib/types";
  * 自然不会亮。也没必要轮询得太勤——后端 6 小时才查一次。
  */
 export function UpdateBadge() {
+  const t = useTranslations("settingsPage.update");
   const [status, setStatus] = React.useState<UpdateStatus | null>(null);
 
   React.useEffect(() => {
@@ -47,11 +50,15 @@ export function UpdateBadge() {
   return (
     <Link
       href="/system/settings"
-      title={staged ? `v${status.staged_version} 已下载，重启后生效` : `发现新版本 v${status.latest}`}
+      title={
+        staged
+          ? t("badge.stagedTitle", { version: status.staged_version ?? "-" })
+          : t("badge.newTitle", { version: status.latest })
+      }
       className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-medium text-xs text-emerald-600 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400"
     >
       <ArrowUpCircleIcon className="size-3" />
-      {staged ? "重启生效" : "有新版本"}
+      {staged ? t("badge.staged") : t("badge.new")}
     </Link>
   );
 }

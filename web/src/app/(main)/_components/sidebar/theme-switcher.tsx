@@ -2,6 +2,8 @@
 
 import { Monitor, Moon, Sun, Type } from "lucide-react";
 
+import { useTranslations } from "next-intl";
+
 import { Button } from "@/components/ui/button";
 import { persistPreference } from "@/lib/preferences/preferences-storage";
 import { applySkin } from "@/lib/preferences/theme-utils";
@@ -9,19 +11,15 @@ import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 const THEME_CYCLE = ["light", "dark", "system"] as const;
 
-// 主题枚举到中文名的映射：自动切换到无标题按钮，中文名只进 aria-label，
-// 让屏幕阅读器听到「当前主题：深色」而不是 light/dark/system。
-const THEME_NAMES: Record<(typeof THEME_CYCLE)[number], string> = {
-  light: "浅色",
-  dark: "深色",
-  system: "跟随系统",
-};
+// 主题名只进 aria-label，让屏幕阅读器听到「当前主题：深色」而不是
+// light/dark/system；文案走 themeSwitcher 命名空间，键名就是枚举值。
 
 /**
  * 外观一键切换：老主题（九套预设）↔ 新主题（纸本）。
  * 与偏好浮层里的「外观」是同一个偏好，这里只是给一个不用开浮层的入口。
  */
 export function SkinSwitcher() {
+  const t = useTranslations("themeSwitcher");
   const skin = usePreferencesStore((s) => s.skin);
   const themePreset = usePreferencesStore((s) => s.themePreset);
   const setSkin = usePreferencesStore((s) => s.setSkin);
@@ -35,8 +33,8 @@ export function SkinSwitcher() {
         applySkin(next, themePreset);
         void persistPreference("skin", next);
       }}
-      aria-label={skin === "editorial" ? "当前为新主题（纸本），点击切回老主题" : "当前为老主题，点击切到新主题（纸本）"}
-      title={skin === "editorial" ? "新主题 / 纸本" : "老主题"}
+      aria-label={t(skin === "editorial" ? "skinAriaPaper" : "skinAriaClassic")}
+      title={t(skin === "editorial" ? "skinTitlePaper" : "skinTitleClassic")}
       data-skin-state={skin}
     >
       <Type className="size-4" />
@@ -45,6 +43,7 @@ export function SkinSwitcher() {
 }
 
 export function ThemeSwitcher() {
+  const t = useTranslations("themeSwitcher");
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
 
@@ -57,7 +56,7 @@ export function ThemeSwitcher() {
   };
 
   return (
-    <Button size="icon" onClick={cycleTheme} aria-label={`当前主题：${THEME_NAMES[themeMode]}，点击切换`}>
+    <Button size="icon" onClick={cycleTheme} aria-label={t("currentTheme", { theme: t(themeMode) })}>
       {/* SYSTEM */}
       <Monitor className="hidden [html[data-theme-mode=system]_&]:block" />
 

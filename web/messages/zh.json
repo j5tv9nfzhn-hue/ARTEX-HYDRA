@@ -870,6 +870,12 @@
     "turnsCount": "{turns} 轮",
     "turnsTooltip": "agent 循环轮次（模型调用次数）",
     "untitledConversation": "新对话"
+  ,
+    "budgetExhausted": "预算用尽",
+    "budgetLabel": "预算",
+    "budgetTitleEnforced": "本条会话累计 token 预算：已用 {used} / 上限 {limit}。达到上限后本轮自动收尾（可在系统配置调整 default_conversation_token_budget）。",
+    "budgetTitleStats": "仅统计，不拦截：已用 {used}（参考上限 {limit}）。在系统配置填写 default_conversation_token_budget 后才启用收尾。",
+    "usageLabel": "用量"
   },
   "chatSendMode": {
     "option": {
@@ -2533,6 +2539,47 @@
     "showingAll": "已显示全部 {count} 条",
     "showingMore": "已显示 {count} 条，向下滚动加载更多"
   },
+  "layoutControls": {
+    "appearance": "外观",
+    "collapse": "侧边栏折叠模式",
+    "collapseIcon": "仅图标",
+    "collapseIconAria": "切换为仅图标",
+    "collapseOffcanvas": "隐藏式",
+    "collapseOffcanvasAria": "切换为隐藏式",
+    "contentLayout": "页面布局",
+    "desc": "自定义仪表盘布局偏好。",
+    "font": "字体",
+    "fontPlaceholder": "选择字体",
+    "layoutCentered": "居中",
+    "layoutCenteredAria": "切换为居中",
+    "layoutFullWidth": "全宽",
+    "layoutFullWidthAria": "切换为全宽",
+    "modeDark": "深色",
+    "modeDarkAria": "切换为深色",
+    "modeLight": "浅色",
+    "modeLightAria": "切换为浅色",
+    "modeSystem": "跟随系统",
+    "modeSystemAria": "切换为跟随系统",
+    "navbar": "导航栏行为",
+    "navbarScroll": "随滚动",
+    "navbarScrollAria": "切换为随滚动",
+    "navbarSticky": "吸顶",
+    "navbarStickyAria": "切换为吸顶",
+    "presetPlaceholder": "预设",
+    "restore": "恢复默认",
+    "sidebarVariant": "侧边栏样式",
+    "skinClassicHint": "经典：沿用下方主题预设的原始观感。",
+    "skinPaperHint": "纸本：书刊排版、发丝线、等宽数字；配色固定为纸本预设。",
+    "themeMode": "主题模式",
+    "themePreset": "主题预设",
+    "title": "偏好设置",
+    "variantFloating": "浮动",
+    "variantFloatingAria": "切换为浮动",
+    "variantInset": "内嵌",
+    "variantInsetAria": "切换为内嵌",
+    "variantSidebar": "侧边",
+    "variantSidebarAria": "切换为侧边"
+  },
   "nav": {
     "customize": {
       "close": "完成",
@@ -2544,6 +2591,13 @@
       "trigger": "自定义侧边栏",
       "unhide": "取消隐藏",
       "unpin": "取消置顶"
+    },
+    "documents": {
+      "delete": "删除",
+      "more": "更多",
+      "open": "打开",
+      "share": "分享",
+      "title": "文档"
     },
     "group": {
       "function": "功能",
@@ -2944,6 +2998,16 @@
       "footHint": "每次复测都是一次独立会话"
     }
   },
+  "themeSwitcher": {
+    "currentTheme": "当前主题：{theme}，点击切换",
+    "dark": "深色",
+    "light": "浅色",
+    "skinAriaClassic": "当前为老主题，点击切到新主题（纸本）",
+    "skinAriaPaper": "当前为新主题（纸本），点击切回老主题",
+    "skinTitleClassic": "老主题",
+    "skinTitlePaper": "新主题 / 纸本",
+    "system": "跟随系统"
+  },
   "verify": {
     "dialog": {
       "alreadyRunning": "该漏洞已有进行中的复核，可查看已有会话",
@@ -3030,6 +3094,9 @@
       "results": "搜索"
     },
     "placeholder": "搜索命令、页面与设置…"
+  ,
+    "themeModeItem": "主题：{label}",
+    "themePresetItem": "主题预设：{label}"
   },
   "sessions": {
     "asset": {
@@ -3434,6 +3501,12 @@
       "linkIntercept": "拦截与合规"
     },
     "update": {
+      "badge": {
+        "new": "有新版本",
+        "newTitle": "发现新版本 v{version}",
+        "staged": "重启生效",
+        "stagedTitle": "v{version} 已下载，重启后生效"
+      },
       "changelog": "更新日志",
       "container": "容器",
       "checking": "检查中…",

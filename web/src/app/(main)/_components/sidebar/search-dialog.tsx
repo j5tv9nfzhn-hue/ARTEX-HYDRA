@@ -203,7 +203,7 @@ export function SearchDialog() {
     },
     ...THEME_MODE_OPTIONS.map((mode) => ({
       id: `theme-mode-${mode.value}`,
-      label: `主题：${mode.label}`,
+      label: t("themeModeItem", { label: mode.label }),
       icon: THEME_MODE_ICONS[mode.value],
       keywords: ["主题", "模式", "theme", "mode", mode.value],
       checked: themeMode === mode.value,
@@ -213,7 +213,7 @@ export function SearchDialog() {
     // LLM / 系统配置 / MCP 等设置直达不在这里重复，「跳转」组就是同一份侧边栏数据源。
     ...THEME_PRESET_OPTIONS.map((preset) => ({
       id: `theme-preset-${preset.value}`,
-      label: `主题预设：${preset.label}`,
+      label: t("themePresetItem", { label: preset.label }),
       swatch: resolvedThemeMode === "dark" ? preset.primary.dark : preset.primary.light,
       keywords: ["主题", "预设", "theme", "preset", preset.value],
       checked: themePreset === preset.value,
