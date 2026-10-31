@@ -2442,6 +2442,8 @@
     "harnessConfirm": "确认写入",
     "harnessCancel": "取消",
     "harnessBackup": "写入前自动备份为 .artex.bak.<时间戳>",
+    "harnessFoot": "已勾选 {n} 个客户端",
+    "harnessFootHint": "写入前先给 diff，确认后才落盘",
     "harnessState_linked": "已接入",
     "harnessState_configured": "已有配置",
     "harnessState_installed": "已安装",
