@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 )
+
 // upsertCompanySQLiteInsert 只负责"抢占"这一行：nkey 已存在时什么都不做，
 // 并且不返回任何行。与本文件配套的第 2 条语句见 upsertCompanySQLiteUpdate。
 const upsertCompanySQLiteInsert = `

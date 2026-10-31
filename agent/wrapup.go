@@ -31,6 +31,7 @@ var WrapupMaxTurnsOverride func(agentKey string) (int, bool)
 //     与旧 worker 完全一致；
 //   - coord_root（编排者）：用 generic 兜底即可。它不写库，收尾方式是 finish_task
 //     交一份结构化 Brief，不需要被叮嘱"去 insert_assets"。
+//
 // 未命中的（chat/auto/pentest/自定义 agent）走通用兜底。
 var wrapupDefaults = map[string]string{
 	"coord_child": settleWrapUpPrompt,

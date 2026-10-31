@@ -390,7 +390,6 @@ func isLoopbackAddr(addr string) bool {
 
 // WarnIfExposed logs a warning when the admin password is still unset and the
 // server accepts connections from other hosts.
-//
 func (s *Server) WarnIfExposed(addr string) {
 	if s.m == nil || s.m.pg == nil || s.cachedPassHash() != "" || isLoopbackAddr(addr) {
 		return
