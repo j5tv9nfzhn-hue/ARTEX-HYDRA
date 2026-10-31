@@ -30,7 +30,7 @@ import (
 	actool "github.com/Autumn-27/norma/tool"
 )
 
-// CoordAgents 是新链路需要从 Server 取的两件事。
+// CoordAgents 是新链路需要从 Server 取的三件事。
 //
 // 做成接口而不是让 Engine 直接持有 *Server：Engine 在包内已被 300+ 处引用，
 // 加一个字段意味着改结构体字面量的所有地方（测试里也有）。一个包级注册 +
@@ -38,6 +38,10 @@ import (
 type CoordAgents interface {
 	AgentMaxTurns(key string) int
 	AgentRunSeconds(key string) int
+	// AgentsForTask 取任务的 agent 装配包（provider / 运行时 / 工具面来源），
+	// 与旧 planner/worker 完全同源 —— 多档切换、配额轮转、上下文窗口这些
+	// 既有能力因此对新链路自动生效，不需要在别处再实现一遍。
+	AgentsForTask(t *Task) *taskAgentBundle
 }
 
 var coordCfgFn func() CoordAgents
@@ -124,13 +128,27 @@ func (e *Engine) RunCoord(ctx context.Context, t *Task) {
 	}()
 }
 
+// agentsForTaskCoord 取任务的 agent 装配包。
+//
+// 与 agentMaxTurnsCoord 同一套路：经 CoordAgents 从 Server 取，而不是让
+// Engine 持有 *Server。未注册（测试 / 未接线）时返回 nil，调用方的
+// bundle != nil 判断会跳过 provider 与工具面，coordOptionsFor 里
+// 「工具面为空」的那道闸会拦住开跑 —— 不会起一张半装配的图。
+func (e *Engine) agentsForTaskCoord(t *Task) *taskAgentBundle {
+	cfg := coordCfg()
+	if cfg == nil {
+		return nil
+	}
+	return cfg.AgentsForTask(t)
+}
+
 // coordOptionsFor 把任务级配置翻译成 CoordTaskOptions。
 //
 // provider 取 taskLLMRuntime（按任务的 LLM profile 链解析），与旧 planner/worker
 // 完全同源——这样"多档切换/配额轮转/上下文窗口"这些既有能力对新链路自动生效，
 // 不需要在 agent 包里再实现一遍。
 func (e *Engine) coordOptionsFor(t *Task) CoordTaskOptions {
-	bundle := e.agentsForTask(t)
+	bundle := e.agentsForTaskCoord(t)
 
 	opts := CoordTaskOptions{
 		WorkDir:         e.dataDir(),
