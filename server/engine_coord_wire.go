@@ -398,7 +398,7 @@ func (e *Engine) CoordSelfCheck() {
 	}
 	if !agent.CoordEnabled() {
 		log.Printf("[coord] 显式回退到旧调度链路（%s=legacy）：planner + worker 池 + frontier。"+
-			"注意 reviewer 已在下线，旧链路的部分判定能力不再可用。")
+			"注意 reviewer 已在下线，旧链路的部分判定能力不再可用。", agent.SchedModeEnv)
 		return
 	}
 	log.Printf("[coord] 调度层已启用（ARTEX_SCHED=coord）：planner/reviewer 不参与，根 agent 负责编排")
