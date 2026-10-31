@@ -35,9 +35,9 @@ const SchedModeEnv = "ARTEX_SCHED"
 func SchedModeNow() SchedMode {
 	raw := strings.ToLower(strings.TrimSpace(os.Getenv(SchedModeEnv)))
 	switch SchedMode(raw) {
-	case string(SchedLegacy):
+	case SchedLegacy:
 		return SchedLegacy
-	case "", string(SchedCoord):
+	case "", SchedCoord:
 		// 【P4 / B1：默认值切换】这里原本对 "" 返回 SchedLegacy（"重构未完成前
 		// 不改变现有行为"）。重构已进入收尾：新链路是**唯一被维护**的路径，
 		// 旧链路（planner + reviewer + frontier）已经拆掉 Reviewer、也无法再
@@ -57,7 +57,7 @@ func SchedModeNow() SchedMode {
 func SchedModeInvalid() bool {
 	raw := strings.ToLower(strings.TrimSpace(os.Getenv(SchedModeEnv)))
 	switch SchedMode(raw) {
-	case "", string(SchedLegacy), string(SchedCoord):
+	case "", SchedLegacy, SchedCoord:
 		return false
 	default:
 		return true
