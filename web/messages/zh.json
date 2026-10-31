@@ -1317,6 +1317,8 @@
       "empty": "暂无关联流量",
       "emptyHint": "可绑定正常对照、漏洞证明和补充验证请求。",
       "evidenceNo": "证据 #{id}",
+      "foot": "共 {total} 条流量证据",
+      "footHint": "顺序即复现顺序，可用箭头调整",
       "inherited": "继承证据，只读",
       "moveDown": "下移证据 {id}",
       "moveUp": "上移证据 {id}",

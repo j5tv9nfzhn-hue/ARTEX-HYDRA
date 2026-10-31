@@ -6,13 +6,13 @@ import { ArrowDownIcon, ArrowUpIcon, PlusIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { TrafficEvidenceViewer } from "@/components/traffic-evidence-viewer";
 import { TrafficPickerDialog } from "@/components/traffic-picker-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -94,24 +94,23 @@ export function FindingTrafficPanel({
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>
-              {t("traffic.title")} {data ? `(${data.bindings.length})` : ""}
-            </CardTitle>
-            {!readOnly ? (
+      <Sheet>
+        <SheetHead
+          title={t("traffic.title")}
+          count={data ? data.bindings.length : undefined}
+          hint={t("traffic.description")}
+          actions={
+            !readOnly ? (
               <Button variant="outline" size="sm" disabled={!data || busy} onClick={() => setAdding(true)}>
                 <PlusIcon data-icon="inline-start" />
                 {t("traffic.bind")}
               </Button>
             ) : (
               <Badge variant="outline">{t("traffic.inherited")}</Badge>
-            )}
-          </div>
-          <CardDescription>{t("traffic.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+            )
+          }
+        />
+        <div className="flex flex-col gap-3 px-4">
           {error ? (
             <Alert variant="destructive">
               <AlertDescription>
@@ -128,28 +127,15 @@ export function FindingTrafficPanel({
             <EmptyState compact illustration="radar" title={t("traffic.empty")} description={t("traffic.emptyHint")} />
           ) : (
             data.bindings.map((b, index) => (
-              <div key={b.id} className="flex min-w-0 flex-col gap-2 rounded-md border p-3">
-                <div className="flex flex-wrap items-center gap-2">
+              <RecordRow
+                key={b.id}
+                cols="104px minmax(0,1fr) auto"
+                lead={
                   <Badge variant="outline">
                     {index + 1}. {t(`traffic.role.${b.role}`)}
                   </Badge>
-                  <Badge variant="secondary">
-                    {b.snapshot.method} / {b.snapshot.status}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">{t("traffic.evidenceNo", { id: b.id })}</span>
-                </div>
-                <Button
-                  variant="link"
-                  className="h-auto justify-start p-0 text-left whitespace-normal"
-                  onClick={() => setPreview(b.id)}
-                >
-                  <span className="break-all font-mono text-xs">{b.snapshot.url}</span>
-                </Button>
-                {b.note ? <p className="text-sm whitespace-pre-wrap">{b.note}</p> : null}
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(b.snapshot.captured_at * 1000).toLocaleString("zh-CN")}
-                  </span>
+                }
+                values={[
                   <div className="flex flex-wrap gap-1">
                     <Button variant="outline" size="sm" onClick={() => setPreview(b.id)}>
                       {t("traffic.viewRaw")}
@@ -198,13 +184,39 @@ export function FindingTrafficPanel({
                         </Button>
                       </>
                     ) : null}
-                  </div>
+                  </div>,
+                ]}
+              >
+                <div className="flex min-w-0 flex-col gap-1">
+                  <RecordSub
+                    items={
+                      [
+                        t("traffic.evidenceNo", { id: b.id }),
+                        `${b.snapshot.method} / ${b.snapshot.status}`,
+                        new Date(b.snapshot.captured_at * 1000).toLocaleString("zh-CN"),
+                      ]
+                    }
+                  />
+                  <Button
+                    variant="link"
+                    className="h-auto justify-start p-0 text-left whitespace-normal"
+                    onClick={() => setPreview(b.id)}
+                  >
+                    <span className="break-all font-mono text-xs">{b.snapshot.url}</span>
+                  </Button>
+                  {b.note ? <p className="text-sm whitespace-pre-wrap">{b.note}</p> : null}
                 </div>
-              </div>
+              </RecordRow>
             ))
           )}
-        </CardContent>
-      </Card>
+      </div>
+      {data && data.bindings.length > 0 ? (
+        <SheetFoot
+          left={t("traffic.foot", { total: data.bindings.length })}
+          right={t("traffic.footHint")}
+        />
+      ) : null}
+    </Sheet>
       {adding && data ? (
         <TrafficPickerDialog
           findingId={findingId}
