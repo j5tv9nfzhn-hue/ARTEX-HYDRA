@@ -1047,3 +1047,20 @@
   color: var(--muted-foreground);
 }
 
+/* ══ 17. 统计小卡：去掉外框，只留一条下沿细线 ═══════════════════════════════
+   通知页的统计格原本是 size="sm" 的卡片（外框 + 圆角 + 内边距）。纸本里读数字
+   的地方不该有框 —— 与 KPI 数字行同一套规矩：靠细线定界，不靠盒子。
+   结构层已经去掉 Card（见 _components/stat-tile.tsx 的 data-editorial="stat-tile"），
+   这里只负责把壳子压平；字号一律不动（门禁 ≥12px，见 §7-5）。 */
+:root[data-skin="editorial"] [data-editorial="stat-tile"] {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ed-hairline);
+}
+
+:root[data-skin="editorial"] [data-editorial="stat-tile"] > p:first-child {
+  letter-spacing: 0.06em;
+}
+

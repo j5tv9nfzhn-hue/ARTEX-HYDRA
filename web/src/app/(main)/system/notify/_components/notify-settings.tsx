@@ -5,8 +5,8 @@ import * as React from "react";
 import { RotateCcwIcon, SendIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -69,11 +69,9 @@ export function NotifySettings() {
   };
 
   return (
-    <Card className="gap-3">
-      <CardHeader>
-        <CardTitle className="text-base">{t("settings.title")}</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-4">
+    <Sheet>
+      <SheetHead title={t("settings.title")} />
+      <div className="grid gap-4 px-4 py-3">
         <p className="text-muted-foreground text-xs leading-5">{t("settings.subtitle")}</p>
 
         {/* 延迟 */}
@@ -211,7 +209,7 @@ export function NotifySettings() {
             {t("settings.reset")}
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </Sheet>
   );
 }
