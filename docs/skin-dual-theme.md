@@ -191,8 +191,23 @@ web/src/
    类表达，用 `data-slot` 一刀切会把「这是条错误」一起抹掉。勾选用左侧主色竖线
    而不是填充块，是同一个理由：朴素不等于丢信息。
 
-结构改造（卡片 → 版块原语）已从 `finding-retest-panel.tsx` 开刀：它是 B 类面板里
-体量最小、形态最典型的一个，改完即可作为其余面板的模板。
+**结构改造（卡片 → 版块原语）已收尾：B 类清单 8 组全部换完。** `finding-retest-panel.tsx`
+开刀，随后按同一套语法跟进：`finding-verify-panel`（复核）、`finding-traffic-panel`
+（关联流量）、`harness-targets-card`（客户端接入）、`mcp-exposure-card`（对外接入）、
+设置页四张小卡（更新 / 改密 / 迁移 / 简介）、通知页两块（`notify-settings` 与
+`stat-tile`）、`retention/_components/retention-audit`（留存审计）。三处需要留意：
+
+- **统计格不是版块。** `stat-tile` 套 `Sheet` 会变成「小卡里长个头」，所以只拆掉
+  `Card`、改成带 `data-editorial="stat-tile"` 的普通块，再由第 17 组 CSS 把壳子
+  压平（去圆角、去底色、去 ring，只留下沿细线），与 KPI 数字行同一套「靠细线
+  定界、不靠盒子」的规矩。
+- **表格不拆成记录行。** `retention-audit` 是「一张表 + 一条说明」，套 `RecordRow`
+  会把四列表格拆烂；这里只收外壳、表格原样保留（表头压线归第 5 / 16.13 组管）。
+- **表单类版块自带呼吸。** 记录列表的行自带 `py-2.5`，正文容器给 `px-4` 就够；
+  设置页、通知设置、对外接入这些表单 / 字段块没有行距，统一用 `px-4 py-3`。
+
+老主题零影响：`Sheet` 仍带 `data-slot="card"`，classic 下渲染成原来的卡片；
+`stat-tile` 的类名与原卡片等价。
 
 覆盖到的槽位：面板头尾；`dialog` / `sheet` / `drawer` 的右上角 ✕（必须限定
 **直接子元素**——页脚那排「取消」也用 `DialogClose` 包着，不限定会把整排按钮
@@ -238,7 +253,7 @@ web/src/
 > 下面只留仍然成立的项，B / C 两类改为可核对的具体清单。
 
 - **B 类「通知推送 · 模板编辑」**：后端 `NotificationChannel` 没有模板字段，只做了渠道配置 + 测试发送；要做真模板编辑得先加后端字段。
-- **B 类页内深层面板：皮肤层已适配（见 7-4），结构重写仍未做。** 浮层 / 面板调用最密集的六个文件：`function/tasks/page.tsx`（31 处）、`tasks/detail/_tabs/overview-tab.tsx`（28）、`function/assets/page.tsx`（21）、`system/llm/page.tsx`（18）、`system/skills/page.tsx`（17）、`components/agent-editor.tsx`（16）。它们现在连壳子里的菜单、列表、表单、代码块一起是报纸腔调，**仍缺的是版块原语级别的结构重写**（把卡片换成 `Sheet` / `RecordRow`），属于下一批。
+- **A 类页面级卡片：B 类面板已全部改成版块原语，剩下的是页面骨架。** 卡片调用最密集的页面：`system/settings/page.tsx`（30 处）、`dashboard/page.tsx`（26）、`system/storage/page.tsx`（16）、`system/lan/page.tsx`（12）、`function/findings/page.tsx`（9）、`system/retention` / `system/intercept` / `tasks/detail/_tabs/overview-tab.tsx` / `function/sync/page.tsx`（各 6）、`system/tools` / `function/tasks` / `function/assets`（各 4）、`system/notify/page.tsx`（3）；深层面板还有 `function/tasks/page.tsx`（31 处）、`system/llm/page.tsx`（18）、`system/skills/page.tsx`（17）、`components/agent-editor.tsx`（16）。它们连壳子里的菜单、列表、表单、代码块一起是报纸腔调，**缺的是页面骨架这一层的结构重写**，属下一批。
 - **C 类全局浮层：6 个已核对。** ⌘K 命令面板、偏好浮层、用户菜单、新建任务、导出，以及本批新建的通知中心；同样只补了入口与文案，没有重写。
 - **中文衬线依赖系统字体。** Windows 上 `Songti SC` / `Noto Serif CJK SC` 多半缺失，标题会落到 `SimSun`（观感偏硬但仍是衬线）。统一观感需要在 `next/font` 里引入中文衬线 Web Font，子集化后仍有 3–8MB，代价较大，未做。
 - **`.uppercase` 的作用域不能扩大。** 它已收窄到 `[data-editorial="body"]`；新页面接入时必须挂 body 锚点，否则既拿不到正文腔调，也容易误伤侧栏与顶栏这些「机器外壳」。
