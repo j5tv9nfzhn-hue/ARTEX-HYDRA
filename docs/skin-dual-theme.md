@@ -253,7 +253,25 @@ web/src/
 > 下面只留仍然成立的项，B / C 两类改为可核对的具体清单。
 
 - **B 类「通知推送 · 模板编辑」**：后端 `NotificationChannel` 没有模板字段，只做了渠道配置 + 测试发送；要做真模板编辑得先加后端字段。
-- **A 类页面级卡片：B 类面板已全部改成版块原语，剩下的是页面骨架。** 卡片调用最密集的页面：`system/settings/page.tsx`（30 处）、`dashboard/page.tsx`（26）、`system/storage/page.tsx`（16）、`system/lan/page.tsx`（12）、`function/findings/page.tsx`（9）、`system/retention` / `system/intercept` / `tasks/detail/_tabs/overview-tab.tsx` / `function/sync/page.tsx`（各 6）、`system/tools` / `function/tasks` / `function/assets`（各 4）、`system/notify/page.tsx`（3）；深层面板还有 `function/tasks/page.tsx`（31 处）、`system/llm/page.tsx`（18）、`system/skills/page.tsx`（17）、`components/agent-editor.tsx`（16）。它们连壳子里的菜单、列表、表单、代码块一起是报纸腔调，**缺的是页面骨架这一层的结构重写**，属下一批。
+- **A 类页面级卡片：B 类面板已全部改成版块原语，剩下的是页面骨架——这是下一批。**
+  2026-10-31 按 `<Card` 重新清点（`XxxCard` 这类组件名不算），**23 个文件、260 处标签**，
+  按密度排：
+
+  | 文件 | `<Card` 标签数 | 文件 | `<Card` 标签数 |
+  |---|---|---|---|
+  | `system/settings/page.tsx` | 75 | `system/tools/page.tsx` | 10 |
+  | `system/storage/page.tsx` | 40 | `system/intercept/page.tsx` | 6 |
+  | `system/lan/page.tsx` | 23 | `system/agents/page.tsx` | 5 |
+  | `dashboard/page.tsx` | 21 | `_components/sidebar/sidebar-support-card.tsx` | 4 |
+  | `function/findings/page.tsx` | 15 | `function/tasks/page.tsx` | 4 |
+  | `system/retention/page.tsx` | 15 | `system/mcp/page.tsx` | 4 |
+  | `tasks/detail/_tabs/overview-tab.tsx` | 13 | `notify/_components/notify-inbox-list.tsx` | 4 |
+  | `function/sync/page.tsx` | 10 | 其余 9 个文件 | 各 1–2 |
+
+  已改完：`system/notify/page.tsx`。改法与 B 类一致，只多一条——页面已经从
+  `ui/sheet` 引入 `Sheet` 时，用仓库惯例 `import { Sheet as PaperSheet }` 避开同名
+  （`tasks/detail/_tabs/assets-tab.tsx` 先例）。它们连壳子里的菜单、列表、表单、
+  代码块一起是报纸腔调，**缺的就是页面骨架这一层**。
 - **C 类全局浮层：6 个已核对。** ⌘K 命令面板、偏好浮层、用户菜单、新建任务、导出，以及本批新建的通知中心；同样只补了入口与文案，没有重写。
 - **中文衬线依赖系统字体。** Windows 上 `Songti SC` / `Noto Serif CJK SC` 多半缺失，标题会落到 `SimSun`（观感偏硬但仍是衬线）。统一观感需要在 `next/font` 里引入中文衬线 Web Font，子集化后仍有 3–8MB，代价较大，未做。
 - **`.uppercase` 的作用域不能扩大。** 它已收窄到 `[data-editorial="body"]`；新页面接入时必须挂 body 锚点，否则既拿不到正文腔调，也容易误伤侧栏与顶栏这些「机器外壳」。
