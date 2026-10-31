@@ -90,14 +90,28 @@ func TestDeferredInfoSurvivesToolResolve(t *testing.T) {
 // 它替换了原先借用的 routerFake（那个定义在 tool_router_test.go 里，已随路由
 // 测试一起下线）。测试替身跨文件借用是一个隐性耦合：删掉一个测试文件会让另一个
 // 测试编译失败，而失败原因与它测的东西毫无关系。
-type deferredFakeTool string
+type deferredToolStub struct {
+	name string
+	desc string
+}
 
-func (f deferredFakeTool) Name() string                { return string(f) }
-func (f deferredFakeTool) Description() string         { return "fake " + string(f) }
-func (f deferredFakeTool) Prompt() string              { return "" }
-func (f deferredFakeTool) InputSchema() map[string]any { return map[string]any{"type": "object"} }
+// deferredFakeTool 造一个带名字与描述的替身。
+//
+// 原来是 `type deferredFakeTool string` 的单值转换：只能带名字，描述固定返回
+// "fake <name>"。但调用处是按 (名字, 描述) 两件套写的，多出来的那个参数
+// 编译不过。这里顺着调用处的意思补上第二个字段，调用点一个字不用改——
+// 那三条描述（打开页面 / 技能解锁后调用 / 加载技能）本来就是写给人看的，
+// 丢掉只会让测试更难读。
+func deferredFakeTool(name, desc string) deferredToolStub {
+	return deferredToolStub{name: name, desc: desc}
+}
 
-func (f deferredFakeTool) Call(context.Context, json.RawMessage, *actool.ToolContext) (actool.Result, error) {
+func (f deferredToolStub) Name() string                { return f.name }
+func (f deferredToolStub) Description() string         { return f.desc }
+func (f deferredToolStub) Prompt() string              { return "" }
+func (f deferredToolStub) InputSchema() map[string]any { return map[string]any{"type": "object"} }
+
+func (f deferredToolStub) Call(context.Context, json.RawMessage, *actool.ToolContext) (actool.Result, error) {
 	return actool.Result{}, nil
 }
 

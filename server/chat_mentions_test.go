@@ -144,7 +144,9 @@ func TestIntentMessagePathRetired(t *testing.T) {
 		_ = s.waitTaskQuiescent(drain, task.ID)
 		_, _ = m.DeleteTask(task.ID, DeleteTaskOptions{})
 	}()
-	iid, err := task.Store.AddNode(db.KindIntent, map[string]any{"summary": "Read referenced records only"}, 1, "paused")
+	// origin 取 "planner"、anchors 取 nil：与 db.AddIntent 包装器（exploration.go:233）
+	// 的默认口径一致，全仓 intent 的既有调用也都是这两个值。
+	iid, err := task.Store.AddNode(db.KindIntent, map[string]any{"summary": "Read referenced records only"}, 1, "paused", "planner", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
