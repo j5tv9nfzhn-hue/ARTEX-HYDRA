@@ -9,3 +9,5 @@ package server
 func (s *Server) AgentMaxTurns(key string) int { return s.agentMaxTurns(key) }
 
 func (s *Server) AgentRunSeconds(key string) int { return s.agentRunSeconds(key) }
+
+func (s *Server) AgentsForTask(t *Task) *taskAgentBundle { return s.agentsForTask(t) }
