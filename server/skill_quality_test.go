@@ -49,10 +49,24 @@ func parseSkillFrontmatter(t *testing.T, path string) skillFrontmatter {
 	}
 
 	var fm skillFrontmatter
+	lastKey := ""
 	for _, line := range lines[1:end] {
-		if strings.TrimSpace(line) == "" {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
 			continue
 		}
+		// YAML 块结构：缩进的续行（折叠块 >-／字面块 |／长 description 的续写）
+		// 与列表项（"- red-team"）都不是新的 key。技能库里 818 个技能用
+		// tags: 后跟列表、mitre_attack: 后跟列表，描述则普遍用 `>-` 折叠块 ——
+		// 把续行当 key（或直接丢掉）会让整包全红，或让描述长度校验误判。
+		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") || strings.HasPrefix(trimmed, "-") {
+			// 折叠/字面块的续行属于上一个键：拼回 description 才能算长度。
+			if lastKey == "description" && !strings.HasPrefix(trimmed, "-") {
+				fm.description += " " + trimmed
+			}
+			continue
+		}
+		lastKey = ""
 		if strings.HasPrefix(line, "#") {
 			t.Fatalf("frontmatter 内不接受标题行: %q（应为 name: value）", line)
 		}
@@ -60,15 +74,25 @@ func parseSkillFrontmatter(t *testing.T, path string) skillFrontmatter {
 		if !ok {
 			t.Fatalf("frontmatter 行不是 key: value 形式: %q", line)
 		}
-		switch strings.TrimSpace(key) {
+		lastKey = strings.TrimSpace(key)
+		switch lastKey {
 		case "name":
 			fm.name = strings.TrimSpace(value)
 		case "description":
-			fm.description = strings.TrimSpace(value)
+			if v := strings.TrimSpace(value); v != ">" && v != ">-" && v != "|" && v != "|-" {
+				fm.description = v
+			}
 		case "allowed-tools":
 			// Anthropic Agent Skills extension; passed through, not our concern.
 		case "mcps", "mcp", "license", "compatibility":
 			// norma/skill supported frontmatter keys (e.g. mcps gates skill-bound MCP servers).
+		case "domain", "subdomain", "tags", "version", "author",
+			"mitre_attack", "nist_csf", "d3fend_techniques", "nist_ai_rmf",
+			"mitre_f3", "atlas_techniques", "based_on", "swc_registry":
+			// 技能库里 818/830 个技能带的分类与合规映射元数据（ATT&CK / NIST CSF /
+			// D3FEND / ATLAS / SWC）。它们由技能作者维护、被检索与报告引用，属于
+			// 这个仓库的既定格式 —— 白名单没跟上，于是整包测试因为一个"未知键"
+			// 全红。真正的未知键仍要失败，所以这里逐项列出而不是 `default: pass`。
 		default:
 			t.Fatalf("frontmatter 出现未知键 %q", strings.TrimSpace(key))
 		}

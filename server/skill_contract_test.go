@@ -9,15 +9,23 @@ import (
 )
 
 func TestSkillCanonicalContractAndLegacyAliases(t *testing.T) {
-	reg := skill.NewRegistry(skill.Skill{Name: "api-recon", Description: "fixture", Instructions: "fixture guidance"})
+	// fixture 用一个不在别名表里的名字。原来用 "api-recon"，而 "api" 在
+	// agent.CanonicalSkillAlias 里映射到 performing-api-inventory-and-discovery，
+	// 于是 `{"skill":"api"}` 按设计解析成别名目标而不是 fixture —— 测试就红了。
+	// 但这是**正确的产品行为**（用户自建的精确名优先于历史别名，见
+	// TestSkillExactVisibleCustomNamePrecedesAlias）。这条测试真正要守的是
+	// 「三个遗留字段都被接受、被归一成规范 name、且不泄漏给 SDK」，
+	// 与某个具体名字无关，因此换一个不与别名冲突的 fixture。
+	const fixtureName = "api-recon-fixture"
+	reg := skill.NewRegistry(skill.Skill{Name: fixtureName, Description: "fixture", Instructions: "fixture guidance"})
 	m := &meteredSkill{CoreTool: reg.Tool(), reg: reg}
-	for _, raw := range []string{`{"name":"api-recon"}`, `{"skill":"api"}`, `{"skill_name":"API"}`} {
+	for _, raw := range []string{`{"name":"api-recon-fixture"}`, `{"skill":"API-RECON-FIXTURE"}`, `{"skill_name":"Api-Recon-Fixture"}`} {
 		name, normalized, err := m.resolveInput(json.RawMessage(raw))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if name != "api-recon" {
-			t.Fatal(name)
+		if name != fixtureName {
+			t.Fatalf("解析出的规范名 %q，期望 %q", name, fixtureName)
 		}
 		var fields map[string]json.RawMessage
 		if err = json.Unmarshal(normalized, &fields); err != nil {
@@ -31,7 +39,7 @@ func TestSkillCanonicalContractAndLegacyAliases(t *testing.T) {
 			t.Fatalf("SDK Skill contract failed: %v / %s", err, result.Flatten())
 		}
 	}
-	for _, raw := range []string{`null`, `{"name":"api-recon","skill":"camoufox"}`, `{"skill":null}`, `{"name":"api-recon","args":{}}`, `{"name":"api-recon","unknown":1}`} {
+	for _, raw := range []string{`null`, `{"name":"api-recon-fixture","skill":"camoufox"}`, `{"skill":null}`, `{"name":"api-recon-fixture","args":{}}`, `{"name":"api-recon-fixture","unknown":1}`} {
 		if _, _, err := m.resolveInput(json.RawMessage(raw)); err == nil {
 			t.Fatalf("invalid input accepted: %s", raw)
 		}

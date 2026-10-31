@@ -115,7 +115,7 @@ var DecommissionTable = []DecomEntry{
 	{
 		Symbol: "agent/tools_evidence.go", Where: "agent/tools_evidence.go",
 		Replacement: "coord_tools.go/agents_graph",
-		Note:        "fetch_evidence 是给 Planner 的「受限回溯通道」，存在的唯一理由是 Reviewer 把 raw 关掉了。" +
+		Note: "fetch_evidence 是给 Planner 的「受限回溯通道」，存在的唯一理由是 Reviewer 把 raw 关掉了。" +
 			"新架构里根 agent 能直接读子代理的交卷与 agents_graph，不需要一个只读洗过快照的口子。",
 	},
 
@@ -129,7 +129,7 @@ var DecommissionTable = []DecomEntry{
 	{
 		Symbol: "Engine.runWorkerStep + workerLoop", Where: "server/engine.go（P4 已删，约 140 行）", Lines: 140,
 		Replacement: "Spawner.Delegate（每个意图一个子 agent）",
-		Note: "从 frontier 领取意图、执行、结算。领取与结算这两步在内存 mailbox 里退化成一次投递。",
+		Note:        "从 frontier 领取意图、执行、结算。领取与结算这两步在内存 mailbox 里退化成一次投递。",
 	},
 	{
 		Symbol: "Engine.runFinalPlannerRound", Where: "server/engine_timeout.go（P4 改为读库判定）", Lines: 40,
@@ -138,22 +138,22 @@ var DecommissionTable = []DecomEntry{
 			"目标节点的 state——根 agent 运行期间 prove_goal 落的库才是权威记录，临场判定反而受上下文余量影响。",
 	},
 	{
-		Symbol: "Engine.resolve / SetAgentResolver / SetAuthoritativeAgentResolver / snapshotFor",
-		Where: "server/engine.go（P4 已删；收敛为 Engine.resolve bool + SetTaskRunnable）",
+		Symbol:      "Engine.resolve / SetAgentResolver / SetAuthoritativeAgentResolver / snapshotFor",
+		Where:       "server/engine.go（P4 已删；收敛为 Engine.resolve bool + SetTaskRunnable）",
 		Replacement: "Spawner 持有 Runner（构造期注入，运行期不可变）",
 		Note: "运行时可换 planner/worker 的注入点。新架构里执行器在 StartTask 时绑定，" +
 			"中途换执行器等同于换掉整张图——那应该是一个新任务，不是一个运行期开关。",
 	},
 	{
-		Symbol: "Engine.dirGate / bumpDirection / AckDispatch / dispatchHeld",
-		Where: "server/engine.go:1430-1470（dirGate 定义与解冻兜底）",
+		Symbol:      "Engine.dirGate / bumpDirection / AckDispatch / dispatchHeld",
+		Where:       "server/engine.go:1430-1470（dirGate 定义与解冻兜底）",
 		Replacement: "MsgKind=instruction（send_to_agent）",
 		Note: "方向代际门控：为「kill 之后不要再按旧方向派发」发明的。新架构里改方向是一套显式指令，" +
 			"由接收方在自己的 turn 里读取，不需要代际号。",
 	},
 	{
-		Symbol: "Reviewer 闸门熔断 / awaitReviewerVerdict / runReviewerForIntent",
-		Where: "server/handoff.go:181,184 + server/reviewer.go:280-320",
+		Symbol:      "Reviewer 闸门熔断 / awaitReviewerVerdict / runReviewerForIntent",
+		Where:       "server/handoff.go:181,184 + server/reviewer.go:280-320",
 		Replacement: "（无 —— 直接删除）",
 		Note: "「等判决落库」的同步闸门与它的熔断器。这份复杂度完全由「交卷必须经过中间角色」这一设计产生，" +
 			"交卷变成一条消息后它没有存在意义。",
@@ -161,8 +161,8 @@ var DecommissionTable = []DecomEntry{
 
 	// ── 第三层：四套提示词与工具面 ───────────────────────────────────────
 	{
-		Symbol: "plannerDefaultTmpl / workerSystem / reviewerDefaultTmpl（均已删；goals 分解提示词保留）",
-		Where: "agent/{planner,worker,reviewer}.go 已下线 / agent/goals.go 仍存活",
+		Symbol:      "plannerDefaultTmpl / workerSystem / reviewerDefaultTmpl（均已删；goals 分解提示词保留）",
+		Where:       "agent/{planner,worker,reviewer}.go 已下线 / agent/goals.go 仍存活",
 		Replacement: "rootTmpl / childTmpl（prompts_coord.go）",
 		Note: "四套提示词 + 各自的九段后处理拼接（artifactSpec / toolBatchSpec / langDirective / " +
 			"toolNameDiscipline / constraintBlock / envBrief / intentBlock / 启动指令 / intent 8KB 兜底）。" +
@@ -171,7 +171,7 @@ var DecommissionTable = []DecomEntry{
 	{
 		Symbol: "agent/assembly.go IsReviewerKey 硬闸门", Where: "agent/assembly.go:47-51",
 		Replacement: "（无 —— 直接删除）",
-		Note: "「即便是 reviewer 也装配空工具面」的防御。reviewer 不存在了，这条防御失去主语。",
+		Note:        "「即便是 reviewer 也装配空工具面」的防御。reviewer 不存在了，这条防御失去主语。",
 	},
 	{
 		Symbol: "ToolSet.PlannerTools()", Where: "agent/tools.go:2321",
@@ -182,8 +182,8 @@ var DecommissionTable = []DecomEntry{
 
 	// ── 第四层：数据库承载的控制流 ───────────────────────────────────────
 	{
-		Symbol: "表 intent_runs / intent_handoffs / intent_closures / intent_links / branch_retries / intent_open_work",
-		Where: "db/schema_sqlite.sql",
+		Symbol:      "表 intent_runs / intent_handoffs / intent_closures / intent_links / branch_retries / intent_open_work",
+		Where:       "db/schema_sqlite.sql",
 		Replacement: "Coordinator 内存图 + 一份 JSON 快照（Snapshot）",
 		Note: "六张表表达的是「一次任务在角色之间的流转」。新架构里它就是一次函数调用 + 一条消息。" +
 			"表可以保留为**审计日志**（谁在什么时候交了什么），但不再参与控制流——是否保留由报表需求决定，不由调度需要决定。",

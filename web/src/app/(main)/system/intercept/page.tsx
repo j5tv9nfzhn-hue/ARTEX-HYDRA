@@ -10,7 +10,7 @@ import { Masthead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet } from "@/components/editorial-sheet";
+import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -195,7 +195,7 @@ function JudgeCard() {
       {cfg.enabled && (
         <div className="grid gap-4 lg:grid-cols-5">
           {/* 左侧：默认展开的主要提示编辑区。 */}
-          <Sheet className="lg:col-span-3">
+          <PaperSheet className="lg:col-span-3">
             <div className="flex h-full flex-col gap-2 p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -217,10 +217,10 @@ function JudgeCard() {
                 {t("judge.charCount", { count: cfg.prompt.length })}
               </p>
             </div>
-          </Sheet>
+          </PaperSheet>
 
           {/* 右侧：判定参数设置。 */}
-          <Sheet className="lg:col-span-2">
+          <PaperSheet className="lg:col-span-2">
             <div className="space-y-5 p-4">
               <div className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -302,7 +302,7 @@ function JudgeCard() {
                 </Field>
               </div>
             </div>
-          </Sheet>
+          </PaperSheet>
         </div>
       )}
 
@@ -586,7 +586,7 @@ export default function InterceptPage() {
             </Button>
           </div>
 
-          <Sheet>
+          <PaperSheet>
             <div className="p-0">
               {loading ? (
                 <p className="p-6 text-sm text-muted-foreground">{t("rules.loading")}</p>
@@ -664,7 +664,7 @@ export default function InterceptPage() {
                 </Table>
               )}
             </div>
-          </Sheet>
+          </PaperSheet>
         </TabsContent>
 
         {/* ---- tab: model ---- */}

@@ -23,7 +23,7 @@ type AgentSpec struct {
 	ParentID string   `json:"parent_id,omitempty"`
 	Name     string   `json:"name,omitempty"` // 人类可读标签，仅用于日志/UI
 	Role     string   `json:"role,omitempty"`
-	Task     string   `json:"task"`   // 必须自包含：子 agent 看不到父级的会话历史
+	Task     string   `json:"task"` // 必须自包含：子 agent 看不到父级的会话历史
 	Skills   []string `json:"skills,omitempty"`
 	AssetIDs []int64  `json:"asset_ids,omitempty"`
 	IntentID int64    `json:"intent_id,omitempty"`

@@ -59,22 +59,22 @@ type SessionRunner struct {
 	ToolOutputDir      string
 	MaxToolOutputChars int
 
-	MaxTurns           int
-	MaxDuration        time.Duration
-	MaxTokens          int
-	MaxConcurrency     int
-	NonStreaming       bool
-	PermissionMode     permission.Mode
-	AllowedTools       []string
-	DisallowedTools    []string
-	BashEnv            []string
-	Hooks              harness.HookRunner
-	Compactor          harness.Compactor
-	Settlement         *harness.Settlement
-	TokenBudget        int
-	EscalateMaxTokens  bool
+	MaxTurns               int
+	MaxDuration            time.Duration
+	MaxTokens              int
+	MaxConcurrency         int
+	NonStreaming           bool
+	PermissionMode         permission.Mode
+	AllowedTools           []string
+	DisallowedTools        []string
+	BashEnv                []string
+	Hooks                  harness.HookRunner
+	Compactor              harness.Compactor
+	Settlement             *harness.Settlement
+	TokenBudget            int
+	EscalateMaxTokens      bool
 	DisableBackgroundTasks bool
-	SessionIDPrefix    string
+	SessionIDPrefix        string
 
 	// Window 是该任务的上下文窗口（token）。0 = 未提供，按 ARTEX 的默认窗口。
 	//
@@ -258,6 +258,11 @@ func (r *SessionRunner) Run(ctx context.Context, spec AgentSpec, agentID string,
 		if reason == harness.ReasonMaxTurns || reason == harness.ReasonTimeout {
 			// 预算用尽仍未交卷：按 open_proof_gap 收尾，而不是伪装成完成。
 			// 这条兜底是"没有结论也必须留痕"的最后一道闸。
+			//
+			// 同时登记 interrupted：这不是它自己判断「做完了」，而是被额度打断的。
+			// 两者的差别只在调度层有意义——上层把额度调大后，被打断的 agent 应当
+			// 还能收到"继续"，而自己交卷的不能再被塞指令（见 Runtime.resumableLocked）。
+			coord.MarkInterrupted(agentID)
 			out.Brief = Brief{
 				State:   StateCompleted,
 				Outcome: "open_proof_gap",
@@ -394,6 +399,7 @@ func (r *SessionRunner) sysBodyFor(spec AgentSpec, coord *Coordinator, agentID s
 	vars := CoordVars{
 		Goal:     spec.Task,
 		Scope:    scopeOf(spec),
+		DataDir:  r.WorkDir, // 与 cwd 同源：提示词里说的目录必须是它真正落地的目录
 		MaxTurns: spec.EffectiveMaxTurns(r.MaxTurns),
 	}
 	if isRoot {

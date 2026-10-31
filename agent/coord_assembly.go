@@ -231,7 +231,8 @@ func coordAgentKey(rootKey, childKey string, isRoot bool) string {
 // 这正是 agent/tool_lean.go 的 toolNameDiscipline 要防的那类漂移。
 //
 // 所以这里只点名**确定在面上**的工具：
-//   根：finish_task；子：submit_report + record_fact。
+//
+//	根：finish_task；子：submit_report + record_fact。
 func coordSettlement(isRoot bool, disabled []string, maxTurns int) *harness.Settlement {
 	var p string
 	if isRoot {
