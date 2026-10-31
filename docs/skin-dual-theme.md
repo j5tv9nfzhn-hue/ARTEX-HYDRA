@@ -175,13 +175,36 @@ web/src/
 
 其余 13 个 B 类面板与 5 个 C 类浮层（⌘K 命令面板、偏好浮层、用户菜单、新建任务、导出）在库里本来就有，逐一核对后只补了入口与文案，没有重写。
 
+### 7-4 B 类面板：皮肤层适配（第 16 组）
+
+第 10 组只翻译了外壳，B 类面板切到纸本后是「纸的壳子里装着科技风」。
+`skin-editorial.css` 新增第 16 组补上壳子里那一层，三条约束贯穿始终：
+
+1. **只动版式与描边**：不改 `display` / `position` / `overflow`，不写死尺寸上限。
+   万一命中了没预料到的元素，最坏也只是「看起来朴素一点」，不会错位。
+2. **不硬编码配色**：颜色只来自 `paper.css` 的令牌，或本文件令牌块里那四档中性暗
+   （`--ed-lift-1/2/3` 抬升、`--ed-scrim` 遮罩）。抬升与遮罩刻意不用 `--foreground`
+   推导——阴影的作用是压暗下方，跟着前景色走会在深色主题里反过来变成光晕。
+   `scripts/audit-editorial.mjs` 新增第 5 条不变量守这条：令牌块之外出现
+   `#hex` / `oklch()` / `rgb()` / `hsl()` 即报错。
+3. **不牺牲语义色**：`alert` 只改排版、不动边框与底色——它的危险态靠 destructive
+   类表达，用 `data-slot` 一刀切会把「这是条错误」一起抹掉。勾选用左侧主色竖线
+   而不是填充块，是同一个理由：朴素不等于丢信息。
+
+覆盖到的槽位：面板头尾；`dialog` / `sheet` / `drawer` 的右上角 ✕（必须限定
+**直接子元素**——页脚那排「取消」也用 `DialogClose` 包着，不限定会把整排按钮
+压成一枚图标钮）；命令面板（分组标题是 `[cmdk-group-heading]` 属性，cmdk 不给
+`data-slot`）；右键菜单 / 悬停卡 / 提示气泡 / 菜单栏 / 导航菜单；`item` / `field` /
+`accordion` / `scroll-area` / `progress` / `kbd`；面板内的 `pre`（行内 `code`
+不碰——加了边框正文会被割碎）与表格容器。
+
 ### 还剩什么
 
 > 2026-10-31 按代码现状复核过一遍：原清单里的「详情路由还没有独立路由」已经不成立（见 7-1 / 7-2），
 > 下面只留仍然成立的项，B / C 两类改为可核对的具体清单。
 
 - **B 类「通知推送 · 模板编辑」**：后端 `NotificationChannel` 没有模板字段，只做了渠道配置 + 测试发送；要做真模板编辑得先加后端字段。
-- **B 类页内深层面板：已核对，未重写版式。** 7-3 只补了入口与文案。浮层 / 面板调用最密集的六个文件：`function/tasks/page.tsx`（31 处）、`tasks/detail/_tabs/overview-tab.tsx`（28）、`function/assets/page.tsx`（21）、`system/llm/page.tsx`（18）、`system/skills/page.tsx`（17）、`components/agent-editor.tsx`（16）。它们已经继承 `skin-editorial.css` 的浮层外观（3px 圆角 + 发丝边 + 衬线标题 + 极轻投影），**缺的是版块原语级别的重写**，属于下一批。
+- **B 类页内深层面板：皮肤层已适配（见 7-4），结构重写仍未做。** 浮层 / 面板调用最密集的六个文件：`function/tasks/page.tsx`（31 处）、`tasks/detail/_tabs/overview-tab.tsx`（28）、`function/assets/page.tsx`（21）、`system/llm/page.tsx`（18）、`system/skills/page.tsx`（17）、`components/agent-editor.tsx`（16）。它们现在连壳子里的菜单、列表、表单、代码块一起是报纸腔调，**仍缺的是版块原语级别的结构重写**（把卡片换成 `Sheet` / `RecordRow`），属于下一批。
 - **C 类全局浮层：6 个已核对。** ⌘K 命令面板、偏好浮层、用户菜单、新建任务、导出，以及本批新建的通知中心；同样只补了入口与文案，没有重写。
 - **中文衬线依赖系统字体。** Windows 上 `Songti SC` / `Noto Serif CJK SC` 多半缺失，标题会落到 `SimSun`（观感偏硬但仍是衬线）。统一观感需要在 `next/font` 里引入中文衬线 Web Font，子集化后仍有 3–8MB，代价较大，未做。
 - **`.uppercase` 的作用域不能扩大。** 它已收窄到 `[data-editorial="body"]`；新页面接入时必须挂 body 锚点，否则既拿不到正文腔调，也容易误伤侧栏与顶栏这些「机器外壳」。

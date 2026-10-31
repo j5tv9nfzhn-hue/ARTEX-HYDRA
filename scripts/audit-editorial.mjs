@@ -5,13 +5,18 @@
  * 它守的是这个项目里最容易悄悄破掉的一条承诺：
  *   「新增的纸本主题不能影响其余 8 套主题。」
  *
- * 三个不变量：
+ * 六个不变量：
  *   1. editorial.css 里的每一条规则都必须挂在 [data-theme-preset="paper"] 之下
  *      （唯二的例外是「默认态」声明，它们必须显式列出）。
  *   2. presets/paper.css 必须覆盖完整的令牌契约 —— 少一个令牌，
  *      组件就会回落到默认主题的颜色，在深色模式下尤其明显。
  *   3. 页面要么继承全局壳的 body 锚点，要么自己挂一个；
  *      否则拿不到表格语法（这是阶段二踩过的坑）。
+ *   4. skin-editorial.css 的每一条规则都必须挂在 [data-skin="editorial"] 之下，
+ *      且双主题的七处接线齐全。
+ *   5. skin-editorial.css 里不得出现硬编码色值：颜色只能来自 paper.css 的令牌，
+ *      或本文件令牌块里那四档中性暗（抬升与遮罩）。
+ *   6. 主题预设必须注册进 THEME_PRESET_OPTIONS（外观下拉与命令面板的唯一来源）。
  *
  * 用法：node scripts/audit-editorial.mjs
  * 退出码非 0 即失败，可直接接进 CI。零依赖，不需要先构建。
@@ -209,6 +214,63 @@ if (!skin) {
   if (unscoped === 0) console.log(`  ✓ skin-editorial.css 全部规则限定在外观作用域内（${selectors.length} 块）`);
 }
 
+// ── 4b. 皮肤层不得硬编码配色 ──────────────────────────────────────────────────
+// 颜色只有两个合法出处：presets/paper.css 的令牌，或本文件令牌块里那四档
+// 「中性暗」（抬升与遮罩）。规则里一旦写死色值，换预设 / 换主题时它不再跟着动，
+// 而且往往只在深色模式下才现形——评审时最容易漏，所以交给脚本守。
+
+{
+  const lines = skin.split("\n");
+  let inComment = false;
+  const codeLines = [];
+  for (let i = 0; i < lines.length; i++) {
+    let cur = lines[i];
+    let out = "";
+    while (cur.length) {
+      if (inComment) {
+        const end = cur.indexOf("*/");
+        if (end === -1) { cur = ""; } else { inComment = false; cur = cur.slice(end + 2); }
+      } else {
+        const start = cur.indexOf("/*");
+        if (start === -1) { out += cur; cur = ""; } else { out += cur.slice(0, start); inComment = true; cur = cur.slice(start + 2); }
+      }
+    }
+    codeLines.push([i + 1, out]);
+  }
+
+  // 令牌块 = 第一个 :root[data-skin="editorial"] { ... } 的闭合区间
+  let tokenStart = -1;
+  let tokenEnd = -1;
+  for (let i = 0; i < codeLines.length; i++) {
+    if (codeLines[i][1].includes(':root[data-skin="editorial"] {')) { tokenStart = i; break; }
+  }
+  if (tokenStart >= 0) {
+    let depth = 0;
+    for (let i = tokenStart; i < codeLines.length && tokenEnd < 0; i++) {
+      for (const ch of codeLines[i][1]) {
+        if (ch === "{") depth++;
+        else if (ch === "}") { depth--; if (depth === 0) { tokenEnd = i; break; } }
+      }
+    }
+  }
+
+  const COLOR = /#[0-9a-fA-F]{3,8}\b|oklch\(|rgba?\(|hsla?\(/;
+  let hardCoded = 0;
+  for (let i = 0; i < codeLines.length; i++) {
+    if (tokenStart >= 0 && i >= tokenStart && i <= tokenEnd) continue;
+    if (COLOR.test(codeLines[i][1])) {
+      hardCoded++;
+      errors.push(
+        `skin-editorial.css 第 ${codeLines[i][0]} 行出现硬编码色值（令牌块之外只能引用 var()）：${codeLines[i][1].trim().slice(0, 60)}`
+      );
+    }
+  }
+  if (hardCoded === 0) {
+    console.log(`  ✓ skin-editorial.css 无硬编码配色（令牌块第 ${tokenStart + 1}–${tokenEnd + 1} 行除外）`);
+  }
+}
+
+
 // ── 5. 双主题的接线必须齐全 ──────────────────────────────────────────────────
 // 少任何一处，都会出现「切了没生效」或者「刷新后变回老主题」的幽灵 bug：
 // 首帧脚本负责不闪烁，layout 负责 SSR 默认值，provider 负责运行时同步。
@@ -222,12 +284,21 @@ const wiring = [
   ["web/src/stores/preferences/preferences-provider.tsx", "applySkin(", "provider 没有同步外观变化"],
   ["web/src/app/globals.css", "skin-editorial.css", "globals.css 没有引入外观层"],
 ];
+// 用计数判断，不要用「错误文本里是否含 skin」判断：缺文件时的消息是
+// 「缺少 web/src/lib/preferences/theme.ts」，里面一个 skin 都没有，
+// 按文本匹配会在这七处全缺的情况下照样打印「接线完整」——守卫自己撒谎。
+let wiringBroken = 0;
 for (const [file, needle, msg] of wiring) {
   const src = read(join(root, file));
-  if (!src) errors.push(`缺少 ${file}`);
-  else if (!src.includes(needle)) errors.push(`${msg}（${file}）`);
+  if (!src) {
+    errors.push(`缺少 ${file}`);
+    wiringBroken++;
+  } else if (!src.includes(needle)) {
+    errors.push(`${msg}（${file}）`);
+    wiringBroken++;
+  }
 }
-if (!errors.some((e) => e.includes("data-skin") || e.includes("applySkin") || e.includes("skin"))) {
+if (wiringBroken === 0) {
   console.log("  ✓ 双主题接线完整（首帧 / SSR / provider / 样式层）");
 }
 
