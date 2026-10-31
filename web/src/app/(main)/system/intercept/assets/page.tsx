@@ -7,10 +7,10 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Masthead } from "@/components/editorial";
+import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -195,8 +195,8 @@ export default function AssetInterceptPage() {
         </Button>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
+      <PaperSheet>
+        <div className="p-0">
           {loading ? (
             <p className="p-6 text-sm text-muted-foreground">{t("loading")}</p>
           ) : rules.length === 0 ? (
@@ -265,8 +265,8 @@ export default function AssetInterceptPage() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </PaperSheet>
 
       {/* editor sheet */}
       <Sheet open={open} onOpenChange={setOpen}>

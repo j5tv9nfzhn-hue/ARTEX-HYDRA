@@ -1,29 +1,39 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { siX } from "simple-icons";
 
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { SimpleIcon } from "@/components/simple-icon";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function SidebarSupportCard() {
+  const t = useTranslations("sidebarSupport");
   return (
-    <Card size="sm" className="overflow-hidden shadow-none group-data-[collapsible=icon]:hidden">
-      <CardHeader className="min-w-0 px-4">
-        <CardTitle className="truncate text-sm">寻找更多？</CardTitle>
-        <CardDescription className="line-clamp-2">
-          欢迎提交 issue，或在 X 上联系作者&nbsp;
-          <Link
-            href="https://x.com/arhamkhnz"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="在 X 上联系作者"
-            className="inline-flex items-center text-foreground"
-          >
-            <SimpleIcon icon={siX} aria-hidden className="size-3 fill-current" />
-          </Link>
-          .
-        </CardDescription>
-      </CardHeader>
-    </Card>
+    <Sheet className="overflow-hidden shadow-none group-data-[collapsible=icon]:hidden">
+      <SheetHead title={t("title")} />
+      <div className="px-4 pb-3">
+        <p className="line-clamp-2 text-muted-foreground text-xs">
+          {t.rich("desc", {
+            // X 的图标本身就是链接内容，所以只把句末标点留在标签里，
+            // 图标由渲染函数补在标点前面。
+            x: (chunks) => (
+              <>
+                &nbsp;
+                <Link
+                  href="https://x.com/arhamkhnz"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={t("xAria")}
+                  className="inline-flex items-center text-foreground"
+                >
+                  <SimpleIcon icon={siX} aria-hidden className="size-3 fill-current" />
+                </Link>
+                {chunks}
+              </>
+            ),
+          })}
+        </p>
+      </div>
+    </Sheet>
   );
 }

@@ -47,6 +47,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { AssetInterceptRulesEditor } from "@/components/asset-intercept-rules-editor";
+import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { useStaggerOnce } from "@/components/motion";
 import { StatusBadge } from "@/components/status-badge";
@@ -66,7 +67,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -821,8 +821,8 @@ export default function TasksPage() {
         <TabsTrigger value="archived">{t("tab.archived")}</TabsTrigger>
       </TabsList>
       <TabsContent value="current">
-        <Card>
-          <CardContent className="flex flex-col gap-4 px-0 pt-6">
+        <PaperSheet>
+          <div className="flex flex-col gap-4 px-0 pt-4">
             <div className="flex flex-wrap items-center gap-2 px-4 lg:px-6">
               <div className="relative w-full sm:max-w-xs">
                 <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -1049,8 +1049,8 @@ export default function TasksPage() {
                 setPage(1);
               }}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </PaperSheet>
       </TabsContent>
       <TabsContent value="archived">
         <TaskArchivesPanel onChanged={load} />
@@ -1881,8 +1881,8 @@ function TaskArchivesPanel({ onChanged }: { onChanged: () => void }) {
   }
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-4 px-0 pt-6">
+    <PaperSheet>
+      <div className="flex flex-col gap-4 px-0 pt-4">
         <div className="flex flex-wrap items-center gap-2 px-4 lg:px-6">
           <div className="relative w-full sm:max-w-xs">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -2108,8 +2108,8 @@ function TaskArchivesPanel({ onChanged }: { onChanged: () => void }) {
             setPage(1);
           }}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </PaperSheet>
   );
 }
 

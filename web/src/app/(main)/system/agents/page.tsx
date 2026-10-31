@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Masthead } from "@/components/editorial";
+import { Sheet as PaperSheet, SheetHead } from "@/components/editorial-sheet";
 import { AgentEditor } from "@/components/agent-editor";
 import { EmptyState } from "@/components/empty-state";
 import { useStaggerOnce } from "@/components/motion";
@@ -23,7 +24,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -244,12 +244,9 @@ export default function AgentsPage() {
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("listTitle")}</CardTitle>
-          <CardDescription>{t("countTotal", { count: agents.length })}</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <PaperSheet>
+        <SheetHead title={t("listTitle")} count={agents.length} />
+        <div className="px-4 py-3">
           {agents.length === 0 ? (
             <EmptyState illustration="nodes" title={t("empty")} />
           ) : (
@@ -265,8 +262,8 @@ export default function AgentsPage() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </PaperSheet>
 
       <Sheet open={!!editing} onOpenChange={(o) => !o && setEditKey(null)}>
         <SheetContent

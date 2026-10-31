@@ -9,10 +9,10 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Masthead } from "@/components/editorial";
+import { Sheet as PaperSheet, SheetHead } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -397,20 +397,19 @@ export default function MCPPage() {
         </button>
 
         {servers.map((s) => (
-          <Card
+          <PaperSheet
             key={s.id}
             onClick={() => openEdit(s)}
             className="min-w-0 cursor-pointer gap-3 overflow-hidden transition hover:border-primary/60 hover:shadow-sm"
           >
-            <CardHeader className="pb-1">
-              <div className="flex min-w-0 items-center justify-between gap-2">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <ServerIcon className="size-4 shrink-0 text-primary/80" />
-                  <CardTitle className="min-w-0 truncate text-base">{s.name}</CardTitle>
+            <SheetHead
+              icon={ServerIcon}
+              title={<span className="block max-w-[14rem] truncate">{s.name}</span>}
+              actions={
+                <>
                   <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-xs uppercase">
                     {s.transport}
                   </Badge>
-                </div>
                 {/* biome-ignore lint/a11y/noStaticElementInteractions: 此容器仅阻止向父卡片传播点击，本身不是交互元素；内部 Switch 和删除按钮均可由键盘操作。 */}
                 {/* biome-ignore lint/a11y/useKeyWithClickEvents: 仅阻止点击传播，无需额外键盘处理器。 */}
                 <div className="ml-auto flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -431,9 +430,10 @@ export default function MCPPage() {
                     <Trash2Icon className="size-4" />
                   </Button>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="grid gap-3">
+              </>
+            }
+            />
+            <div className="grid gap-3 px-4 py-3">
               <p className="text-muted-foreground text-sm">
                 {s.tools && s.tools.length > 0 ? t("toolCount", { count: s.tools.length }) : t("noTools")}
               </p>
@@ -453,8 +453,8 @@ export default function MCPPage() {
                   ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </PaperSheet>
         ))}
       </div>
 

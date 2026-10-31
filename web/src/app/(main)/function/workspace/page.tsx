@@ -16,13 +16,13 @@ import {
   UploadIcon,
 } from "lucide-react";
 import { Masthead } from "@/components/editorial";
+import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -236,8 +236,8 @@ export default function WorkspacePage() {
         <span>{t("summary", { files: summary.files, dirs: summary.dirs })}</span>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
+      <PaperSheet>
+        <div className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -344,8 +344,8 @@ export default function WorkspacePage() {
               })}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </PaperSheet>
 
       {/* 查看、编辑文件。 */}
       <Sheet open={edit !== null} onOpenChange={(o) => !o && setEdit(null)}>
