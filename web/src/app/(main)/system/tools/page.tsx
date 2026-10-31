@@ -12,7 +12,7 @@ import { Masthead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sheet as PaperSheet, SheetHead } from "@/components/editorial-sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -437,16 +437,14 @@ export default function ToolsPage() {
         </TabsList>
 
         <TabsContent value="system">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("tabSystem")}</CardTitle>
-              <CardDescription>
+          <PaperSheet>
+            <SheetHead title={t("tabSystem")} />
+            <div className="px-4 py-3">
+              <p className="text-muted-foreground text-sm">
                 {query.trim()
                   ? t("systemMatched", { shown: systemTools.length, total: allSystemCount })
                   : t("systemTotal", { total: allSystemCount })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </p>
               {systemTools.length === 0 ? (
                 <EmptyState illustration="terminal" title={query.trim() ? t("systemNoMatch") : t("systemEmpty")} />
               ) : (
@@ -456,28 +454,26 @@ export default function ToolsPage() {
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </PaperSheet>
         </TabsContent>
 
         <TabsContent value="custom">
-          <Card>
-            <CardHeader>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <CardTitle>{t("tabCustom")}</CardTitle>
-                  <CardDescription>
-                    {query.trim()
-                      ? t("customMatched", { shown: customTools.length, total: allCustomCount })
-                      : t("customTotal", { total: allCustomCount })}
-                  </CardDescription>
-                </div>
+          <PaperSheet>
+            <SheetHead
+              title={t("tabCustom")}
+              actions={
                 <Button size="sm" onClick={() => setCustomEdit("new")}>
                   <PlusIcon /> {t("newCustom")}
                 </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
+              }
+            />
+            <div className="px-4 py-3">
+              <p className="text-muted-foreground text-sm">
+                {query.trim()
+                  ? t("customMatched", { shown: customTools.length, total: allCustomCount })
+                  : t("customTotal", { total: allCustomCount })}
+              </p>
               {customTools.length === 0 ? (
                 <EmptyState illustration="terminal" title={query.trim() ? t("customNoMatch") : t("customEmpty")} />
               ) : (
@@ -487,8 +483,8 @@ export default function ToolsPage() {
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </PaperSheet>
         </TabsContent>
       </Tabs>
 
