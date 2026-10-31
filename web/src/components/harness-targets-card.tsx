@@ -6,9 +6,9 @@ import { RefreshCwIcon, ShieldCheckIcon, WrenchIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { RecordRow, Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -138,19 +138,14 @@ export function HarnessTargetsCard() {
   };
 
   return (
-    <Card className="gap-3">
-      <CardHeader className="pb-1">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <WrenchIcon className="size-4 shrink-0 text-primary/80" />
-            <CardTitle className="text-base">{t("harnessTitle")}</CardTitle>
-            {scan ? (
-              <Badge variant="secondary">
-                {scan.stats.linked}/{scan.stats.total}
-              </Badge>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-2">
+    <Sheet>
+      <SheetHead
+        icon={WrenchIcon}
+        title={t("harnessTitle")}
+        count={scan ? `${scan.stats.linked}/${scan.stats.total}` : undefined}
+        hint={t("harnessSubtitle")}
+        actions={
+          <>
             <Button variant="ghost" size="sm" onClick={selectAll} disabled={busy || clients.length === 0}>
               {t("harnessSelectAll")}
             </Button>
@@ -163,12 +158,10 @@ export function HarnessTargetsCard() {
             >
               <RefreshCwIcon className="size-4" />
             </Button>
-          </div>
-        </div>
-        <p className="text-muted-foreground text-sm">{t("harnessSubtitle")}</p>
-      </CardHeader>
-
-      <CardContent className="flex flex-col gap-3">
+          </>
+        }
+      />
+      <div className="flex flex-col gap-3 px-4">
         <div className="flex flex-wrap items-center gap-2">
           <Input
             value={projectDir}
@@ -179,23 +172,31 @@ export function HarnessTargetsCard() {
           <span className="text-muted-foreground text-xs">{t("harnessProjectDirHint")}</span>
         </div>
 
-        <div className="max-h-96 divide-y divide-border/60 overflow-y-auto rounded-lg border border-border/70">
+        <div className="max-h-96 overflow-y-auto">
           {clients.length === 0 ? (
-            <div className="p-4 text-muted-foreground text-sm">{t("harnessScanEmpty")}</div>
+            <div className="px-4 py-3 text-muted-foreground text-sm">{t("harnessScanEmpty")}</div>
           ) : (
             clients.map((c) => {
               const canPick = selectable(c);
               return (
-                <div key={c.id} className="flex items-start gap-3 px-3 py-2.5">
-                  <Checkbox
-                    className="mt-0.5"
-                    checked={Boolean(selected[c.id])}
-                    disabled={!canPick}
-                    onCheckedChange={(v) => toggle(c.id, v === true)}
-                    aria-label={c.name}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
+                <RecordRow
+                  key={c.id}
+                  cols="24px minmax(0,1fr) auto"
+                  lead={
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={Boolean(selected[c.id])}
+                      disabled={!canPick}
+                      onCheckedChange={(v) => toggle(c.id, v === true)}
+                      aria-label={c.name}
+                    />
+                  }
+                  values={[
+                    !canPick ? <span className="text-muted-foreground">{t("harnessManual")}</span> : null,
+                  ]}
+                >
+                  <div className="flex min-w-0 flex-col">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                       <span className="font-medium text-sm">{c.name}</span>
                       <span className="text-muted-foreground text-xs">{c.vendor}</span>
                       <Badge variant={stateVariant(c.state)}>{t(`harnessState_${c.state}`)}</Badge>
@@ -220,10 +221,7 @@ export function HarnessTargetsCard() {
                       ) : null}
                     </div>
                   </div>
-                  {!canPick ? (
-                    <span className="shrink-0 text-muted-foreground text-xs">{t("harnessManual")}</span>
-                  ) : null}
-                </div>
+                </RecordRow>
               );
             })
           )}
@@ -235,7 +233,13 @@ export function HarnessTargetsCard() {
           </Button>
           <span className="text-muted-foreground text-xs">{t("harnessBackup")}</span>
         </div>
-      </CardContent>
+      </div>
+      {clients.length > 0 ? (
+        <SheetFoot
+          left={t("harnessFoot", { n: targetIds.length })}
+          right={t("harnessFootHint")}
+        />
+      ) : null}
 
       <Dialog open={changes !== null} onOpenChange={(open) => (open ? null : setChanges(null))}>
         <DialogContent className="max-w-3xl">
@@ -286,6 +290,6 @@ export function HarnessTargetsCard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </Sheet>
   );
 }
