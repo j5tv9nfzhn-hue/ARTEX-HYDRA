@@ -136,7 +136,7 @@ export function FindingTrafficPanel({
                   </Badge>
                 }
                 values={[
-                  <div className="flex flex-wrap gap-1">
+                  <span className="inline-flex flex-wrap gap-1">
                     <Button variant="outline" size="sm" onClick={() => setPreview(b.id)}>
                       {t("traffic.viewRaw")}
                     </Button>
@@ -184,7 +184,7 @@ export function FindingTrafficPanel({
                         </Button>
                       </>
                     ) : null}
-                  </div>,
+                  </span>,
                 ]}
               >
                 <div className="flex min-w-0 flex-col gap-1">
