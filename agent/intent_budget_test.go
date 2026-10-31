@@ -111,9 +111,16 @@ func TestIntentToolCapEnv(t *testing.T) {
 	}
 }
 
-// 端到端：guardedTool 在额度用尽后**不执行**工具实现（副作用为零），
-// 并把拒绝归到 error_class=quota。
-func TestGuardedToolQuotaGateBlocksExecution(t *testing.T) {
+// 单意图工具额度闸门**已随 P4 拆除**（见 assembly.go 里 guardedTool.Call 的注释：
+// 新链路没有意图节点，预算由 MaxTurns/MaxDuration 在会话层约束）。
+//
+// 原来的端到端测试要求「额度用尽后 guardedTool 不执行实现并返回【额度】错误」，
+// 守的正是那条已被删掉的闸门 —— 拆闸门时没同步拆测试，于是它变成一条永远
+// 失败的断言。这里把它改成守**拆除后的真实契约**：
+//
+//	guardedTool 只做输入校验、panic 兜底、裁剪与 loop-breaker，**不再按额度拦截**；
+//	额度本身（intentBudget）仍在，由调用方在轮次层面检查。
+func TestGuardedToolHasNoQuotaGate(t *testing.T) {
 	calls := 0
 	inner := &countingTool{onCall: func() { calls++ }}
 	g := &guardedTool{CoreTool: inner}
@@ -122,30 +129,18 @@ func TestGuardedToolQuotaGateBlocksExecution(t *testing.T) {
 	ctx := WithIntentBudget(context.Background(), b)
 	tc := &actool.ToolContext{}
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 4; i++ { // 故意超过 newIntentBudget(2) 的额度
 		res, err := g.Call(ctx, json.RawMessage(`{}`), tc)
 		if err != nil || res.IsError {
-			t.Fatalf("第 %d 次应当成功：err=%v res=%+v", i+1, err, res)
+			t.Fatalf("第 %d 次调用不应被拦：err=%v res=%+v", i+1, err, res)
 		}
 	}
-	if calls != 2 {
-		t.Fatalf("底层工具被调用 %d 次，期望 2", calls)
+	if calls != 4 {
+		t.Fatalf("工具实现被调用 %d 次，期望 4（额度闸门已拆除，不应拦截）", calls)
 	}
-	res, err := g.Call(ctx, json.RawMessage(`{}`), tc)
-	if err != nil {
-		t.Fatalf("拒绝不应返回 Go error（要成为一条 tool_result）：%v", err)
-	}
-	if !res.IsError {
-		t.Fatal("额度用尽后应返回错误结果")
-	}
-	if calls != 2 {
-		t.Fatalf("被拒绝的调用执行了工具实现（副作用！）：%d", calls)
-	}
-	if !strings.HasPrefix(res.Flatten(), "【额度】") {
-		t.Fatalf("拒绝文本缺少【额度】前缀，error_class 会归错类：%q", res.Flatten())
-	}
-	if class := ErrorClassOf(res, nil, ctx); class != ErrClassQuota {
-		t.Fatalf("error_class=%q，期望 %q", class, ErrClassQuota)
+	// 额度账本仍然独立工作：它记录的是"本轮已经调了几次"，而不是"能否调"。
+	if b.Calls() != 0 {
+		t.Fatalf("guardedTool 不应再动 intentBudget 的账（Calls=%d）", b.Calls())
 	}
 }
 

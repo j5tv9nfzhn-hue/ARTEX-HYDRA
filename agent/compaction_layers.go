@@ -63,7 +63,11 @@ func LayerPlanFor(role string, windowTokens int) []LayerPlan {
 	}
 }
 
-// Describe 渲染人类可读的分层计划（每层一行）。
+// DescribeLayerPlan 渲染人类可读的分层计划（每层一行）。
+//
+// Detail 的 note 必须一并输出：这张表是**运维/排障时唯一的自我说明**，
+// 只打 "[tool_output_clip] 启用（chat）" 无法回答"这一层到底做了什么、
+// 现在是不是在跑"。测试也据此断言"旁路"这一状态词存在（见 compaction_layers_test.go）。
 func DescribeLayerPlan(plan []LayerPlan) string {
 	out := ""
 	for _, p := range plan {
@@ -74,6 +78,9 @@ func DescribeLayerPlan(plan []LayerPlan) string {
 		out += fmt.Sprintf("[%s] %s（%s）", p.Layer, state, p.Role)
 		if w, ok := p.Detail["window_tokens"]; ok {
 			out += fmt.Sprintf(" window=%v", w)
+		}
+		if note, ok := p.Detail["note"].(string); ok && note != "" {
+			out += " " + note
 		}
 		out += "\n"
 	}

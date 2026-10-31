@@ -29,13 +29,13 @@ import (
 
 // 工具名常量：供工具面装配、日志与前端标签复用，避免三处各写一遍字符串。
 const (
-	ToolDelegateTask   = "delegate_task"
-	ToolSendToAgent    = "send_to_agent"
-	ToolWaitForAgents  = "wait_for_agents"
-	ToolAgentsGraph    = "agents_graph"
-	ToolStopAgent      = "stop_agent"
-	ToolSubmitReport   = "submit_report"
-	ToolFinishTask     = "finish_task"
+	ToolDelegateTask  = "delegate_task"
+	ToolSendToAgent   = "send_to_agent"
+	ToolWaitForAgents = "wait_for_agents"
+	ToolAgentsGraph   = "agents_graph"
+	ToolStopAgent     = "stop_agent"
+	ToolSubmitReport  = "submit_report"
+	ToolFinishTask    = "finish_task"
 )
 
 // waitWindowDefault 是 wait_for_agents 的单次等待窗口。
@@ -356,9 +356,9 @@ func (t *ToolSet) stopAgent() actool.CoreTool {
 				return actool.Errorf(err.Error()), nil
 			}
 			return jsonResult(map[string]any{
-				"stopped":  target,
-				"reason":   reason,
-				"note":     "状态已置为 stopped；它的历史产出保留，可读 agents_graph 看结论。",
+				"stopped":   target,
+				"reason":    reason,
+				"note":      "状态已置为 stopped；它的历史产出保留，可读 agents_graph 看结论。",
 				"remaining": sp.Coord.ActiveCount(),
 			})
 		})
@@ -383,14 +383,14 @@ func (t *ToolSet) agentsGraph() actool.CoreTool {
 			rows := make([]map[string]any, 0, len(all))
 			for _, v := range all {
 				row := map[string]any{
-					"id":        v.ID,
-					"parent":    v.ParentID,
-					"root":      v.Root,
-					"state":     v.State,
-					"turn":      v.Turn,
-					"pending":   v.Pending,
-					"role":      v.Role,
-					"elapsed_s": int64(time.Since(v.StartedAt).Seconds()),
+					"id":         v.ID,
+					"parent":     v.ParentID,
+					"root":       v.Root,
+					"state":      v.State,
+					"turn":       v.Turn,
+					"pending":    v.Pending,
+					"role":       v.Role,
+					"elapsed_s":  int64(time.Since(v.StartedAt).Seconds()),
 					"tool_calls": v.Usage.ToolCalls,
 				}
 				if v.Brief != nil {
@@ -431,9 +431,9 @@ func (t *ToolSet) agentsGraph() actool.CoreTool {
 				rows = append(rows, row)
 			}
 			return jsonResult(map[string]any{
-				"task_id":   sp.Coord.TaskID,
-				"agents":    rows,
-				"active":    sp.Coord.ActiveCount(),
+				"task_id":            sp.Coord.TaskID,
+				"agents":             rows,
+				"active":             sp.Coord.ActiveCount(),
 				"children_of_caller": len(sp.Coord.Children(AgentIDFrom(ctx))),
 			})
 		})

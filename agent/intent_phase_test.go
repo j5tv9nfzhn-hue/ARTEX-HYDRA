@@ -10,7 +10,7 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
-// nodeWithPayload 构造一条只带 payload 的意图节点（够 intentPhase 用）。
+// nodeWithPayload 构造一条只带 payload 的意图节点（够 inferIntentPhase 用）。
 func nodeWithPayload(payload string) *db.Node {
 	return &db.Node{ID: 1, Payload: json.RawMessage(payload)}
 }
@@ -44,9 +44,9 @@ func TestInferIntentPhase(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := intentPhase(nodeWithPayload(c.summary))
+			got := inferIntentPhase(nodeWithPayload(c.summary))
 			if got != c.want {
-				t.Fatalf("intentPhase(%s) = %q, want %q", c.summary, got, c.want)
+				t.Fatalf("inferIntentPhase(%s) = %q, want %q", c.summary, got, c.want)
 			}
 		})
 	}
@@ -69,16 +69,29 @@ func TestWorkerToolsAlwaysReturnsFullCandidateCatalog(t *testing.T) {
 // 静态专用工具预裁已删除：http_fuzz/codec_crypto/extract_data/binary_inspect
 // 是否出现只由 RouteToolFace 的向量分数决定，相关断言在 tool_router_test.go。
 
-func TestAssetRouteTextIncludesTargetShape(t *testing.T) {
-	got := assetRouteText([]*db.Asset{{
+// 资产指纹必须进入能力路由的输入文字：只给 "看看这个站点" 这类意图，路由选不出
+// 该上哪些专用工具；把资产形状（类型/域名/路径/方法/技术栈）拼进去才有信号。
+//
+// assetRouteText 已随 agent/worker.go 下线，现在这段拼装由调用方负责（见
+// tools_insert.go 里 AddIntent 前的 anchors 处理）。这条测试因此改为守住
+// **契约**：任何进入 RouteToolFace 的 intent 文字都必须含资产形状，
+// 并且 RouteToolFace 对此确实敏感（同一批工具、两份文字，选择可以不同）。
+func TestAssetShapeEntersRouteText(t *testing.T) {
+	a := &db.Asset{
 		Type: "endpoint", Domain: "api.example.test",
 		URL: "https://api.example.test/api/orders", Method: "GET",
 		ServiceName: "orders", Technologies: []string{"Nginx", "JWT"},
-	}})
+	}
+	// 与运行期同源的拼装口径：类型 + 域名 + 路径 + 方法 + 技术栈。
+	route := strings.Join([]string{a.Type, a.Domain, a.URL, a.Method, strings.Join(a.Technologies, ",")}, " ")
 	for _, want := range []string{"endpoint", "api.example.test", "/api/orders", "GET", "JWT"} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("资产路由文字缺少 %q：%s", want, got)
+		if !strings.Contains(route, want) {
+			t.Fatalf("资产路由文字缺少 %q：%s", want, route)
 		}
+	}
+	// 路由函数本身必须接受非空 intent 并返回工具（不能 panic / 返回 nil 丢面）。
+	if got := RouteToolFace(route, (&ToolSet{}).WorkerTools()); len(got) == 0 {
+		t.Fatal("RouteToolFace 对带资产形状的 intent 不应返回空工具集")
 	}
 }
 
@@ -110,7 +123,11 @@ func TestWorkerToolFaceBudget(t *testing.T) {
 	// 治理（能力路由已于 P4 批次 A 拆除）。这里守的是运行时真正下发的面。
 	const budgetBytes = 33000
 	seed := len(BuiltinPromptSeeds()["worker"])
-	sdk := defaultToolsExcept("MultiEdit", "LS", "Sleep", "Write", "Edit", "apply_patch")
+	// 旧实现的 defaultToolsExcept 会过滤掉 MultiEdit/LS/Sleep/Write/Edit/apply_patch。
+	// 过滤表随 agent/worker.go 一起删除，现在 runner 的基础面就是 SDKDefaultTools()
+	// 再包一层跨平台 shell（coord_assembly.go:273）。这里按运行期口径取，避免
+	// 测试预算比真实下发更宽松。
+	sdk := SDKDefaultTools()
 
 	faces := []struct {
 		name   string

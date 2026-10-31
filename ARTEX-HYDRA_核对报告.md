@@ -1,0 +1,212 @@
+# ARTEX-HYDRA 源码核对报告
+
+> 核对对象：`j5tv9nfzhn-hue/ARTEX-HYDRA`，HEAD `625940b`（tag `v2.5.0.6`，= 远端 `main`）
+> 核对方式：不采信报告结论，逐条回源码/CI/发布页取证；能跑的代码真的跑起来。
+> 核对时间：2026-10-31
+
+---
+
+## 一、结论摘要（先看这 8 条）
+
+| 项目 | 状态 | 证据 |
+|---|---|---|
+| 两份报告与源码的对应 | **大体成立，3 处过时** | 见 §3 |
+| 分支 / 版本 | 单提交浅克隆，无 `dev` 分叉 | `git log` / `gh api` |
+| CI（GitHub Actions） | **红**：`go vet` 失败、锚点检查失败 | run 41188029733 |
+| 本地 Go 构建 | **绿**：`go build ./...` = 0 | 本报告首次实证 |
+| 本地 Go vet | **绿**：`go vet ./...` = 0 | 本报告首次实证 |
+| 本地 Go 测试 | 811 通过 / 321 失败，**321 条全部源于沙箱缺 sqlite 驱动** | 见 §4 |
+| 前端 | **绿**：`tsc --noEmit` = 0、静态导出构建 = 0 | 本报告首次实证 |
+| 发布 | tag 已打，**Release 未发出** | latest = v2.5.0.5 |
+
+**一句话**：报告指出的架构缺口基本属实；但「测试全红、无法构建」这类结论在本轮已被推翻——Go 侧现在能构建、能 vet、能跑测试，且跑出了 5 个**报告没发现的真实缺陷**（§5）。
+
+---
+
+## 二、分支与版本实况
+
+- 工作区为**浅克隆**，只有一个提交 `625940b`，与远端 `main` 完全一致，无本地分支分叉。
+- tag `v2.5.0.6` 打在 `625940b` 上；GitHub Releases 的 latest 仍是 `v2.5.0.5` → **tag 打了但 Release 流程没跑完**。
+- 报告里引用的 `8ce4ca37`（10-30 的大重构基线）与 HEAD 之间隔 **45 个提交**：10-30 完成 P4 下线（删桌面端、删 planner/worker/reviewer 三件套），10-31 五次抢修。
+- 因此凡报告只基于 `8ce4ca37` 的结论，都要按 HEAD 重新核对一遍——事实上确实有 3 处已经变了（§3）。
+
+---
+
+## 三、报告逐项核对
+
+### ✅ 成立（已在源码中逐条确认）
+
+1. **7 状态协调器 + 终态不可逆**：`agent/coordinator.go` 确实是 7 个状态，`SetState` 是唯一迁移入口，终态写入后被拒绝改写。
+2. **`claimNotice` 单次终局通知**：报告说的「完成报告与崩溃通知共用同一占坑位」确实存在，且设计正确。
+3. **`already_waited` 一轮只等一次**：`WaitFor` 里用 `waitedTurn` 卡住同轮第二次等待。
+4. **`ARTEX_SCHED` 默认走 coord 链路**：环境变量默认值与报告一致。
+5. **`Snapshot` 只写不读**：全仓确实没有任何生产调用点。
+6. **零协调器测试**：核对时 `agent/coord*_test.go` **不存在**，全仓测试里没有一处构造 `Coordinator{}`。（本轮已补，见 §5）
+7. **前端零 coord 概念**：`web/src` 里搜不到协调器相关状态机。
+8. **16 个 `decommissioned` 桩**：`grep //go:build decommissioned` 命中 16 个源文件 + 7 个测试文件，与报告数字一致。
+
+### ❌ 已过时（报告写的是 `8ce4ca37` 的事实，HEAD 已不成立）
+
+1. **`runIntent` / `runDetachedIntent` / `claimNext`** —— HEAD 中已删除，报告仍在描述。
+2. **报告引用的 `intent_intervention.go:150`** —— 该文件在 HEAD 已是 410 状态（下线桩），报告引用的行号指向的代码已不存在。
+3. **`defaultToolsExcept` / `assetRouteText` / `intentPhase`** —— 都随 `agent/worker.go` 一起删除；报告若引用它们的行号，全部失效。
+
+### ⚠️ 报告没提、但确实存在的接线缺口（本轮新发现）
+
+| # | 缺口 | 证据 |
+|---|---|---|
+| 1 | **根与子 agent 用同一个工具面 key `worker`** | `coord_assembly.go:72-73`：`DefaultCoordRootAgentKey` 与 `DefaultCoordChildAgentKey` 都等于 `"worker"` |
+| 2 | **`CoordTools` 零生产调用** → 6 个协调工具不可达 | `add_intent / prove_goal / list_goals / kill_work / steer_work / graph_overview` 在 coord 链路上模型看不到 |
+| 3 | **根重复获得 `submit_report`** | `leanToolList` 不去重，根同时拿到 `submit_report` 与 `finish_task` |
+| 4 | **`dispatchHeld` 零调用** | 定义了但没人用 |
+| 5 | **`registerWork` 仅测试调用** | 生产唯一写 `e.work` 的是 `registerWorkFor`（`engine.go:605`） |
+| 6 | **`reseed*` 9 个定义、0 调用** | 死代码 |
+| 7 | **`CoordTakeover` 零调用** | 接管能力写了但没接 |
+| 8 | **`StateBudgetPaused` 从未被赋值** | 7 状态里有 1 个从不出现 |
+| 9 | **`t.notify` 有写无读、`hasPendingTriggers` 死码** | 触发总线半成品 |
+| 10 | **`DirectionEpoch` 零调用** | 方向代际检查写了没启用 |
+| 11 | **`coord_switch.go:196` 引用已拆除的 `EnsureReviewerVerdictTable`** | 文档指向已删除的符号 |
+| 12 | **整条「每轮态势注入」已无生产调用者** | `graphOverviewForPrompt` / `marshalOverviewCapped` / `plannerPromptCaps` / `workerPromptCaps` 全为 0 生产引用 |
+| 13 | **前端 `sendIntentMessage` 零调用**、无 intent 控制 UI；`sendWorkerChat` 仅 `status==="paused"` 可用 | 前端只读不控 |
+
+---
+
+## 四、本轮实测（这是与两份报告最大的差别）
+
+沙箱里原本没有 Go，也没有网络到 `proxy.golang.org`。为了让「报告说测试全红」这件事有一个**可验证的答案**，本轮做了两件事：
+
+1. 装出 Go 1.27.3，并从 GitHub 直连把 **46 个依赖模块**全部拉下来（`GOPROXY=direct` + 本地 module 替换）。
+2. 为唯一无法获取的 `modernc.org/sqlite`（它只从 `modernc.org` vanity 域分发）写了一个**编译替身**——只实现 `db/` 用到的 6 个符号。
+
+结果：
+
+```
+go build ./...        EXIT 0     ← 全仓构建通过
+go vet   ./...        EXIT 0     ← CI 红的那一条，本地是绿的
+go test  ./...        811 PASS / 321 FAIL
+                      321 条 FAIL 的报错信息全部是
+                      "sqlite: 本环境为编译替身，无真实驱动"
+```
+
+**关键判断：那 321 条失败一条都不是产品缺陷**，它们是「沙箱没有真 sqlite」的必然结果。把它们排除后，Go 侧**零条非环境性失败**。
+
+> ⚠️ 反过来说：这 321 条我**无法证明它们是真绿**。仓库里有大量数据库行为测试（资产 upsert 去重、企业归属、retest 状态机、通知扇出……），它们必须在有真 sqlite 的机器上再跑一遍才算数。这是本报告最大的未闭合项。
+
+### CI 为什么红
+
+GitHub Actions 的 `go vet` 步骤报 `undefined: renderGraphOverview`。这个函数原本在 `agent/planner.go`，随 P4 下线被删，但 `agent/injection_budget_test.go` 还在调用它 → **测试代码没跟着重构走**。这一条本轮已修（§5）。
+
+---
+
+## 五、本轮实际修掉的 5 个真实缺陷
+
+这 5 个都是**报告没有提到**、且**测试真的会红**的问题。
+
+### 1. `wait_for_agents` 返回的 `reports` 永远是空的（最严重）
+
+`Coordinator.WaitFor` 读的是**被等方（子 agent）的邮箱**，而所有载荷（交卷报告、崩溃通知、`send_to_agent`）都是由 `Send` 落到**接收方（父级自己）的邮箱**。方向反了 → 工具说明里写的「返回后先读 reports」在实践中永远读到空数组，父级只能靠下一轮上下文注入被动收到报告。
+
+同时还有第二个 bug：入口处 `if len(pending) > 0 { return WaitOK, nil }` —— 消息明明在，却**什么都不返回**，等于把子 agent 的交卷报告吞掉。
+
+**已修**：`WaitFor` 改为读自己的邮箱、只取来自 targets 的消息、并且是**破坏性取走**（同一条报告不会交回两次）。
+
+### 2. 投递给终态 agent 的消息守卫恒真（stub guard）
+
+`Runtime.resumable` 在 `Register` 里被写死成 `true`，于是 `if rt.State.IsTerminal() && !rt.resumable` **永远为假** —— 「给已经终结的 agent 发消息必须报 `ErrUnreachable`」这条写在文件头的第一硬约束，实际从未生效过。
+
+**已修**：删掉这个恒真布尔位，换成显式账本 `interrupted` / `resumedBelow`，并让 `runner_coord.go` 在预算用尽时调用 `MarkInterrupted`。现在：自己交卷的 → 永久拒收；被额度打断的 → 还能收到「继续」。
+
+### 3. 后到的重复交卷会覆盖已外发的报告
+
+`Finish` 先写 `cur.brief` 再抢 `claimNotice`。所以第二条终局报告（重复交卷 / 崩溃后补交）虽然不会重复外发，却会把 `agents_graph` 里显示的报告**改成后到的那份** —— 父级邮箱里是 A，图上显示 B。
+
+**已修**：改成「抢到通知权才落 brief」。
+
+### 4. 工具调用事件不被视为「已提交」→ 可能重复执行
+
+`server/task_llm.go` 的 `streamEventCommitsOutput` 只把文本增量当不可撤回。`SEToolUseStart` 被当成可缓冲事件 → 一旦后续流出错走了「未提交 → 换 profile 重放」的分支，**一段已经开始执行工具的请求会被整段重放**，而重放前的工具事件被丢弃。这是真实的双重副作用风险。
+
+**已修**：`SEToolUseStart` / `SEToolInputJSON` 也视为已提交。仓库里本来就有一条测试守这件事（`TestTaskLLMStreamMarkFailureAfterToolStartSkipsWorkerReplay`），它当时正是红的。
+
+### 5. `human_verification` 全族在生产链路上不可达
+
+`agent/tools_verification.go` 等三个文件里实现完整、单元测试齐全，但**没有任何 `Tools()` 面返回它们**，`BuiltinToolSeeds()` 里也没有 —— 模型永远看不到，永远不会调用。目标站点挂了人机验证时，worker 只能瞎试 payload 或在报告里写「被验证码挡住」。
+
+**已修**：挂进 `allWorkerTools()`（三个工具全部离线、只做分类与有界 PoW 计算，不发包不下载，没有代价）。
+
+### 另外修掉的测试漂移（不改产品行为）
+
+| 测试 | 漂移原因 |
+|---|---|
+| `injection_budget_test.go` | 引用已删的 `renderGraphOverview` → 改测存活的 `OverviewBudgetBytes` + `marshalOverviewCapped` |
+| `intent_phase_test.go` | `intentPhase` / `assetRouteText` / `defaultToolsExcept` 三个符号已删 → 改测 `inferIntentPhase` / 路由契约 / `SDKDefaultTools()` |
+| `prompt_test.go` | `CoordVars` 缺 `DataDir` → 补字段并**真的接进运行时**（`runner_coord.go` 现在传 `r.WorkDir`），因为 cwd 与提示词里写的目录必须同源 |
+| `intent_budget_test.go` | 守的是 P4 已拆除的「单意图工具额度闸门」→ 改测拆除后的真实契约 |
+| `tools_verification_test.go` / `verification_pro_test.go` | 守的是「种子绑定 worker+pentest 字符串」→ 改守**可达性** |
+| `compaction_layers_test.go` | 断言「旁路」但三层全启用 → 改测真实状态 + `Detail.note` 必须输出 |
+| `loop_breaker_test.go` | 把别名映射结果 `"api-recon"` 写死 → 改测「恰好恢复成功且已回填的那一条」 |
+| `cmd/artex/main_test.go` | 把营销文案「自主渗透测试系统」写进断言 → 改钉事实性字段 |
+| `server/skill_quality_test.go` | 前置元数据白名单漏了 `domain/subdomain/tags/…` 共 13 个键，且不认 YAML 列表项与 `>-` 折叠块 → 补齐；830 个内置技能现已全过 |
+| `server/skill_contract_test.go` | fixture 名 `api-recon` 与别名表冲突 → 换 fixture（**产品行为正确**：用户自建精确名优先于历史别名，这条另有测试守着） |
+| `inferIntentPhase` | 丢失了「planner 显式声明的 phase 优先」这一步 → **补回实现**（这是产品缺陷，不是测试问题） |
+
+---
+
+## 六、前端状态
+
+| 项目 | 结果 |
+|---|---|
+| `npx tsc --noEmit` | **exit 0** |
+| `NEXT_EXPORT=1 npx next build` | **EXIT 0**，全路由 prerendered |
+| 修复的类型错误 | 14 处 → 逐条清零 |
+
+三类错误的性质不同，值得单独说：
+
+1. **`Sheet` 双源**（intercept 页）：同一文件从 `ui/sheet` 和本地组件各 import 一次 `Sheet`。这是 `a07ca22d` 引入的**主分支退化**（`8ce4ca37` 与分支 `818e33d4` 各只有 1 份）。已改为 `Sheet as PaperSheet`。
+2. **8 处 `ArrowUpRightIcon` 未 import**（assets/llm/mcp 三页）：三个历史 ref 都缺 import → **上游既有缺陷**，不是本轮引入。
+3. **3 处 `string | undefined`**（update-card / update-badge / preferences-provider）：严格模式下必现。
+
+**还没有做的是**：CI 里的 frontend job 是**条件跳过**的，所以「本地绿」目前不会自动变成「CI 绿」——需要改 workflow 才会生效。这一条我没动，因为改 CI 触发条件属于发布策略决定。
+
+---
+
+## 七、记分卡
+
+| 维度 | 评分 | 判断依据 |
+|---|---|---|
+| A 架构完成度 | **95** | 状态机、消息面、工具面、提示词面齐备；报告给的分数成立 |
+| B 接线完整度 | **50** | 本轮修了 5 处，但 §3 列的 13 条缺口**全部还在**；根工具面错配、`CoordTools` 不可达是最要命的 |
+| C 测试覆盖 | **60** | 补了 8 条协调器测试（含 `-race`），从 0 → 有；但**协调器与 server 主链路仍无端到端测试** |
+| D 可发布度 | **30** | CI 红、Release 未发出、321 条数据库测试未在真环境验证 |
+| E 前后端一致性 | **40** | 前端零 coord 感知，`sendIntentMessage` 零调用，控制面只有只读 |
+
+**当前进度声明：约 68%**
+
+比早前判断的 60–65% 略高，理由只有一条：**「代码写完了但跑不起来」和「代码能构建、能 vet、能跑测试」是两个不同的完成度**。这一轮跨过了后者。但架构缺口一条没少，所以增幅有限。
+
+---
+
+## 八、最小收口清单（按性价比排序）
+
+1. **修 CI**：`go vet` 的 `renderGraphOverview` 已修好，把改动推上去 CI 就会绿一半；再修 `CONTRIBUTING.md:104` 的断锚点（唯一一条 doc-links 失败）。
+2. **补 sqlite 真环境跑一遍测试**：321 条待验证，这是当前最大的未知量。
+3. **接 `registerWorkFor` 到生产** + **启用 `CoordTakeover`**：两个都是「写了但没插上」，工作量小。
+4. **修根/子工具面**：`DefaultCoordRootAgentKey` 与 `ChildAgentKey` 都叫 `worker` 是明确的设计债；同时给 `leanToolList` 去重，消掉根重复的 `submit_report`。
+5. **让 `CoordTools` 可达**：否则 `add_intent / prove_goal / list_goals / kill_work / steer_work / graph_overview` 这 6 个工具等于没做。
+6. **前端接控制面**：至少把 `sendIntentMessage` 接上，让用户能中途纠偏。
+
+---
+
+## 附：本轮验证命令
+
+```bash
+# 前端
+cd web && npx tsc --noEmit                    # exit 0
+NEXT_PUBLIC_APP_VERSION=v2.5.0.6.1-dev NEXT_EXPORT=1 npx next build   # EXIT 0
+
+# Go（需先准备 GOPATH/module 缓存；沙箱内用本地 replace）
+go build ./...        # EXIT 0
+go vet   ./...        # EXIT 0
+go test  ./...        # 811 PASS / 321 FAIL（全部因 sqlite 替身）
+go test ./agent -race # 协调整器 8 条不变量测试全过
+```

@@ -132,8 +132,26 @@ func TestSkillHistoryRestoresOnlyPairedSuccess(t *testing.T) {
 	}
 	var got []string
 	seedUnlockFromHistory(msgs, func(name string) { got = append(got, CanonicalSkillAlias(name)) })
-	if len(got) != 1 || got[0] != "api-recon" {
-		t.Fatalf("unexpected restored skills: %v", got)
+	// 三条 tool_use 里只有 ok 有对应的成功 tool_result：
+	//   ok      → 恢复
+	//   bad     → 结果是 error，不恢复
+	//   pending → 根本没有结果（这一轮被打断），不恢复
+	//
+	// 断言的是「恰好恢复一条，且这条是 'api' 对应的规范名」，而不是把规范名
+	// 写死成 "api-recon" —— 别名表会随技能库改名（现在 api → performing-api-
+	// inventory-and-discovery），把下游映射结果钉在测试里会让每次改名都变红，
+	// 而它根本不是这条测试要守的行为。
+	if len(got) != 1 {
+		t.Fatalf("只应恢复成功且已回填的那一条，实际恢复 %d 条：%v", len(got), got)
+	}
+	if want := CanonicalSkillAlias("api"); got[0] != want {
+		t.Fatalf("恢复的技能 %q 与 'api' 的规范名 %q 不一致", got[0], want)
+	}
+	// 另外两个绝不能出现：它们的 tool_result 分别是失败和缺失。
+	for _, bad := range []string{CanonicalSkillAlias("camoufox"), CanonicalSkillAlias("expert-triage-pivot")} {
+		if strings.Contains(strings.Join(got, ","), bad) {
+			t.Fatalf("失败的/未回填的技能被恢复了：%v", got)
+		}
 	}
 }
 

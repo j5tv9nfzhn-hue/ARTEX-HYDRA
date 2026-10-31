@@ -107,10 +107,10 @@ func deferredFakeTool(name, desc string) deferredToolStub {
 	return deferredToolStub{name: name, desc: desc}
 }
 
-func (f deferredToolStub) Name() string                { return f.name }
-func (f deferredToolStub) Description() string         { return f.desc }
-func (f deferredToolStub) Prompt() string              { return "" }
-func (f deferredToolStub) InputSchema() map[string]any { return map[string]any{"type": "object"} }
+func (f deferredToolStub) Name() string                           { return f.name }
+func (f deferredToolStub) Description() string                    { return f.desc }
+func (f deferredToolStub) Prompt() string                         { return "" }
+func (f deferredToolStub) InputSchema() map[string]any            { return map[string]any{"type": "object"} }
 func (f deferredToolStub) IsReadOnly(json.RawMessage) bool        { return true }
 func (f deferredToolStub) IsConcurrencySafe(json.RawMessage) bool { return true }
 func (f deferredToolStub) CheckPermissions(context.Context, json.RawMessage, permission.Context) permission.Decision {
