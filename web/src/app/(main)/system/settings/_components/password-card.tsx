@@ -6,8 +6,8 @@ import { KeyRoundIcon, RefreshCwIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { http } from "@/lib/api";
@@ -88,15 +88,10 @@ export function PasswordCard() {
   };
 
   return (
-    <Card className="mb-4 break-inside-avoid md:mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <KeyRoundIcon />
-          {t("title")}
-        </CardTitle>
-        <CardDescription>{t("desc")}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+    <Sheet className="mb-4 break-inside-avoid md:mb-6">
+      <SheetHead icon={KeyRoundIcon} title={t("title")} />
+      <div className="flex flex-col gap-3 px-4 py-3">
+        <p className="text-muted-foreground text-sm">{t("desc")}</p>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -170,7 +165,7 @@ export function PasswordCard() {
         </div>
 
         <p className="text-muted-foreground text-xs">{t("cliHint")}</p>
-      </CardContent>
-    </Card>
+      </div>
+    </Sheet>
   );
 }

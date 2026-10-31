@@ -12,9 +12,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api";
@@ -223,19 +223,14 @@ export function UpdateCard() {
 
   return (
     // 设置页是多列瀑布流布局，卡片自己负责行间距并禁止跨列断开（见 page.tsx 的注释）。
-    <Card className="mb-4 break-inside-avoid md:mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <CloudDownloadIcon className="size-4" />
-          版本与更新
-        </CardTitle>
-        <CardDescription>
+    <Sheet className="mb-4 break-inside-avoid md:mb-6">
+      <SheetHead icon={CloudDownloadIcon} title="版本与更新" />
+      <div className="flex flex-col gap-4 px-4 py-3">
+        <p className="text-muted-foreground text-sm">
           更新源固定为本仓库的 GitHub Release，只接受带 SHA256 校验的正式版；检测走
           <span className="font-mono"> latest.json </span>
           清单，不消耗 GitHub API 配额。
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </p>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Badge variant="secondary" className="font-mono">
             v{(check?.current ?? "…").replace(/^v(?=\d)/, "")}
@@ -425,7 +420,7 @@ export function UpdateCard() {
             </Button>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </Sheet>
   );
 }

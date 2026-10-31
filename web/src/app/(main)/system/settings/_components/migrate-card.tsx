@@ -11,15 +11,9 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
@@ -116,15 +110,10 @@ export function MigrateCard() {
   }, [confirm, mode, selected, t]);
 
   return (
-    <Card className="mb-4 break-inside-avoid md:mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <DatabaseZapIcon className="size-4" />
-          {t("migrate.title")}
-        </CardTitle>
-        <CardDescription>{t("migrate.desc")}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+    <Sheet className="mb-4 break-inside-avoid md:mb-6">
+      <SheetHead icon={DatabaseZapIcon} title={t("migrate.title")} />
+      <div className="flex flex-col gap-4 px-4 py-3">
+        <p className="text-muted-foreground text-sm">{t("migrate.desc")}</p>
         {/* 手填路径：覆盖"我知道旧版在哪个盘"的场景 */}
         <div className="flex flex-col gap-2">
           <Label htmlFor="migrate-path">{t("migrate.pathLabel")}</Label>
@@ -325,7 +314,7 @@ export function MigrateCard() {
             ) : null}
           </div>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </Sheet>
   );
 }
