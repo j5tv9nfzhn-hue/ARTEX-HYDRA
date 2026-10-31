@@ -508,7 +508,7 @@ gh 只读查询（run list / release list / api GET）
 2. 函数签名 / 返回类型 / 错误处理是否与调用点一致。
 3. 结构体字段名、JSON tag 是否与前端类型、golden 文件一致。
 4. 新增的 `import` 是否齐全，删除代码后是否留下未使用的 import。
-5. 新增界面文案是否同时写进 `web/messages/zh.json`，键名一致。
+5. 新增界面文案是否同时写进 `web/messages/zh.json`，键名一致。可跑 `python3 -I scripts/check-i18n-keys.py` 全量核对（零依赖、只读、不构建）：键缺失在真机上不会报错，只会把**键名**渲染到界面并刷 `MISSING_MESSAGE`，编译与类型检查都发现不了。`t` 由 prop 传进子组件的情况脚本判定不了归属，会列入「跳过」清单而不报错。
 6. 改了 `capability` 相关能力项时，同步 `mcp_tools.golden.json` 与计数断言。
 
 #### 5. 网络：访问 GitHub 必须走本地代理 10808

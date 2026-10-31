@@ -47,11 +47,11 @@
 ### 本地化（i18n）
 
 - **本次将项目自有韩文统一重构为简体中文。** 覆盖 Go 后端消息、状态、工具摘要、模型输出指令、Next.js 页面与演示数据、注释、部署脚本、配置说明、文档和 GitHub 模板。
-- **默认语言改为 zh。** 正式支持 zh/en/es，旧 ko 配置、cookie 和本地偏好归一为 zh；`web/messages/ko.json` 保留为与中文词库一致的兼容副本，不再提供新的韩文 UI 选项。
+- **默认语言改为 zh，随后收口为「中文唯一」。** 旧 ko 配置、cookie 和本地偏好归一为 zh；在此基础上进一步**删除 `web/messages/` 下的 `ko.json` / `en.json` / `es.json`**，`LOCALES` 只剩 `zh`，界面不再提供语言选择器，`ko` / `en` / `es` 与未知值统一回退为简体中文。`src/i18n/config.test.mjs` 用「`messages/` 目录必须只有 `zh.json`」把这条约束钉住。
 - **统一 Agent 输出语言。** 保留行为提示词、角色职责、命令和证据语义，以 `langDirective` 明确报告、事实摘要、最终总结和对话的输出语言；自定义收尾提示也追加选定语言约束。
 - **同步中文消息协议。** 审批摘要解析与后端格式一致，保持工具名及 `pending_id`；Skill 已存在提示、通知、默认回退和语言切换测试同步更新，保留供应商返回的底层诊断原文。
 - **增加语言回归检查。** `check-language.py` 扫描项目自有文本及静态 HTML 的韩文字母/音节，允许中文；新增 Python 和前端语言、审批回归测试并接入 CI。
-- **保留既有多语言基础设施。** 原分支引入 next-intl、消息键提取、后端词库和输出语言设置，这些功能继续使用；新增消息须同步 zh/en/es 与 ko 兼容副本，不应重新硬编码到页面。
+- **保留 i18n 基础设施，收敛为单一词库。** next-intl、消息键提取（`web/src/scripts/extract-i18n.ts`）、后端词库和输出语言设置继续使用；**新增消息只写 `web/messages/zh.json`**，不再同步 en/es/ko 副本，也不应重新硬编码到页面。提取脚本同步改为只回写 `zh.json` 与 `zh.sources.json`——此前它仍会写出 `ko.json` 与 `en/es` 两份，与「中文唯一」冲突且会让目录断言变红。
 
 ### 界面与主题
 
@@ -59,6 +59,13 @@
 - **字体自托管。** Geist、Space Grotesk、JetBrains Mono 随包分发，不请求外部字体服务，离线可用。
 - **统一严重度色彩契约。** 收敛为 critical 红 → high 橙 → medium 琥珀 → low 灰蓝（修正旧版亮度倒挂），徽章、圆点、条带与图表色（亮/暗两套 hex）集中在一个事实源，页面不再各写一套。
 - **命令面板与界面打磨。** 新增 ⌘K / Ctrl+K 命令面板（跳转、操作、搜索，⌘J 保留为旧版别名），以及侧边栏自定义、空状态、动效、活动流圆点、发现告警、LLM 配置徽章与 Agent 备用链可视化等组件。探索图重绘（小地图、节点类型配色与图例、节点进入动效、自适应缩放）；仪表盘新增可靠性面板（工具错误率、崩溃重放成功率、中断恢复率与按阶段分布）。
+- **双主题开关（经典 / 纸本）。** 新增 `skin` 偏好，默认仍是经典：切到「纸本」时主题预设被钉为 `paper`、下拉置灰，版式交给 `styles/skin-editorial.css` —— 一张纸的骨架、发丝线表格、下划线页签、全站等宽数字、卡片与阴影归零、装饰性入场动效静音（`animate-spin` 保留）。首帧由 `theme-boot` 写 `data-skin`，切换无闪烁；皮肤层每条规则都挂在 `[data-skin="editorial"]` 下，老主题零影响。
+- **两套新预设：纸本 / Paper 与双墨 / Two Inks。** 纸本取 FT Origami 的「机制不取表层」——纸 `oklch(0.962 0.010 86)`、主色紫青 `#197075`（红让给危险色）、圆角 ≤4px、阴影归零、衬线只管标题层（正文与数字仍用无衬线，12–13px 下衬线辨识度更差）。双墨把 10 个色族压成一条灰阶、只留专色给「需要你动手的」东西，并把 `text-xs` 抬到 12.8px / 1.55。两套都锁在各自 `data-theme-preset` 作用域内，浅/深两套令牌的对比度均实测达标（纸本正文 16.06:1、主色 5.18:1、危险色 5.74:1，hover 面 ≥1.12:1）。
+- **编辑排版原语。** 新增 `components/editorial.tsx`（`Masthead` / `SectionHead` / `KpiBand` / `KpiRow`）与 `components/editorial-sheet.tsx`（`Sheet` / `SheetHead` / `GroupHead` / `RecordRow` / `RecordSub` / `SheetFoot`）。28 个页面里 16 个改用报头原语（内联在徽章横排里、工具栏里、或本来就没有页面标题的 12 个页面刻意不动），任务详情 9 个页签改用版块原语；会话、拦截审批、软件分析三个页签因形态独立而未改。
+- **九类详情路由可独立打开。** 新增 `/function/{assets,traffic,llm-records,commands}/detail`、`/function/tasks/session`、`/system/{tools,skills,mcp,llm,agents}/detail`、`/system/intercept/approvals/detail` 与 `/function/findings/detail`，统一「书眉（编号 · 分类 · 状态 · 时间 / 26px 标题）+ 五格数字行 + 下划线页签」，能刷新、能回退、能贴链接；资产行、报文抽屉、录制详情与审批展开区都补了入口。数据缺失处如实标注（报文时序未采集、后端暂无「发现 ← 报文」反查索引、MCP 握手日志未落库）。
+- **通知中心与日志行内展开。** 顶栏铃铛只列「要动手的」两件事：待裁决的审批票与最近 10 条 critical / high 发现，数字即待办数，关掉面板不轮询；日志页点一行展开前后各 3 行上下文，一次只展开一行。
+- **排版门禁。** 字号 12px 门禁：9 / 10 / 11 / 11.5px 全部收敛到 `text-xs`；元数据分隔符去掉中点「·」，展示层改用间距，历史协议串的解析兼容保持不变。
+- **可复跑的守卫。** `scripts/audit-editorial.mjs` 守五条不变量：`editorial.css` 规则必须限定在 `[data-theme-preset="paper"]` 下、`paper.css` 覆盖 37 项令牌契约且浅深两套都在、每个页面必须挂 `data-editorial="body"`、`skin-editorial.css` 必须挂在 `[data-skin="editorial"]` 下、双主题接线七处齐全。
 
 ### 成本与效率（批次 E）
 

@@ -4,11 +4,13 @@
  * 硬编码、包含汉字的用户消息：字符串、模板字符串和 JSX 文本。
  * 例如 title: 仪表盘、已删除 {var0} 个对话、<span>故障转移</span>。
  * 注释不是消息提取目标，但项目语言检查器仍检查注释中的韩文残留。
- * 输出 zh.json 中文词库、ko.json 中文兼容副本与 zh.sources.json 来源元数据。
+ * 输出 zh.json 中文词库与 zh.sources.json 来源元数据；仓库只保留简体中文一种词库。
  * 提取结果按路径命名空间保存，如 app.main.system.llm.page；
  * 原文 sha1 前八位为键，同一文案获得稳定键，减少重复提取的差异。
  * 递归增量合并，保留人工键与已改为 t(key) 的键，不自动删除旧键。
- * en/es 保留已有译文，新提取键暂用中文回退。运行：npm run extract:i18n。
+ * ko/en/es 词库已随「统一简体中文」移除，不再回写——回写会让
+ * src/i18n/config.test.mjs 的「messages/ 目录只有 zh.json」断言变红。
+ * 运行：npm run extract:i18n。
  */
 
 import * as ts from "typescript";
@@ -205,10 +207,8 @@ function readTree(name: string): Tree {
 
 const chinese = sortTree(mergeCatalogTree(readTree("zh.json"), zhTree, true));
 write("zh.json", chinese);
-write("ko.json", chinese); // 旧路径只保留中文兼容副本，不再提供韩文界面。
-for (const locale of ["en", "es"]) {
-  write(`${locale}.json`, sortTree(mergeCatalogTree(readTree(`${locale}.json`), chinese)));
-}
+// 只写 zh.json：ko/en/es 词库已随「统一简体中文」删除，再回写既违背中文唯一，
+// 也会让 src/i18n/config.test.mjs 断言 messages/ 目录只有 zh.json 的用例失败。
 write("zh.sources.json", sortedSources);
 
 // 摘要报告。
@@ -258,5 +258,5 @@ console.log("");
 console.log("消息最多的前 15 个命名空间：");
 for (const [ns, n] of topNs) console.log(`  ${String(n).padStart(4)}  ${ns}`);
 console.log("");
-console.log(`输出：web/messages/{zh.json, ko.json, en.json, es.json, zh.sources.json}`);
+console.log(`输出：web/messages/{zh.json, zh.sources.json}`);
 console.log("─".repeat(64));
