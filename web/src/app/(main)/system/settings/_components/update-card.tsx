@@ -10,6 +10,7 @@ import {
   RotateCcwIcon,
   TriangleAlertIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Sheet, SheetHead } from "@/components/editorial-sheet";
@@ -36,15 +37,6 @@ function humanTime(iso?: string): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-const PHASE_LABEL: Record<UpdateProgress["phase"], string> = {
-  idle: "准备中",
-  downloading: "下载中",
-  verifying: "校验 SHA256",
-  extracting: "解包中",
-  staged: "已就绪",
-  failed: "失败",
-};
-
 /**
  * 版本与更新。
  *
@@ -53,6 +45,7 @@ const PHASE_LABEL: Record<UpdateProgress["phase"], string> = {
  * 只能走后端 SSE；页面刷新后重新订阅也能补到当前状态。
  */
 export function UpdateCard() {
+  const t = useTranslations("settingsPage");
   const [check, setCheck] = React.useState<UpdateCheck | null>(null);
   const [loading, setLoading] = React.useState(true);
   // applying 只控制"是否订阅 SSE"：下载本身在后端 goroutine 上跑。
@@ -76,7 +69,7 @@ export function UpdateCard() {
         // 后端已经把它下好放在磁盘上了（自动更新做的）：直接进入"重启生效"态。
         if (c.staged_version && c.staged_version !== c.current) setRestarting(false);
       })
-      .catch((e) => toast.error(`检查更新失败：${(e as Error).message}`))
+      .catch((e) => toast.error(t("update.toast.checkFailed", { error: (e as Error).message })))
       .finally(() => setLoading(false));
   }, []);
 
@@ -107,7 +100,7 @@ export function UpdateCard() {
       if (p.phase === "failed") {
         es.close();
         setApplying(false);
-        toast.error(p.error || p.message || "更新失败");
+        toast.error(p.error || p.message || t("update.toast.failed"));
       } else if (p.phase === "staged") {
         es.close();
         setApplying(false);
@@ -163,24 +156,24 @@ export function UpdateCard() {
 
   const apply = () => {
     setJournalIssue(null);
-    setProgress({ phase: "idle", percent: -1, message: "正在准备…" });
+    setProgress({ phase: "idle", percent: -1, message: t("update.toast.preparing") });
     setApplying(true);
     api.applyUpdate().catch((e) => {
       setApplying(false);
       setProgress(null);
-      toast.error(`更新失败：${(e as Error).message}`);
+      toast.error(t("update.toast.updateFailed", { error: (e as Error).message }));
     });
   };
 
   const rollback = () => {
-    if (!window.confirm("回滚会换回上一版本并重启服务，确定继续？")) return;
+    if (!window.confirm(t("update.confirm.rollbackStart"))) return;
     setRestarting(true);
     api
       .rollbackUpdate()
-      .then(() => toast.info("正在回滚，服务即将重启…"))
+      .then(() => toast.info(t("update.toast.rollbackSwitched")))
       .catch((e) => {
         setRestarting(false);
-        toast.error(`回滚失败：${(e as Error).message}`);
+        toast.error(t("update.toast.rollbackFailed", { error: (e as Error).message }));
       });
   };
 
@@ -195,14 +188,14 @@ export function UpdateCard() {
       .then((s) => {
         setAutoCheck(s.update_auto_check !== false);
         setAutoApply(!!s.update_auto_apply);
-        toast.success("已保存");
+        toast.success(t("update.toast.saved"));
         // 打开检测后后端会立刻查一次，这里顺手把结果拉回来。
         if (key === "update_auto_check" && value) load(false);
       })
       .catch((e) => {
         setAutoCheck(prevCheck);
         setAutoApply(prevApply);
-        toast.error(`保存失败：${(e as Error).message}`);
+        toast.error(t("update.toast.saveFailed", { error: (e as Error).message }));
       })
       .finally(() => setSavingPref(false));
   };
@@ -224,12 +217,10 @@ export function UpdateCard() {
   return (
     // 设置页是多列瀑布流布局，卡片自己负责行间距并禁止跨列断开（见 page.tsx 的注释）。
     <Sheet className="mb-4 break-inside-avoid md:mb-6">
-      <SheetHead icon={CloudDownloadIcon} title="版本与更新" />
+      <SheetHead icon={CloudDownloadIcon} title={t("update.title")} />
       <div className="flex flex-col gap-4 px-4 py-3">
         <p className="text-muted-foreground text-sm">
-          更新源固定为本仓库的 GitHub Release，只接受带 SHA256 校验的正式版；检测走
-          <span className="font-mono"> latest.json </span>
-          清单，不消耗 GitHub API 配额。
+          {t.rich("update.sourceNote", { code: (chunks) => <span className="font-mono">{chunks}</span> })}
         </p>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Badge variant="secondary" className="font-mono">
@@ -245,7 +236,7 @@ export function UpdateCard() {
               {check.os}/{check.arch}
             </Badge>
           )}
-          {docker && <Badge variant="outline">容器</Badge>}
+          {docker && <Badge variant="outline">{t("update.container")}</Badge>}
           <Button
             variant="ghost"
             size="sm"
@@ -254,7 +245,7 @@ export function UpdateCard() {
             disabled={loading || applying}
           >
             <RefreshCwIcon className={loading ? "size-4 animate-spin" : "size-4"} />
-            {loading ? "检查中…" : "检查更新"}
+            {loading ? t("update.checking") : t("update.check")}
           </Button>
         </div>
 
@@ -264,7 +255,7 @@ export function UpdateCard() {
             <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
             <div>
               <div className="font-medium text-foreground">
-                {check.rolled_back ? "上次升级已自动回滚" : "上次升级提示"}
+                {check.rolled_back ? t("update.bootRolledBack") : t("update.bootNotice")}
               </div>
               <div className="text-muted-foreground">{check.boot_notice}</div>
             </div>
@@ -273,33 +264,32 @@ export function UpdateCard() {
 
         {restarting && (
           <div className="rounded-md border bg-muted/30 p-3 text-sm">
-            <div className="font-medium">正在重启，切换到新版本…</div>
+            <div className="font-medium">{t("update.restarting")}</div>
             <p className="mt-1 text-muted-foreground text-xs">
-              服务会短暂中断，页面在检测到新版本后自动刷新。若长时间没有反应，请手动重启服务。
+              {t("update.restartingDesc")}
             </p>
           </div>
         )}
         {/* 升级失败：原因来自落盘台账，而不是一句"正在重启"。 */}
         {journalIssue && (
           <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm">
-            <div className="font-medium">升级未完成（{journalIssue.state}）</div>
+            <div className="font-medium">{t("update.journalFailed", { state: journalIssue.state })}</div>
             <p className="mt-1 text-muted-foreground text-xs">
-              {journalIssue.last_error || journalIssue.detail || "未记录具体原因"}
+              {journalIssue.last_error || journalIssue.detail || t("update.journalNoReason")}
             </p>
             <p className="mt-1 text-muted-foreground text-xs">
-              详见程序目录下的 <span className="font-mono">logs/update.log</span> 与{" "}
-              <span className="font-mono">updates/journal.json</span>。
-              {journalIssue.pointer?.previous ? " 可先回滚到上一版本恢复服务。" : ""}
+              {t.rich("update.journalSeeLog", { code: (chunks) => <span className="font-mono">{chunks}</span> })}
+              {journalIssue.pointer?.previous ? t("update.journalRollbackHint") : ""}
             </p>
           </div>
         )}
         {!restarting && staged && (
           <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
-            <div className="font-medium">v{staged.replace(/^v(?=\d)/, "")} 已下载并校验完成</div>
+            <div className="font-medium">{t("update.stagedTitle", { version: staged.replace(/^v(?=\d)/, "") })}</div>
             <p className="mt-1 text-muted-foreground text-xs">
               {canRestart
-                ? "装好后进程会自己重启并切到新版本，不需要手动重启，也不需要 start.bat。"
-                : "当前环境不能自动重启（例如容器内），更新无法在这里一键生效。"}
+                ? t("update.stagedDescAuto")
+                : t("update.stagedDescManual")}
             </p>
           </div>
         )}
@@ -309,7 +299,7 @@ export function UpdateCard() {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium">
-                {PHASE_LABEL[progress.phase]}
+                {t(`update.phase.${progress.phase}`)}
                 {progress.version ? ` v${progress.version.replace(/^v(?=\d)/, "")}` : ""}
               </span>
               <span className="text-muted-foreground tabular-nums">
@@ -325,7 +315,7 @@ export function UpdateCard() {
           <div className="flex items-start gap-2 rounded-md border p-2.5 text-xs">
             <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
             <div>
-              <div className="font-medium text-foreground">暂时查不到新版本</div>
+              <div className="font-medium text-foreground">{t("update.noNewTitle")}</div>
               <div className="text-muted-foreground">{check?.error}</div>
             </div>
           </div>
@@ -334,10 +324,13 @@ export function UpdateCard() {
           <div className="space-y-2">
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="font-medium">
-                发现新版本 <span className="font-mono">v{(check?.latest ?? "").replace(/^v(?=\d)/, "")}</span>
+                {t("update.foundNew")}{" "}
+                <span className="font-mono">v{(check?.latest ?? "").replace(/^v(?=\d)/, "")}</span>
               </span>
               {check?.published_at && (
-                <span className="text-muted-foreground text-xs">发布于 {humanTime(check?.published_at)}</span>
+                <span className="text-muted-foreground text-xs">
+                  {t("update.publishedAt", { time: humanTime(check?.published_at) })}
+                </span>
               )}
               {humanSize(check?.size) && (
                 <span className="text-muted-foreground text-xs">{humanSize(check?.size)}</span>
@@ -345,7 +338,7 @@ export function UpdateCard() {
             </div>
             {check?.notes && (
               <details className="rounded-md border bg-muted/20 p-2.5 text-xs">
-                <summary className="cursor-pointer select-none font-medium">更新说明</summary>
+                <summary className="cursor-pointer select-none font-medium">{t("update.notes")}</summary>
                 <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap font-sans text-muted-foreground">
                   {check?.notes}
                 </pre>
@@ -354,23 +347,23 @@ export function UpdateCard() {
             {!check?.comparable && check?.reason && <p className="text-amber-500 text-xs">{check?.reason}</p>}
             {check?.comparable !== false && check?.asset_available === false && (
               <p className="text-amber-500 text-xs">
-                该版本没有提供 {check?.os}/{check?.arch} 的安装包（{check?.asset}），请等待重新发布。
+                {t("update.noAssetInline", { os: check?.os, arch: check?.arch, asset: check?.asset })}
               </p>
             )}
             {docker && (
               <p className="text-muted-foreground text-xs">
-                容器内不支持一键换装（只改到容器可写层，重建容器即回退），请拉取新镜像后重建容器。
+                {t("update.dockerInline")}
               </p>
             )}
             <div className="flex flex-wrap gap-2">
               <Button onClick={apply} disabled={!canApply}>
                 <ArrowDownToLineIcon className="size-4" />
-                {staged ? "重启并生效" : "立即更新"}
+                {staged ? t("update.restartApply") : t("update.updateNow")}
               </Button>
               {check?.html_url && (
                 <Button asChild variant="outline">
                   <a href={check?.html_url} target="_blank" rel="noreferrer">
-                    查看发布页
+                    {t("update.viewRelease")}
                   </a>
                 </Button>
               )}
@@ -380,16 +373,16 @@ export function UpdateCard() {
         {!check?.error && check?.has_update === false && (
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <CheckCircle2Icon className="size-4 text-emerald-500" />
-            已是最新版本
+            {t("update.upToDate")}
           </div>
         )}
 
         <div className="space-y-3 border-t pt-3">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-sm">自动检测新版本</div>
+              <div className="text-sm">{t("update.autoCheckTitle")}</div>
               <p className="text-muted-foreground text-xs">
-                每 6 小时查一次（只读版本清单，不下载、不改动任何东西）。关闭后后台不再访问 GitHub。
+                {t("update.autoCheckDesc")}
               </p>
             </div>
             <Switch
@@ -400,11 +393,11 @@ export function UpdateCard() {
           </div>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-sm">自动下载新版本</div>
+              <div className="text-sm">{t("update.autoDownloadTitle")}</div>
               <p className="text-muted-foreground text-xs">
                 {canRestart
-                  ? "检测到新版本会自动下载并校验；装好后进程自己重启生效，不必守着控制台。"
-                  : "当前环境不能自动重启（例如容器内），自动下载后无法自动生效。"}
+                  ? t("update.autoDownloadDescAuto")
+                  : t("update.autoDownloadDescManual")}
               </p>
             </div>
             <Switch
@@ -416,7 +409,7 @@ export function UpdateCard() {
           {check?.has_backup && (
             <Button variant="outline" size="sm" onClick={rollback} disabled={applying || restarting}>
               <RotateCcwIcon className="size-4" />
-              回滚到上一版本
+              {t("update.rollback")}
             </Button>
           )}
         </div>
