@@ -480,7 +480,7 @@ func (t *ToolSet) submitReport() actool.CoreTool {
 			switch outcome {
 			case "confirmed", "ruled_out", "open_proof_gap":
 			default:
-				return actool.Errorf("outcome 必须是 confirmed / ruled_out / open_proof_gap，收到 %q", a.Outcome), nil
+				return actool.Errorf(fmt.Sprintf("outcome 必须是 confirmed / ruled_out / open_proof_gap，收到 %q", a.Outcome)), nil
 			}
 			b := Brief{
 				State:       StateCompleted,
@@ -496,7 +496,7 @@ func (t *ToolSet) submitReport() actool.CoreTool {
 				}
 			}
 			if err := sp.Coord.Finish(me, b); err != nil {
-				return actool.Errorf("交卷被拒：%v。补齐字段后再调一次", err), nil
+				return actool.Errorf(fmt.Sprintf("交卷被拒：%v。补齐字段后再调一次", err)), nil
 			}
 			return jsonResult(map[string]any{
 				"accepted": true,
@@ -540,7 +540,7 @@ func (t *ToolSet) finishTask() actool.CoreTool {
 			switch v {
 			case "met", "partial", "blocked":
 			default:
-				return actool.Errorf("verdict 必须是 met / partial / blocked，收到 %q", a.Verdict), nil
+				return actool.Errorf(fmt.Sprintf("verdict 必须是 met / partial / blocked，收到 %q", a.Verdict)), nil
 			}
 			b := Brief{
 				State:       StateCompleted,
@@ -551,7 +551,7 @@ func (t *ToolSet) finishTask() actool.CoreTool {
 				CounterView: a.CounterView,
 			}
 			if err := sp.Coord.Finish(AgentIDFrom(ctx), b); err != nil {
-				return actool.Errorf("交卷被拒：%v。补齐字段后再调一次", err), nil
+				return actool.Errorf(fmt.Sprintf("交卷被拒：%v。补齐字段后再调一次", err)), nil
 			}
 			return jsonResult(map[string]any{"accepted": true, "verdict": v})
 		})
