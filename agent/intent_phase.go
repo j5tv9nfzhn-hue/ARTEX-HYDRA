@@ -108,12 +108,28 @@ func countSignals(text string, words []string) int {
 	return n
 }
 
-// inferIntentPhase 在 planner 没有声明 phase 时，从意图文字推断阶段标签。
+// inferIntentPhase 得出意图的阶段标签：**先看 planner 有没有自己声明**，
+// 没有才从意图文字推断。
+//
+// 声明优先不是可有可无的细节：planner 写着 `"phase":"verify"` 而 summary 里
+// 恰好出现"利用"二字时，按文字推断会把它归到 exploit —— 于是日志、观测与
+// workerRouteText 的路由信号全都与意图作者的本意相反。旧实现（已随 worker.go
+// 下线的 intentPhase）就是这个顺序，重构时把第一步丢了，测试随即变红。
 //
 // 返回空串表示「判断不了」。阶段标签不再裁工具：WorkerTools 恒定给完整候选
 // 目录，最终由 RouteToolFace 选择。这里仍是**宁可判不出，也不要判错**，避免
 // 错误标签污染日志与后续观测。
 func inferIntentPhase(n *db.Node) string {
+	if n != nil && len(n.Payload) > 0 {
+		var p struct {
+			Phase string `json:"phase"`
+		}
+		if err := json.Unmarshal(n.Payload, &p); err == nil {
+			if declared := normalizeWorkerPhase(p.Phase); declared != "" {
+				return declared
+			}
+		}
+	}
 	text := intentSignalText(n)
 	if text == "" {
 		return ""

@@ -31,7 +31,12 @@ func TestPrintBannerLocalized(t *testing.T) {
 		t.Fatalf("启动横幅未包含中文：%q", out)
 	}
 
-	for _, want := range []string{"ARTEX-HYDRA", "自主渗透测试系统", "版本", "监听地址", ":8787"} {
+	// 断言的是「横幅必须是中文且在讲这件事」，不是某个固定的产品口号。
+	// 原来钉的是 "自主渗透测试系统"，文案改成 "AI 自主渗透测试与自适应编排指挥中枢"
+	// 之后测试变红，但横幅本身完全正确 —— 这种把营销文案写进断言的写法
+	// 只会制造假红灯。这里改钉稳定的事实性字段（品牌/版本/监听地址）与
+	// 「渗透测试」这个产品定位词。
+	for _, want := range []string{"ARTEX-HYDRA", "自主渗透测试", "版本", "监听地址", ":8787"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("启动横幅缺少 %q：%q", want, out)
 		}

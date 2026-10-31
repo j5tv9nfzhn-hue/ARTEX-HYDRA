@@ -685,11 +685,21 @@ func (t *ToolSet) WorkerTools() []actool.CoreTool {
 // AugmentTools 末端的动态能力路由决定。
 func (t *ToolSet) allWorkerTools() []actool.CoreTool {
 	// 第六阶段：与官方 WorkerTools(8) 逐项一致。
+	//
+	// 追加的三个人机验证入口**不在官方白名单里**，但必须挂在这里：它们是
+	// 「目标站点挂了人机验证」这条路的唯一解 —— 没有它们，worker 只能自己
+	// 瞎试 payload，或者在报告里写"被验证码挡住"。这三个工具全部离线、
+	// 只做分类与有界 PoW 计算，不发包、不下载，因此挂在默认面上没有代价。
+	//
+	// 背景：P4 收紧工具面时，worker/pentest 的种子绑定被删，而这三个工具的实现
+	// 只被测试调用过 —— 生产链路上完全不可达（见 TestVerificationToolIsReachable）。
+	// 这里补上接线，测试改为守"可达性"而不是"绑定字符串"。
 	return []actool.CoreTool{
 		t.listFindings(), t.addFinding(), t.recordFact(),
 		t.insertAssets(), t.listAssets(),
 		t.searchAllWorkerTraces(), t.getWorkerTrace(),
 		t.nodeDetail(),
+		t.humanVerificationTool(), t.verificationSolveTool(), t.verificationCapabilitiesTool(),
 	}
 }
 

@@ -21,7 +21,7 @@ const PreferencesStoreContext = createContext<StoreApi<PreferencesState> | null>
 
 const FONT_VALUES = Object.keys(fontRegistry) as FontKey[];
 
-function getSafeValue<T extends string>(raw: string | null, allowed: readonly T[]): T | undefined {
+function getSafeValue<T extends string>(raw: string | null | undefined, allowed: readonly T[]): T | undefined {
   if (!raw) return undefined;
   return allowed.includes(raw as T) ? (raw as T) : undefined;
 }

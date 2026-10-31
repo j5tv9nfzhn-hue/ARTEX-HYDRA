@@ -5,6 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 
 import {
+  ArrowUpRightIcon,
   Loader2Icon,
   PlugZapIcon,
   PlusIcon,

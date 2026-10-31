@@ -347,7 +347,7 @@ export function UpdateCard() {
             {!check?.comparable && check?.reason && <p className="text-amber-500 text-xs">{check?.reason}</p>}
             {check?.comparable !== false && check?.asset_available === false && (
               <p className="text-amber-500 text-xs">
-                {t("update.noAssetInline", { os: check?.os, arch: check?.arch, asset: check?.asset })}
+                {t("update.noAssetInline", { os: check?.os, arch: check?.arch, asset: check?.asset ?? "" })}
               </p>
             )}
             {docker && (

@@ -8,8 +8,8 @@ import (
 // 本文件在 P4 拆掉旧骨架后重新裁剪。
 //
 // 保留的是**与角色无关**的两类断言：
-//   1. renderSystem 的三级回落（无覆盖→内置默认；有覆盖→渲染；模板报错→回落）；
-//   2. langDirective 自身的语义（点名显示语言、保留原文、禁止镜像目标语言）。
+//  1. renderSystem 的三级回落（无覆盖→内置默认；有覆盖→渲染；模板报错→回落）；
+//  2. langDirective 自身的语义（点名显示语言、保留原文、禁止镜像目标语言）。
 //
 // 换掉的是**角色清单**：原来的用例断言 worker/planner/mainagent 三条系统提示都
 // 带语言尾，这三个角色已随 agent/{worker,planner,mainagent}.go 下线。现在由
@@ -46,6 +46,20 @@ func TestRenderSystemOverrideAndFallback(t *testing.T) {
 	got := RootSystemPrompt(CoordVars{Goal: "g", DataDir: "/data"})
 	if !strings.HasPrefix(got, "ROOT-BODY") {
 		t.Fatalf("RootSystemPrompt body not honored: %q", got)
+	}
+	// DataDir 必须是**真的渲染进正文**的：运行时把 cwd 设成任务目录（runner_coord
+	// 的 WorkDir），提示词里不提这个目录，模型就会把脚本和战利品写到别处，
+	// 用户在任务目录里找不到产物。
+	//
+	// 注意必须在**无覆盖**下验：上面那段用的是 DB 覆盖正文 "ROOT-BODY"，
+	// 它根本不含 {{.DataDir}}，在那里断言目录会被渲染出来是自相矛盾的。
+	PromptOverride = nil
+	withDir := RootSystemPrompt(CoordVars{Goal: "g", DataDir: "/data"})
+	if !strings.Contains(withDir, "/data") {
+		t.Fatalf("RootSystemPrompt 没有渲染工作目录: %q", withDir)
+	}
+	if bare := RootSystemPrompt(CoordVars{Goal: "g"}); strings.Contains(bare, "工作目录") {
+		t.Fatalf("DataDir 为空时不应渲染工作目录行: %q", bare)
 	}
 	if !strings.Contains(got, "简体中文") {
 		t.Fatalf("RootSystemPrompt missing code-owned lang tail: %q", got)
