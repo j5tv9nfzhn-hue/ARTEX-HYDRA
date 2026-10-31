@@ -10,7 +10,7 @@ import { Masthead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,9 +77,9 @@ function ScopeSentryPanel() {
       {ready ? (
         <SyncWorkbench />
       ) : (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground text-sm">{t("notReady")}</CardContent>
-        </Card>
+        <Sheet>
+          <div className="py-8 text-center text-muted-foreground text-sm">{t("notReady")}</div>
+        </Sheet>
       )}
     </div>
   );
@@ -134,17 +134,22 @@ function DataSourceCard({
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <PlugZapIcon className="size-4" /> {t("dsTitle")}
-          <StatusBadge status={status} loading={loading} />
-        </CardTitle>
-        <Button variant="ghost" size="sm" onClick={onChanged} disabled={loading}>
-          <RefreshCwIcon className={loading ? "size-4 animate-spin" : "size-4"} /> {t("refresh")}
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Sheet>
+      <SheetHead
+        icon={PlugZapIcon}
+        title={
+          <span className="flex items-center gap-2">
+            {t("dsTitle")}
+            <StatusBadge status={status} loading={loading} />
+          </span>
+        }
+        actions={
+          <Button variant="ghost" size="sm" onClick={onChanged} disabled={loading}>
+            <RefreshCwIcon className={loading ? "size-4 animate-spin" : "size-4"} /> {t("refresh")}
+          </Button>
+        }
+      />
+      <div className="space-y-3 px-4 py-3">
         {!status?.exists ? (
           <div className="flex items-center justify-between gap-4">
             <p className="text-muted-foreground text-sm">{t("notCreatedDesc")}</p>
@@ -183,8 +188,8 @@ function DataSourceCard({
             </div>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </Sheet>
   );
 }
 
@@ -331,11 +336,9 @@ function SyncWorkbench() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{t("workbenchTitle")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Sheet>
+      <SheetHead title={t("workbenchTitle")} />
+      <div className="space-y-4 px-4 py-3">
         {/* 切换维度。 */}
         <Tabs
           value={dimension}
@@ -442,8 +445,8 @@ function SyncWorkbench() {
 
         {/* 结果。 */}
         {result && <SyncResult result={result} />}
-      </CardContent>
-    </Card>
+      </div>
+    </Sheet>
   );
 }
 
