@@ -137,6 +137,7 @@ UPDATE task_categories SET name=$2, nkey=$3 WHERE id=$1
 RETURNING id, name, nkey,
        (SELECT count(*) FROM tasks WHERE category_id=task_categories.id AND deleted_at IS NULL),
        created_at, updated_at`
+
 // taskCategoryAssignSQLiteUpdate 是上面那条 CTE 语句在 SQLite 上的第 1 步：
 // 挂分类。`EXISTS(SELECT 1 FROM task_categories WHERE id=$2)` 就是原
 // `EXISTS (SELECT 1 FROM selected)` 的内联形式（SQLite 的 CTE 里不能放 DML，
