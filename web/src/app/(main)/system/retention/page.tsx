@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -125,15 +125,10 @@ export default function RetentionPage() {
       )}
 
       <div className="grid items-start gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DatabaseIcon className="size-4" />
-              {t("policy.title")}
-            </CardTitle>
-            <CardDescription>{t("policy.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
+        <Sheet>
+          <SheetHead icon={DatabaseIcon} title={t("policy.title")} />
+          <div className="space-y-5 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("policy.description")}</p>
             <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
               <div>
                 <Label htmlFor="retention-enabled">{t("policy.enabled")}</Label>
@@ -192,18 +187,13 @@ export default function RetentionPage() {
               <p className="text-muted-foreground text-xs">{policyStatus}</p>
             </div>
             <p className="border-t pt-3 text-muted-foreground text-xs">{t("policy.invalidate")}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <EyeIcon className="size-4" />
-              {t("preview.title")}
-            </CardTitle>
-            <CardDescription>{t("preview.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <Sheet>
+          <SheetHead icon={EyeIcon} title={t("preview.title")} />
+          <div className="space-y-4 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("preview.description")}</p>
             <Button variant="outline" disabled={!model.canPreview} onClick={() => void model.preview()}>
               <EyeIcon className="size-4" />
               {t("preview.create")}
@@ -238,21 +228,19 @@ export default function RetentionPage() {
             )}
             <p className="border-t pt-3 text-muted-foreground text-xs">{t("preview.expiry")}</p>
             {model.envelope && <p className="text-muted-foreground text-xs">{model.envelope.scope}</p>}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       </div>
 
       {model.result && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("result.title")}</CardTitle>
-            <CardDescription>{t("result.description")}</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <Sheet>
+          <SheetHead title={t("result.title")} />
+          <div className="px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("result.description")}</p>
             <RetentionCounts rows={model.result.counts} result />
             <p className="mt-3 text-muted-foreground text-xs">{t("result.space")}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       )}
 
       <RetentionAudit
