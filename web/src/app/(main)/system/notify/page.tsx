@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Masthead } from "@/components/editorial";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sheet as PaperSheet, SheetHead } from "@/components/editorial-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -321,11 +321,9 @@ export default function NotifyPage() {
         </div>
       )}
 
-      <Card className="gap-3">
-        <CardHeader>
-          <CardTitle className="text-base">{t("global.title")}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+      <PaperSheet>
+        <SheetHead title={t("global.title")} />
+        <div className="grid gap-4 px-4 py-3 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label htmlFor="n-base">{t("global.baseUrl")}</Label>
             <Input
@@ -354,8 +352,8 @@ export default function NotifyPage() {
               {t("global.save")}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </PaperSheet>
 
       <Tabs
         value={tab}
@@ -389,15 +387,16 @@ export default function NotifyPage() {
             </button>
 
             {channels.map((ch) => (
-              <Card
+              <PaperSheet
                 key={ch.id}
                 onClick={() => openEdit(ch)}
                 className="cursor-pointer gap-3 transition hover:border-primary/60 hover:shadow-sm"
               >
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <BellIcon className="size-4 shrink-0 text-muted-foreground" />
-                    <CardTitle className="truncate text-base">{ch.name}</CardTitle>
+                <SheetHead
+                  icon={BellIcon}
+                  title={<span className="block max-w-[12rem] truncate">{ch.name}</span>}
+                  actions={
+                    <>
                     {/* 卡片整体可点（进入编辑），所以这两个控件必须各自吞掉冒泡，
                         否则开关/删除会顺带触发编辑。把 stopPropagation 挂在控件自己
                         身上，而不是套一层 div：套 div 会造出一个「看起来可交互但没有
@@ -423,17 +422,18 @@ export default function NotifyPage() {
                         <Trash2Icon className="text-destructive" />
                       </Button>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="grid gap-3">
+                    </>
+                  }
+                />
+                <div className="grid gap-3 px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="outline">{kindLabel(ch.kind)}</Badge>
                     <Badge variant="outline">{ch.mode === "digest" ? t("mode.digest") : t("mode.realtime")}</Badge>
                     {!ch.enabled && <Badge variant="outline">{t("disabled")}</Badge>}
                   </div>
                   <FilterSummary filter={ch.filter} />
-                </CardContent>
-              </Card>
+                </div>
+              </PaperSheet>
             ))}
           </div>
         </TabsContent>
