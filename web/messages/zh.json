@@ -5436,7 +5436,8 @@
     "filesEmpty": "工作空间不可用",
     "filesTotal": "合计 {size}",
     "filesCount": "{count} 个文件",
-    "filesOpen": "打开工作空间"
+    "filesOpen": "打开工作空间",
+    "loadFailed": "读取失败"
   },
   "retentionPage": {
     "title": "数据保留",

@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { AlertTriangleIcon, DatabaseIcon, RefreshCwIcon, ShieldCheckIcon, Trash2Icon } from "lucide-react";
 import { Masthead } from "@/components/editorial";
+import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { useTranslations } from "next-intl";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,7 +20,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
@@ -88,15 +88,16 @@ export default function StoragePage() {
   const [keepDays, setKeepDays] = React.useState<number | null>(null);
   const [keepMaxRows, setKeepMaxRows] = React.useState<number | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 依赖里刻意不放 t——
+  // useTranslations 每次渲染都可能返回新函数，放进 useCallback 会让 load 反复重建 →
+  // effect 无限重取。
   const load = React.useCallback(async () => {
     setError(null);
     const [nextStats, nextWs] = await Promise.allSettled([storageApi.stats(), api.workspaceList("")]);
     if (nextStats.status === "fulfilled") setStats(nextStats.value);
-    else setError(nextStats.reason instanceof Error ? nextStats.reason.message : "读取失败");
+    else setError(nextStats.reason instanceof Error ? nextStats.reason.message : t("loadFailed"));
     setWs(nextWs.status === "fulfilled" ? nextWs.value : null);
     setLoading(false);
-    // 依赖里刻意不放 t：useTranslations 每次渲染都可能返回新函数，
-    // 放进 useCallback 会让 load 反复重建 → effect 无限重取。
   }, []);
 
   React.useEffect(() => {
@@ -203,15 +204,10 @@ export default function StoragePage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* 数据库 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <DatabaseIcon className="size-4" />
-              {t("dbTitle")}
-            </CardTitle>
-            <CardDescription>{t("dbDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <Sheet>
+          <SheetHead icon={DatabaseIcon} title={t("dbTitle")} />
+          <div className="space-y-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("dbDesc")}</p>
             {loading || !db ? (
               <p className="text-muted-foreground text-sm">{t("loading")}</p>
             ) : (
@@ -254,16 +250,14 @@ export default function StoragePage() {
                 <p className="text-xs text-muted-foreground">{t("dbCompactHint")}</p>
               </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
         {/* 内存 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("memTitle")}</CardTitle>
-            <CardDescription>{t("memDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <Sheet>
+          <SheetHead title={t("memTitle")} />
+          <div className="space-y-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("memDesc")}</p>
             {loading || !mem ? (
               <p className="text-muted-foreground text-sm">{t("loading")}</p>
             ) : (
@@ -315,16 +309,14 @@ export default function StoragePage() {
                 </Button>
               </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
         {/* 记忆库 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("mdbTitle")}</CardTitle>
-            <CardDescription>{t("mdbDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <Sheet>
+          <SheetHead title={t("mdbTitle")} />
+          <div className="space-y-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("mdbDesc")}</p>
             {loading || !mdb ? (
               <p className="text-muted-foreground text-sm">{t("loading")}</p>
             ) : (
@@ -420,8 +412,8 @@ export default function StoragePage() {
                 <p className="text-xs text-muted-foreground">{t("mdbNote")}</p>
               </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       </div>
 
       {/*
@@ -431,12 +423,10 @@ export default function StoragePage() {
         窄屏一律退化为单列，顺序仍是 写入 → WAL → 保留。
       */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("wqTitle")}</CardTitle>
-            <CardDescription>{t("wqDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <Sheet>
+          <SheetHead title={t("wqTitle")} />
+          <div className="space-y-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("wqDesc")}</p>
             {loading || !wq ? (
               <p className="text-muted-foreground text-sm">{t("loading")}</p>
             ) : (
@@ -454,15 +444,13 @@ export default function StoragePage() {
                 <p className="text-xs text-muted-foreground">{t("wqNote")}</p>
               </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("walTitle")}</CardTitle>
-            <CardDescription>{t("walDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <Sheet>
+          <SheetHead title={t("walTitle")} />
+          <div className="space-y-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm">{t("walDesc")}</p>
             {loading || !wal ? (
               <p className="text-muted-foreground text-sm">{t("loading")}</p>
             ) : (
@@ -501,16 +489,14 @@ export default function StoragePage() {
                 <p className="text-xs text-muted-foreground">{t("walNote")}</p>
               </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Sheet>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("retentionTitle")}</CardTitle>
-          <CardDescription>{t("retentionDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <Sheet>
+        <SheetHead title={t("retentionTitle")} />
+        <div className="space-y-3 px-4 py-3">
+          <p className="text-muted-foreground text-sm">{t("retentionDesc")}</p>
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <Label htmlFor="activity-retention-days" className="text-xs">
@@ -569,28 +555,26 @@ export default function StoragePage() {
             <Stat label={t("retentionLastCapped")} value={fmtNum(keep?.last_capped ?? 0)} />
           </div>
           <p className="text-xs text-muted-foreground">{t("retentionNote")}</p>
-        </CardContent>
-      </Card>
+        </div>
+      </Sheet>
 
       {/* 表行数 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("tablesTitle")}</CardTitle>
-          <CardDescription>
+      <Sheet>
+        <SheetHead title={t("tablesTitle")} />
+        <div className="px-4 py-3">
+          <p className="text-muted-foreground text-sm">
             {t("tablesDesc")}
             {db?.tables_partial ? ` / ${t("tablesPartial")}` : ""}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>{tablesBody}</CardContent>
-      </Card>
+          </p>
+          {tablesBody}
+        </div>
+      </Sheet>
 
       {/* 文件 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("filesTitle")}</CardTitle>
-          <CardDescription>{t("filesDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <Sheet>
+        <SheetHead title={t("filesTitle")} />
+        <div className="space-y-3 px-4 py-3">
+          <p className="text-muted-foreground text-sm">{t("filesDesc")}</p>
           {!ws ? (
             <p className="text-muted-foreground text-sm">{t("filesEmpty")}</p>
           ) : (
@@ -609,8 +593,8 @@ export default function StoragePage() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </Sheet>
 
       <AlertDialog open={confirm !== null} onOpenChange={(open) => !open && setConfirm(null)}>
         <AlertDialogContent>
