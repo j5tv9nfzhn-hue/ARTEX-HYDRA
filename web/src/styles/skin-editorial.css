@@ -161,6 +161,97 @@
   padding-top: 8px;
 }
 
+/* ── 目录编号（03）─────────────────────────────────────────────────────────
+   分组 01 / 02，条目 01.03 —— 目录页的「卷 / 章」编号。
+
+   用 CSS counter 生成，不在 JSX 里算，理由有三：
+     1. 侧边栏条目会被隐藏、置顶、按分组折叠，索引必须跟着 DOM 实时变。
+        在 React 里算就得把 visibleGroups / pinnedItems 的过滤逻辑复制一遍，
+        两处一旦不同步，编号就会错位。
+     2. 图标折叠态下只需一条规则就能把编号整体收掉。
+     3. 编号是纯装饰，不该进可访问性树 —— ::before 的 content 不会进。 */
+
+:root[data-skin="editorial"] [data-sidebar="content"] {
+  counter-reset: ed-group;
+}
+
+:root[data-skin="editorial"] [data-sidebar="group"] {
+  counter-increment: ed-group;
+  counter-reset: ed-item;
+}
+
+/* 分组号排在标签之前：等宽 + 等宽数字，避免 01→02 切换时字宽跳动。 */
+:root[data-skin="editorial"] [data-sidebar="group-label"]::before {
+  content: counter(ed-group, decimal-leading-zero);
+  margin-right: 6px;
+  font-family: var(--ed-mono);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+:root[data-skin="editorial"] [data-sidebar="menu-item"] {
+  counter-increment: ed-item;
+}
+
+/* 条目号排在图标之前，不用 flex order 重排：
+   Collapsible 条目的展开箭头是 button 的第二个 svg，一旦用 order 把
+   「首个 svg」钉住，箭头就会因为没有 order 而跑到最前面。编号置左零风险。 */
+:root[data-skin="editorial"] [data-sidebar="menu-button"] {
+  position: relative;
+}
+
+:root[data-skin="editorial"] [data-sidebar="menu-button"]::before {
+  content: counter(ed-group, decimal-leading-zero) "." counter(ed-item, decimal-leading-zero);
+  flex: none;
+  font-family: var(--ed-mono);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  transition: opacity 120ms linear;
+}
+
+:root[data-skin="editorial"] [data-sidebar="menu-button"]:hover::before,
+:root[data-skin="editorial"] [data-sidebar="menu-button"][data-active="true"]::before {
+  opacity: 0.85;
+}
+
+/* 悬停下划线：与选中态的书脊形成「悬停 = 暂定，选中 = 确定」的层级差。
+   用 scaleX 而不是改 width，避免逐帧触发布局。 */
+:root[data-skin="editorial"] [data-sidebar="menu-button"]::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 3px;
+  height: 1px;
+  background: var(--ed-rule);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 140ms ease-out;
+  pointer-events: none;
+}
+
+:root[data-skin="editorial"] [data-sidebar="menu-button"]:hover::after {
+  transform: scaleX(1);
+}
+
+/* 选中态已经有 2px 书脊了，再画下划线就重复，反而削弱书脊。 */
+:root[data-skin="editorial"] [data-sidebar="menu-button"][data-active="true"]::after {
+  transform: scaleX(0);
+}
+
+/* 图标折叠态：只剩一列图标，编号与下划线都要收掉，否则会挤掉图标。 */
+:root[data-skin="editorial"] [data-sidebar="sidebar"][data-state="collapsed"] [data-sidebar="menu-button"]::before,
+:root[data-skin="editorial"] [data-sidebar="sidebar"][data-state="collapsed"] [data-sidebar="menu-button"]::after,
+:root[data-skin="editorial"] [data-sidebar="sidebar"][data-state="collapsed"] [data-sidebar="group-label"]::before {
+  display: none;
+}
+
+
 /* ══ 4. 卡片 → 版块（.sheet）═══════════════════════════════════════════════
    纸本没有卡片：没有底色、没有圆角、没有阴影，
    一个版块 = 一条上沿发丝线 + 一个标题行。 */
@@ -1064,3 +1155,280 @@
   letter-spacing: 0.06em;
 }
 
+/* ══ 18. 03 面板原语：Panel / ApiBar / 严重度条 / 常驻指挥框 ══════════════════
+   components/editorial.tsx 里后加的 Panel / ApiBar / SeverityBar / ComposeBar
+   只输出结构锚点与中性 Tailwind —— 默认外观与改造前逐像素一致，老主题零影响。
+   本组负责把它们翻译成纸本语言。
+
+   刻意与 §4「卡片 → 版块」收在同一个视觉结论上：没有底色、没有圆角、没有
+   阴影，一个版块 = 一条上沿发丝线 + 一个标题行。不合并进 §4 的理由是 Panel
+   比 shadcn Card 多三层结构 —— 编号头、标注小签、接口锚点条 —— §4 的
+   data-slot 规则覆盖不到；合并反而会让「哪条规则管哪个锚点」变模糊。
+
+   编号体系（03 的核心识别特征）：章节号用等宽，版块名用衬线。两者并置时
+   一机器一人文，正是报纸「栏目标识 vs 标题」的关系；若都衬线会糊成一片，
+   若都等宽则失去标题层级。 */
+
+/* 版块：与 §4 的 card 同一结论——只有上沿发丝线。 */
+:root[data-skin="editorial"] [data-editorial="panel"] {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--ed-hairline);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* 编号头：与 §4 的 card-header 对齐（14 上 / 8 下，无下沿线）。
+   版块标题本身就是这条发丝线下的第一行，不需要再画一条。 */
+:root[data-skin="editorial"] [data-editorial="panel-head"] {
+  padding: 14px 0 8px;
+  gap: 6px;
+  border-bottom: 0;
+}
+
+/* 章节号：等宽 + 等宽数字，避免 01→02 切换时字宽跳动。 */
+:root[data-skin="editorial"] [data-editorial="secnum"] {
+  font-family: var(--ed-mono);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  flex: none;
+}
+
+/* 版块名：与 §4 的 card-title 逐值一致（衬线 13.5 / 600）。 */
+:root[data-skin="editorial"] [data-editorial="panel-title"] {
+  font-family: var(--ed-serif);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+
+/* 正文：与 §4 的 card-content 一样去掉左右内边距，让表格贴边到发丝线。 */
+:root[data-skin="editorial"] [data-editorial="panel-body"] {
+  padding: 2px 0 12px;
+}
+
+/* 标注小签：03 用它标记「新增 / 保留 / 移除 / 差异化」。沿用 §8 的小签语言 ——
+   不铺底色，只用一条边与字重区分，否则版块头会变成胶囊按钮堆。 */
+:root[data-skin="editorial"] [data-editorial="annotation"] {
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 6px;
+  border: 1px solid var(--ed-hairline);
+  color: var(--muted-foreground);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex: none;
+}
+
+:root[data-skin="editorial"] [data-editorial="annotation"][data-kind="add"] {
+  color: var(--primary);
+  border-color: color-mix(in oklab, var(--primary) 40%, transparent);
+}
+
+:root[data-skin="editorial"] [data-editorial="annotation"][data-kind="trim"] {
+  color: var(--destructive);
+  border-color: color-mix(in oklab, var(--destructive) 40%, transparent);
+}
+
+:root[data-skin="editorial"] [data-editorial="annotation"][data-kind="keep"] {
+  color: var(--muted-foreground);
+  border-style: dashed;
+}
+
+/* 后端接口锚点条：03「不违背后端、杜绝空匹配」的落点。
+   它是机器产物（web/src/lib/api.ts 的方法名），所以用等宽；放在版块末尾，
+   上沿一条更弱的发丝线 —— 与正文分开，但不抢版块名的视觉重量。
+   方法名后面补一对空括号，让「这是可调用的方法」而不是「一个词」这件事
+   在第一眼就成立。 */
+:root[data-skin="editorial"] [data-editorial="apibar"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 10px;
+  border-top: 1px solid var(--ed-hairline-weak);
+  font-family: var(--ed-mono);
+  font-size: 9.5px;
+  color: var(--muted-foreground);
+}
+
+:root[data-skin="editorial"] [data-editorial="apibar-label"] {
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+  flex: none;
+}
+
+:root[data-skin="editorial"] [data-editorial="apibar-methods"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+:root[data-skin="editorial"] [data-editorial="apibar-method"] {
+  font-family: var(--ed-mono);
+  font-size: 9.5px;
+  padding: 1px 5px;
+  border: 1px solid var(--ed-hairline-weak);
+  white-space: nowrap;
+}
+
+:root[data-skin="editorial"] [data-editorial="apibar-method"]::after {
+  content: "()";
+  opacity: 0.45;
+}
+
+/* 栅格：默认单列。纸本是多栏的，但分栏要靠竖线而不是卡片间距，
+   所以这里只给列数，竖线由 panel 的上沿发丝线自然形成。窄屏一律回落单列 ——
+   报纸在窄栏下也会改成单栏通排。 */
+:root[data-skin="editorial"] [data-editorial="panel-grid"][data-cols="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+:root[data-skin="editorial"] [data-editorial="panel-grid"][data-cols="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  :root[data-skin="editorial"] [data-editorial="panel-grid"][data-cols="3"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  :root[data-skin="editorial"] [data-editorial="panel-grid"][data-cols="2"],
+  :root[data-skin="editorial"] [data-editorial="panel-grid"][data-cols="3"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 严重度分布条（对应 strix 的 IssueSeveritySummary）。
+   一条通栏 + 内部 1px 缝隙 = 报纸的「分栏表头」；条内填充用极低不透明度的
+   色块表示占比，而不是画一根粗进度条 —— 粗条会把读者的注意力从数字上抢走。 */
+:root[data-skin="editorial"] [data-editorial="severity-bar"] {
+  display: flex;
+  gap: 1px;
+  border: 1px solid var(--ed-hairline);
+  background: var(--ed-hairline);
+}
+
+:root[data-skin="editorial"] [data-editorial="severity-seg"] {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 9px;
+  background: var(--background);
+  font-size: 11px;
+  text-align: left;
+  overflow: hidden;
+}
+
+:root[data-skin="editorial"] [data-editorial="severity-seg"][data-active] {
+  background: var(--ed-hover);
+}
+
+:root[data-skin="editorial"] [data-editorial="severity-fill"] {
+  position: absolute;
+  inset: 0 auto 0 0;
+  pointer-events: none;
+  background: var(--muted-foreground);
+  opacity: 0.12;
+}
+
+:root[data-skin="editorial"] [data-editorial="severity-seg"][data-severity="critical"] [data-editorial="severity-fill"],
+:root[data-skin="editorial"] [data-editorial="severity-seg"][data-severity="high"] [data-editorial="severity-fill"] {
+  background: var(--destructive);
+  opacity: 0.16;
+}
+
+:root[data-skin="editorial"] [data-editorial="severity-label"] {
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:root[data-skin="editorial"] [data-editorial="severity-count"] {
+  position: relative;
+  margin-left: auto;
+  font-family: var(--ed-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+/* 常驻指挥框（对应 strix 的 ScanPromptComposer）。
+   strix 把它放在 TAB 集合之外随页面常驻，所以纸本里给它一条**双线**（2px 实线
+   + 1px 发丝线）作上沿 —— 与 §11 书眉的双线呼应，读作「这是另一个层级的入口」，
+   而不是页面里的又一个输入框。 */
+:root[data-skin="editorial"] [data-editorial="compose"] {
+  border-top: 2px solid var(--ed-rule);
+  box-shadow: inset 0 1px 0 var(--ed-hairline-weak);
+  padding: 12px 0 0;
+  background: transparent;
+}
+
+:root[data-skin="editorial"] [data-editorial="compose-hint"] {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  margin-bottom: 7px;
+}
+
+:root[data-skin="editorial"] [data-editorial="compose-row"] {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+:root[data-skin="editorial"] [data-editorial="compose-input"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 46px;
+  resize: vertical;
+  background: transparent;
+  border: 1px solid var(--ed-hairline);
+  border-radius: 0;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: inherit;
+}
+
+:root[data-skin="editorial"] [data-editorial="compose-input"]::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+
+:root[data-skin="editorial"] [data-editorial="compose-input"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+  border-color: var(--ed-rule);
+}
+
+:root[data-skin="editorial"] [data-editorial="compose-submit"] {
+  flex: none;
+  padding: 9px 18px;
+  border: 1px solid var(--ed-rule);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+:root[data-skin="editorial"] [data-editorial="compose-submit"]:hover:not(:disabled) {
+  background: var(--ed-hover);
+}
+
+:root[data-skin="editorial"] [data-editorial="compose-submit"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
