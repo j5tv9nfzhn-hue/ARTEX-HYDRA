@@ -16,8 +16,7 @@ RETURNING id`
 
 // upsertCompanySQLiteUpdate 是 xmax <> 0 分支的等价物：把已有企业改写成
 // 新值并回传 id。占位符按 (name, logo, nkey) 的自然顺序排：
-// COALESCE($2, logo) 对应 PG 侧的 COALESCE(EXCLUDED.logo, companies.logo)，
-// 调用方传空 logo 时保留原值。
+// COALESCE($2, logo)：调用方传空 logo 时保留原值。
 const upsertCompanySQLiteUpdate = `
 UPDATE companies
 SET name = $1, logo = COALESCE($2, logo), updated_at = now()
@@ -27,8 +26,8 @@ RETURNING id`
 // upsertCompanyByNkey 按规范化名称 upsert 一家企业，并报告这次调用到底是
 // 新建（created=true）还是命中已有企业（created=false）。
 //
-// PostgreSQL 用单条语句的 xmax 惯用法判断"是插入还是更新"；SQLite 没有 xmax，
-// 改用"抢占式 INSERT + UPDATE"的两语句等价写法，对外返回值完全一致。
+// SQLite 没有 xmax 系统列，不能靠单条 upsert 判断"是插入还是更新"，改用
+// "抢占式 INSERT + UPDATE"的两语句写法，对外返回值完全一致。
 func upsertCompanyByNkey(d *DB, name, nkey string, logoVal any) (id int64, created bool, err error) {
 	tx, err := d.Begin()
 	if err != nil {

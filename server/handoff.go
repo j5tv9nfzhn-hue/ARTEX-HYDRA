@@ -65,18 +65,6 @@ type handoffRecord struct {
 	Scope    handoffScope    `json:"scope"`
 	Progress handoffProgress `json:"progress"`
 	Pointers handoffPointers `json:"pointers"`
-	// Quota 非空 = 本条意图因**工具额度用尽**而结束，正文是模型被强制产出的
-	// 结构化报告（① 已完成 / ② 未解决线索 / ③ 建议下一步）。
-	Quota *handoffQuota `json:"quota,omitempty"`
-}
-
-// handoffQuota 是一次「工具额度用尽」收尾的自述报告（任务 27）。
-// 与 Progress（系统直读的事实层）物理分开：这份正文由模型写，属于可推翻的描述。
-type handoffQuota struct {
-	Cap     int    `json:"cap"`
-	Calls   int    `json:"calls"`
-	Refused int    `json:"refused,omitempty"`
-	Report  string `json:"report,omitempty"`
 }
 
 // stopReasonFrom 把 SDK 的终止原因归一成台账里的 stop_reason。
@@ -262,27 +250,13 @@ func (e *Engine) saveHandoff(t *Task, intent *db.Node, runID int64, reason harne
 			TraceRange: traceRange(firstID, lastID),
 		},
 	}
-	// 额度用尽：把模型被强制写出的报告挂到交接单上，并把触发原因改写成 tool_quota
-	// ——「这条意图为什么停」比「正常结束」重要得多，下一轮要靠它决定接不接。
-	if wrote.Quota != nil {
-		rec.Quota = &handoffQuota{
-			Cap:     wrote.Quota.Cap,
-			Calls:   wrote.Quota.Calls,
-			Refused: wrote.Quota.Refused,
-			Report:  clipText(wrote.Quota.Report, 6000),
-		}
-		rec.Trigger.Kind = "tool_quota"
-		rec.Trigger.Detail = fmt.Sprintf("工具额度 %d/%d 用尽（拒绝 %d 次）", wrote.Quota.Calls, wrote.Quota.Cap, wrote.Quota.Refused)
-	}
 	raw, err := json.MarshalIndent(rec, "", "  ")
 	if err != nil {
 		log.Printf("[handoff] task %s 意图 #%d 序列化失败: %v", t.ID, intent.ID, err)
 		return rec
 	}
-	// mech_sha256 覆盖系统抽取的机械事实；模型写的额度报告不进入事实层指纹。
-	mech := rec
-	mech.Quota = nil
-	mechRaw, _ := json.Marshal(mech)
+	// mech_sha256 覆盖系统抽取的机械事实。
+	mechRaw, _ := json.Marshal(rec)
 	sum := sha256.Sum256(mechRaw)
 	h := &db.IntentHandoff{
 		RunID:         runID,
@@ -340,11 +314,6 @@ func renderHandoffText(rec handoffRecord) string {
 	}
 	if rec.Progress.LastOutput != "" {
 		fmt.Fprintf(&b, "最后输出：%s\n", clipText(rec.Progress.LastOutput, 500))
-	}
-	if rec.Quota != nil && strings.TrimSpace(rec.Quota.Report) != "" {
-		b.WriteString("── 额度用尽报告（模型自述，未经核实，可推翻）──\n")
-		b.WriteString(strings.TrimSpace(rec.Quota.Report))
-		b.WriteString("\n")
 	}
 	// 只点名真实挂载的 get_worker_trace；交接单已在上文渲染，不提示调用已退役工具。
 	if len(rec.Pointers.TraceRange) == 2 {

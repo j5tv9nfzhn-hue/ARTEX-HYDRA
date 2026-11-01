@@ -99,10 +99,9 @@ func companyNKey(name string) string {
 // UpsertCompany creates or updates a company by name. Returns the id and whether
 // a new row was created.
 //
-// created 由 upsertCompanyByNkey 判定：PostgreSQL 用 MVCC 系统列
-// `(xmax = 0)` 区分 INSERT 分支与 ON CONFLICT DO UPDATE 分支，SQLite 没有
-// 该系统列，改用"抢占式 INSERT + UPDATE"的两语句等价写法。语义细节见
-// db/dialect_softdelete.go。
+// created 由 upsertCompanyByNkey 判定：SQLite 没有 MVCC 系统列（xmax），不能靠
+// 单条 upsert 区分"插入"与"冲突更新"，改用"抢占式 INSERT + UPDATE"的两语句写法。
+// 语义细节见 db/dialect_softdelete.go。
 func (s *CompanyStore) UpsertCompany(name, logo string) (id int64, created bool, err error) {
 	nkey := companyNKey(name)
 	var logoVal any
@@ -447,9 +446,8 @@ func insertScopeRulesTx(tx *sql.Tx, companyID int64, rules []ParsedScope, reason
 // insertScopeRuleTx inserts a scope rule. inserted=false means a duplicate was
 // ignored by ON CONFLICT, not an error.
 //
-// 两条冲突目标的方言差异见 companyScopeConflictTarget：PostgreSQL 按约束名
-// 仲裁，SQLite 按唯一索引的列清单仲裁，两边指向的是同一个 uq_sv2_domain /
-// uq_sv2_net 唯一约束，所以重复规则在两个引擎上都被同样地吞掉。
+// 冲突目标见 companyScopeConflictTarget：SQLite 按唯一索引的列清单仲裁，指向
+// uq_sv2_domain / uq_sv2_net 唯一约束，所以重复规则会被同样地吞掉。
 func insertScopeRuleTx(tx *sql.Tx, companyID int64, rule ParsedScope, reason string) (inserted bool, err error) {
 	var res interface{ RowsAffected() (int64, error) }
 	switch rule.Kind {
@@ -505,10 +503,10 @@ func (s *CompanyStore) RecomputeAttribution() error {
 // for assets whose ip column cannot be parsed: try_inet skips them instead of
 // aborting the statement, so without this they would silently never receive a
 // network-based company. Callers surface the warning and it is always logged.
-// 三条归属语句都是「每个资产挑一条最优规则」的形状。PostgreSQL 用
-// DISTINCT ON (a.id) + ORDER BY 表达，SQLite 没有 DISTINCT ON，改用
-// ROW_NUMBER() OVER (PARTITION BY a.id ORDER BY …) + WHERE rn = 1——两者是同一个
-// 确定性选择：按同一个 ORDER BY 排序后取每个 a.id 的第一行。
+// 三条归属语句都是「每个资产挑一条最优规则」的形状。SQLite 没有 DISTINCT ON，
+// 改用 ROW_NUMBER() OVER (PARTITION BY a.id ORDER BY …) + WHERE rn = 1——与
+// DISTINCT ON (a.id) + ORDER BY 是同一个确定性选择：按同一个 ORDER BY 排序后取
+// 每个 a.id 的第一行。
 //
 // 其余逐条对应：
 //
@@ -516,8 +514,7 @@ func (s *CompanyStore) RecomputeAttribution() error {
 //	UPDATE assets a      → UPDATE assets（SQLite 的 UPDATE 不接受不带 AS 的表别名，
 //	 SET … FROM matched     且 WHERE 里用全名 assets.id 指回目标表）
 //	UPDATE … FROM        两边都用；SQLite 3.33+ 支持 UPDATE-FROM。CTE 在 UPDATE
-//	                      之前先物化成快照，因此不会看到自己这次写入，与 PG 的
-//	                      MVCC 快照语义一致。
+//	                      之前先物化成快照，因此不会看到自己这次写入。
 //	try_inet(a.ip)       → artex_try_inet(a.ip)（见 companyTryInet）
 //	cs.net >>= …         → artex_inet_contains(cs.net, a.ip)（见 companyInetContains）
 //	masklen(cs.net)      → artex_inet_masklen(cs.net)（见 companyInetMasklen）

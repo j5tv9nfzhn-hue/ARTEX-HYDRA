@@ -28,9 +28,9 @@ const toolCols = `key, system, description, schema, agents, enabled, kind, exec,
 
 // toolsAddAgentSQL / toolsRemoveAgentSQL 把 agents 数组的增删收敛到一处。
 //
-//	PG:     jsonb 运算符 `|| to_jsonb(...)`（追加）、`-`（删全部同值成员）、
+//	改写前：jsonb 运算符 `|| to_jsonb(...)`（追加）、`-`（删全部同值成员）、
 //	        `?`（成员存在性）
-//	SQLite: artex_json_add / artex_json_remove UDF + json_each 存在性子查询
+//	现在：  artex_json_add / artex_json_remove UDF + json_each 存在性子查询
 //
 // 三者语义逐点对齐：追加发生在「不含该成员」时（NOT EXISTS 与 NOT(?) 同义），
 // 删除清掉所有同值成员（与 jsonb `-` 一致），存在性判断按字符串值比较。
@@ -148,10 +148,10 @@ func (d *DB) RefreshToolDefaults(key, desc string, schema json.RawMessage) error
 
 func scanTool(rows interface{ Scan(...any) error }) (*Tool, error) {
 	var t Tool
-	// schema / agents / exec 是 JSON 列。pgx 交 []byte、SQLite TEXT 列交
-	// string、json.RawMessage 绑定写入的又是 BLOB、builtin 行的 exec 还可能是
-	// NULL——直接扫进 json.RawMessage 会在 string/nil 上命中 database/sql 的
-	// 盲区（详见 sqlite_json_scan.go），统一经 jsonValue 落点再赋回。
+	// schema / agents / exec 是 JSON 列。TEXT 列交 string、json.RawMessage 绑定
+	// 写入的又是 BLOB、builtin 行的 exec 还可能是 NULL——直接扫进 json.RawMessage
+	// 会在 string/nil 上命中 database/sql 的盲区（详见 sqlite_json_scan.go），
+	// 统一经 jsonValue 落点再赋回。
 	var schemaCol, agentsCol, execCol jsonValue
 	if err := rows.Scan(&t.Key, &t.System, &t.Description, &schemaCol, &agentsCol, &t.Enabled, &t.Kind, &execCol, &t.Deferred); err != nil {
 		return nil, err

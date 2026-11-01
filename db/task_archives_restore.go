@@ -66,8 +66,12 @@ WHERE relation.source_task_id=$1 LIMIT 1`, taskID).Scan(&dependent)
 	// 归档即冷存：证据快照不进归档包，直接清掉。恢复后的旧判决仍在，
 	// 但它的 evidence_ref 会失效——fetch_evidence 会明确报「未找到快照」，
 	// 属于可接受的降级（判决本身仍可采信）。
-	if _, err := tx.Exec(`DELETE FROM reviewer_evidence WHERE task_id=$1`, taskID); err != nil {
-		return err
+	// 表可能已随 Reviewer 下线而不存在（见 tableExists 的说明），存在才清：
+	// 否则新库上这句会报 no such table 并让整个归档事务回滚。
+	if tableExists(tx, "reviewer_evidence") {
+		if _, err := tx.Exec(`DELETE FROM reviewer_evidence WHERE task_id=$1`, taskID); err != nil {
+			return err
+		}
 	}
 	if _, err := tx.Exec(`DELETE FROM llm_records WHERE COALESCE(task_id,'')=$1`, strconv.FormatInt(taskID, 10)); err != nil {
 		return err
@@ -145,7 +149,7 @@ WHERE id=$1`, archiveID, ArchiveReady, archivePath, sha256, originalSize, compre
 	return tx.Commit()
 }
 
-// RestoreTaskArchive restores PostgreSQL rows from a verified manifest. It is
+// RestoreTaskArchive restores rows from a verified manifest. It is
 // idempotent for accounting/traffic retry scenarios and returns non-fatal
 // warnings for global objects that intentionally are not recreated.
 func (d *DB) RestoreTaskArchive(archiveID int64, snapshot *TaskArchiveSnapshot, remainingTimeoutSeconds int64) ([]string, error) {
@@ -365,7 +369,6 @@ func restoreTaskStub(tx *sql.Tx, row map[string]any, taskID, remaining int64) er
 //
 // SQLite 没有布尔类型，tasks.paused 是 INTEGER：导出时 jsonSafeValue 拿到
 // int64(0/1) 会原样编码成 JSON 数字，所以这里要同时接受数字、布尔和字符串。
-// PostgreSQL 侧同一列是真 BOOLEAN，走 json_populate_record 时不存在这层转换。
 func archiveBool(v any) bool {
 	switch t := v.(type) {
 	case bool:

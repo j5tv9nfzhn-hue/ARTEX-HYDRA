@@ -20,7 +20,7 @@ import (
 //   - 熔断状态进程级共享(s.llmHealth),重建 pool 不清空。
 
 // newLLMHealthRegistry builds the process-wide circuit-breaker registry, mirroring
-// state into PG so a cooling-off window survives a restart. Writes are async and
+// state into the database so a cooling-off window survives a restart. Writes are async and
 // best-effort — the in-memory copy is authoritative.
 func newLLMHealthRegistry(pg *db.DB) *llmpool.Registry {
 	if pg == nil {

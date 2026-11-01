@@ -29,18 +29,16 @@ import (
 //
 //	unsupported Scan, storing driver.Value type string into type *jsontext.Value
 //
-// 实测矩阵（Go 1.27.2 / modernc.org/sqlite v1.52.0 / pgx v5.10.0）：
+// 实测矩阵（Go 1.27.2 / modernc.org/sqlite v1.52.0）：
 //
 //	列形态          驱动交出的源类型   dest = *json.RawMessage
-//	PG  JSONB       []byte             成功（两边类型完全相同，反射兜底直接 Set）
 //	SQLite TEXT     string             失败 ← 本 bug
 //	SQLite BLOB     []byte             成功（同上）
 //	任意             nil                失败
 //
-// 也就是说：PostgreSQL 侧一直正常，是因为 pgx 把 JSONB 交成了 []byte，恰好撞在
-// 「类型相同」这条反射兜底上；SQLite 把 JSON 存在 TEXT 列、交出 string，就掉进
-// 了没有分支的空档。这不是 SQLite 驱动的缺陷，而是列的存储类型差异暴露了
-// database/sql 的一个盲点。
+// 也就是说：BLOB 列一直正常，是因为驱动交出 []byte，恰好撞在「类型相同」这条
+// 反射兜底上；而 JSON 存在 TEXT 列、交出 string，就掉进了没有分支的空档。这不是
+// 驱动的缺陷，而是列的存储类型差异暴露了 database/sql 的一个盲点。
 //
 // ── 为什么字段类型仍然是 json.RawMessage ─────────────────────────────────────
 //
@@ -84,7 +82,7 @@ var (
 	_ json.Unmarshaler = (*jsonValue)(nil)
 )
 
-// Scan 实现 sql.Scanner，三种源都要接：PG 交 []byte、SQLite 的 TEXT 列交 string、
+// Scan 实现 sql.Scanner，三种源都要接：BLOB 列交 []byte、TEXT 列交 string、
 // 空列交 nil。
 //
 // 字节一律复制一份再存（源是 string 时本来就要新建底层数组；源是 []byte 时
@@ -108,11 +106,9 @@ func (v *jsonValue) Scan(src any) error {
 
 // Value 实现 driver.Valuer，写库时固定交 []byte。
 //
-// 固定字节而不是字符串，是为了让两个引擎落到同一种归档内容：PG 侧 pgx 收到
-// []byte 会按 JSON 文本解析后写进 JSONB 列，与改动前传 `string(c.Config)`
-// 得到的值完全一致（PG 对 JSONB 参数一律先按 JSON 文本解析，字节还是字符串
-// 只影响传输编码，不影响存进去的 JSON 值）；SQLite 侧驱动把 []byte 原样写进
-// TEXT 列。
+// 固定字节而不是字符串，是为了让归档内容稳定：驱动收到 []byte 会原样写进 TEXT
+// 列，与传 `string(c.Config)` 得到的字节一致（只影响传输编码，不影响存进去的
+// JSON 值）。
 //
 // SQL NULL 走 nil，好让「没配过」与「配了空对象 {}」在库里继续可区分。
 func (v jsonValue) Value() (driver.Value, error) {
@@ -127,9 +123,8 @@ func (v jsonValue) Value() (driver.Value, error) {
 // 判定用 json.Valid：内容本身就是一份 JSON 就**原样内联**，否则当成普通字符串
 // 加引号输出。
 //
-// 为什么必须这么判，而不是无条件内联：PostgreSQL 侧这些列是 JSONB，pgx 交出来的
-// 是「已经解析过的 JSON 值」。如果这里把内容降级成字符串，通知归档里同一个字段
-// 就会从 {"a":1} 变成 "{\"a\":1}"——归档格式在两个引擎之间分叉，而分叉的是
+// 为什么必须这么判，而不是无条件内联：这些列存的就是一份 JSON。如果这里把内容
+// 降级成字符串，通知归档里同一个字段就会从 {"a":1} 变成 "{\"a\":1}"——而分叉的是
 // **已经落库的历史数据**，事后没法对齐。
 //
 // 为什么不用 jsontext.Value 自带的 MarshalJSON：它是按 v1 json.RawMessage 的行为
@@ -142,7 +137,7 @@ func (v jsonValue) Value() (driver.Value, error) {
 //
 // 判定条件收紧成「整段内容（去掉首尾空白后）本身就是合法 JSON」才内联，于是：
 //
-//   - 内容是 JSON（对象/数组/数字/字符串/布尔/null）→ 原样内联，与 PG 行为一致；
+//   - 内容是 JSON（对象/数组/数字/字符串/布尔/null）→ 原样内联；
 //   - 内容是裸文本、半截 JSON、带尾随垃圾 → 当普通字符串输出，不会污染外层文档。
 //
 // 代价是「内容恰好长得像 JSON 的普通文本」会被内联：比如某列存的字面文本

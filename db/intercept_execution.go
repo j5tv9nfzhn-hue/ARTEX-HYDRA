@@ -34,9 +34,9 @@ func (d *DB) GetInterceptExecution(id int64) (*InterceptExecution, error) {
 	var scope any
 	if approval.ConversationID != nil {
 		scope = *approval.ConversationID
-		// 这条查询里唯一的方言点是两个表达式位的 ::type（NULL::bigint / NULL::integer，
-		// SQLite 报 unrecognized token ":"）。PG 语句逐字保留，SQLite 版本见
-		// dialect_intercept.go 的逐条等价性论证。
+		// 这条查询里唯一的替换点是两个表达式位的 ::type（NULL::bigint / NULL::integer，
+		// SQLite 报 unrecognized token ":"）。替换后的版本与逐条等价性论证见
+		// dialect_intercept.go。
 		query = interceptConversationActivitiesSQLite
 	} else if approval.TaskID != nil {
 		taskID, parseErr := strconv.ParseInt(*approval.TaskID, 10, 64)

@@ -77,7 +77,7 @@
         "to_ids": false,
         "disable_correlation": true,
         "value": "exploration_nodes",
-        "comment": "ARTEX exploration-graph table in its PostgreSQL store (db/schema.sql); with exploration_edges/exploration_anchors/assets/companies/activity and an agent_prompts seed it forms the ARTEX dual-graph schema. Host-triage lead checked by inspecting the database, not a blocking IoC."
+        "comment": "ARTEX exploration-graph table in its SQLite store (db/schema_sqlite.sql); with exploration_edges/exploration_anchors/assets/companies/activity and an agent_prompts seed it forms the ARTEX dual-graph schema. Host-triage lead checked by inspecting the database file, not a blocking IoC."
       }
     ]
   }

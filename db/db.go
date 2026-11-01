@@ -22,9 +22,8 @@ var schemaSQLiteSQL string
 
 // DSN resolves the SQLite connection string and reports where it came from.
 //
-// Unlike the PostgreSQL backend this replaces, there is no configuration that can
-// be missing: the database is a file next to the config file, created on first
-// open. source is retained for the startup log line so an operator can see which
+// There is no configuration that can be missing: the database is a file next to
+// the config file, created on first open. source is retained for the startup log line so an operator can see which
 // path was used.
 func DSN() (dsn, source string, err error) {
 	return config.SQLiteDSN(),
@@ -584,4 +583,28 @@ func AdvisoryLock(ctx context.Context, tx *sql.Tx, key int64) error {
 // schema is applied on the single connection that opens the database.
 func coordinateWithSchemaMigration(tx *sql.Tx) error {
 	return advisoryLock(context.Background(), tx, 0)
+}
+
+// queryRower is the shared surface of *sql.DB and *sql.Tx, so scalar helpers
+// work both inside and outside a transaction.
+type queryRower interface {
+	QueryRow(query string, args ...any) *sql.Row
+}
+
+// tableExists reports whether a SQLite table is present.
+//
+// It exists for the leftovers of decommissioned tables: reviewer_verdicts and
+// reviewer_evidence had their CREATE TABLE dropped from schema_sqlite.sql, but
+// the delete cascade and the archive purge still DELETE from them. Databases
+// upgraded from an older build keep both tables (retained as audit data), where
+// dropping the statements would let orphan rows pile up; databases created from
+// the current schema have no such tables, where keeping them makes the DELETE
+// fail with "no such table" and roll the whole transaction back. So the callers
+// fork on existence instead of choosing one shape.
+func tableExists(q queryRower, table string) bool {
+	var n int
+	if err := q.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=$1`, table).Scan(&n); err != nil {
+		return false
+	}
+	return n > 0
 }

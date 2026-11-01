@@ -76,11 +76,9 @@ func (s *AssetStore) upsertTaskScopeResult(ts TaskScope) (bool, error) {
 	if src == "" {
 		src = "auto"
 	}
-	// 参数位上的 ::cidr 直接去掉：pgx 会把 `$5::cidr` 当成一个名叫 "5::cidr"
-	// 的参数（PostgreSQL 侧报 missing named argument，SQLite 侧则把 $5 当纯
-	// 位置参数、找不到名字）。net 列在 SQLite 侧已是 TEXT（schema_sqlite.sql:685），
-	// 存进去的就是字符串，无需转换；PostgreSQL 侧该参数由目标列 net CIDR 推出
-	// 同样的类型，两边语义一致。
+	// 参数位上的 ::cidr 直接去掉：`$5::cidr` 会被当成一个名叫 "5::cidr" 的参数而
+	// 报 missing named argument。net 列是 TEXT（schema_sqlite.sql:685），存进去的
+	// 就是字符串，无需转换。
 	query := `
 INSERT INTO task_scope(task_id, kind, company_id, domain, net, value, source, reason)
 VALUES ($1,$2,$3,$4,$5,$6,$7,NULLIF($8,''))
@@ -306,8 +304,7 @@ func (s *AssetStore) CoverageEnabled(taskID int64) bool {
 
 // task_scope→assets match predicate, reused by the count / by-type / untested
 // queries. $1=taskID. The CTE itself moved to db/dialect_dml.go because its
-// `>>=` / try_inet / regexp_replace predicate is PostgreSQL-only; this thin
-// wrapper picks the right text for the active engine.
+// `>>=` / try_inet / regexp_replace predicate needs the artex_scope_* UDFs.
 
 // TaskCoverage computes rough per-type coverage for a task. taskID indexes
 // task_scope + assets; expID indexes the fact anchors. Reference figure only.

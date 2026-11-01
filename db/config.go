@@ -446,8 +446,8 @@ func (d *DB) deleteProfile(ctx context.Context, id int64) (bool, error) {
 	// same order: the old profile -> child order deadlocked with a setter's child
 	// -> profile order. Sorting also gives concurrent profile deletions a stable
 	// order when their chains overlap multiple tasks.
-	// 行锁片段按引擎取：PG 保留 FOR UPDATE [OF t]，SQLite 没有行锁、返回空串，
-	// 而锁要防的东西（WAL 下的库级写锁互斥）由 SQLite 自己提供，见 dialect_locking.go。
+	// 这里不写行锁子句（见 dialect_locking.go）：SQLite 没有行锁，而锁要防的东西
+	// （WAL 下的库级写锁互斥）由 SQLite 自己提供。
 	lockedTasks, err := lockProfileReferenceRows(ctx, tx, `SELECT t.id
 FROM tasks t
 WHERE t.llm_profile_id=$1
@@ -824,7 +824,7 @@ func (d *DB) SetAgentLLMProfile(key string, id *int64) error {
 
 	// DeleteProfile locks reference rows before the profile row. Keep the same
 	// order here so a concurrent rebind cannot form a child/profile deadlock.
-	// 行锁子句按引擎取：PG 保留 FOR UPDATE，SQLite 返回空串（见 dialect_locking.go）。
+	// 这里不写行锁子句：SQLite 没有行锁（见 dialect_locking.go）。
 	var agentID int64
 	if err := tx.QueryRow(`SELECT id FROM agents WHERE key=$1`, key).Scan(&agentID); err != nil {
 		if err == sql.ErrNoRows {

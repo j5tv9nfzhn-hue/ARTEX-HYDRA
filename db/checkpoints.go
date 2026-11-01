@@ -116,7 +116,7 @@ func (d *DB) CaptureCheckpoint(ctx context.Context, scope, reason, summary strin
 	if err := tx.QueryRowContext(ctx, `
 INSERT INTO checkpoints(scope, seq, reason, status, summary, snapshot_json)
 VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-		scope, seq, reason, CheckpointActive, summary, string(jsonbClean(snapB))).Scan(&id); err != nil {
+		scope, seq, reason, CheckpointActive, summary, string(jsonTextClean(snapB))).Scan(&id); err != nil {
 		return nil, err
 	}
 	// 保留上限：只删最旧的超出部分，superseded 与 active 一视同仁（时间线历史）。

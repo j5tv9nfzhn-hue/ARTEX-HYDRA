@@ -114,7 +114,7 @@ func (f deferredToolStub) InputSchema() map[string]any            { return map[s
 func (f deferredToolStub) IsReadOnly(json.RawMessage) bool        { return true }
 func (f deferredToolStub) IsConcurrencySafe(json.RawMessage) bool { return true }
 func (f deferredToolStub) CheckPermissions(context.Context, json.RawMessage, permission.Context) permission.Decision {
-	// 替身不参与权限判定：一律放行。与 intent_budget_test.go 的 countingTool
+	// 替身不参与权限判定：一律放行。与 tools_concurrency_shell_test.go 的 countingTool
 	// 同一个写法 —— 本文件测的是 DeferredInfo 的名字不变式，不是权限。
 	return permission.Decision{Behavior: permission.Allow}
 }

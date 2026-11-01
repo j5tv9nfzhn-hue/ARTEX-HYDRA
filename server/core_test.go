@@ -15,9 +15,10 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
-// TestCoreTaskLifecyclePG exercises the migrated core (tasks/exploration on PG)
-// through the real HTTP mux: create → goal nodes seeded → list → delete cascade.
-func TestCoreTaskLifecyclePG(t *testing.T) {
+// TestCoreTaskLifecycle exercises the migrated core (tasks/exploration in the
+// database) through the real HTTP mux: create → goal nodes seeded → list →
+// delete cascade.
+func TestCoreTaskLifecycle(t *testing.T) {
 	m, err := NewManager(t.TempDir(), "")
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +62,7 @@ func TestCoreTaskLifecyclePG(t *testing.T) {
 		return code, out
 	}
 
-	// create a task → 201, returns PG task (string id + exploration_id)
+	// create a task → 201, returns the task (string id + exploration_id)
 	code, out := doRetry("POST", "/api/tasks", map[string]string{"description": "smoke", "goal": "测试 SQLi/XSS"})
 	if code != 201 {
 		t.Fatalf("create task: %d (%v)", code, out)
@@ -164,7 +165,7 @@ func TestCoreTaskLifecyclePG(t *testing.T) {
 		}
 	}
 	if got, _ := m.pg.GetTask(nid); got != nil {
-		t.Fatalf("task should be deleted from PG")
+		t.Fatalf("task should be deleted from the database")
 	}
 	if finding, err := m.pg.GetFinding(findingID); err != nil || finding != nil {
 		t.Fatalf("finding should be deleted, got finding=%+v err=%v", finding, err)

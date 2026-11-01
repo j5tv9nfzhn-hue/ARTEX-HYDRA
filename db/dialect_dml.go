@@ -10,7 +10,7 @@ import (
 )
 
 // =====================================================================
-// DML / 谓词方言层（PostgreSQL ↔ SQLite）
+// 写语句与范围匹配谓词
 // =====================================================================
 //
 // 文件名沿用 dialect_* 的叫法，和 db/dialect_mixed.go（锁与类型转换）、
@@ -31,39 +31,34 @@ import (
 //
 //	    WITH inserted AS (INSERT ... RETURNING *) SELECT ... FROM inserted
 //
-//	PostgreSQL 允许在 WITH 里放 INSERT/UPDATE/DELETE（"data-modifying CTE"，
-//	PG 7 引入），并且外层 SELECT 能读到 CTE 的 RETURNING 结果。SQLite 只把
-//	SELECT 放进 CTE：CTE 的表值主体解析出来必须是一个 SELECT，INSERT / UPDATE
-//	一进去就报 `near "INSERT": syntax error`。
+//	SQLite 只把 SELECT 放进 CTE：CTE 的表值主体解析出来必须是一个 SELECT，
+//	INSERT / UPDATE 一进去就报 `near "INSERT": syntax error`。
 //
-//	SQLite 的等价物是**顶层** `INSERT/UPDATE ... RETURNING`：
+//	因此改用**顶层** `INSERT/UPDATE ... RETURNING`：
 //	  - RETURNING 自 3.35.0 起就是语句的一部分，不依赖 CTE；
 //	  - `ON CONFLICT DO NOTHING` 命中冲突时不写任何行，RETURNING 就返回 0 行；
 //	  - RETURNING 的输出表达式可以是任意 SQLite 表达式，包括常量
 //	    （原外层 SELECT 里的 `0`）和标量子查询（原 CTE 里算 task_count 的
 //	    `(SELECT count(*) ...)`）。
-//	这几条都用本机 modernc.org/sqlite v1.52.0 实测过，因此语句在两个引擎上
-//	可以写成**字面相同**的一条，不需要方言分支；"插入还是冲突"一律交给 Go 侧
-//	按返回行数（sql.ErrNoRows）判断。
+//	这几条都用本机 modernc.org/sqlite v1.52.0 实测过，因此语句可以写成一条，
+//	不需要分支；"插入还是冲突"一律交给 Go 侧按返回行数（sql.ErrNoRows）判断。
 //
 //	B. **范围匹配谓词**（db/task_scope.go 的 covTargetCTE）
 //
 //	    ts.net >>= try_inet(a.ip)
 //	    lower(regexp_replace(COALESCE(a.icp,''), '[[:space:]]+', '', 'g')) = ts.value
 //
-//	`>>=` 是 PostgreSQL 的"是否被包含"运算符（inet/cidr 专有），`try_inet()`
-//	与 `regexp_replace()` 同为 PostgreSQL 函数。SQLite 三样都没有，而且
-//	`>>=` 是**中缀运算符**，SQLite 不提供运算符重载机制，任何标量函数都顶不上。
-//	只能把整个谓词搬进 Go：注册 artex_scope_* 标量函数，SQLite 侧拼成
-//	`artex_scope_net_contains(ts.net, a.ip)` 这种函数调用。
+//	`>>=` 是"是否被包含"运算符，`try_inet()` 与 `regexp_replace()` 也是函数。
+//	SQLite 三样都没有，而且 `>>=` 是**中缀运算符**，SQLite 不提供运算符重载机制，
+//	任何标量函数都顶不上。只能把整个谓词搬进 Go：注册 artex_scope_* 标量函数，
+//	拼成 `artex_scope_net_contains(ts.net, a.ip)` 这种函数调用。
 //
 //	函数调用在这里比"拼 EXISTS (SELECT 1 FROM json_each(...))"片段更合适：
 //	值只是普通实参，调用处永远只写列名，没有任何把用户值拼进 SQL 的机会。
 //
 //	函数名统一带 `artex_scope_` 前缀而不是直接注册 `try_inet` / `regexp_replace`
-//	这两个 PostgreSQL 原名：任务范围谓词在 db/task_assets_context.go 里还有另外
-//	两份同样写法（contextCoverageCTE / scopeTargetCTE），用中性前缀注册可以
-//	避免和那些迁移分支的命名撞车。
+//	这些名字：任务范围谓词在 db/task_assets_context.go 里还有另外两份同样写法
+//	（contextCoverageCTE / scopeTargetCTE），用中性前缀注册可以避免命名撞车。
 //
 // ---------------------------------------------------------------------
 // 已知残留（不在本文件的责任范围）
@@ -103,8 +98,8 @@ func init() {
 // 顶层 `INSERT ... RETURNING id, name, nkey, 0, created_at, updated_at` 后列序
 // 与 scanTaskCategory 完全一致，返回的还是同一行。
 //
-// 冲突判定：PostgreSQL 与 SQLite 的 `ON CONFLICT (nkey) DO NOTHING` 在冲突时
-// 都是"一条都没写"，于是 RETURNING 返回 0 行 → database/sql 交回
+// 冲突判定：`ON CONFLICT (nkey) DO NOTHING` 在冲突时"一条都没写"，于是 RETURNING
+// 返回 0 行 → database/sql 交回
 // sql.ErrNoRows → 调用方映射成 ErrTaskCategoryNameConflict。语义一致。
 const taskCategoryInsertQuery = `
 INSERT INTO task_categories(name, nkey)
@@ -119,19 +114,19 @@ RETURNING id, name, nkey, 0, created_at, updated_at`
 // 事是算 task_count，而 SQLite 的 RETURNING 里可以直接写标量子查询（已实测），
 // 所以整条塌回一条顶层 UPDATE：
 //
-//	PG:     WITH updated AS (UPDATE ... RETURNING *)
+//	改写前：WITH updated AS (UPDATE ... RETURNING *)
 //	             SELECT updated.id, ..., (SELECT count(*) FROM tasks
 //	                                      WHERE category_id=updated.id AND deleted_at IS NULL), ...
-//	SQLite: UPDATE ... RETURNING id, name, nkey,
+//	现在：  UPDATE ... RETURNING id, name, nkey,
 //	                       (SELECT count(*) FROM tasks
 //	                        WHERE category_id=task_categories.id AND deleted_at IS NULL), ...
 //
 // 两条里的表名引用指向同一张被更新的表（相关子查询），过滤条件
 // `deleted_at IS NULL` 逐字照搬。0 行 = 分类不存在 → ErrTaskCategoryNotFound。
 //
-// 附带说明：SQLite 上 RETURNING 的 updated_at 是**触发器改写之前**的值
-// （RETURNING 不反映触发器的改动），PostgreSQL 上是 BEFORE UPDATE 触发器改写
-// 之后的值。这个字段是时间戳、没有任何调用点拿它做判定，属于已知的可接受差异。
+// 附带说明：SQLite 上 RETURNING 的 updated_at 是**触发器改写之前**的值（RETURNING
+// 不反映触发器的改动）。这个字段是时间戳、没有任何调用点拿它做判定，属于已知的
+// 可接受差异。
 const taskCategoryRenameQuery = `
 UPDATE task_categories SET name=$2, nkey=$3 WHERE id=$1
 RETURNING id, name, nkey,
@@ -142,7 +137,7 @@ RETURNING id, name, nkey,
 // 挂分类。`EXISTS(SELECT 1 FROM task_categories WHERE id=$2)` 就是原
 // `EXISTS (SELECT 1 FROM selected)` 的内联形式（SQLite 的 CTE 里不能放 DML，
 // 但普通子查询可以），所以"分类不存在"和"任务不存在"两种情况都会在这里
-// 收敛成 0 行，由 Go 侧区分——与 PostgreSQL 分支的 0 行路径完全一致。
+// 收敛成 0 行，由 Go 侧区分。
 const taskCategoryAssignSQLiteUpdate = `
 UPDATE tasks SET category_id=$2
 WHERE id=$1 AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM task_categories WHERE id=$2)
@@ -150,8 +145,8 @@ RETURNING id`
 
 // taskCategoryAssignSQLiteSelect 是第 2 步：拿改完之后的分类行。
 // 与 taskCategoryCols 同一套投影（LEFT JOIN + count FILTER），因此返回的
-// task_count 已经是本次移动之后的值，和 PostgreSQL 分支外层 SELECT 里的标量
-// 子查询读到的口径相同。第 1 步是写语句、事务一开就拿到 SQLite 的写锁
+// task_count 已经是本次移动之后的值，与改写前外层 SELECT 里的标量子查询读到的
+// 口径相同。第 1 步是写语句、事务一开就拿到 SQLite 的写锁
 // （DSN 的 _txlock=immediate），两步之间不会有别的连接插进来。
 const taskCategoryAssignSQLiteSelect = `
 SELECT ` + taskCategoryCols + `
@@ -168,9 +163,7 @@ RETURNING id`
 
 // taskCategoryBatchMoveStmt 组装批量改分类的语句与参数。
 //
-// PostgreSQL 分支保持原有的 $1=taskIDs[]、$2=categoryID 的绑定顺序，因此语句与
-// 参数都与改写前逐字一致；SQLite 分支把 $1 让给 categoryID，任务 id 从 $2 开始
-// 顺序展开。
+// 绑定顺序：$1=categoryID，任务 id 从 $2 开始顺序展开。
 func taskCategoryBatchMoveStmt(args *[]any, taskIDs []int64, categoryID *int64) string {
 	*args = append(*args, categoryID)
 	return taskCategoryBatchMoveSQLiteHead + appendInPlaceholders(args, taskIDs) + taskCategoryBatchMoveSQLiteTail
@@ -178,11 +171,11 @@ func taskCategoryBatchMoveStmt(args *[]any, taskIDs []int64, categoryID *int64) 
 
 // covTargetCTESQLite 是「任务范围 → 资产」的匹配 CTE。
 //
-// 【P4】它原本还有一份 PostgreSQL 版本（covTargetCTEPG），逐行相同、只有两处
-// 表达式不同。ARTEX 只用 SQLite，那份没有调用方的副本已经删掉——保留一个
-// 永远不执行的 SQL 常量，只会让后来的人误以为存在第二条代码路径。
+// 【P4】它原本还有一份逐行相同、只有两处表达式不同的副本（covTargetCTEPG）。
+// ARTEX 只用 SQLite，那份没有调用方的副本已经删掉——保留一个永远不执行的 SQL
+// 常量，只会让后来的人误以为存在第二条代码路径。
 //
-// 与 PostgreSQL 写法的两处对应关系，记录在这里而不是留在代码里：
+// 两处表达式的对应关系，记录在这里而不是留在代码里：
 //
 //	ts.net >>= try_inet(a.ip)                    （cidr 是否包含该 inet）
 //	    → artex_scope_net_contains(ts.net, a.ip)
@@ -190,7 +183,7 @@ func taskCategoryBatchMoveStmt(args *[]any, taskIDs []int64, categoryID *int64) 
 //	    → artex_scope_icp_key(x)
 //
 // 两个函数都是自定义 SQL 函数（见 scopeNetContains / scopeICPKey 的注释与
-// 注册处），语义与 PostgreSQL 原式等价，包括 inet 为 NULL 时不命中的行为。
+// 注册处），语义包括"值为 NULL 时不命中"这一条。
 const covTargetCTESQLite = `
 target AS (
   SELECT DISTINCT a.id, a.type,
@@ -223,11 +216,11 @@ func covTargetCTE() string {
 // B 的 SQLite 实现
 // ---------------------------------------------------------------------
 
-// scopeNetContainsFunc 实现 `ts.net >>= try_inet(a.ip)`。
+// scopeNetContainsFunc 实现任务范围的「网段包住这个 IP 吗」谓词。
 //
-// 两个入参都是纯文本（SQLite schema 里 task_scope.net 与 assets.ip 都是 TEXT），
-// 没有 NULL 以外的特殊形态；解析不了就返回 0，对应 PostgreSQL 里 try_inet()
-// 返回 NULL → 比较结果为 NULL → WHERE 不命中。
+// 两个入参都是纯文本（schema 里 task_scope.net 与 assets.ip 都是 TEXT），没有
+// NULL 以外的特殊形态；解析不了就返回 0（不命中），等价于"解析失败 → 比较结果为
+// NULL → WHERE 不命中"。
 func scopeNetContainsFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) < 2 {
 		return int64(0), nil
@@ -238,17 +231,14 @@ func scopeNetContainsFunc(_ *sqlite.FunctionContext, args []driver.Value) (drive
 	return int64(0), nil
 }
 
-// scopeNetContains 判断 addr 是否落在 cidrText 指定的网段里，等价于 PostgreSQL 的
-// `cidr >>> inet`。
+// scopeNetContains 判断 addr 是否落在 cidrText 指定的网段里。
 //
-// 三点与 PostgreSQL 对齐：
-//   - 地址族不同（v4 网段 vs v6 地址）时 PostgreSQL 的 `>>>` 返回 false 而不是
-//     报错，这里同样返回 false；
-//   - PostgreSQL 会把 cidr 的主机位清零（Go 侧存进去的 '10.0.188.136/32'
-//     读出来仍是 '10.0.188.136/32'），这里直接用 ParseCIDR 返回的 *IPNet.IP
-//     （已按掩码对齐）作比较基准；
-//   - 裸 IP（没有 "/"，Go 侧只在个别老数据里可能出现）按 /32 或 /128 处理，
-//     与 PostgreSQL 的 inet 裸值语义一致。
+// 三条语义约定：
+//   - 地址族不同（v4 网段 vs v6 地址）时返回 false 而不是报错；
+//   - 网段按"主机位已清零"比较（Go 侧存进去的 '10.0.188.136/32' 读出来仍是
+//     '10.0.188.136/32'），这里直接用 ParseCIDR 返回的 *IPNet.IP（已按掩码
+//     对齐）作比较基准；
+//   - 裸 IP（没有 "/"，Go 侧只在个别老数据里可能出现）按 /32 或 /128 处理。
 func scopeNetContains(cidrText, addrText string) bool {
 	mask, bits, base, ok := parseScopeCIDR(cidrText)
 	if !ok {
@@ -264,7 +254,7 @@ func scopeNetContains(cidrText, addrText string) bool {
 		addr = addr.To16()
 	}
 	if addr == nil || len(addr)*8 != bits {
-		return false // 地址族不一致（v4 网段 vs v6 地址，PG 的 >>> 也是 false）
+		return false // 地址族不一致（v4 网段 vs v6 地址）
 	}
 	return addr.Mask(mask).Equal(base)
 }
@@ -306,12 +296,11 @@ func scopeICPKeyFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Val
 //
 // `'[[:space:]]+'` 配 'g' 标志就是"把每一处连续空白整段删掉"（不是替换成单个
 // 空格），所以实现是纯过滤而不是替换。空白判定用 unicode.IsSpace，它覆盖
-// ASCII 的 space/\t/\n/\v/\f/\r（与 PostgreSQL 的 [[:space:]] 一致）外加
-// NBSP、U+3000 等 Unicode 空白；ICP 备案值里出现这些的概率极低，多认几种
-// 空白不会改变业务判定。
+// ASCII 的 space/\t/\n/\v/\f/\r（与 POSIX 的 [[:space:]] 一致）外加 NBSP、
+// U+3000 等 Unicode 空白；ICP 备案值里出现这些的概率极低，多认几种空白不会改变
+// 业务判定。
 //
-// 大小写折叠用 strings.ToLower 而不是 SQLite 的 lower()：后者只处理 ASCII，
-// 而 PostgreSQL 的 lower() 按 C.UTF-8 collation 会折叠 Unicode。
+// 大小写折叠用 strings.ToLower 而不是 SQLite 的 lower()：后者只处理 ASCII。
 func scopeICPKey(s string) string {
 	return strings.ToLower(strings.Map(func(r rune) rune {
 		if unicode.IsSpace(r) {

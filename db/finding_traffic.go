@@ -111,7 +111,7 @@ type PreparedTrafficEvidence struct {
 	Snapshot TrafficEvidenceSnapshot
 }
 
-// Normalize makes the snapshot's text columns safe for PostgreSQL. URL and the
+// Normalize makes the snapshot's text columns safe to store. URL and the
 // head blocks come straight off the wire, so a target answering with a non-UTF-8
 // header (a GBK `Content-Disposition: filename=…`, a NUL byte) would otherwise
 // abort the INSERT and roll back the whole finding — losing a confirmed finding
@@ -251,10 +251,10 @@ func FindingTrafficTx(tx *sql.Tx, findingID int64) (*FindingTraffic, error) {
 		}
 		return nil, err
 	}
-	// to_jsonb(<row>) serialises a whole row inside SQL. PostgreSQL has it;
-	// SQLite does not, and because it resolves an unknown name as a column
-	// reference first, the failure surfaces as "no such column: s" -- the
-	// alias -- rather than as the missing function.
+	// There is no SQL function that serialises a whole row, and because SQLite
+	// resolves an unknown name as a column reference first, trying it would
+	// surface as "no such column: s" -- the alias -- rather than as a missing
+	// function.
 	//
 	// So select the snapshot's columns and rebuild the object in Go, the same
 	// way db/rowjson.go does for the finding retest snapshot. `s.*` keeps the
@@ -407,6 +407,13 @@ type RecordFindingInput struct {
 	TaskID, ExplorationID, IntentID                      int64
 	VulnClass, Name, Severity, Summary, Evidence, Worker string
 	AssetIDs                                             []int64
+	// 反证闭环（移植自 Strix reporting 工具的必填四项，见 agent 侧
+	// validateFindingAnalysis）。落库而非只留上下文：复核与报告阶段要能看到
+	// 「上报者当时认为哪里可能不成立」，否则复核只能重新做一遍推理。
+	Counterevidence          string
+	Confidence               string
+	ConfidenceRationale      string
+	SeverityChangeConditions string
 }
 
 type RecordedFinding struct {
@@ -439,7 +446,8 @@ func RecordFindingTx(ctx context.Context, tx *sql.Tx, in RecordFindingInput, pre
 			return nil, errors.New("intent_id 必须是本任务的意图（关联任务意图只读）")
 		}
 	}
-	payload, _ := json.Marshal(map[string]any{"vulnclass": in.VulnClass, "name": in.Name, "severity": in.Severity, "summary": in.Summary, "evidence": map[string]any{"by": in.Worker, "poc": in.Evidence}})
+	payload, _ := json.Marshal(map[string]any{"vulnclass": in.VulnClass, "name": in.Name, "severity": in.Severity, "summary": in.Summary, "evidence": map[string]any{"by": in.Worker, "poc": in.Evidence},
+		"counterevidence": in.Counterevidence, "confidence": in.Confidence, "confidence_rationale": in.ConfidenceRationale, "severity_change_conditions": in.SeverityChangeConditions})
 	out := &RecordedFinding{}
 	if err := tx.QueryRow(`INSERT INTO exploration_nodes(exploration_id,kind,payload,priority,state,origin)
 VALUES($1,'finding',$2,9,'confirmed',$3) RETURNING id`, in.ExplorationID, string(payload), in.Worker).Scan(&out.NodeID); err != nil {
@@ -460,8 +468,11 @@ VALUES($1,'finding',$2,9,'confirmed',$3) RETURNING id`, in.ExplorationID, string
 		assets = []int64{}
 	}
 	raw, _ := json.Marshal(assets)
-	if err := tx.QueryRow(`INSERT INTO findings(task_id,node_id,vulnclass,name,severity,summary,evidence,worker,asset_ids)
-VALUES(NULLIF($1,0),$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`, in.TaskID, out.NodeID, in.VulnClass, in.Name, in.Severity, in.Summary, in.Evidence, in.Worker, string(raw)).Scan(&out.FindingID); err != nil {
+	if err := tx.QueryRow(`INSERT INTO findings(task_id,node_id,vulnclass,name,severity,summary,evidence,worker,asset_ids,
+counterevidence,confidence,confidence_rationale,severity_change_conditions)
+VALUES(NULLIF($1,0),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+		in.TaskID, out.NodeID, in.VulnClass, in.Name, in.Severity, in.Summary, in.Evidence, in.Worker, string(raw),
+		in.Counterevidence, in.Confidence, in.ConfidenceRationale, in.SeverityChangeConditions).Scan(&out.FindingID); err != nil {
 		return nil, err
 	}
 	// 在**同一事务**里登记一条推送事件：提交即保证「漏洞落库」与「推送任务存在」

@@ -18,11 +18,10 @@ import (
 
 // isSQLiteDSN distinguishes the two drivers from the DSN itself.
 //
-// Both are driver-owned DSNs rather than raw connection parameters, so the
-// scheme is the discriminator: modernc.org/sqlite uses a URI ("file:..."),
-// pgx uses a postgres:// URL. An empty DSN is treated as PostgreSQL because
-// that is what every existing caller has always passed, and failing later at
-// sql.Open gives a clearer error than silently opening the wrong database.
+// The DSN is driver-owned rather than raw connection parameters, so the scheme
+// is the discriminator: modernc.org/sqlite uses a URI ("file:..."). An empty DSN
+// is rejected rather than silently accepted, because failing at sql.Open gives a
+// clearer error than opening something unintended.
 func isSQLiteDSN(dsn string) bool {
 	s := strings.TrimSpace(dsn)
 	return strings.HasPrefix(strings.ToLower(s), "file:")
@@ -80,8 +79,8 @@ func sqliteStatements(script string) []string {
 
 // applySQLiteSchema runs the translated schema.
 //
-// Unlike PostgreSQL this needs no advisory lock: the schema is a single
-// connection's work and SQLite serialises writers at the file level anyway.
+// No advisory lock is needed: the schema is a single connection's work and
+// SQLite serialises writers at the file level anyway.
 func applySQLiteSchema(ctx context.Context, con *sql.Conn) error {
 	stmts := sqliteStatements(schemaSQLiteSQL)
 	for i, stmt := range stmts {
@@ -103,7 +102,7 @@ func applySQLiteSchema(ctx context.Context, con *sql.Conn) error {
 //
 // SQLite 没有 ADD COLUMN IF NOT EXISTS,而 schema 每次启动都整段重放:不加保护
 // 直接 ALTER,第二次启动就会因 duplicate column name 整体失败。故先查
-// pragma_table_info,缺了才加,等价于 PG 侧 ADD COLUMN IF NOT EXISTS 的幂等语义。
+// pragma_table_info,缺了才加,等价于 ADD COLUMN IF NOT EXISTS 的幂等语义。
 var sqliteColumnAdds = []struct {
 	table  string
 	column string
@@ -156,6 +155,30 @@ var sqliteColumnAdds = []struct {
 		"findings",
 		"validation",
 		`ALTER TABLE findings ADD COLUMN validation TEXT NOT NULL DEFAULT 'unverified'`,
+	},
+	{
+		// 反证闭环四列(见 db.RecordFindingInput 与 agent.validateFindingAnalysis)。
+		// 历史漏洞一律回填空串而非任何默认值:它们没有走过反证流程,空串表示
+		// 「没做过」,不能用 'high'/'medium' 之类的默认值假装做过——那正是伪证
+		// 最容易藏身的地方。前端与报告对空串应显示为「未评估」。
+		"findings",
+		"counterevidence",
+		`ALTER TABLE findings ADD COLUMN counterevidence TEXT NOT NULL DEFAULT ''`,
+	},
+	{
+		"findings",
+		"confidence",
+		`ALTER TABLE findings ADD COLUMN confidence TEXT NOT NULL DEFAULT ''`,
+	},
+	{
+		"findings",
+		"confidence_rationale",
+		`ALTER TABLE findings ADD COLUMN confidence_rationale TEXT NOT NULL DEFAULT ''`,
+	},
+	{
+		"findings",
+		"severity_change_conditions",
+		`ALTER TABLE findings ADD COLUMN severity_change_conditions TEXT NOT NULL DEFAULT ''`,
 	},
 	{
 		// 工具错误标记(见 server/tool_usage.go)。历史行没有错误信息可回溯,统一回填
@@ -228,11 +251,30 @@ func applySQLitePostColumnDDL(ctx context.Context, con *sql.Conn) error {
 
 // openSQLite opens the embedded database and initialises it.
 //
-// The SQLite side deliberately skips two things the PostgreSQL path does:
+// Two things are deliberately not done here:
 //
 //   - ensureDatabase: SQLite has no separate server and no database to CREATE.
 //   - the advisory lock around DDL: SQLite serialises writers on the file, so
 //     a session-level lock would be redundant as well as unimplementable.
+//
+// defaultAgentMaxTurns 是 agents.max_turns 的列默认值，取 Strix 的
+// DEFAULT_MAX_TURNS = 500。
+const defaultAgentMaxTurns = 500
+
+// backfillAgentMaxTurns 把「仍停在旧默认值 0」的内置 agent 抬到新的轮次上限。
+//
+// 只动 builtin=true 且 max_turns=0 的行：0 同时表示「不限」和「从没设过」，无法区
+// 分，而自建的、或用户手工改过的 agent 保持原样——显式设过的轮次不该被升级改写。
+// 幂等：跑过一次后这些行已经是 500，再跑是空操作。
+func backfillAgentMaxTurns(ctx context.Context, con *sql.Conn) (int64, error) {
+	res, err := con.ExecContext(ctx,
+		`UPDATE agents SET max_turns = $1 WHERE builtin = 1 AND max_turns = 0`, defaultAgentMaxTurns)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
 func openSQLite(dsn string) (*DB, error) {
 	sqlDB, err := sql.Open("sqlite", dsn)
 	if err != nil {
@@ -315,6 +357,15 @@ func openSQLite(dsn string) (*DB, error) {
 	if _, err := d.retireSkillRefs(); err != nil {
 		sqlDB.Close()
 		return nil, fmt.Errorf("retire skill refs: %w", err)
+	}
+	// 轮次上限回填必须早于 seedBuiltins：seed 用 ON CONFLICT DO UPDATE 但**不动**
+	// max_turns，所以它既不会给存量行赋上新的列默认，也不会覆盖用户在界面上改过的
+	// 值——存量行要靠这里单独抬一次，否则升级后老库仍然是 0（不限），改默认值等于没改。
+	if n, err := backfillAgentMaxTurns(context.Background(), conn); err != nil {
+		sqlDB.Close()
+		return nil, fmt.Errorf("backfill agent max_turns: %w", err)
+	} else if n > 0 {
+		log.Printf("[db] 内置 agent 轮次上限已抬到 %d（原为 0=不限）：%d 行", defaultAgentMaxTurns, n)
 	}
 	if err := d.seedBuiltins(); err != nil {
 		sqlDB.Close()

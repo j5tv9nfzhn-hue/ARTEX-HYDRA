@@ -33,10 +33,18 @@ type DBFinding struct {
 	Status    string
 	// Validation 是独立复核结论(unverified/verified/refuted)。与 Status 正交:
 	// Status 是「人怎么处置」,Validation 是「这条漏洞是否被独立确认过」。
-	Validation      string
-	Report          string // 详细报告(Markdown);仅 GetFinding 填充,列表查询不带
-	CreatedAt       time.Time
-	TaskDescription string // populated via LEFT JOIN on tasks
+	Validation string
+	// 反证闭环(移植自 Strix reporting 工具的必填四项,见 agent.validateFindingAnalysis)。
+	// 空串 = 上报时未做过反证(历史漏洞与老库迁移回填都是空串),必须与「反证结果是
+	// 空」区分开:前者是没做,后者是做了。展示层应对空串显示「未评估」,不要显示成
+	// confidence 的某个取值——那正是伪证最容易藏身的地方。
+	Counterevidence          string
+	Confidence               string
+	ConfidenceRationale      string
+	SeverityChangeConditions string
+	Report                   string // 详细报告(Markdown);仅 GetFinding 填充,列表查询不带
+	CreatedAt                time.Time
+	TaskDescription          string // populated via LEFT JOIN on tasks
 }
 
 // Finding triage states (findings.status).
@@ -167,7 +175,9 @@ const findingSelectCols = `f.id, f.task_id, f.node_id, f.vulnclass, COALESCE(f.n
 	       f.evidence, f.worker, f.asset_ids, COALESCE(f.status, 'pending'), f.created_at,
 	       COALESCE(t.description, '') AS task_description, f.evidence_version, f.report_evidence_version,
  (SELECT count(*) FROM finding_traffic_bindings b WHERE b.finding_id=f.id),
-	       COALESCE(f.validation, 'unverified')`
+	       COALESCE(f.validation, 'unverified'),
+	       COALESCE(f.counterevidence, ''), COALESCE(f.confidence, ''),
+	       COALESCE(f.confidence_rationale, ''), COALESCE(f.severity_change_conditions, '')`
 
 // scanFindings materializes rows selected via findingSelectCols.
 func scanFindings(rows interface {
@@ -180,7 +190,7 @@ func scanFindings(rows interface {
 		f := &DBFinding{}
 		var aidsJSON string
 		if err := rows.Scan(&f.ID, &f.TaskID, &f.NodeID, &f.VulnClass, &f.Name, &f.Severity,
-			&f.Summary, &f.Evidence, &f.Worker, &aidsJSON, &f.Status, &f.CreatedAt, &f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation); err != nil {
+			&f.Summary, &f.Evidence, &f.Worker, &aidsJSON, &f.Status, &f.CreatedAt, &f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation, &f.Counterevidence, &f.Confidence, &f.ConfidenceRationale, &f.SeverityChangeConditions); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(aidsJSON), &f.AssetIDs)
@@ -262,8 +272,7 @@ func (f FindingFilter) where() (string, []any) {
 		args = append(args, tid)
 		conds = append(conds, fmt.Sprintf("f.task_id = $%d", len(args)))
 	}
-	// 资产筛选:asset_ids 在 PostgreSQL 是 jsonb 数组,@> ANY(...) 能走
-	// idx_findings_asset_ids;SQLite 侧是 TEXT 存 JSON,等价物见
+	// 资产筛选:asset_ids 是 TEXT 列存 JSON 数组,判定见
 	// findingAssetScopeIDsCond / findingAssetRowsGoneCond。
 	switch {
 	case f.assetMiss:
@@ -580,7 +589,7 @@ func (d *DB) ListFindingsForExport(f FindingFilter, ids []int64) ([]*DBFinding, 
 		var aidsJSON string
 		if err := rows.Scan(&f.ID, &f.TaskID, &f.NodeID, &f.VulnClass, &f.Name, &f.Severity,
 			&f.Summary, &f.Evidence, &f.Worker, &aidsJSON, &f.Status, &f.CreatedAt,
-			&f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation, &f.Report); err != nil {
+			&f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation, &f.Counterevidence, &f.Confidence, &f.ConfidenceRationale, &f.SeverityChangeConditions, &f.Report); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(aidsJSON), &f.AssetIDs)
@@ -715,7 +724,7 @@ func (d *DB) GetFinding(id int64) (*DBFinding, error) {
 		WHERE f.id = $1`, id).Scan(
 		&f.ID, &f.TaskID, &f.NodeID, &f.VulnClass, &f.Name, &f.Severity,
 		&f.Summary, &f.Evidence, &f.Worker, &aidsJSON, &f.Status, &f.CreatedAt,
-		&f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation, &f.Report)
+		&f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation, &f.Counterevidence, &f.Confidence, &f.ConfidenceRationale, &f.SeverityChangeConditions, &f.Report)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

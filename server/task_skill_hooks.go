@@ -4,7 +4,7 @@ import (
 	"log"
 	"runtime/debug"
 
-	pgdb "github.com/Autumn-27/artex/db"
+	"github.com/Autumn-27/artex/db"
 )
 
 // skillHookMu guards the optional Task lifecycle hooks. They are deliberately
@@ -12,7 +12,7 @@ import (
 // user deletion funnels through Manager's lifecycle methods.
 func (m *Manager) SetTaskSkillHooks(
 	terminal func(taskID, status string),
-	deleted func(taskID string, snapshot *pgdb.Task),
+	deleted func(taskID string, snapshot *db.Task),
 ) {
 	if m == nil {
 		return
@@ -49,7 +49,7 @@ func (m *Manager) fireTaskTerminal(taskID, status string) {
 // The caller (DeleteTask) has not staged or removed any task data yet, so the
 // curator can still read the exploration graph. Bounded collector work lives in
 // the hook itself; a curator failure is logged and never cancels deletion.
-func (m *Manager) fireTaskDeleted(taskID string, snapshot *pgdb.Task) {
+func (m *Manager) fireTaskDeleted(taskID string, snapshot *db.Task) {
 	if m == nil || snapshot == nil {
 		return
 	}

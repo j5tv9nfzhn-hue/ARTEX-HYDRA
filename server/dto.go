@@ -341,9 +341,16 @@ type FindingDTO struct {
 	// Validation 是独立复核态(unverified | verified | refuted)。与 status 正交:
 	// 前者是「人怎么处置」,后者是「有没有被独立确认过」。前端用它区分真值与线索。
 	Validation string `json:"validation"`
-	Summary    string `json:"summary"`
-	Evidence   string `json:"evidence"`
-	Report     string `json:"report,omitempty"` // 详细报告(Markdown);仅详情接口返回,列表为空
+	// 反证闭环(移植自 Strix reporting 工具的必填四项)。
+	// 一律 omitempty:改造前的历史漏洞这四列是空串,不带出来可以让列表 payload 保持
+	// 原大小;前端对缺失应渲染「未评估」,而不是 fallback 成某个 confidence 取值。
+	Counterevidence          string `json:"counterevidence,omitempty"`
+	Confidence               string `json:"confidence"`
+	ConfidenceRationale      string `json:"confidence_rationale,omitempty"`
+	SeverityChangeConditions string `json:"severity_change_conditions,omitempty"`
+	Summary                  string `json:"summary"`
+	Evidence                 string `json:"evidence"`
+	Report                   string `json:"report,omitempty"` // 详细报告(Markdown);仅详情接口返回,列表为空
 
 	IntentID        string            `json:"intent_id,omitempty"`
 	ParamID         string            `json:"param_id,omitempty"`
@@ -401,6 +408,12 @@ type findingPayload struct {
 	Severity  string          `json:"severity"`
 	Summary   string          `json:"summary"`
 	Evidence  json.RawMessage `json:"evidence"`
+	// 反证闭环:db.RecordFindingTx 写节点 payload 时一并写入这四项,
+	// 任务内「发现」Tab 走的是这条节点路径,不从 findings 表读,必须同步解析。
+	Counterevidence          string `json:"counterevidence"`
+	Confidence               string `json:"confidence"`
+	ConfidenceRationale      string `json:"confidence_rationale"`
+	SeverityChangeConditions string `json:"severity_change_conditions"`
 }
 
 func findingDTO(n *db.Node) FindingDTO {
@@ -414,10 +427,14 @@ func findingDTO(n *db.Node) FindingDTO {
 		Status:    db.FindingPending,
 		// 节点级发现没有独立带复核态的来源时一律按未复核展示：把空串漏给前端，
 		// 徽标会退化成英文原值。
-		Validation: db.FindingUnverified,
-		Summary:    p.Summary,
-		Evidence:   rawString(p.Evidence),
-		TS:         rfc3339(n.CreatedAt),
+		Validation:               db.FindingUnverified,
+		Summary:                  p.Summary,
+		Evidence:                 rawString(p.Evidence),
+		TS:                       rfc3339(n.CreatedAt),
+		Counterevidence:          p.Counterevidence,
+		Confidence:               p.Confidence,
+		ConfidenceRationale:      p.ConfidenceRationale,
+		SeverityChangeConditions: p.SeverityChangeConditions,
 	}
 	if n.SourceTaskID > 0 {
 		d.SourceTaskID = i64s(n.SourceTaskID)
@@ -489,15 +506,19 @@ func findingFromDB(f *db.DBFinding, assets map[int64]*db.Asset) FindingDTO {
 		FindingID:    i64s(f.ID),
 		TrafficCount: f.TrafficCount, EvidenceVersion: f.EvidenceVersion, ReportEvidenceVersion: f.ReportEvidenceVersion,
 		ReportStale: f.Report != "" && f.EvidenceVersion != f.ReportEvidenceVersion, TrafficBindings: f.TrafficBindings,
-		VulnClass:  f.VulnClass,
-		Name:       f.Name,
-		Severity:   f.Severity,
-		Status:     status,
-		Validation: findingValidation(f.Validation),
-		Summary:    f.Summary,
-		Evidence:   f.Evidence,
-		Report:     f.Report,
-		TS:         rfc3339(f.CreatedAt),
+		VulnClass:                f.VulnClass,
+		Name:                     f.Name,
+		Severity:                 f.Severity,
+		Status:                   status,
+		Validation:               findingValidation(f.Validation),
+		Summary:                  f.Summary,
+		Evidence:                 f.Evidence,
+		Report:                   f.Report,
+		TS:                       rfc3339(f.CreatedAt),
+		Counterevidence:          f.Counterevidence,
+		Confidence:               f.Confidence,
+		ConfidenceRationale:      f.ConfidenceRationale,
+		SeverityChangeConditions: f.SeverityChangeConditions,
 	}
 	d.Assets = findingAssetDTOs(f.AssetIDs, assets)
 	if f.TaskID != nil {

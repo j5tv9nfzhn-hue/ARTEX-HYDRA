@@ -86,8 +86,8 @@ func TestServerMgmtSkillExistsSentinel(t *testing.T) {
 }
 
 // TestServerMgmtPGGate503Localized exercises the real shared DB gate every
-// management handler passes through: with no PostgreSQL handle, pg() writes 503
-// and returns nil. The 503 body must be Simplified Chinese.
+// management handler passes through: with no database handle, the gate writes
+// 503 and returns nil. The 503 body must be Simplified Chinese.
 func TestServerMgmtPGGate503Localized(t *testing.T) {
 	s := &Server{m: &Manager{}} // pg == nil
 	rec := httptest.NewRecorder()

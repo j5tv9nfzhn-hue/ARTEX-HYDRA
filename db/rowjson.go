@@ -2,8 +2,7 @@
 //
 // ── 背景 ────────────────────────────────────────────────────────────────────
 //
-// db/finding_retests.go 的复测快照原本靠 PostgreSQL 的两个构造在 SQL 里就地
-// 拼出整行 JSON：
+// db/finding_retests.go 的复测快照原本靠 SQL 里的两个构造就地拼出整行 JSON：
 //
 //	jsonb_build_object('finding', to_jsonb(f),
 //	                   'assets',      COALESCE((SELECT jsonb_agg(to_jsonb(a)) …), '[]'::jsonb),
@@ -34,12 +33,10 @@
 //     task_constraints 7 列，三张表合计 57 个字段，是一处必然漏改的地方。
 //  3. 类型映射要手写。BIGSERIAL 要变成 JSON number 还是 string、TIMESTAMPTZ
 //     要按什么时区渲染、jsonb 列要内联还是转义，每一项都得重新决定一遍。
-//  4. 两个引擎要写两遍。PostgreSQL 侧能写 json_object 不代表 SQLite 侧能写
-//     出同样的结果，语句一长，分歧就会回来——那正是这次要消灭的东西。
+//  4. 语句一长，同一段 SQL 在不同地方的实现就会分叉，而那正是要消灭的东西。
 //
 // rows.Columns() 返回的是**数据库实际给出的列名**，因此：列的增删自动跟随
-// schema（新增列自动出现在快照里，这正是 to_jsonb(f) 的行为）、SQL 语句在
-// 两个引擎上逐字相同、列名不可能抄错。剩下的只有「值怎么变成 JSON」这一个
+// schema（新增列自动出现在快照里）、SQL 语句只有一份、列名不可能抄错。剩下的只有「值怎么变成 JSON」这一个
 // 问题，由本文件的 jsonSafeValue 统一处理。
 package db
 
@@ -61,8 +58,8 @@ func rowsToJSONObjects(rows *sql.Rows) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// 空集合必须是 [] 而不是 null：原来的 PG 语句用 COALESCE(…, '[]'::jsonb)
-	// 保证了这一点，快照的 assets / constraints 键是数组而不是 null。
+	// 空集合必须是 [] 而不是 null：原来的语句用 COALESCE(…, '[]') 保证了这一点，
+	// 快照的 assets / constraints 键是数组而不是 null。
 	if len(objs) == 0 {
 		return []byte("[]"), nil
 	}
@@ -110,7 +107,7 @@ func rowJSONObjects(rows *sql.Rows) ([]map[string]any, error) {
 }
 
 // rowJSONObject 按列名把一行值装配成 {"列名": 值} 对象，键顺序由
-// json.Marshal 决定（字典序），与 PostgreSQL jsonb 的键序规范化一致。
+// json.Marshal 决定（字典序），键序是稳定的。
 func rowJSONObject(cols []string, vals []any) map[string]any {
 	obj := make(map[string]any, len(cols))
 	for i, name := range cols {
@@ -121,23 +118,21 @@ func rowJSONObject(cols []string, vals []any) map[string]any {
 
 // jsonSafeValue 把一个 driver.Value 变成能安全进 JSON 的值。
 //
-// 两个引擎交给 database/sql 的原始类型（已逐条对过 pgx/v5 stdlib 的 Rows.Next
-// 与 modernc.org/sqlite 的行为）：
+// 驱动交给 database/sql 的原始类型（已逐条对过 modernc.org/sqlite 的行为）：
 //
-//	PostgreSQL                SQLite
-//	  INT2/4/8      → int64     INTEGER/BIGINT → int64
-//	  FLOAT4/8      → float64   REAL          → float64
-//	  BOOL          → bool      BOOLEAN        → int64（SQLite 无布尔类型）
-//	  TEXT/VARCHAR  → string    TEXT           → string
-//	  INT8[]/TEXT[]/INET/CIDR → string（同上，走默认分支）
-//	  JSON/JSONB    → []byte    JSON 文本列    → string
-//	  TIMESTAMPTZ   → time.Time TIMESTAMP（DSN 的 _texttotime=1）→ time.Time
-//	  NULL          → nil       NULL           → nil
+//	INTEGER/BIGINT → int64
+//	REAL          → float64
+//	BOOLEAN       → int64（SQLite 无布尔类型）
+//	TEXT          → string
+//	数组列 / 地址列 → string（同上，走默认分支）
+//	JSON 文本列    → string
+//	TIMESTAMP     → time.Time（DSN 的 _texttotime=1）
+//	NULL          → nil
 //
 // 真正需要处理的只有三类：
 //
 //	· []byte / string —— JSON 文本，见 jsonText 的说明；
-//	· time.Time      —— 渲染成 RFC3339Nano，与 PG to_jsonb(timestamptz) 同形；
+//	· time.Time      —— 渲染成 RFC3339Nano，与列里存的时间文本同形；
 //	· 非有限浮点     —— NaN / ±Inf 不是合法 JSON，降级成 null。
 //
 // 其它类型（int64 / bool / 未来驱动可能给出的数值类型）交给 json.Marshal，
@@ -153,8 +148,8 @@ func jsonSafeValue(v any) any {
 		// 「时间戳在快照里长什么样」这件事在本文件内自洽，不依赖外部默认值。
 		return t.Format(time.RFC3339Nano)
 	case float64:
-		// json.Marshal 对 NaN / ±Inf 直接返回错误，会把整个快照打挂。
-		// PG 的 to_jsonb 对非有限 double 同样报错，这里降级成 null 只会更宽松。
+		// json.Marshal 对 NaN / ±Inf 直接返回错误，会把整个快照打挂，
+		// 这里降级成 null。
 		if math.IsNaN(t) || math.IsInf(t, 0) {
 			return nil
 		}
@@ -177,12 +172,10 @@ func jsonSafeValue(v any) any {
 // jsonText 判断一段文本「本身就是一份 JSON 值」，是就原样内联进快照，
 // 否则按普通字符串处理。
 //
-// 为什么 string 也必须参与判断：SQLite 没有 JSON 类型，JSON 值就存放在
-// TEXT 列里——findings.asset_ids 在 PostgreSQL 上是 JSONB，在 SQLite 上是
-// TEXT；assets.task_ids / open_ports / params / extra 同理。如果只对
-// []byte 内联（PostgreSQL 的 json/jsonb 才走这条路），两个引擎就会给出
-// 结构不同的快照：同一列一边是数组、一边是数组的字符串文本。既然两种驱动
-// 形态都要收敛到同一种 JSON，判定规则就必须对两者一致。
+// 为什么 string 也必须参与判断：SQLite 没有 JSON 类型，JSON 值就存放在 TEXT
+// 列里——findings.asset_ids、assets.task_ids / open_ports / params / extra 都是
+// 这样。如果只对 []byte 内联，同一列就会一会儿是数组、一会儿是数组的字符串文本，
+// 快照结构不稳定。既然两种形态都要收敛到同一种 JSON，判定规则就必须对两者一致。
 //
 // 判定条件刻意收紧成「必须是数组或对象」，以免把数字 / 布尔 / 字符串形式的
 // JSON 误判：findings.summary 这类自由文本里恰好写着 "[1,2]" 的概率不为零，
@@ -195,8 +188,8 @@ func jsonSafeValue(v any) any {
 // summary 写成 ["looks","like","json"] 时，快照里该字段是数组而非字符串。
 //
 // 之所以接受：SQLite 把 JSON 存成 TEXT，schema 里没有任何可用来区分「这一列
-// 装的是 JSON」的元数据（findings.asset_ids 在 PG 是 JSONB、在 SQLite 声明成
-// TEXT，与 summary 的声明类型一模一样）。唯一的精确做法是维护一份「哪些列是
+// 装的是 JSON」的元数据（findings.asset_ids 声明成 TEXT，与 summary 的声明类型
+// 一模一样）。唯一的精确做法是维护一份「哪些列是
 // JSON」的清单，而那正是上面第 1、2 条否掉的方案：清单会随 schema 静默过期。
 //
 // 代价可控且两个引擎一致：只是少一层引号，字符一个不少；Agent 读到的内容
@@ -218,8 +211,8 @@ func jsonText(s string) (json.RawMessage, bool) {
 // marshalSnapshot 编码快照。与 json.Marshal 的唯一差别是不转义 HTML 字符。
 //
 // 这份 JSON 不会离开本进程，而是被 server 原样交给复测 Agent 读取，证据
-// 正文里的 < > & 保留原字符比 \u003c \u003e \u0026 更可读，也与 PostgreSQL
-// to_jsonb 的输出一致（jsonb 从不做 HTML 转义）。
+// 正文里的 < > & 保留原字符比 \u003c \u003e \u0026 更可读（JSON 本身不要求
+// HTML 转义）。
 func marshalSnapshot(v any) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)

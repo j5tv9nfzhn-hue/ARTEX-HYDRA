@@ -11,8 +11,8 @@ import (
 //
 // ARTEX is SQLite-only, so without the file redirection the package's tests would
 // open the real database next to the config file and mutate a user's data. The
-// previous harness instead held a PostgreSQL advisory lock (7337741002) to
-// serialise db/agent/server against one shared dev database; with a file per
+// previous harness instead held an advisory lock to serialise db/agent/server
+// against one shared dev database; with a file per
 // package there is no shared server left to coordinate.
 func TestMain(m *testing.M) {
 	// server.New starts the realtime notifier's background delivery loop

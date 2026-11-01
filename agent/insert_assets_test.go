@@ -9,7 +9,7 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
-// testDB opens a DB connection, skipping if PG is unavailable.
+// testDB opens a DB connection.
 func testDB(t *testing.T) *db.DB {
 	t.Helper()
 	dsn, _, err := db.DSN()

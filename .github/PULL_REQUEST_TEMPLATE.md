@@ -25,7 +25,7 @@
 <!-- 列出实际执行的命令、结果与未验证项目，不将 SKIP 当作数据库测试通过。 -->
 
 - [ ] Go 改动：`go build ./...`、`go vet ./...`、`go test ./...`。
-- [ ] 涉及数据库的包：在独立 PostgreSQL 环境运行集成测试。
+- [ ] 涉及数据库的包：`go test ./db/ ./server/ ./agent/`（各包使用独立临时 SQLite 库）。
 - [ ] Web 改动：`npm test`、`npm run check`、`npm run build:static`。
 - [ ] 文档改动：`python3 -I scripts/check-doc-links.py`。
 - [ ] 语言残留：`python3 -I scripts/check-language.py --source`，构建后加 `--web`。

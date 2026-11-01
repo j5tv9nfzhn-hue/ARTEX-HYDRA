@@ -64,7 +64,7 @@ ON CONFLICT(task_id) DO UPDATE SET
   env_json=EXCLUDED.env_json,
   contract_json=EXCLUDED.contract_json,
   warnings=EXCLUDED.warnings`,
-		taskID, source, string(jsonbClean(envB)), string(jsonbClean(contractB)), string(jsonbClean(warnB)))
+		taskID, source, string(jsonTextClean(envB)), string(jsonTextClean(contractB)), string(jsonTextClean(warnB)))
 	return err
 }
 

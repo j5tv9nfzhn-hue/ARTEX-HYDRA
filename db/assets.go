@@ -203,9 +203,8 @@ func parseURL(raw string) (domain string, port int, serviceName string) {
 }
 
 // marshalPortServices encodes assets.open_ports, whose elements are
-// {"port":N,"service":"..."} objects. The element shape is identical on both
-// engines; only the array wrapper differs (PostgreSQL array literal vs JSON
-// array), so the encoding decision is delegated to encodeJSONBArray.
+// {"port":N,"service":"..."} objects. The column stores a JSON array, so the
+// encoding decision is delegated to encodeJSONBArray.
 func marshalPortServices(ps []PortService) (string, error) {
 	items := make([]map[string]any, len(ps))
 	for i, p := range ps {
@@ -263,10 +262,10 @@ func (s *AssetStore) UpsertRootDomain(req UpsertRootDomainReq) (int64, error) {
 
 // upsertRootDomainSQL 返回该引擎认的 upsert 语句。
 //
-// PostgreSQL 分支逐字保留迁移前的写法：$4::bigint[] 的数组字面量转换，以及
-// task_ids 的 ARRAY(SELECT DISTINCT unnest(...)) 去重合并。
+// 迁移前的写法是 $4::bigint[] 的数组字面量转换，以及 task_ids 的
+// ARRAY(SELECT DISTINCT unnest(...)) 去重合并。
 //
-// SQLite 分支的三处替换（依据见 db/dialect_arrays.go 文件头）：
+// 现在的三处替换（依据见 db/dialect_arrays.go 文件头）：
 //
 //	$4::bigint[]  → $4。task_ids 在 SQLite 里是 TEXT 列存 JSON 数组，
 //	  值由 encodeTaskIDArray 在 Go 侧生成（"[5]" / "[]"），SQL 不再转换类型。
@@ -412,10 +411,8 @@ func (s *AssetStore) AppendIPPort(ipStr string, port int, serviceName string) er
 		return nil
 	}
 	entry, _ := json.Marshal(map[string]any{"port": port, "service": serviceName})
-	// Postgres 侧是 unnest(open_ports || ARRAY[$1::jsonb])：$1 只是一个 jsonb 对象，
-	// ARRAY[...] 把它包成单元素数组再拼接。SQLite 侧的 artex_json_merge_ports 会对
-	// 第二个参数做同样的"不是数组就包成单元素"处理，所以这里传的仍是裸对象 JSON，
-	// 不需要在 Go 侧多包一层数组。
+	// artex_json_merge_ports 会对第二个参数做"不是数组就包成单元素"处理，所以这里
+	// 传的仍是裸对象 JSON，不需要在 Go 侧多包一层数组。
 
 	_, err := s.db.Exec(`
 UPDATE assets SET
@@ -430,8 +427,7 @@ func (s *AssetStore) AppendIPBoundDomain(ipStr, domain string) error {
 	if ipStr == "" || domain == "" {
 		return nil
 	}
-	// Postgres: bound_domains || ARRAY[$1::text]，DISTINCT 保证同一个域名不重复。
-	// SQLite: artex_json_merge 把 $1 当单元素数组拼进去并按元素去重，语义相同。
+	// artex_json_merge 把 $1 当单元素数组拼进去并按元素去重，同一个域名不会重复。
 
 	_, err := s.db.Exec(`
 UPDATE assets SET
@@ -800,8 +796,8 @@ func (s *AssetStore) UpsertHTTPService(req UpsertHTTPServiceReq) (int64, error) 
 //	  encodeJSONBArray 生成；c_segment 是 TEXT 列。`::` 转换在 SQLite 不是语法。
 //	technologies 的 ARRAY(SELECT DISTINCT unnest(...)) → artex_json_merge。
 //	auth 的 DISTINCT ON (elem::text) → artex_json_merge：键是"整个元素相等"，
-//	  与 elem::text 的去重键等价（Go 的 json.Marshal 会把对象键排序，正好对上
-//	  PostgreSQL jsonb ::text 的规范化形态）。
+//	  与"整个元素文本相等"的去重键等价（Go 的 json.Marshal 会把对象键排序，得到的
+//	  就是规范化文本）。
 //	task_ids 同上 → artex_json_merge。
 func upsertHTTPServiceSQL() string {
 
@@ -1075,7 +1071,7 @@ func (s *AssetStore) UpsertEndpoint(req UpsertEndpointReq) (int64, error) {
 //	)
 //
 // 换成 artex_json_merge_params：键是 (location, name)，同键保留 elem::text 最大的
-// 一条（PG 的 ORDER BY ... DESC + DISTINCT ON 就是这个意思），结果按 location、
+// 一条（同键时按 elem::text 倒序取第一条），结果按 location、
 // name 升序排列，NULL 排最后。详见 db/dialect_arrays.go。
 func upsertEndpointSQL() string {
 
@@ -1263,7 +1259,7 @@ func (s *AssetStore) CountsByTypeForTask(taskID int64) (map[string]int, error) {
 // 两条语句都含数组运算：
 //
 //	task_ids = ARRAY[$1]::bigint[]
-//	  → artex_json_equals(task_ids, $1)。PG 的数组相等是"同长度 + 逐元素相等 +
+//	  → artex_json_equals(task_ids, $1)。数组相等是"同长度 + 逐元素相等 +
 //	    顺序敏感"，只有 task_ids 恰好是 {taskID} 这一种形状的行会被删。
 //	array_remove(task_ids, $1) ... WHERE $1 = ANY(task_ids)
 //	  → artex_json_remove / artex_json_contains。$1 在两个语句里复用同一个编号，

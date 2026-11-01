@@ -68,9 +68,9 @@ type TaskDeleteResult struct {
 	LLMRecordsDeleted int64
 }
 
-// TaskDeletePreparation is produced inside the PostgreSQL deletion transaction
-// after asset and anchor writers have been excluded. Prepare callbacks may use
-// TrafficHosts to stage an external traffic deletion before PostgreSQL commits.
+// TaskDeletePreparation is produced inside the deletion transaction after asset
+// and anchor writers have been excluded. Prepare callbacks may use TrafficHosts
+// to stage an external traffic deletion before the delete commits.
 type TaskDeletePreparation struct {
 	ExplorationID int64
 	TrafficHosts  []string
@@ -297,7 +297,7 @@ func insertTaskCompanies(tx *sql.Tx, taskID int64, companyIDs []int64) error {
 	// source rows. The provenance upsert must therefore run afterwards so the
 	// company name and creation-time reason remain visible to operators.
 	//
-	// SQLite 侧的三处 PG 专有写法逐一对齐：
+	// 三处写法逐一对齐：
 	//   - company_id=ANY($2::bigint[]) → 展开成 IN 列表。ANY() 不是 SQLite
 	//     的运算符，`$2::bigint[]` 会让驱动把参数名当成 "2::bigint"，而
 	//     绑定 []int64 本身就会得到 "unsupported type []int64"。
@@ -467,10 +467,9 @@ type TaskPatch struct {
 // UpdateTask applies a partial task name/pin/budget mutation and returns the
 // updated row. Re-pinning an already pinned task preserves its original position.
 //
-// $2/$4 后面刻意不带 ::boolean：pgx 会把 `$2::boolean` 整体当成一个名叫
-// "2::boolean" 的参数，SQLite 的位置参数找不到这个名字，直接报
-// missing named argument "2::boolean"。转换语义完全由 Go 侧绑定的 bool 承担，
-// PG 侧删掉同样不改变参数类型推断结果。
+// $2/$4 后面刻意不带 ::boolean：SQLite 的位置参数会把 `$2::boolean` 整体当成
+// 一个名叫 "2::boolean" 的参数而报 missing named argument "2::boolean"。转换
+// 语义完全由 Go 侧绑定的 bool 承担，不需要在 SQL 里标注。
 func (d *DB) UpdateTask(id int64, patch TaskPatch) (*Task, error) {
 	// 负预算归一为 0(不限),与创建路径一致;复制指针避免改到调用方的值。
 	budget := patch.TokenBudget
@@ -657,13 +656,13 @@ func (d *DB) DeleteTaskCascade(id int64, deleteAssets, deleteFindings bool, dele
 }
 
 // DeleteTaskCascadePrepared coordinates reversible external deletion with the
-// PostgreSQL cascade. When prepare is non-nil, host ownership is resolved and
+// database cascade. When prepare is non-nil, host ownership is resolved and
 // prepare is invoked inside this transaction while asset and anchor writers are
 // excluded. The locks remain held through commit, closing the window where a
 // host could become shared after its traffic had already been staged.
 //
 // prepare must only stage reversible work. Any returned error or later database
-// error rolls PostgreSQL back; the caller remains responsible for rolling back
+// error rolls the transaction back; the caller remains responsible for rolling back
 // external work that its callback staged successfully.
 func (d *DB) DeleteTaskCascadePrepared(
 	id int64,
@@ -768,11 +767,19 @@ deletable AS (
 	// task — it is kept as historical accounting even after the task is gone.
 	// Reviewer 的证据快照是冷数据，但会随任务量线性增长；任务被真删时一并清掉，
 	// 避免孤儿行长期占着库。判决表同删（它没有独立留存价值）。
-	if _, err := tx.Exec(`DELETE FROM reviewer_evidence WHERE task_id=$1`, id); err != nil {
-		return result, err
+	// 两张表的 CREATE TABLE 已随 Reviewer 下线从 schema_sqlite.sql 移除：升级上来的
+	// 历史库里它们还在（保留为审计数据），按当前 schema 新建的库里则没有。所以按
+	// 存在性分叉——不看存在性的话，新库上这句 DELETE 会报 no such table 并把整个
+	// 事务打断，DELETE FROM tasks 根本走不到，任务就删不掉。
+	if tableExists(tx, "reviewer_evidence") {
+		if _, err := tx.Exec(`DELETE FROM reviewer_evidence WHERE task_id=$1`, id); err != nil {
+			return result, err
+		}
 	}
-	if _, err := tx.Exec(`DELETE FROM reviewer_verdicts WHERE task_id=$1`, id); err != nil {
-		return result, err
+	if tableExists(tx, "reviewer_verdicts") {
+		if _, err := tx.Exec(`DELETE FROM reviewer_verdicts WHERE task_id=$1`, id); err != nil {
+			return result, err
+		}
 	}
 	if _, err := tx.Exec(`DELETE FROM tasks WHERE id=$1`, id); err != nil {
 		return result, err

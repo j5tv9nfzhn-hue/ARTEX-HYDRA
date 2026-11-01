@@ -64,7 +64,7 @@ func SetPassthrough(w io.Writer) {
 	logSink.mu.Unlock()
 }
 
-// SetDB wires a postgres DB into the sink once (idempotent). It:
+// SetDB wires the database into the sink once (idempotent). It:
 //  1. Restores the last 100 log rows from DB into the ring so the /logs page
 //     shows history immediately after restart.
 //  2. Starts an async goroutine that persists every subsequent log line to DB.

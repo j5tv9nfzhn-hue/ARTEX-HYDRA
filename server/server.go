@@ -517,7 +517,7 @@ func (s *Server) agentRunSeconds(key string) int {
 	return a.RunSecs
 }
 
-// loadLLMConfig reads the active LLM profile from PG (llm_profiles).
+// loadLLMConfig reads the active LLM profile from the database (llm_profiles).
 func (s *Server) loadLLMConfig() (agent.Config, bool) {
 	p, err := s.m.pg.ActiveProfile()
 	if err != nil || p == nil {
@@ -543,7 +543,7 @@ func (s *Server) loadLLMConfig() (agent.Config, bool) {
 	return cfg, true
 }
 
-// saveLLMConfig persists the LLM config as the active "default" profile in PG.
+// saveLLMConfig persists the LLM config as the active "default" profile in the database.
 func (s *Server) saveLLMConfig(cfg agent.Config) error {
 	// cfg.Provider() already returns one of the three valid format strings
 	// (anthropic / openai / openai-responses), matching the DB CHECK constraint.
@@ -1070,7 +1070,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/tasks/{id}/chat/status", s.taskChatStatus)
 	mux.HandleFunc("POST /api/tasks/{id}/chat/stop", s.stopChat)
 
-	// --- 管理后台 API (PostgreSQL 数据源; 新版数据库与管理后台方案) ---
+	// --- 管理后台 API (数据库数据源; 新版数据库与管理后台方案) ---
 	mux.HandleFunc("DELETE /api/tasks/{id}", s.pgDeleteTask)
 	// Agents
 	// conversations (chat page)

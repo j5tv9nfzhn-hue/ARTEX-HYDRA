@@ -63,9 +63,9 @@ func skillAgentsAgg() string {
 // that were never invoked are absent — callers merge against the skill list on disk.
 // Only resolved calls count; misses are reported separately by MissingSkillStats.
 func (d *DB) SkillStats() ([]SkillStat, error) {
-	// agent keys come back as one comma-joined string rather than text[]: the pgx
-	// stdlib driver has no database/sql Scan target for arrays, and agent keys are
-	// [a-z0-9_-] so a comma join is unambiguous.
+	// agent keys come back as one comma-joined string: the driver has no
+	// database/sql Scan target for arrays, and agent keys are [a-z0-9_-] so a
+	// comma join is unambiguous.
 	rows, err := d.Query(`
 SELECT skill, COUNT(*) AS calls,
        COUNT(DISTINCT task_id) AS tasks,

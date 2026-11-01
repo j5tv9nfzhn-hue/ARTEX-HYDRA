@@ -377,8 +377,8 @@ WHERE exploration_id=$1 AND kind IN ('fact','finding') AND created_at >= $2`, ex
 	return n, err
 }
 
-// boolToInt 让 bool 以 0/1 落 INTEGER 列：SQLite 与 PostgreSQL 都接受，
-// 避免把 Go bool 直接绑到 PG 的 INTEGER 参数上（类型不匹配）。
+// boolToInt 让 bool 以 0/1 落 INTEGER 列，避免把 Go bool 直接绑到 INTEGER
+// 参数上（类型不匹配）。
 func boolToInt(b bool) int {
 	if b {
 		return 1

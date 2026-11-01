@@ -117,16 +117,16 @@ func (s *Server) seedFindingWorkflowTools() {
 
 // 下面的助手把「agents 恰好等于某个默认集合」的判定拆成双引擎版本。
 //
-//	PG:     agents @> '<list>' AND jsonb_array_length(agents)=N
+//	改写前： agents @> '<list>' AND jsonb_array_length(agents)=N
 //
 // agentsSetEqualsCond 表达「agents 恰好等于某个默认集合」。
 //
 //	(SELECT COUNT(*) FROM json_each(agents))=N AND NOT EXISTS
 //	  （json_each('<list>') 里存在 agents 中没有的成员）
 //
-// 「包含全部成员 + 长度相等」与「互为子集」等价，即集合相等；这是原 PostgreSQL
-// `agents @> '<list>' AND jsonb_array_length(agents)=N` 的语义。jsonb 运算符与
-// jsonb_array_length 在 SQLite 全无，故改用 json_each 计数。
+// 「包含全部成员 + 长度相等」与「互为子集」等价，即集合相等——这就是
+// 「agents 包含 '<list>' 全部成员且长度为 N」的语义。SQLite 既没有数组包含
+// 运算符也没有 jsonb_array_length，故改用 json_each 计数。
 func agentsSetEqualsCond(list string, n int) string {
 	return `((SELECT COUNT(*) FROM json_each(agents))=` + strconv.Itoa(n) + ` AND NOT EXISTS (SELECT 1 FROM json_each('` + list + `') w WHERE NOT EXISTS (SELECT 1 FROM json_each(agents) a WHERE a.value=w.value)))`
 }

@@ -9,9 +9,9 @@ import (
 	"github.com/Autumn-27/artex/notify"
 )
 
-// 本文件的用例都会真连 PostgreSQL（无库时跳过）。这些 SQL 用到了
-// FOR UPDATE SKIP LOCKED、make_interval、JSONB、多行 IN(...) 占位符拼接，
-// 都是「编译通过但可能运行时报错」的写法，必须实跑才算验证过。
+// 本文件的用例都会真开一个临时 SQLite 库跑完整路径：行锁、时间表达式、
+// JSON 列、多行 IN(...) 占位符拼接，都是「编译通过但可能运行时报错」的写法，
+// 必须实跑才算验证过。
 
 func notifyTestDB(t *testing.T) *DB {
 	t.Helper()
@@ -92,60 +92,6 @@ func TestNotificationAssetNamesResolvesAndPreservesOrder(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("顺序/取值不符，期望 %v 得到 %v", want, got)
 		}
-	}
-}
-
-// TestRecordNotificationEventTxUnwindsOnFailure 是保存点机制的核心用例：
-// 在事务里先让 notification_events 的写入必然失败（临时加一个恒 false 的约束），
-// 断言 ① 该函数报 false ② 事务没有进入 aborted 状态，后续语句仍能执行。
-//
-// 没有保存点的话，PostgreSQL 会让整个事务作废，后续任何语句都以
-// "current transaction is aborted" 失败——那正是「一个通知表的问题导致
-// 漏洞存不进库」的故障路径。
-//
-// 这里刻意用 **ROLLBACK 收尾而不是 COMMIT**：ALTER TABLE 在 PG 里是事务性的，
-// 一旦提交，那个临时约束就会永久留在 schema 里，把后续所有用例一起打挂。
-// 回滚能自动撤销 DDL，无需手工清理。断言只需要「事务还活着」，
-// 不需要真的提交。
-func TestRecordNotificationEventTxUnwindsOnFailure(t *testing.T) {
-	t.Skip("PostgreSQL DDL 语义用例（ADD CONSTRAINT ... NOT VALID / DROP CONSTRAINT 种约束逼失败）：SQLite 无约束 DDL；事务回滚语义由 companies/findings 的回滚用例覆盖")
-	d := notifyTestDB(t)
-	ctx := context.Background()
-
-	// 防御性清理：若历史运行留下过这个约束，先摘掉。
-	if _, err := d.Exec(`ALTER TABLE notification_events DROP CONSTRAINT IF EXISTS notify_test_never`); err != nil {
-		t.Fatal(err)
-	}
-
-	tx, err := d.BeginTx(ctx, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tx.Rollback() //nolint:errcheck // 撤销临时约束，见函数注释
-
-	// NOT VALID：只约束此后写入的行，不去校验库里已有的历史事件
-	// （否则存量行违规会导致约束加不上）。
-	if _, err := tx.ExecContext(ctx, `ALTER TABLE notification_events ADD CONSTRAINT notify_test_never CHECK (false) NOT VALID`); err != nil {
-		t.Fatalf("加临时约束失败: %v", err)
-	}
-	if RecordNotificationEventTx(ctx, tx, notify.EventFindingCreated, 1, notify.Snapshot{Severity: "high"}) {
-		t.Fatal("在必然失败的约束下仍报告写入成功")
-	}
-	// 关键断言：事务还能用。
-	var one int
-	if err := tx.QueryRowContext(ctx, `SELECT 1`).Scan(&one); err != nil {
-		t.Fatalf("事务已被污染（保存点未生效）: %v", err)
-	}
-	if err := tx.Rollback(); err != nil {
-		t.Fatalf("回滚失败: %v", err)
-	}
-	// 确认 DDL 已随回滚撤销，不给后续用例留雷。
-	var exists bool
-	if err := d.QueryRow(`SELECT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='notify_test_never')`).Scan(&exists); err != nil {
-		t.Fatal(err)
-	}
-	if exists {
-		t.Fatal("临时约束未被回滚撤销，会污染后续用例")
 	}
 }
 

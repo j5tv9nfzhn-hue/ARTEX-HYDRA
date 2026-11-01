@@ -17,8 +17,8 @@ var ErrSideParentGone = errors.New("旁路父会话已删除或归档")
 // Lock the real parent before the side session, also covering soft task/intent
 // deletion. A delayed checkpoint cannot recreate data after archive cleanup.
 //
-// 行锁子句按引擎取：PG 保留 FOR SHARE，SQLite 没有行锁、返回空串（见 dialect_locking.go）。
-// 这里要挡的是「父行在本事务写入旁路会话期间被并发删掉/归档」，而 SQLite 的写事务从
+// 这里不写行锁子句（见 dialect_locking.go）：SQLite 没有 FOR SHARE 这样的行锁。
+// 要挡的是「父行在本事务写入旁路会话期间被并发删掉/归档」，而 SQLite 的写事务从
 // 第一条写语句起独占库文件，并发的删除只能整个排在本事务之前或之后，不存在插入窗口。
 func lockSideParent(ctx context.Context, tx *sql.Tx, p sidequestion.Parent) error {
 	var id int64
@@ -60,7 +60,7 @@ func (d *DB) SaveSideSnapshot(ctx context.Context, s sidequestion.Snapshot) erro
 	_, err = tx.ExecContext(ctx, `INSERT INTO side_question_sessions(session_key,conversation_id,task_id,exploration_id,intent_id,run_id,version,snapshot)
 VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(session_key) DO UPDATE SET run_id=EXCLUDED.run_id,version=EXCLUDED.version,snapshot=EXCLUDED.snapshot
 WHERE (side_question_sessions.run_id,side_question_sessions.version)<(EXCLUDED.run_id,EXCLUDED.version)`,
-		s.Parent.Key(), nullableSideID(s.Parent.ConversationID), nullableSideID(s.Parent.TaskID), nullableSideID(s.Parent.ExplorationID), nullableSideID(s.Parent.IntentID), s.RunID, s.Version, string(jsonbClean(b)))
+		s.Parent.Key(), nullableSideID(s.Parent.ConversationID), nullableSideID(s.Parent.TaskID), nullableSideID(s.Parent.ExplorationID), nullableSideID(s.Parent.IntentID), s.RunID, s.Version, string(jsonTextClean(b)))
 	if err != nil {
 		return err
 	}
@@ -125,12 +125,10 @@ func (d *DB) CurrentSideRequest(ctx context.Context, key string) (*sidequestion.
 }
 
 func (d *DB) SideHistory(ctx context.Context, key string, before int64, limit int) ([]sidequestion.Exchange, error) {
-	// The cursor filter uses "before==0 means no filter". PostgreSQL needs the
-	// explicit ::bigint so pgx can type the parameter against both uses in the
-	// OR; SQLite would parse the whole `$2::bigint` as a parameter *named*
-	// "2::bigint" and report "missing named argument" -- exactly the failure
-	// this cast is meant to avoid there. `before` is bound as an integer, so
-	// the bare comparison is already well-typed.
+	// The cursor filter uses "before==0 means no filter". No `::bigint` cast is
+	// written here: `$2::bigint` would be parsed as a parameter *named*
+	// "2::bigint" and report "missing named argument". `before` is bound as an
+	// integer, so the bare comparison is already well-typed.
 	cursor := "($2=0 OR ordinal<$2)"
 
 	rows, err := d.QueryContext(ctx, `SELECT `+sideCols+` FROM side_question_requests WHERE session_key=$1 AND `+cursor+` ORDER BY ordinal DESC LIMIT $3`, key, before, limit)
@@ -179,8 +177,8 @@ func (d *DB) StartSideRequest(ctx context.Context, s sidequestion.Snapshot, clie
 		return nil, false, err
 	}
 	var generation int64
-	// 行锁子句按引擎取：PG 保留 FOR UPDATE，SQLite 返回空串（见 dialect_locking.go）。
-	// 锁防的是「同一 session_key 的两个 StartSideRequest 读到同一个 generation 后双双
+	// 这里不写行锁子句（见 dialect_locking.go）：SQLite 没有 FOR UPDATE 行锁。
+	// 要防的是「同一 session_key 的两个 StartSideRequest 读到同一个 generation 后双双
 	// 插入 running 行」。SQLite 的单写者保证后到的事务读到的是前一个提交后的
 	// generation；即使真撞上，schema 上的 UNIQUE(session_key,generation,client_id)
 	// 与 idx_side_request_running 这条部分唯一索引仍会把重复行挡在库外。
@@ -208,14 +206,13 @@ func (d *DB) StartSideRequest(ctx context.Context, s sidequestion.Snapshot, clie
 	if err != nil {
 		return nil, false, err
 	}
-	// ordinal 是分页用的单调序号：PostgreSQL 侧靠 BIGSERIAL 的 nextval 赋值，
-	// 但那个列不是主键，schema 转换后成了没有默认值的普通 INTEGER，新行的
-	// ordinal 因此是 NULL——而 scanSide 扫进非指针的 int64，直接失败。
-	// SQLite 没有序列，所以在事务内取下一个值显式写入。
+	// ordinal 是分页用的单调序号：该列不是主键，也没有默认值（schema 转换后
+	// 成了普通 INTEGER），新行的 ordinal 因此是 NULL——而 scanSide 扫进非指针的
+	// int64，直接失败。SQLite 没有序列，所以在事务内取下一个值显式写入。
 	//
 	// 放在同一事务里是安全的：SQLite 同一时刻只有一个写事务（DSN 带
 	// _txlock=immediate，写锁在 BEGIN 就取得），所以 MAX+1 到 INSERT 之间
-	// 不会有别的写入插进来。PostgreSQL 分支仍走 BIGSERIAL，SQL 不变。
+	// 不会有别的写入插进来。
 	ordinal, err := nextSideOrdinal(tx)
 	if err != nil {
 		return nil, false, err

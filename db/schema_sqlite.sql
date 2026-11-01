@@ -1,8 +1,12 @@
--- ARTEX SQLite schema -- 由 db/schema.sql 自动生成，请勿手改。
--- 重新生成：python db/schema_translate.py db/schema.sql db/schema_sqlite.sql
+-- ARTEX SQLite schema -- 唯一的数据源定义，手改即生效。
 --
--- 与 PostgreSQL 版的已知差异（有意为之）：
---   1. 无 plpgsql，触发器函数体已丢弃；
+-- ARTEX 只用 SQLite。这个文件原先是由一份 PostgreSQL schema 翻译生成的，
+-- 那份源schema 与翻译脚本已经删除，本文件自此是权威定义：改这里就是改线上库。
+--
+-- 建库时整段重放（见 db/open_sqlite.go），因此语句必须是幂等的。
+--
+-- 沿用下来的几条约定（不要随手改回 SQL 方言写法）：
+--   1. 无过程式触发器语言，触发器只写 SQLite 能表达的形态；
 --      set_updated_at 形态的 BEFORE UPDATE 改写为 AFTER UPDATE 回写同一行
 --      （SQLite 触发器不能给 NEW 赋值；recursive_triggers 默认 OFF 故不递归）。
 --   2. inet/cidr 为纯 TEXT，Go 侧不得再做 ::inet 转换。
@@ -47,7 +51,7 @@
 -- 改写   1 条 INDEX ... INCLUDE
 -- 改写   1 条 UPDATE <t> <alias>
 -- 改写   1 条 正则 ~ 运算符
--- ARTEX PostgreSQL schema (单一数据源)
+-- ARTEX schema（单一数据源）
 -- 幂等：可重复执行（IF NOT EXISTS / OR REPLACE / DROP TRIGGER IF EXISTS）。
 
 -- =====================================================================
@@ -604,7 +608,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_pinned ON tasks(pinned_at DESC)
 CREATE INDEX IF NOT EXISTS idx_tasks_archived ON tasks(archived_at DESC)
     WHERE archived_at IS NOT NULL;
 
--- Cold task archives retain only compact metadata in PostgreSQL. The complete
+-- Cold task archives retain only compact metadata in the database. The complete
 -- task payload lives in a versioned .tar.zst package under data/archives/tasks.
 -- task_id stays unique so an operation can be retried safely after a restart.
 CREATE TABLE IF NOT EXISTS task_archives (
@@ -840,7 +844,11 @@ CREATE TABLE IF NOT EXISTS agents (
     enabled           BOOLEAN NOT NULL DEFAULT true,
     llm_profile_id    BIGINT REFERENCES llm_profiles(id) ON DELETE SET NULL,
     current_prompt_id BIGINT,
-    max_turns         INTEGER NOT NULL DEFAULT 0,
+    -- 轮次天花板默认 500（= Strix 的 DEFAULT_MAX_TURNS）。旧值 0 表示「不限」，
+    -- 于是轮次永远撞不到线，唯一的收口是 run_seconds 墙钟——「模型在原地打转」与
+    -- 「任务真的需要很久」在账面上无法区分，两者都表现为跑满 20 分钟。
+    -- 给一个不依赖墙钟的轮次上限，退化式空转才会在轮次上先撞线。
+    max_turns         INTEGER NOT NULL DEFAULT 500,
     run_seconds       INTEGER NOT NULL DEFAULT 1200,
     web_search        BOOLEAN NOT NULL DEFAULT false,
     interactive_shell BOOLEAN NOT NULL DEFAULT false,
@@ -1212,7 +1220,14 @@ CREATE TABLE IF NOT EXISTS findings (
     -- 复核状态：unverified 未复核（默认） / verified 已复核（可进真值与报告） / refuted 已推翻。
     -- 与 status 分开：status 是「人怎么处置」，validation 是「这条发现本身有没有被独立复核」。
     -- 取值不加 CHECK，由 db.ValidFindingValidation + server 白名单校验，与 status 一致。
-    validation  TEXT NOT NULL DEFAULT 'unverified'
+    validation  TEXT NOT NULL DEFAULT 'unverified',
+    -- 反证闭环（移植自 Strix reporting 工具的必填四项，见 agent.validateFindingAnalysis）。
+    -- 老库由 open_sqlite.go 的 sqliteColumnAdds 补列，补列前写入的旧漏洞四列皆为空串：
+    -- 「没做过反证」与「反证结果是空」必须区分开，所以一律用空串而不是默认值填充。
+    counterevidence             TEXT NOT NULL DEFAULT '',
+    confidence                  TEXT NOT NULL DEFAULT '',
+    confidence_rationale        TEXT NOT NULL DEFAULT '',
+    severity_change_conditions  TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_findings_task ON findings(task_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_findings_time ON findings(created_at DESC);

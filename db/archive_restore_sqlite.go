@@ -9,10 +9,9 @@ import (
 	"time"
 )
 
-// 归档回写的 SQLite 侧实现：替代 PostgreSQL 的 json_populate_record /
-// json_populate_recordset。
+// 归档回写：把归档包里的「整行 JSON 数组」展开回表。
 //
-// ── 为什么必须搬到 Go 侧 ────────────────────────────────────────────────────
+// ── 为什么必须在 Go 侧做 ────────────────────────────────────────────────────
 //
 // 归档包里每一张表是以「整行 JSON 数组」存的，回写时靠这两个函数把对象展开成
 // 与表结构对齐的一行 INSERT：
@@ -31,8 +30,7 @@ import (
 // SQLite 侧没有任何等价物，PRAGMA 也拿不到列的默认值表达式去复现这条语义。
 // 于是只能在 Go 侧按「表定义顺序 + 缺列补 NULL」重建这条 INSERT。
 //
-// 这里只有 SQLite 一条实现：PostgreSQL 时代的 json_populate_record(set) 路径已随
-// 迁移删除，本文件即唯一实现，读代码时不必再假设还有另一条分支。
+// 本文件即唯一实现，读代码时不必再假设还有另一条分支。
 //
 
 // archiveColumn 是回写目标表的一列。
@@ -225,7 +223,7 @@ func newArchiveInserter(tx *sql.Tx, table, onConflict string) (*archiveInserter,
 	return &archiveInserter{table: table, cols: cols, stmt: stmt}, nil
 }
 
-// Insert 写入一行。行里没有的列按 PG 的 json_populate_record 语义落 NULL。
+// Insert 写入一行。行里没有的列落 NULL。
 func (in *archiveInserter) Insert(row map[string]any) error {
 	args := make([]any, len(in.cols))
 	for i, c := range in.cols {
@@ -259,7 +257,8 @@ func insertArchiveRowMaps(tx *sql.Tx, table string, rows []map[string]any, onCon
 
 // archiveStubUpdate 组装一条「用归档 JSON 对象回填现有行」的 UPDATE。
 //
-// 存在的理由：PostgreSQL 侧原本靠
+// 存在的理由：它对应下面这条「用归档 JSON 对象回填现有行」的 UPDATE，而 SQLite
+// 没有从 JSON 展开成行的函数，只能在 Go 侧按列名逐个拼 SET 子句。
 //
 //	UPDATE explorations current SET description=archived.description, …
 //	FROM json_populate_record(NULL::explorations,$2::json) archived

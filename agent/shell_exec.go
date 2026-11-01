@@ -61,12 +61,15 @@ var shellRT = &shellRuntime{}
 
 // 指标计数（原子）。只做诊断，不影响任何执行路径。
 var (
-	shellStatPoolHit     atomic.Int64
-	shellStatPoolSpawn   atomic.Int64
-	shellStatOneShot     atomic.Int64
-	shellStatFallback    atomic.Int64 // 池 spawn 失败 → 同 exe 一次性 spawn（用户批准的降级）
-	shellStatTimeout     atomic.Int64
-	shellStatRestarts    atomic.Int64
+	shellStatPoolHit   atomic.Int64
+	shellStatPoolSpawn atomic.Int64
+	shellStatOneShot   atomic.Int64
+	shellStatFallback  atomic.Int64 // 池 spawn 失败 → 同 exe 一次性 spawn（用户批准的降级）
+	shellStatTimeout   atomic.Int64
+	shellStatRestarts  atomic.Int64
+	// shellStatKillStuck 统计「发了终止信号但进程在宽限期内没死」的次数。
+	// 非零说明有进程失控，是排查「命令卡住」的第一手证据。
+	shellStatKillStuck   atomic.Int64
 	shellStatLastLatency atomic.Int64 // 最近一次耗时（毫秒）
 )
 
@@ -211,7 +214,7 @@ func runShell(ctx context.Context, req shellRequest) shellOutcome {
 		return shellOutcome{ExitCode: -1, Err: errors.New("命令为空")}
 	}
 	if req.Timeout <= 0 {
-		req.Timeout = 2 * time.Minute
+		req.Timeout = shellDefaultWait
 	}
 	if req.WorkDir != "" {
 		req.WorkDir = filepath.Clean(req.WorkDir)
@@ -315,14 +318,56 @@ func runOneShot(ctx context.Context, spec ShellSpec, req shellRequest) shellOutc
 		return shellOutcome{Output: text, ExitCode: -1, Err: err}
 	case <-timer.C:
 		_ = terminateExternalProc(cmd)
-		<-done
+		out := reapProcessOutput(&buf, done)
 		shellStatTimeout.Add(1)
-		return shellOutcome{Output: ensureUTF8Output(buf.String()), ExitCode: -1, TimedOut: true,
+		return shellOutcome{Output: out, ExitCode: -1, TimedOut: true,
 			Err: fmt.Errorf("命令超时（%s）", req.Timeout)}
 	case <-ctx.Done():
 		_ = terminateExternalProc(cmd)
-		<-done
-		return shellOutcome{Output: ensureUTF8Output(buf.String()), ExitCode: -1, Err: ctx.Err()}
+		out := reapProcessOutput(&buf, done)
+		return shellOutcome{Output: out, ExitCode: -1, Err: ctx.Err()}
+	}
+}
+
+// shellDefaultWait 是 Bash 未显式给 timeout 时的默认等待窗口。
+//
+// 取 30s 而不是原来的 2 分钟，对齐 Strix：它的 shell 把等待输出硬顶在
+// PTY_YIELD_TIME_MS_MAX = 30_000ms，超过就返回「Process running with session ID N」。
+// 30 秒足以覆盖绝大多数探测/读取类命令；跑不完的属于「长任务」，按 Strix 的惯例
+// 应当一开始就转后台（见 shellLongRunContract）。
+//
+// 注意这里**没有**照搬 Strix 的「无条件硬顶 30s、无视调用方请求」：Strix 到点只是
+// 停止等待、进程继续跑且可重连 session，所以硬顶无副作用；ARTEX 超时会真正终止
+// 进程（terminateExternalProc），硬顶等于把长扫描直接杀掉。故此处只改默认值，
+// 模型显式请求的超时仍按原口径放行（上限 10 分钟，见 shell_builtins.go）。
+const shellDefaultWait = 30 * time.Second
+
+// shellKillGrace 是发出终止信号后等待进程真正退出的宽限时间。
+//
+// 取 3s 而不是更长：这里每多等一秒，调用方就多卡一秒，而调用方持有的是
+// Shell 执行域的独占锁（见 tools_concurrency.go 的 shell: 命名空间）。进程
+// 若在 3s 内没死，再等下去也基本不会死——Windows 上常见的原因是子进程继承了
+// 管道句柄，此时 terminateExternalProc 已经尽力，剩下的只能交给运维。
+const shellKillGrace = 3 * time.Second
+
+// reapProcessOutput 在终止进程后收割输出，等不到退出就放弃等待。
+//
+// 为什么不能再写成 `<-done`：改造前这里是无条件阻塞，一旦进程不响应终止信号
+// （Windows 上子进程继承管道句柄、或 cmd 的 chcp 管道未收口都常见），整个调用
+// 永久悬停。叠加改造前 Bash 持有全局独占锁，一次悬停等于全进程所有工具一起
+// 卡死，界面上只表现为「长时间运行中」，没有任何报错。
+//
+// 等不到退出时**不读缓冲**：进程还活着就会继续往 bytes.Buffer 里写，此时读它
+// 是与进程竞争。宁可少拿一段输出，也不能让调用方卡在一个杀不掉的进程上。
+func reapProcessOutput(buf *bytes.Buffer, done <-chan error) string {
+	timer := time.NewTimer(shellKillGrace)
+	defer timer.Stop()
+	select {
+	case <-done:
+		return ensureUTF8Output(buf.String())
+	case <-timer.C:
+		shellStatKillStuck.Add(1)
+		return ""
 	}
 }
 

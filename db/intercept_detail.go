@@ -84,12 +84,11 @@ func (d *DB) ResolveIntercept(id int64, status, action, reason string) (bool, er
 	if err != nil {
 		return false, err
 	}
-	// 方言分支只发生在语句级：PostgreSQL 语句逐字保留（含 $3::jsonb——PG 里这个
-	// cast 不能删，jsonb || $3 会被判成 unknown || jsonb 而不唯一），
-	// SQLite 侧的等价语句与逐条等价性论证见 dialect_intercept.go。
+	// 语句替换只发生在语句级，SQLite 侧的等价语句与逐条等价性论证见
+	// dialect_intercept.go。
 	var r sql.Result
 	// 补丁文本用 string 绑定：项目里 JSON 列参数的既有约定就是文本
-	// （encodeJSONBArray / side_questions 的 string(jsonbClean(...))）。
+	// （encodeJSONBArray / side_questions 的 string(jsonTextClean(...))）。
 	r, err = d.Exec(interceptResolveAuditSQLite, id, status, string(patch), action,
 		interceptPatchExecutionUnknown, interceptPatchEmptyObject)
 	if err != nil {
@@ -109,9 +108,9 @@ func (d *DB) CompleteIntercept(id int64, runID, toolUseID, status, output string
 	if err != nil {
 		return err
 	}
-	// 方言分支同样只在语句级：PG 保留 audit || $4::jsonb 与四个 audit->>'k'，
-	// SQLite 用 json_patch + CAST(json_extract(...) AS TEXT)，
-	// 逐条论证见 dialect_intercept.go。四道守卫条件两边一一对应。
+	// 语句替换同样只在语句级：合并写成 json_patch(audit, $4)，四个 audit->>'k'
+	// 写成 CAST(json_extract(...) AS TEXT)，逐条论证见 dialect_intercept.go。
+	// 四道守卫条件一一对应。
 	_, err = d.Exec(interceptCompleteAuditSQLite, id, runID, toolUseID, string(patch))
 	return err
 }

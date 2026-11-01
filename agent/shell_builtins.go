@@ -158,7 +158,9 @@ func (b *crossPlatformBashTool) call(ctx context.Context, in json.RawMessage, tc
 	// 注意键名：SDK 的 Bash schema 用的是 timeout_ms。历史代码读的是 "timeout"，
 	// 于是永远取不到值、一律按 2 分钟跑——模型明确要求 600s 的命令会被提前杀掉，
 	// 这类「莫名其妙超时」本身就是错误率的一部分。两个键都认，先 timeout_ms。
-	timeoutDur := 2 * time.Minute
+	// 默认等待窗口对齐 Strix 的 30s（PTY_YIELD_TIME_MS_MAX），详见 shellDefaultWait。
+	// 模型未给 timeout 时按此值；给了就尊重，仍受下面的 10 分钟上限约束。
+	timeoutDur := shellDefaultWait
 	for _, key := range []string{"timeout_ms", "timeout"} {
 		if tms, ok := payload[key].(float64); ok && tms > 0 {
 			timeoutDur = time.Duration(tms) * time.Millisecond

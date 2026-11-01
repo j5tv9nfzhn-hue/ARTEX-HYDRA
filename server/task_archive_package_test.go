@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	pgdb "github.com/Autumn-27/artex/db"
+	"github.com/Autumn-27/artex/db"
 	"github.com/klauspost/compress/zstd"
 )
 
@@ -47,7 +47,7 @@ func TestTaskArchivePackageFilesRoundTrip(t *testing.T) {
 	}
 
 	archivePath := taskArchivePath(dataDir, 1, taskID)
-	streamPath := filepath.Join(stage.payload, filepath.FromSlash(pgdb.TaskArchiveLLMRecordsPath))
+	streamPath := filepath.Join(stage.payload, filepath.FromSlash(db.TaskArchiveLLMRecordsPath))
 	if err := os.MkdirAll(filepath.Dir(streamPath), archiveDirMode); err != nil {
 		t.Fatal(err)
 	}
@@ -55,9 +55,9 @@ func TestTaskArchivePackageFilesRoundTrip(t *testing.T) {
 	if err := os.WriteFile(streamPath, streamBody, archiveFileMode); err != nil {
 		t.Fatal(err)
 	}
-	snapshot := &pgdb.TaskArchiveSnapshot{
-		FormatVersion: pgdb.TaskArchiveFormatVersion, TaskID: 42, ExplorationID: explorationID,
-		StreamedTables: map[string]string{"llm_records": pgdb.TaskArchiveLLMRecordsPath},
+	snapshot := &db.TaskArchiveSnapshot{
+		FormatVersion: db.TaskArchiveFormatVersion, TaskID: 42, ExplorationID: explorationID,
+		StreamedTables: map[string]string{"llm_records": db.TaskArchiveLLMRecordsPath},
 	}
 	original, compressed, checksum, err := writeTaskArchivePackage(archivePath, stage.payload, snapshot)
 	if err != nil {
@@ -73,7 +73,7 @@ func TestTaskArchivePackageFilesRoundTrip(t *testing.T) {
 	if err := extractTaskArchivePackage(archivePath, checksum, extracted); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := os.ReadFile(filepath.Join(extracted, filepath.FromSlash(pgdb.TaskArchiveLLMRecordsPath))); err != nil || !bytes.Equal(got, streamBody) {
+	if got, err := os.ReadFile(filepath.Join(extracted, filepath.FromSlash(db.TaskArchiveLLMRecordsPath))); err != nil || !bytes.Equal(got, streamBody) {
 		t.Fatalf("streamed LLM archive payload=%q err=%v", got, err)
 	}
 	installed, err := installTaskArchiveFiles(dataDir, extracted, taskID, 1)
@@ -110,7 +110,7 @@ func TestTaskArchivePackageSkipsSymlink(t *testing.T) {
 	}
 
 	archivePath := filepath.Join(dataDir, "archive.tar.zst")
-	snapshot := &pgdb.TaskArchiveSnapshot{FormatVersion: pgdb.TaskArchiveFormatVersion, TaskID: 42}
+	snapshot := &db.TaskArchiveSnapshot{FormatVersion: db.TaskArchiveFormatVersion, TaskID: 42}
 	_, _, checksum, err := writeTaskArchivePackage(archivePath, payload, snapshot)
 	if err != nil {
 		t.Fatalf("archive should skip symlink, not fail: %v", err)

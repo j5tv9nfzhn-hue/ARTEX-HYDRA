@@ -72,7 +72,7 @@ VALUES(?,?,?,?,?)`, id, requestHead, []byte("payload"), responseHead, []byte(`{"
 	}
 }
 
-func TestRecoverArchiveHostDeleteStageRollsBackBeforePostgresCommit(t *testing.T) {
+func TestRecoverArchiveHostDeleteStageRollsBackBeforeArchiveCommit(t *testing.T) {
 	trafficDir := t.TempDir()
 	tr, err := Open(trafficDir, "127.0.0.1:0")
 	if err != nil {
@@ -110,7 +110,7 @@ func TestRecoverArchiveHostDeleteStageRollsBackBeforePostgresCommit(t *testing.T
 	}
 }
 
-func TestRecoverArchiveHostDeleteStageCompletesAfterPostgresCommit(t *testing.T) {
+func TestRecoverArchiveHostDeleteStageCompletesAfterArchiveCommit(t *testing.T) {
 	trafficDir := t.TempDir()
 	tr, err := Open(trafficDir, "127.0.0.1:0")
 	if err != nil {

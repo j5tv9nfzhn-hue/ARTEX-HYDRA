@@ -33,7 +33,7 @@ const maxNativeMCPToolSchemas = 25
 // a multi-file skill package is invoked via Skill({"name":"..."}).
 const maxCompanionRefBytes = 16384
 
-// wireAgentAugment connects the PG agent_visibility table into the agent runtime:
+// wireAgentAugment connects the agent_visibility table into the agent runtime:
 // an agent's visible skills are loaded from the filesystem and packed into one
 // Skill meta-tool; its visible MCP servers are connected and expanded to
 // mcp__server__tool. skillDir is the root directory of all skill subdirectories.

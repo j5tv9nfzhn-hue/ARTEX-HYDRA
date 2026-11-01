@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	pgdb "github.com/Autumn-27/artex/db"
+	"github.com/Autumn-27/artex/db"
 	"github.com/klauspost/compress/zstd"
 )
 
@@ -322,10 +322,10 @@ func (s *taskArchiveRestoreFiles) commit() error {
 }
 
 // recoverTaskArchiveRestoreStages resolves file installs left by an interrupted
-// restore. If PostgreSQL committed, installed files are authoritative and only
+// restore. If the database committed, installed files are authoritative and only
 // the extraction directory is stale. Otherwise all completed renames are moved
 // back so the persistent restore job can retry from a clean destination.
-func recoverTaskArchiveRestoreStages(dataDir string, pg *pgdb.DB) error {
+func recoverTaskArchiveRestoreStages(dataDir string, pg *db.DB) error {
 	parent := filepath.Join(taskArchiveRoot(dataDir), ".restore")
 	entries, err := os.ReadDir(parent)
 	if os.IsNotExist(err) {
@@ -358,7 +358,7 @@ func recoverTaskArchiveRestoreStages(dataDir string, pg *pgdb.DB) error {
 			continue
 		}
 		restored, err := pg.IsTaskArchiveRestored(journal.ArchiveID)
-		if errors.Is(err, pgdb.ErrTaskArchiveNotFound) && journal.TaskID > 0 {
+		if errors.Is(err, db.ErrTaskArchiveNotFound) && journal.TaskID > 0 {
 			task, taskErr := pg.GetTask(journal.TaskID)
 			if taskErr != nil {
 				errs = append(errs, taskErr)
@@ -392,7 +392,7 @@ func recoverTaskArchiveRestoreStages(dataDir string, pg *pgdb.DB) error {
 // recoverTaskArchiveStages resolves file renames left by an interrupted archive.
 // A committed cold task already has a verified package, so stale staging can be
 // discarded; otherwise files are moved back before the persistent job retries.
-func recoverTaskArchiveStages(dataDir string, pg *pgdb.DB) error {
+func recoverTaskArchiveStages(dataDir string, pg *db.DB) error {
 	parent := filepath.Join(taskArchiveRoot(dataDir), ".staging")
 	entries, err := os.ReadDir(parent)
 	if os.IsNotExist(err) {
@@ -434,7 +434,7 @@ func recoverTaskArchiveStages(dataDir string, pg *pgdb.DB) error {
 			errs = append(errs, getErr)
 			continue
 		}
-		if archive != nil && archive.State == pgdb.ArchiveReady {
+		if archive != nil && archive.State == db.ArchiveReady {
 			if err := os.RemoveAll(root); err != nil {
 				errs = append(errs, err)
 			}
@@ -451,7 +451,7 @@ func recoverTaskArchiveStages(dataDir string, pg *pgdb.DB) error {
 	return errors.Join(errs...)
 }
 
-func recoverTaskArchiveDeletePackages(dataDir string, pg *pgdb.DB) error {
+func recoverTaskArchiveDeletePackages(dataDir string, pg *db.DB) error {
 	root := taskArchiveRoot(dataDir)
 	entries, err := os.ReadDir(root)
 	if os.IsNotExist(err) {
@@ -487,7 +487,7 @@ func recoverTaskArchiveDeletePackages(dataDir string, pg *pgdb.DB) error {
 			}
 			continue
 		}
-		if archive.State == pgdb.DeleteQueued || archive.State == pgdb.Deleting || archive.State == pgdb.DeleteFailed {
+		if archive.State == db.DeleteQueued || archive.State == db.Deleting || archive.State == db.DeleteFailed {
 			// The idempotent delete worker consumes the staged path directly.
 			continue
 		}
@@ -525,7 +525,7 @@ func stageTaskArchivePackageDelete(archivePath string, archiveID int64) (string,
 	return staged, false, nil
 }
 
-func writeTaskArchivePackage(path, payloadDir string, snapshot *pgdb.TaskArchiveSnapshot) (originalSize, compressedSize int64, checksum string, err error) {
+func writeTaskArchivePackage(path, payloadDir string, snapshot *db.TaskArchiveSnapshot) (originalSize, compressedSize int64, checksum string, err error) {
 	if snapshot == nil {
 		return 0, 0, "", errors.New("nil task archive snapshot")
 	}

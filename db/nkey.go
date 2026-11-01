@@ -9,8 +9,9 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
-// 归一化自然键 (nkey)：移植自旧 graph/id.go，去掉 StableID 哈希（PG 用 BIGSERIAL 主键 +
-// UNIQUE(type, nkey) 去重）。子资产的 nkey 内嵌父资产的 int64 id，把层级编码进键。
+// 归一化自然键 (nkey)：移植自旧 graph/id.go，去掉 StableID 哈希（主键改用
+// AUTOINCREMENT，靠 UNIQUE(type, nkey) 去重）。子资产的 nkey 内嵌父资产的
+// int64 id，把层级编码进键。
 
 func DomainKey(fqdn string) string {
 	return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(fqdn)), ".")

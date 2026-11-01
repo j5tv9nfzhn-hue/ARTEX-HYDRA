@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// testSetup opens a DB and returns both stores. Skips if no PG.
+// testSetup opens a DB and returns both stores.
 func testSetup(t *testing.T) (*DB, *AssetStore, *CompanyStore) {
 	t.Helper()
 	d, err := Open(testDSN(t))
@@ -26,20 +26,17 @@ func deleteAsset(d *DB, id int64) {
 
 // testTaskIDsInsert 返回把单个 task id 写进数组列的占位符与绑定值。
 //
-// PostgreSQL 侧写的是 ARRAY[$N]::bigint[] 并直接绑 int64；SQLite 侧写裸 $N 并绑
-// encodeTaskIDArray(id) 编出的 JSON 数组文本——SQLite 既没有 `::` 转换也没有
-// ARRAY[] 构造子，只能收文本，而 pgx 无法把 Go string 编码成 bigint[] 参数
-// （array codec 只认切片、数组文本类型或 TextValuer）。
+// 写裸 $N 并绑 encodeTaskIDArray(id) 编出的 JSON 数组文本——SQLite 既没有 `::`
+// 转换也没有 ARRAY[] 构造子，数组列只能收 JSON 数组文本。
 func testTaskIDsInsert(placeholder string, taskID int64) (string, any) {
 	return placeholder, encodeTaskIDArray(taskID)
 }
 
 // testArrayLenExpr 返回「数组列有几个元素」的表达式。
 //
-// 这些列（open_ports / auth / params / technologies / bound_domains）在 PostgreSQL
-// 是数组、在 SQLite 是存 JSON 数组文本的 TEXT 列，长度函数的拼法不通用。SQLite 侧
-// 用内建 json_array_length：空数组文本 '[]' 返回 0，与 PG 的 cardinality('{}') 一致；
-// 两边在列本身为 NULL 时同样返回 NULL。
+// 这些列（open_ports / auth / params / technologies / bound_domains）存的是 JSON
+// 数组文本，长度用内建 json_array_length 量：空数组文本 '[]' 返回 0，列本身为 NULL
+// 时返回 NULL。
 func testArrayLenExpr(col string) string {
 	return "json_array_length(" + col + ")"
 }

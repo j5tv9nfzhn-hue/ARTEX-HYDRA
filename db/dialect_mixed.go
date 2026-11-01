@@ -7,16 +7,16 @@ import (
 
 // 本文件集中存放「可以直接拼进语句的 SQL 片段」助手。
 //
-// 这些助手原本是 PostgreSQL / SQLite 双分支，每个都带着一段「为什么两边不一样」
-// 的论证。项目收敛到 SQLite 之后，分叉消失了，但助手本身保留：调用点因此仍然是
-// `col = ANY(...)` 之类的语义表达，而不是散落各处的字面 SQL 片段。每条的注释保留
-// 了原 PostgreSQL 写法，作为「这条语句想表达什么」的规范说明。
+// 这些助手原本是双分支，每个都带着一段「为什么两边不一样」的论证。项目收敛到
+// SQLite 之后，分叉消失了，但助手本身保留：调用点因此仍然是 `col = ANY(...)`
+// 之类的语义表达，而不是散落各处的字面 SQL 片段。每条的注释写清楚这条语句想
+// 表达什么、以及为什么这么写。
 
 // sqlILike 返回大小写不敏感的模糊匹配运算符。
 //
 // SQLite 的 LIKE 对 ASCII 本来就大小写不敏感（除非显式开 PRAGMA
-// case_sensitive_like），与本项目用到的字段（全小写的任务名、任务描述、任务 ID
-// 数字串）上等价于 PostgreSQL 的 ILIKE，因此不需要额外包一层 lower()。
+// case_sensitive_like），本项目用到的字段（全小写的任务名、任务描述、任务 ID
+// 数字串）都是 ASCII，因此不需要额外包一层 lower()。
 func sqlILike() string { return "LIKE" }
 
 // sqlNotILike 返回否定模糊匹配的运算符，与 sqlILike 成对。
@@ -28,14 +28,13 @@ func sqlNotILike() string { return "NOT LIKE" }
 
 // sqlCastText 返回把列转成文本的写法。
 //
-// 用途只有一个：让数值列参与字符串比较（任务 ID 的模糊搜索）。PostgreSQL 的
-// `col::text` 在 SQLite 里会报 unrecognized token ":"，必须写 CAST(col AS TEXT)。
+// 用途只有一个：让数值列参与字符串比较（任务 ID 的模糊搜索）。必须写
+// CAST(col AS TEXT)：`col::text` 会报 unrecognized token ":"。
 func sqlCastText(col string) string { return "CAST(" + col + " AS TEXT)" }
 
 // sqlNowPlusSeconds 返回「当前时间 + n 秒」的表达式，n 由占位符 arg 给出。
 //
-//	PostgreSQL: now() + make_interval(secs => $n)
-//	本实现:     strftime('%Y-%m-%d %H:%M:%f+00:00','now','+'||$n||' seconds')
+//	strftime('%Y-%m-%d %H:%M:%f+00:00','now','+'||$n||' seconds')
 //
 // 刻意不用 datetime('now')：列默认时间是 strftime 的 '%Y-%m-%d %H:%M:%f+00:00'
 // 格式，datetime() 少毫秒少时区，同一列里混两种文本格式会直接破坏排序（与
@@ -46,9 +45,8 @@ func sqlNowPlusSeconds(arg string) string {
 
 // sqlArrayRemove 返回「从 <col> 的数组里删掉 <expr>」的写法。
 //
-// PostgreSQL 用 array_remove(col, expr)；SQLite 侧存的是 JSON 数组文本而不是 PG 的
-// {1,2,3} 字面量，所以换成 artex_json_remove UDF，语义（删掉所有等于该值的元素）
-// 由该 UDF 保证。
+// 列里存的是 JSON 数组文本，所以走 artex_json_remove UDF，语义（删掉所有等于该值
+// 的元素）由该 UDF 保证。
 func sqlArrayRemove(col, expr string) string {
 	return "artex_json_remove(" + col + ", " + expr + ")"
 }
@@ -64,9 +62,9 @@ func sqlArrayAddIfMissing(col, expr string) string {
 
 // sqlNextSequenceValue 返回取下一个自增序列值的表达式。
 //
-// PostgreSQL 用 nextval(pg_get_serial_sequence(table,'id'))。这里不能用 max(id)+1
-// 作为首选：并发下两个插入会拿到同一个值。sqlite_sequence 由 AUTOINCREMENT 维护，
-// 读它即可，语义与 nextval 一致。外层 COALESCE 是因为 sqlite_sequence 只在该表
+// 取序列值不能用 max(id)+1 作为首选：并发下两个插入会拿到同一个值。
+// sqlite_sequence 由 AUTOINCREMENT 维护，读它即可。外层 COALESCE 是因为
+// sqlite_sequence 只在该表
 // **首次插入之后**才有行；归档恢复走到这里时表里必然已有行（否则 rowExists 为假），
 // 但兜底比"依赖调用点的隐含前提"便宜。
 func sqlNextSequenceValue(table string) string {
@@ -76,9 +74,8 @@ func sqlNextSequenceValue(table string) string {
 
 // sqlCoalesceNow 返回 COALESCE(<arg>, now())。
 //
-// PostgreSQL 侧原本要写 `$n::timestamptz` 让 pgx 把参数类型定成 timestamptz；
-// SQLite 侧的裸 $n 就够了，调用点此时绑的是 Go 的 time.Time 或 nil，值类型本就确定，
-// 加一个 SQLite 不认识的 `::timestamptz` 只会得到 unrecognized token ":"。
+// 裸 $n 就够了：调用点此时绑的是 Go 的 time.Time 或 nil，值类型本就确定，加一个
+// SQLite 不认识的 `::timestamptz` 只会得到 unrecognized token ":"。
 // 调用点绑 nil 时走 now() 分支，绑 time.Time 时走参数分支。
 func sqlCoalesceNow(arg string) string {
 	return "COALESCE(" + arg + ", now())"
@@ -109,7 +106,7 @@ func pgTypeSQL(ddl string) string {
 
 // sqlDayStart 返回「把时间列截断到当天 00:00:00」的表达式。
 //
-// PostgreSQL 是 date_trunc('day', X)。这里与 sqlUTCDate 一样依赖 DSN 的
+// 这里与 sqlUTCDate 一样依赖 DSN 的
 // _time_format=sqlite：那个格式以空格分隔、带数字时区后缀，而 SQLite 的 strftime
 // 只按 POSIX 解析日期部分，多余的 " 12:34:56+00:00" 会被忽略——对截断到天这个用途
 // 恰好无害，但若哪天改掉那个 DSN 参数，这两处会一起开始出错。
@@ -119,9 +116,8 @@ func sqlDayStart(col string) string {
 
 // sqlEpochInt 返回「时间表达式 -> unix 秒（整型）」的写法。
 //
-// PostgreSQL 是 EXTRACT(EPOCH FROM expr)::bigint；SQLite 没有 EXTRACT，而
-// strftime('%s', ...) 返回字符串形态的 unix 秒，必须显式 CAST 才能被 Scan 进
-// int64。与 sqlDayStart 同样依赖 DSN 的 _time_format=sqlite 时间文本形态：
+// SQLite 没有 EXTRACT，而 strftime('%s', ...) 返回字符串形态的 unix 秒，必须
+// 显式 CAST 才能被 Scan 进 int64。与 sqlDayStart 同样依赖 DSN 的 _time_format=sqlite 时间文本形态：
 // strftime 按 POSIX 解析，时区后缀换算成 UTC 秒，与 Go 的 time.Unix() 对齐。
 func sqlEpochInt(expr string) string {
 	return "CAST(strftime('%s', " + expr + ") AS INTEGER)"
@@ -129,8 +125,7 @@ func sqlEpochInt(expr string) string {
 
 // sqlNowMinusDays 返回「当前时间 - n 天」的表达式，n 由占位符 arg 给出。
 //
-// 调用点原是 PostgreSQL 专有的 `now() - ($1 * interval '1 day')`，这里沿用
-// sqlNowPlusSeconds 的 strftime 形状（与列默认值同形，字典序即时间序）。
+// 沿用 sqlNowPlusSeconds 的 strftime 形状（与列默认值同形，字典序即时间序）。
 func sqlNowMinusDays(arg string) string {
 	return "strftime('%Y-%m-%d %H:%M:%f+00:00','now','-'||" + arg + "||' days')"
 }
@@ -144,14 +139,13 @@ func sqlNotBeforeExpr(col, tsExpr string) string {
 
 // sqlInt64ArrayArg 返回「可以绑给 id 数组列」的值。
 //
-// PostgreSQL 侧直接交原始 []int64 让 pgx 转成 int8[]；SQLite 驱动不认切片——直接绑
-// []int64 会得到 "sql: converting argument $N type: unsupported type []int64"。
+// 驱动不认切片——直接绑 []int64 会得到
+// "sql: converting argument $N type: unsupported type []int64"。
 //
-// 编码成 JSON 而不是 PG 的 "{1,2,3}" 字面量，是因为 task_archives.source_task_ids
-// 在 SQLite 侧本来就按 JSON 数组文本存：读侧 taskIDsAnyExpr 用 artex_json_contains
-// 遍历元素。写入格式必须与读侧配对，写成 PG 字面量的话依赖检查会静默失效——
-// artex_json_contains 对非 JSON 文本返回假，任务因此永远可以被归档，尽管它实际上
-// 被别的归档依赖着。
+// 编码成 JSON 而不是 "{1,2,3}" 字面量，是因为 task_archives.source_task_ids
+// 本来就按 JSON 数组文本存：读侧 taskIDsAnyExpr 用 artex_json_contains 遍历元素。
+// 写入格式必须与读侧配对，写成字面量的话依赖检查会静默失效——artex_json_contains
+// 对非 JSON 文本返回假，任务因此永远可以被归档，尽管它实际上被别的归档依赖着。
 func sqlInt64ArrayArg(ids []int64) any {
 	if len(ids) == 0 {
 		return "[]"

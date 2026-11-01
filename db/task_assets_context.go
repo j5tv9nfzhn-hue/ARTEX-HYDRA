@@ -23,10 +23,9 @@ context_tasks AS (
 
 // contextCoverageCTE returns the coverage CTE (current task + direct source
 // tasks; scope-or-anchor membership; fact-anchored "tested" set) for the current
-// engine. PostgreSQL keeps the original `ts.net >>= try_inet(...)` /
-// `lower(regexp_replace(...))` predicates verbatim; SQLite has neither the inet
-// containment operator (no operator overloading in SQLite) nor regexp_replace,
-// so the same predicates are expressed with the registered dialect helpers
+// engine. SQLite has neither an inet containment operator (no operator
+// overloading in SQLite) nor regexp_replace, so the predicates are expressed
+// with the registered helpers
 // (companyInetContains / companyTryInet / companyICPKey, see dialect_companies.go).
 func contextCoverageCTE() string {
 	return directTaskContextCTE + `,

@@ -19,15 +19,13 @@ import (
 // it to distinguish an expected control race (HTTP 409) from a storage failure.
 var ErrIntentStateConflict = errors.New("intent state changed concurrently")
 
-// utf8Clean makes a string safe for a PostgreSQL text column. It (1) replaces
-// invalid UTF-8 byte sequences with U+FFFD and (2) strips NUL (0x00) bytes.
-// Tool output (nmap/curl/… stdout) can carry raw/truncated bytes that PostgreSQL's
-// UTF8 encoding rejects ("invalid byte sequence for encoding UTF8"); without this
-// the INSERT fails and the activity record is silently lost. NUL is *valid* UTF-8
-// (U+0000) so ToValidUTF8 leaves it in place, yet PostgreSQL text still rejects it
-// (SQLSTATE 22021) — so it must be removed separately. JSONB columns need the
-// separate jsonbClean below: json.Marshal encodes a NUL as the escape backslash-u-0000,
-// which the text-type json accepts but jsonb rejects (SQLSTATE 22P05).
+// utf8Clean makes a string safe to store. It (1) replaces invalid UTF-8 byte
+// sequences with U+FFFD and (2) strips NUL (0x00) bytes.
+// Tool output (nmap/curl/… stdout) can carry raw/truncated bytes; without this the
+// INSERT fails and the activity record is silently lost. NUL is *valid* UTF-8
+// (U+0000) so ToValidUTF8 leaves it in place, so it must be removed separately.
+// JSON columns need the separate jsonTextClean below: json.Marshal encodes a NUL
+// as the escape \u0000, which is accepted as text but rejected as JSON content.
 func utf8Clean(s string) string {
 	if strings.IndexByte(s, 0) >= 0 {
 		s = strings.ReplaceAll(s, "\x00", "")
@@ -35,15 +33,15 @@ func utf8Clean(s string) string {
 	return strings.ToValidUTF8(s, "�")
 }
 
-// jsonbClean makes marshaled JSON safe for a PostgreSQL jsonb column. json.Marshal
-// faithfully encodes a NUL byte (U+0000) as the 6-byte escape sequence \u0000; the
-// json type stores it, but jsonb rejects it with "unsupported Unicode escape
-// sequence" (SQLSTATE 22P05). Captured HTTP/tool bytes can carry NULs, so drop the
+// jsonTextClean makes marshaled JSON safe to store. json.Marshal faithfully
+// encodes a NUL byte (U+0000) as the 6-byte escape sequence \u0000, which is not
+// valid inside a JSON string in this schema. Captured HTTP/tool bytes can carry
+// NULs, so drop the
 // escape — this also covers NULs nested inside json.RawMessage fields, which are
 // copied verbatim into the output. Only a *real* escape is stripped: a \u0000 is
 // genuine when preceded by an even number of backslashes, so an escaped-backslash
 // run such as \\u0000 (the literal text u0000) is left intact.
-func jsonbClean(b []byte) []byte {
+func jsonTextClean(b []byte) []byte {
 	if !bytes.Contains(b, []byte("\\u0000")) {
 		return b
 	}
@@ -431,8 +429,8 @@ func (s *ExplorationStore) SoftDeleteIntent(id int64, reason string) (string, er
 
 	var state string
 	var rawPayload []byte
-	// 行锁子句按引擎取：PG 保留 FOR UPDATE，SQLite 返回空串（见 dialect_locking.go）。
-	// 锁防的是「读到 running 之后被别人改掉状态」的窗口，SQLite 的写事务互斥已覆盖。
+	// 这里不写行锁子句（见 dialect_locking.go）：SQLite 没有 FOR UPDATE 行锁。
+	// 要防的是「读到 running 之后被别人改掉状态」的窗口，SQLite 的写事务互斥已覆盖。
 	if err := tx.QueryRow(`SELECT state, payload FROM exploration_nodes
 		WHERE id=$1 AND exploration_id=$2 AND kind='intent'`, id, s.expID).Scan(&state, &rawPayload); err != nil {
 		if err == sql.ErrNoRows {

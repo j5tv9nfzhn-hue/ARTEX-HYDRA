@@ -11,8 +11,8 @@ import (
 //
 // ── 为什么 SQLite 不需要 FOR UPDATE ───────────────────────────────────────────
 //
-// PostgreSQL 的行锁把「读出来 → 判断 → 更新」这段变成原子的：并发事务要么看到旧值、
-// 要么被挡在锁外直到本事务提交。SQLite 根本没有行锁这个概念，写上去只会得到
+// 行锁把「读出来 → 判断 → 更新」这段变成原子的：并发事务要么看到旧值、要么被挡在
+// 锁外直到本事务提交。SQLite 根本没有行锁这个概念，`FOR UPDATE` 写上去只会得到
 // `SQL logic error: near "FOR": syntax error`。
 //
 // 本项目里所有 FOR UPDATE 的用途只有两种，去掉它在 SQLite 上都是安全的：
@@ -54,9 +54,9 @@ import (
 //
 //	table        被领取的表
 //	selection    候选行 SELECT：**只投影 id 一列**（IN 子查询必须返回单列），
-//	             自带 WHERE / ORDER BY，不带 LIMIT，也不带任何锁子句。它与 PG 分支
-//	             用的是同一条候选条件，只是不再拼行锁子句、也不再多投影列。
-//	selArgs      selection 的参数，**最后一个就是 LIMIT 的值**（与 PG 分支拼
+//	             自带 WHERE / ORDER BY，不带 LIMIT，也不带任何锁子句。用的是原来的
+//	             候选条件，只是不再拼行锁子句、也不再多投影列。
+//	selArgs      selection 的参数，**最后一个就是 LIMIT 的值**（与
 //	             `LIMIT $<len(args)>` 是同一个约定），因此 LIMIT 的占位符就是 $n。
 //	returning    RETURNING 列；可以是 id，也可以是被领取行的其它列（SQLite 的
 //	             UPDATE … RETURNING 会返回更新后的整行）。
@@ -80,16 +80,15 @@ func sqliteClaimUpdate(table, selection, returning string, selArgs []any, setSQL
 }
 
 // sqlTimestampNotAfterNow 返回「该时间戳列是否已到期」的比较表达式，
-// 本文件收录它是因为**队列领取条件必须能真的跑起来**：SQLite 分支的领取语句
-// 直接照搬了 PG 的 `next_attempt_at <= now()`，而那一句在 SQLite 上根本执行不了
+// 本文件收录它是因为**队列领取条件必须能真的跑起来**：领取语句里直接写了
+// `next_attempt_at <= now()`，而那一句在 SQLite 上根本执行不了
 // （报 datatype mismatch (20)，与行锁无关，是移植时就带过来的问题）。
 //
 // 原因：schema 里这些列声明为 TIMESTAMP，SQLite 判定其亲和性为 NUMERIC；而
 // sqlite_compat.go 注册的 now() 返回的是 TEXT。两个操作数亲和性不同、且文本
 // 无法转成数字时，SQLite 直接报 DATATYPE_MISMATCH 而不是当作字符串比较。
 //
-//	PG:      col <= now()
-//	SQLite:  CAST(col AS TEXT) <= now()
+//	CAST(col AS TEXT) <= now()
 //
 // CAST(col AS TEXT) 给左操作数 TEXT 亲和性，比较退回字典序。这对本项目的列是
 // 等价的：写入路径只有两条（列默认值与 now()/sqlNowPlusSeconds），都产出同一形状
@@ -100,8 +99,7 @@ func sqlTimestampNotAfterNow(col string) string {
 }
 
 // claimIDs 读一条 sqliteClaimUpdate 的 RETURNING id 结果。
-// 它与 selectForClaim（PG 分支）配成一对：两条分支给调用方的是同一种东西——领到的
-// id 列表，顺序无意义。
+// 它配合领取语句使用：给调用方的是领到的 id 列表，顺序无意义。
 func claimIDs(rows *sql.Rows) ([]int64, error) {
 	defer rows.Close()
 	var ids []int64

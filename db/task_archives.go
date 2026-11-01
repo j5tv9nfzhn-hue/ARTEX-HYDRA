@@ -48,7 +48,7 @@ var (
 	ErrTaskArchiveFormatMismatch = errors.New("task archive format is not supported")
 )
 
-// TaskArchive is the compact PostgreSQL record retained while a task is cold.
+// TaskArchive is the compact record retained while a task is cold.
 // Sensitive profile configuration and API keys are intentionally absent.
 type TaskArchive struct {
 	ID                      int64           `json:"id"`
@@ -136,8 +136,7 @@ func scanTaskArchive(sc interface{ Scan(...any) error }) (*TaskArchive, error) {
 	// SQLite 把 JSON 存在 TEXT 列、交出 string，而 json.RawMessage 在 Go 1.27
 	// 上是 jsontext.Value 的别名——database/sql 的 convertAssign 只对精确的
 	// *[]byte 写了 string/[]byte 两个分支，具名的 []byte 类型一个都不沾，
-	// 于是报 "unsupported Scan ... into type *jsontext.Value"。PG 侧一直没暴露，
-	// 是因为 pgx 把 JSONB 交成 []byte，恰好撞在反射兜底上。详见 sqlite_json_scan.go。
+	// 于是报 "unsupported Scan ... into type *jsontext.Value"。详见 sqlite_json_scan.go。
 	var warnings, dataCounts, aggregateStats jsonValue
 	err := sc.Scan(
 		&item.ID, &item.TaskID, &item.State, &item.Phase, &item.Progress, &item.Error,
@@ -204,9 +203,9 @@ func (d *DB) ListTaskArchives(search, state string, page, size int) (TaskArchive
 	}
 	search = strings.TrimSpace(search)
 	state = strings.TrimSpace(state)
-	// task_id::text / ILIKE 都是 PG 写法：裸的 `::` 会被 SQLite 判成
-	// unrecognized token ":"，ILIKE 更是没有对应关键字。这里按引擎换成
-	// CAST(... AS TEXT) + LIKE（SQLite 的 LIKE 对 ASCII 本就大小写不敏感）。
+	// task_id 用 CAST(... AS TEXT) + LIKE：裸的 `::` 会被 SQLite 判成
+	// unrecognized token ":"，ILIKE 也没有对应关键字
+	//（SQLite 的 LIKE 对 ASCII 本就大小写不敏感）。
 	where := `WHERE ($1='' OR ` + sqlCastText("task_id") + ` ` + sqlILike() + ` '%'||$1||'%'
   OR task_name ` + sqlILike() + ` '%'||$1||'%'
   OR task_description ` + sqlILike() + ` '%'||$1||'%')
@@ -644,7 +643,7 @@ func archiveAssetIDsQuery() string {
   WHERE finding.task_id=$1 AND regexp(je.value, '^[0-9]+$')`
 }
 
-// SnapshotTaskArchive reads one repeatable PostgreSQL snapshot. Task-owned Agent
+// SnapshotTaskArchive reads one repeatable snapshot. Task-owned Agent
 // writes are already quiescent at the server barrier; repeatable-read also keeps
 // the asset and accounting views mutually consistent during serialization.
 func (d *DB) SnapshotTaskArchive(taskID int64) (*TaskArchiveSnapshot, error) {
@@ -653,7 +652,7 @@ func (d *DB) SnapshotTaskArchive(taskID int64) (*TaskArchiveSnapshot, error) {
 
 // SnapshotTaskArchiveWithLLMRecords streams the heavyweight record history to
 // llmRecords while all other task-owned data is read from the same repeatable
-// PostgreSQL snapshot.
+// snapshot.
 func (d *DB) SnapshotTaskArchiveWithLLMRecords(taskID int64, llmRecords io.Writer) (*TaskArchiveSnapshot, error) {
 	if llmRecords == nil {
 		return nil, errors.New("nil LLM record archive writer")

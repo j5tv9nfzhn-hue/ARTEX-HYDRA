@@ -63,8 +63,7 @@ func (d *DB) SkillGaps(ctx context.Context, minMisses int) ([]SkillGap, error) {
 	if minMisses <= 0 {
 		minMisses = DefaultSkillGapThreshold
 	}
-	// found=false 而非 found=0：PG 侧该列是真 BOOLEAN，SQLite 侧虽然存成
-	// INTEGER，但 3.23 起的 false 关键字两边都认。
+	// found=false 而非 found=0：该列虽然存成 INTEGER，但 false 关键字可用。
 	rows, err := d.QueryContext(ctx, `SELECT skill, count(*) misses, min(ts), max(ts),
  count(DISTINCT agent_key), count(DISTINCT task_id)
 FROM skill_usage WHERE found=false
@@ -103,10 +102,10 @@ ORDER BY count(*) DESC, skill`, minMisses)
 
 // attachGapAgents 补上每个缺口的 agent 名单。
 //
-// 没有用 array_agg/json_group_array：PG 侧是 array_agg(DISTINCT x)，SQLite 侧是
-// group_concat(DISTINCT x)，两边函数名与去重语义都不同，走方言助手会把这个文件
-// 变成另一处需要维护的分叉点。改成多发一次查询在 Go 侧分组——数据量是「未命中」
-// 的行数，比成功命中少一个数量级，这里换来的确定性是划算的。
+// 没有用 group_concat(DISTINCT x)：它的去重语义与这里想要的「一组 agent key」
+// 不完全一致，在 SQL 里凑出来会把这个文件变成一处难维护的分叉点。改成多发一次
+// 查询在 Go 侧分组——数据量是「未命中」的行数，比成功命中少一个数量级，这里换来
+// 的确定性是划算的。
 func (d *DB) attachGapAgents(ctx context.Context, gaps []SkillGap) error {
 	index := make(map[string]int, len(gaps))
 	for i, g := range gaps {
@@ -148,12 +147,11 @@ ORDER BY skill, agent_key`
 
 // aggregateTimestamp 归一化 min()/max() 这类**聚合表达式**的时间返回值。
 //
-// PostgreSQL 的 min(timestamptz) 返回 timestamptz，驱动直接给 time.Time。
-// SQLite 那边不一样：结果列没有声明类型，而 DSN 上的 _texttotime 正是按声明
-// 类型决定要不要把文本读成 time.Time 的，于是驱动交出的是 string，直接 Scan 进
+// 聚合表达式的结果列没有声明类型，而 DSN 上的 _texttotime 正是按声明类型决定
+// 要不要把文本读成 time.Time 的，于是驱动交出的是 string，直接 Scan 进
 // *time.Time 会报 unsupported Scan。
 //
-// 所以这里统一接住两种形态再自己解析，而不是给某个引擎开特例。
+// 所以这里统一接住两种形态（time.Time 与 string）再自己解析。
 func aggregateTimestamp(v any) (time.Time, error) {
 	switch t := v.(type) {
 	case time.Time:

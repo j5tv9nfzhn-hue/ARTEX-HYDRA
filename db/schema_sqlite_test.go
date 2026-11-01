@@ -18,8 +18,8 @@ import (
 // The `regexp` compatibility function is installed by db/sqlite_compat.go's
 // init(); this helper only selects the pragmas the application must use.
 //
-// foreign_keys stays OFF here on purpose. The PostgreSQL schema relies on
-// declared REFERENCES for integrity; SQLite ignores them unless the pragma is
+// foreign_keys stays OFF here on purpose. The schema declares REFERENCES for
+// integrity; SQLite ignores them unless the pragma is
 // set, and turning it on for the schema test would surface ordering problems
 // in the DDL rather than problems in the translation. Turning it on is the
 // application's decision at Open time, not the schema's.
@@ -162,8 +162,8 @@ func TestSQLiteSchemaColumnParity(t *testing.T) {
 	con := openSQLiteForSchema(t)
 	applySQLiteSchemaForTest(t, con)
 
-	// Columns that the PostgreSQL schema only added via a later
-	// ALTER TABLE ... ADD COLUMN. The translator folds these into the CREATE
+	// Columns that were only added via a later ALTER TABLE ... ADD COLUMN.
+	// The translator folds these into the CREATE
 	// TABLE, because SQLite has no ADD COLUMN IF NOT EXISTS and a separate
 	// step would not be re-runnable.
 	for _, tc := range []struct{ table, column string }{

@@ -110,7 +110,7 @@ func TestCreateCompanyWithScopeRollsBackOnScopeWriteFailure(t *testing.T) {
 
 	name := fmt.Sprintf("Atomic Create %d", time.Now().UnixNano())
 	_, _, _, _, _, err = cs.CreateCompanyWithScope(name, "", []ScopeInput{
-		{Kind: "keyword", Value: "invalid\x00postgres-text"},
+		{Kind: "keyword", Value: "invalid\x00utf8-text"},
 	}, "test")
 	if err == nil {
 		t.Fatal("expected scope database write to fail")
@@ -299,7 +299,7 @@ func TestUpdateScopeRollsBackOnInsertFailure(t *testing.T) {
 	}
 
 	added, invalid, updateErrors := cs.UpdateScopeInputs(id, []ScopeInput{
-		{Kind: "keyword", Value: "invalid\x00postgres-text"},
+		{Kind: "keyword", Value: "invalid\x00utf8-text"},
 	}, "replacement")
 	if added != 0 || invalid != 0 || len(updateErrors) == 0 {
 		t.Fatalf("failed update result: added=%d invalid=%d errors=%v", added, invalid, updateErrors)

@@ -14,22 +14,21 @@ import (
 
 // SQLite compatibility layer for the translated schema and queries.
 //
-// PostgreSQL features that have no direct SQLite equivalent are provided here
-// rather than by rewriting every call site. Each entry documents what it
-// stands in for and why the substitution is sound.
+// SQL functions the schema and queries call but SQLite does not ship. They are
+// registered here rather than by rewriting every call site. Each entry documents
+// what it stands in for and why the substitution is sound.
 
-// regexpFunc backs the `regexp(value, pattern)` calls that the schema
-// translator emits where the source used PostgreSQL's `~` operator, e.g.
-// CHECK (key ~ '^[a-z][a-z0-9_]*$') on agents.key.
+// regexpFunc backs the `regexp(value, pattern)` calls the schema emits, e.g.
+// CHECK (regexp(key, '^[a-z][a-z0-9_]*$')) on agents.key.
 //
-// Go's regexp is RE2, which is what PostgreSQL's POSIX `~` compiles to
-// anyway, so the semantics line up rather than merely approximating.
+// Go's regexp is RE2, the same engine the original POSIX `~` operator compiled
+// to, so the semantics line up rather than merely approximating.
 //
 // Registered in init() because modernc.org/sqlite resolves functions when a
 // statement is prepared, so registration has to precede the first sql.Open.
 var regexpCache sync.Map // pattern string -> *regexp.Regexp
 
-// nowFunc backs PostgreSQL's now().
+// nowFunc implements now().
 //
 // SQLite has datetime('now') but not now(), and the two are not
 // interchangeable by name: queries and seed data call now() directly, so
@@ -42,9 +41,9 @@ var regexpCache sync.Map // pattern string -> *regexp.Regexp
 // now()-written row byte-identical to a column-default row. A hand-rolled
 // second format would sort differently inside one timestamp column.
 //
-// One difference from PostgreSQL is accepted deliberately: PostgreSQL's now()
-// is frozen at transaction start, so all rows in a transaction share a
-// timestamp. Here it is evaluated per call, which makes ordering within a
+// One difference is accepted deliberately: the original now() was frozen at
+// transaction start, so all rows in a transaction shared a timestamp. Here it is
+// evaluated per call, which makes ordering within a
 // single transaction slightly finer-grained. Nothing depends on rows inside
 // one transaction being exactly equal, and freezing it would require
 // transaction-awareness the driver does not expose.
@@ -86,16 +85,16 @@ func init() {
 		})
 
 	sqlite.MustRegisterDeterministicScalarFunction("concat_ws", -1, concatWSFunc)
-	// GREATEST/LEAST 是 PG 内建：NULL 不参与比较，全部为 NULL 才返回 NULL。
+	// GREATEST/LEAST 的语义：NULL 不参与比较，全部为 NULL 才返回 NULL。
 	// SQLite 的 MAX/MIN 多参版只要有一个 NULL 就返回 NULL，语义不同，故自实现。
 	sqlite.MustRegisterDeterministicScalarFunction("GREATEST", -1, extremaFunc(true))
 	sqlite.MustRegisterDeterministicScalarFunction("LEAST", -1, extremaFunc(false))
 	sqlite.MustRegisterDeterministicScalarFunction("left", 2, leftFunc)
 
-	// sqlUTCDate 回应 PG 侧同名 SQL 函数（查询文本里直接调用：TokenDailyAll 的
+	// sqlUTCDate 取时间列的 UTC 当日日期（查询文本里直接调用：TokenDailyAll 的
 	// sqlUTCDate("created_at")、UsageDaily 的 sqlUTCDate("ts")）。时间列在 SQLite
 	// 侧存的是 _time_format 文本「YYYY-MM-DD ...+00:00」，前 10 字节就是 UTC
-	// 当日日期，与 PG 函数 to_char(at time zone 'UTC') 的语义逐字节一致。
+	// 当日日期。
 	sqlite.MustRegisterDeterministicScalarFunction("sqlUTCDate", 1,
 		func(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 			s := argString(args[0])
@@ -106,7 +105,7 @@ func init() {
 		})
 }
 
-// extremaFunc 实现 PG 的 GREATEST/LEAST：按数值比较，返回原参数值。
+// extremaFunc 实现 GREATEST/LEAST：按数值比较，返回原参数值。
 // 参与比较的非数值类型无法排序时保守返回 NULL（本项目调用点只喂整型/浮点）。
 func extremaFunc(greatest bool) func(*sqlite.FunctionContext, []driver.Value) (driver.Value, error) {
 	return func(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
@@ -137,16 +136,15 @@ func extremaFunc(greatest bool) func(*sqlite.FunctionContext, []driver.Value) (d
 	}
 }
 
-// concatWSFunc backs PostgreSQL's concat_ws(sep, VARIADIC "any").
+// concatWSFunc implements concat_ws(sep, VARIADIC "any").
 //
-// 语义照抄 PG：NULL 参数被跳过，其余按原样用分隔符连接；全部为 NULL 时返回空串。
-// 空串**不**跳过——PG 也不跳过，跳过会让 `concat_ws(' · ', a, ”, b)` 的列数
-// 与调用点预期不一致。
+// 语义：NULL 参数被跳过，其余按原样用分隔符连接；全部为 NULL 时返回空串。
+// 空串**不**跳过——跳过会让 `concat_ws(' · ', a, ”, b)` 的列数与调用点预期不一致。
 //
 // 为什么注册 UDF 而不是改写调用点：搜索类的拼接谓词（chat_mentions 的
 // "名字/域名/路径任一命中"）在 SQL 里到处都是 concat_ws，逐个改写成 SQLite 的
-// 拼接表达式既啰嗦又容易在 NULL 处理上和 PG 产生分叉。注册同名的标量函数让
-// 语句在两个引擎上逐字相同——这与 regexp / now 是同一条论证。
+// 拼接表达式既啰嗦又容易在 NULL 处理上产生分叉。注册同名的标量函数让语句保持
+// 原样——这与 regexp / now 是同一条论证。
 func concatWSFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) == 0 {
 		return "", nil
@@ -172,10 +170,10 @@ func concatWSFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value,
 	return b.String(), nil
 }
 
-// leftFunc backs PostgreSQL's left(string, n).
+// leftFunc implements left(string, n).
 //
-// SQLite 的 substr(s,1,n) 与之同义；注册 left 只是为了让调用点的 SQL 在两个
-// 引擎上逐字相同，而不是到处写 substr(...)。
+// SQLite 的 substr(s,1,n) 与之同义；注册 left 只是为了让调用点的 SQL 保持原样，
+// 而不是到处写 substr(...)。
 func leftFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) < 2 || args[0] == nil {
 		return nil, nil

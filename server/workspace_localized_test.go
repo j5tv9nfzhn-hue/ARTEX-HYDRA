@@ -10,7 +10,7 @@ import (
 )
 
 // TestWorkspaceErrorConstantsLocalized 验证工作区文件管理错误常量包含中文、不含韩文。
-// 本测试不依赖 PostgreSQL，必须始终执行。
+// 本测试不依赖外部数据源，必须始终执行。
 func TestWorkspaceErrorConstantsLocalized(t *testing.T) {
 	for label, msg := range map[string]string{
 		"illegalPath":      errWsIllegalPath,

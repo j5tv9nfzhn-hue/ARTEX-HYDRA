@@ -160,10 +160,9 @@ func (d *DB) CreateFindingRetest(ctx context.Context, findingID int64, notes str
 // ── 事务边界没有变 ──────────────────────────────────────────────────────────
 //
 // 三条语句与原来那条语句在同一个 tx 内按顺序执行，因此看到的是同一份数据：
-// PostgreSQL 侧第一条带 FOR UPDATE OF f，其余两条在同一个事务里只能读到已被
-// 锁住的那一行；SQLite 侧没有行锁，但 DSN 的 _txlock=immediate 让事务从 BEGIN
-// 起就持有库级写锁，整个快照期间不可能有别的写入者进来。原来的单条语句本来
-// 也是一次一致性读，拆成三条并不引入中间态。
+// SQLite 没有行锁，但 DSN 的 _txlock=immediate 让事务从 BEGIN 起就持有库级写锁，
+// 整个快照期间不可能有别的写入者进来。原来的一条语句本来也是一次一致性读，拆成
+// 三条并不引入中间态。
 //
 // ── 一处行为变化：聚合顺序 ──────────────────────────────────────────────────
 //
@@ -260,11 +259,9 @@ func scanRetestSourceRow(rows *sql.Rows) (string, map[string]any, error) {
 // findingAssetIDsContainExpr 表达「这条 finding 关联了资产 a.id」。
 //
 // 调用点固定写成 `FROM assets a JOIN findings f ON f.id=$1 WHERE <本函数>`。
-// PostgreSQL 侧是 `f.asset_ids @> to_jsonb(ARRAY[a.id])`；artex_json_contains(col, x)
-// 的语义是「col 解析出的数组里是否存在等于 x 的元素」，即
-// EXISTS (SELECT 1 FROM json_each(col) WHERE value = x)，与 jsonb 数组包含完全对应
-// （db/dialect_arrays.go 里有同样的对照说明）。值作为函数实参绑定，不存在拼进
-// SQL 文本的机会。
+// artex_json_contains(col, x) 的语义是「col 解析出的数组里是否存在等于 x 的元素」，
+// 即 EXISTS (SELECT 1 FROM json_each(col) WHERE value = x)。值作为函数实参绑定，
+// 不存在拼进 SQL 文本的机会。
 func findingAssetIDsContainExpr() string {
 	return "artex_json_contains(f.asset_ids, a.id)"
 }

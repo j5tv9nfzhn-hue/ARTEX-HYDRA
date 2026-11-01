@@ -270,11 +270,10 @@ func countFinding(n *FindingAssetNode, h findingAssetHit) {
 
 // findingAssetIDsExpr 读出 findings.asset_ids（资产 id 数组列）。
 //
-// PostgreSQL 侧 asset_ids 是 jsonb，::text 只是取它的文本形态；SQLite 侧同一列
-// 已经是 TEXT 存 JSON 数组（db/schema_sqlite.sql: `asset_ids TEXT NOT NULL
-// DEFAULT '[]'`），直接读即可，再用 artex_json_array 归一化一遍——
-// schema 默认值 '{}' 不是合法 JSON，归一化后交给 json.Unmarshal 的一定是数组。
-// 两边的结果都是一段能 json.Unmarshal 进 []int64 的 JSON 数组文本。
+// asset_ids 是 TEXT 列存 JSON 数组（db/schema_sqlite.sql: `asset_ids TEXT NOT NULL
+// DEFAULT '[]'`），直接读即可，再用 artex_json_array 归一化一遍——schema 默认值
+// '{}' 不是合法 JSON，归一化后交给 json.Unmarshal 的一定是数组。结果是一段能
+// json.Unmarshal 进 []int64 的 JSON 数组文本。
 func findingAssetIDsExpr() string {
 
 	return `COALESCE(artex_json_array(f.asset_ids),'[]')`

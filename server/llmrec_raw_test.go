@@ -15,7 +15,7 @@ import (
 	"github.com/Autumn-27/norma/transcript"
 )
 
-// Full chain against a real PG: Recorder → norma provider → capturing transport
+// Full chain against a real database: Recorder → norma provider → capturing transport
 // → llm_records. The unit tests cover each hop; this proves the raw bodies
 // actually survive all the way into the row an operator opens when debugging.
 func TestRecorderPersistsRawWireBodies(t *testing.T) {

@@ -70,8 +70,8 @@ var reAgentKey = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 // 保留模型输入、工具说明与诊断语义，以及 key、llm_profile_id、file、SKILL.md、
 // name、枚举、%s、%d 和底层 err.Error() 原文。
 const (
-	// 管理处理器共用的数据库门禁 pg。
-	errMgmtPGUnavailable = "未连接到管理控制台数据源（PostgreSQL）"
+	// 管理处理器共用的数据库门禁。
+	errMgmtPGUnavailable = "未连接到管理控制台数据源（数据库）"
 
 	// 任务删除。
 	errMgmtTaskIDInvalid = "任务 id 无效"
@@ -134,7 +134,7 @@ const (
 	errMgmtTmplVarPost = "}} 不在此 Agent 的允许列表中"
 )
 
-// pgReady returns the PG handle, or writes 503 and returns nil if unavailable.
+// pgReady returns the database handle, or writes 503 and returns nil if unavailable.
 func (s *Server) pg(w http.ResponseWriter) *db.DB {
 	if s.m.pg == nil {
 		writeErr(w, 503, errMgmtPGUnavailable)
@@ -240,7 +240,7 @@ func (s *Server) pgDeleteTask(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var committed *taskDeleteCommittedError
 		if errors.As(err, &committed) {
-			// PostgreSQL is already gone. Complete runtime teardown and return the
+			// The database row is already gone. Complete runtime teardown and return the
 			// auditable counts together with the post-commit cleanup warning.
 			s.engine.StopTask(id)
 			s.taskAgentMu.Lock()

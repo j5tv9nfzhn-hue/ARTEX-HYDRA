@@ -309,7 +309,7 @@ func TestCompanyICPAttribution(t *testing.T) {
 	assertCompany(icpAppID, &companyID)
 }
 
-// TestCompanyScopeAttribution exercises the full loop against dev PG: create
+// TestCompanyScopeAttribution exercises the full loop against a dev database: create
 // company (unique name), add scope, and verify auto-attribution at insert time,
 // backfill of a pre-existing asset, CIDR + domain-suffix matching, and that
 // out-of-scope assets stay unattributed.

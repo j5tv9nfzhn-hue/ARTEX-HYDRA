@@ -13,24 +13,13 @@ import (
 )
 
 // =====================================================================
-// 数组列方言层（PostgreSQL 数组 ↔ SQLite 的 TEXT/JSON 数组）
+// 数组列：在 SQLite 上的存储与读写
 //
 // ---------------------------------------------------------------------
-// 背景：这些列在两个引擎里的物理形态完全不同
+// 背景：这些列在 SQLite 里的物理形态
 // ---------------------------------------------------------------------
 //
-// PostgreSQL（db/schema_sqlite.sql）里它们是真数组：
-//
-//	task_ids      BIGINT[]
-//	bound_domains TEXT[]
-//	open_ports    TEXT[]      -- 元素其实是 jsonb 对象 {"port":22,"service":"ssh"}
-//	record_value  TEXT[]
-//	technologies  TEXT[]
-//	auth          TEXT[]      -- 元素是 jsonb 对象
-//	params        TEXT[]      -- 元素是 jsonb 对象
-//	findings.asset_ids  jsonb
-//
-// SQLite（db/schema_sqlite.sql）里同一批列是普通标量列，数组语义全部下沉到 Go：
+// db/schema_sqlite.sql 里同一批列是普通标量列，数组语义全部下沉到 Go：
 //
 //	task_ids        BIGINT[] NOT NULL DEFAULT '{}'   -- SQLite 按列亲和性规则取 INTEGER
 //	bound_domains   TEXT[]  NOT NULL DEFAULT '{}'
@@ -47,16 +36,15 @@ import (
 //     生效：类型名里含 "INT" 的取 INTEGER 亲和性，含 "TEXT" 的取 TEXT 亲和性。
 //     所以这些列在 SQLite 里就是普通的 INTEGER / TEXT 列，里面放什么由写入方决定。
 //
-//  2. 列的 DEFAULT 仍然是 PostgreSQL 的空数组字面量 `'{}'`，而 `{}` **不是合法
-//     JSON**。凡是打算用 json_each() / json_valid() 打开这些列的地方，都必须先
-//     过一层归一化，否则一条 schema 默认值就会让整条语句报 malformed JSON。
-//     jsonArrayOf() 就是这层归一化。
+//  2. 列的 DEFAULT 是空数组字面量 `'{}'`，而 `{}` **不是合法 JSON**。凡是打算用
+//     json_each() / json_valid() 打开这些列的地方，都必须先过一层归一化，否则一条
+//     schema 默认值就会让整条语句报 malformed JSON。jsonArrayOf() 就是这层归一化。
 //
 // ---------------------------------------------------------------------
 // 这个文件收口什么
 // ---------------------------------------------------------------------
 //
-// 三类 PostgreSQL 专属语法，各自有 SQLite 等价物，全部集中在这里：
+// 本文件收口下列写法，全部集中在这里：
 //
 //	A. 写入数组     $6::bigint[] / $3::text[] / ARRAY[$1::jsonb]
 //	               → Go 侧直接产出 JSON 数组文本（encodeTextArray / encodeJSONBArray
@@ -80,13 +68,10 @@ import (
 //	D. 量长度       cardinality(x) / array_length(x, d)
 //	               → 同名注册（见下面"为什么用同名注册而不是 artex_json_* 前缀"）。
 //
-// 读出数组列 array_to_json(x)::text → array_to_json(x)：
+// 读出数组列统一走 array_to_json(x)：
 //
-//	PostgreSQL 侧的 array_to_json(anyarray) 直接返回 JSON 文本，::text 只是为了让
-//	pgx 把 json 映射成 []byte 给 scanAssets 的 json.Unmarshal；去掉 ::text 不改变
-//	读到的字节（database/sql 会把 string 也能塞进 *[]byte）。
-//	SQLite 侧注册同名函数 array_to_json，语义就是"归一化后原样吐回"，于是这一列
-//	投影在两个引擎上字面相同，不需要方言分支，asset_dsl.go 也就不用改。
+//	本文件注册同名函数 array_to_json，语义是"归一化后原样吐回"，于是投影出来的
+//	一律是合法 JSON 数组文本，scanAssets 可以直接 json.Unmarshal。
 //
 // ---------------------------------------------------------------------
 // 为什么用标量函数而不是 `EXISTS (SELECT 1 FROM json_each(col) ...)` 片段
@@ -97,11 +82,11 @@ import (
 //  1. assets 的六个数组列里，open_ports / auth / params 的元素是 **jsonb 对象**。
 //     去重要按"整个对象相等"（auth）、"对象某个键相等"（ports、params）来做，而且
 //     DISTINCT ON 必须带 ORDER BY 才能确定保留哪一个。拼成 SQL 片段需要把
-//     (elem->>'port')::int、elem::text 这些 PostgreSQL 专有表达式一并翻译过去，
-//     翻译出来的片段比原语句更难读，也更难证明等价。
-//  2. task_ids 的历史值可能仍是 PostgreSQL 数组字面量（`'{}'` 是 schema 默认值，
-//     旧版本写进去的是 `'{5}'`）。SQL 片段需要额外写一层 CASE WHEN json_valid
-//     来兜底，否则老数据直接 malformed JSON。函数里可以统一处理。
+//     (elem->>'port')::int、elem::text 这类表达式一并翻译过去，翻译出来的片段
+//     比原语句更难读，也更难证明等价。
+//  2. task_ids 的历史值可能仍是数组字面量（`'{}'` 是 schema 默认值，旧版本写
+//     进去的是 `'{5}'`）。SQL 片段需要额外写一层 CASE WHEN json_valid 来兜底，
+//     否则老数据直接 malformed JSON。函数里可以统一处理。
 //  3. 参数绑定。函数把"值"当普通实参收，调用处永远只写 $N，不存在把值拼进 SQL
 //     文本的机会。任务里明确要求不得产生注入，这里天然满足。
 //
@@ -123,12 +108,12 @@ import (
 //	也就是说 artex_json_merge / artex_json_merge_ports / artex_json_merge_params
 //	以及 encodeTextArray / encodeJSONBArray / encodeTaskIDArray 这一整层都是对的。
 //
-// 真正断掉的是**读侧**：这些数组列的长度是用 PostgreSQL 的
+// 真正断掉的是**读侧**：这些数组列的长度是用
 //
 //	SELECT cardinality(auth)            FROM assets WHERE id = $1
 //	SELECT array_length(technologies,1) FROM assets WHERE id = $1
 //
-// 量出来的，而 SQLite 根本没有 cardinality / array_length 这两个函数，
+// 量出来的，而 SQLite 本来没有 cardinality / array_length 这两个函数，
 //	驱动直接回 `SQL logic error: no such function: cardinality`，
 //	调用方 Scan 拿到 error（多数地方没判），目标变量停在零值，于是打印成 "got 0"。
 //	换句话说 "got 0" 是**查询失败**的假象，不是"合并算出了空集"。
@@ -139,26 +124,14 @@ import (
 //
 //  1. 这两个名字在 SQLite 里完全没有内建，不会遮蔽任何既有函数；不像
 //     json_array_length 那样和内建同名、语义还不同。
-//  2. 调用方（诊断 SQL、测试断言）本来写的就是 PG 写法，同名注册之后同一句话在
-//     两个引擎上都成立，不需要在调用点做引擎分支，也就不存在"改了 PG 分支"的
-//     可能——PG 分支一个字都不用动，线上行为完全不变。
-//  3. 语义逐条对齐 PG：NULL 进 → NULL 出；cardinality 对空数组返回 0，
-//     array_length 对空数组/越界维度返回 NULL（PG 就是 NULL，Scan 成 int 会
-//     报 "converting NULL to int is unsupported"，与 PG 行为一致，不去掩盖）。
+//  2. 调用方（诊断 SQL、测试断言）本来就写的是这个形式，同名注册之后同一句话
+//     直接成立，不必在调用点改写法。
+//  3. 语义：NULL 进 → NULL 出；cardinality 对空数组返回 0，array_length 对空
+//     数组/越界维度返回 NULL（Scan 成 int 会报 "converting NULL to int is
+//     unsupported"，这是有意为之，不去掩盖）。
 //
-// 仍然存在、本文件管不到的一类残留：raw SQL 里的 PostgreSQL 类型转换 `::text`。
-// SQLite 的分词器遇到标识符后面的 ':' 会直接报 unrecognized token，
-// 属于整个迁移的共性问题（db 包里还有另外几处同样原因失败），
-// 与数组合并无关，这里不动。
-//
-// ---------------------------------------------------------------------
-// PostgreSQL 分支
-// ---------------------------------------------------------------------
-//
-// 本文件只负责 SQLite 侧。PostgreSQL 分支在 db/assets.go、db/finding_assets.go、
-// db/task_assets.go 里逐字保留原语句，包括 ARRAY(...)、unnest(...)、::bigint[]
-// 这些写法——项目仍然支持 postgres，不能因为 SQLite 迁移把它们删掉。
-// 判定用 config.Engine() == config.EnginePostgres，与 db/dialect_softdelete.go 一致。
+// 本文件管不到的一类写法：raw SQL 里的 `::type` 类型转换。SQLite 的分词器遇到
+// 标识符后面的 ':' 会直接报 unrecognized token，需要 CAST(... AS ...) 代替。
 
 // ---------------------------------------------------------------------
 // 注册（init）
@@ -166,12 +139,10 @@ import (
 
 // 函数名统一带 artex_ 前缀，三个注册名是例外：array_to_json、cardinality、array_length。
 //
-//	array_to_json：它必须是这个名字才能让 assetSelectCols 这段投影在两个引擎上
-//	  字面相同（见本文件头部的说明）。
-//	cardinality / array_length：它们是**纯读侧**的 PostgreSQL 数组函数，SQLite
-//	  完全没有内建（这正是数组合并"看起来整体失效"的直接原因，见上面那段根因记录）。
-//	  仍按原名注册，是为了让调用方的 `cardinality(col)` / `array_length(col, 1)`
-//	  一句话在两个引擎上都成立，从而不必在调用点分引擎、PG 分支一个字都不用动。
+//	array_to_json：投影里用的就是这个名字（见本文件头部的说明）。
+//	cardinality / array_length：它们是**纯读侧**的数组长度函数，SQLite 完全没有
+//	  内建（这正是数组合并"看起来整体失效"的直接原因，见上面那段根因记录）。
+//	  按原名注册，调用方的 `cardinality(col)` / `array_length(col, 1)` 直接可用。
 //
 // 注册时机与 db/sqlite_compat.go 的 regexp / now 一致：必须在第一次 sql.Open 之前，
 // 因为 modernc.org/sqlite 是语句 prepare 时解析函数名的。放在 init() 里即可。
@@ -179,8 +150,8 @@ func init() {
 	sqlite.MustRegisterDeterministicScalarFunction("array_to_json", 1, jsonArrayTextFunc)
 	sqlite.MustRegisterDeterministicScalarFunction("artex_json_array", 1, jsonArrayTextFunc)
 
-	// cardinality(col) / array_length(col, 1)：数组元素个数。PostgreSQL 独有，
-	// SQLite 无内建；同名注册后调用 SQL 保持 PG 字面不变。
+	// cardinality(col) / array_length(col, 1)：数组元素个数。SQLite 无内建，
+	// 同名注册后调用 SQL 保持字面不变。
 	sqlite.MustRegisterDeterministicScalarFunction("cardinality", 1, jsonCardinalityFunc)
 	sqlite.MustRegisterDeterministicScalarFunction("array_length", 2, jsonArrayLengthFunc)
 
@@ -210,15 +181,12 @@ func init() {
 //
 // 三处调整：
 //
-//	array_to_json(x)::text → array_to_json(x)。
-//	  PostgreSQL 侧的 array_to_json(anyarray) 本来就返回 JSON 文本，::text 只是
-//	  为了让 pgx 把它交成 []byte；去掉转换读到的内容不变。SQLite 侧 array_to_json
-//	  是本文件注册的同名函数，语义是"归一化后原样吐回"，于是这一行在两个引擎上
-//	  字面完全相同，不需要方言分支——这也是 asset_dsl.go 里复用 assetSelectCols
+//	array_to_json(x)：本文件注册的同名函数，语义是"归一化后原样吐回"，因此投影
+//	  出来的永远是合法 JSON 数组文本——这也是 asset_dsl.go 里复用 assetSelectCols
 //	  时不用跟着改的原因。
-//	c_segment::text → CAST(c_segment AS TEXT)。SQLite 没有 `::` 运算符；而
-//	  DSN 里的 _texttotime=1 会把 TIMESTAMP 列交成 time.Time，c_segment 在
-//	  PostgreSQL 上是 inet、投影里要的是文本，两边都需要显式 CAST。
+//	c_segment 用 CAST(c_segment AS TEXT)。SQLite 没有 `::` 运算符；而 DSN 里的
+//	  _texttotime=1 会把 TIMESTAMP 列交成 time.Time，c_segment 投影里要的是文本，
+//	  所以需要显式 CAST。
 //	last_seen::text → CAST(last_seen AS TEXT)。同一个 _texttotime 问题：Asset
 //	  结构体的 LastSeen 是 string，不 CAST 就会 Scan 失败。
 const assetProjection = `SELECT id, type, company_id, array_to_json(task_ids),
@@ -237,9 +205,9 @@ const assetsFromPrefix = "\nFROM assets "
 
 // assetContainsTaskID 表达 `$1 = ANY(task_ids)`。
 //
-// PostgreSQL 侧就是原句；SQLite 侧 artex_json_contains 是"元素集合里有没有这个值"
-// 的等价物（EXISTS (SELECT 1 FROM json_each(task_ids) WHERE value = $1)），差别
-// 只在于它是一个函数调用，因此没有任何把值拼进 SQL 的机会。
+// artex_json_contains 即"元素集合里有没有这个值"，等价于
+// EXISTS (SELECT 1 FROM json_each(task_ids) WHERE value = $1)，差别只在于它是
+// 一个函数调用，因此没有任何把值拼进 SQL 的机会。
 func assetContainsTaskID() string {
 	return "artex_json_contains(task_ids, $1)"
 }
@@ -253,8 +221,7 @@ func assetContainsTaskIDAlias(alias string) string {
 // taskIDsAnyExpr 表达 `<左值> = ANY(<列>)`，其中 <列> 是某个数组列
 // （通常是带表别名的 assets.task_ids）。
 //
-// PostgreSQL 侧就是原句。SQLite 侧换成 artex_json_contains(col, 左值)，
-// 即"这个列的元素集合里有没有左值"，等价于
+// 表达为 artex_json_contains(col, 左值)，即"这个列的元素集合里有没有左值"，等价于
 // EXISTS (SELECT 1 FROM json_each(col) WHERE value = 左值)。
 // 左值始终是 $N 形式或表列名，函数调用把值当普通实参收，
 // 任何地方都没有把值拼进 SQL 文本的机会。
@@ -266,12 +233,12 @@ func taskIDsAnyExpr(left, col string) string {
 // 写入侧：Go 产出 JSON 数组文本
 // ---------------------------------------------------------------------
 
-// encodeTextArray 把 []string 编码成该引擎认的数组列文本。
+// encodeTextArray 把 []string 编码成写进数组列的文本。
 //
-//	PostgreSQL: {"a","b"}  —— text[] 字面量（marshalStringArray）
-//	SQLite:     ["a","b"]  —— JSON 数组
+//	["a","b"]  —— JSON 数组
 //
-// 空集合分别编码成 "{}" 与 "[]"，与 schema 里两边的默认值形状一致。
+// 空集合编码成 "[]"。注意列上的 schema 默认值仍是 '{}'（不是合法 JSON），
+// 所以读侧必须先过 jsonArrayOf 归一化。
 func encodeTextArray(items []string) string {
 	if len(items) == 0 {
 		return "[]"
@@ -283,13 +250,11 @@ func encodeTextArray(items []string) string {
 	return string(b)
 }
 
-// encodeJSONBArray 把 []map[string]any 编码成该引擎认的数组列文本。
+// encodeJSONBArray 把 []map[string]any 编码成写进数组列的文本。
 //
-//	PostgreSQL: {"{\"port\":22}"}  —— jsonb[] 字面量（marshalJSONBArray）
-//	SQLite:     [{"port":22}]      —— JSON 数组
+//	[{"port":22}]  —— JSON 数组
 //
-// PostgreSQL 分支逐字沿用原来的 marshalJSONBArray，保证线上行为不变；
-// SQLite 分支就是标准 JSON 编码，元素结构与 Go 侧 struct tag 一致。
+// 就是标准 JSON 编码，元素结构与 Go 侧 struct tag 一致。
 func encodeJSONBArray(items []map[string]any) (string, error) {
 	if len(items) == 0 {
 		return "[]", nil
@@ -303,8 +268,7 @@ func encodeJSONBArray(items []map[string]any) (string, error) {
 
 // encodeTaskIDArray 编码 assets.task_ids 的写入值。
 //
-//	PostgreSQL: taskID>0 → "{5}"，否则 "{}"
-//	SQLite:     taskID>0 → "[5]"，否则 "[]"
+//	taskID>0 → "[5]"，否则 "[]"
 //
 // 只编码一个元素，因为所有调用点都是 UpsertXxx(req.TaskID) 这种"挂到某个任务"。
 func encodeTaskIDArray(taskID int64) string {
@@ -347,9 +311,8 @@ func appendInPlaceholdersStr(args *[]any, vals []string) string {
 
 // jsonArrayTextFunc 实现 array_to_json(x) / artex_json_array(x)。
 //
-// x 是数组列的原始文本，返回归一化后的 JSON 数组文本；永远不会是 NULL，
-// 至少是 "[]"。PostgreSQL 侧 array_to_json(NULL) 返回 SQL NULL，scanAssets 用
-// len(raw) > 0 判空，两边都得到"空集合"，只是 SQLite 这边顺带把 schema 默认的
+// x 是数组列的原始文本，返回归一化后的 JSON 数组文本；永远不会是 NULL，至少是
+// "[]"。scanAssets 用 len(raw) > 0 判空，得到"空集合"；顺带把 schema 默认的
 // '{}' 修正成了 '[]'，让 json.Unmarshal 拿到的是它真正认识的形状。
 func jsonArrayTextFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) < 1 {
@@ -360,18 +323,18 @@ func jsonArrayTextFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.V
 
 // jsonCardinalityFunc 实现 cardinality(x)：数组的元素个数。
 //
-// 对应 PostgreSQL 的 cardinality(anyarray)。逐条对齐 PG 的三条规则：
+// 三条规则：
 //
-//	NULL 入参     → NULL。PG 的 cardinality 是 STRICT 的，这里显式判一次，
-//	                而不是让 jsonArrayOf 把 NULL 变成"空数组"再回 0——
-//	                那会把"这一行没值"和"这一行确实是空数组"混成同一个答案。
+//	NULL 入参     → NULL。cardinality 是 STRICT 的，这里显式判一次，而不是让
+//	                jsonArrayOf 把 NULL 变成"空数组"再回 0——那会把"这一行没值"
+//	                和"这一行确实是空数组"混成同一个答案。
 //	空数组       → 0。schema 默认值 '{}' 与 Go 侧写出的 '[]' 都归一到空集合，
-//	                于是同样得到 0，与 PG 对 '{}'::text[] 的结果一致。
-//	非数组标量   → 0（PG 这里是 "cannot get cardinality of a scalar" 的运行期错误）。
+//	                于是同样得到 0。
+//	非数组标量   → 0（原实现这里是 "cannot get cardinality of a scalar" 的运行期错误）。
 //	                这里刻意不报错：本函数是纯读侧的量长度助手，一个标量退化成 0
 //	                比让整条查询炸掉好，也与本文件 artex_json_array_length 的取舍一致。
 //
-// 结果返回 int64，SQLite 里就是 INTEGER，与 PG 的 integer 返回类型一致，
+// 结果返回 int64，SQLite 里就是 INTEGER，
 // 直接 Scan 进 int / int64 都不需要额外转换。
 func jsonCardinalityFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) < 1 || args[0] == nil {
@@ -382,19 +345,18 @@ func jsonCardinalityFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver
 
 // jsonArrayLengthFunc 实现 array_length(x, dim)：指定维度的元素个数。
 //
-// 对应 PostgreSQL 的 array_length(anyarray, integer)。本项目的数组列一律是一维
-// （task_ids / bound_domains / open_ports / technologies / auth / params），
-// 所以只有 dim = 1 有意义，其余一律返回 NULL：
+// 本项目的数组列一律是一维（task_ids / bound_domains / open_ports /
+// technologies / auth / params），所以只有 dim = 1 有意义，其余一律返回 NULL：
 //
 //	NULL 入参 → NULL（同上，STRICT）。
 //	dim = 1 且非空 → 元素个数。
-//	dim = 1 且空数组 → NULL。这不是缺陷而是 PG 的原样行为：PG 的 array_length 对
+//	dim = 1 且空数组 → NULL。这不是缺陷而是刻意保留的行为：array_length 对
 //	                空数组返回 NULL，所以 `Scan(&int)` 会拿到
 //	                "converting NULL to int is unsupported"。调用方若不判这个
 //	                error，目标变量停在零值，看上去就是 "got 0"——这恰恰是本文件
 //	                顶部那段根因记录里的同一个坑。与其在这里把它粉饰成 0，让
-//	                "列是空的"继续伪装成"查询失败"，不如和 PG 保持一致。
-//	dim ≠ 1     → NULL：维度越界 PG 就是 NULL；PG 对 dim < 1 是报错，这里宽松返回
+//	                "列是空的"继续伪装成"查询失败"，不如照原实现的语义返回 NULL。
+//	dim ≠ 1     → NULL：维度越界返回 NULL；dim < 1 这里宽松返回
 //	                NULL，同样是"读不出来"而不是"炸掉查询"。
 func jsonArrayLengthFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) < 2 || args[0] == nil {
@@ -412,9 +374,9 @@ func jsonArrayLengthFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver
 
 // jsonContainsFunc 实现 $1 = ANY(col) 与 col = ANY($1)。
 //
-// PG 侧两种写法在这里是同一个动作：col 的元素集合里是否存在一个等于目标标量的值。
-// 逐元素比较用"类型标签 + 规范化字面量"（jsonScalarKey）而不是字符串相等，
-// 这样 number 5 不会和 string "5" 互相误命中，跟 PG 的类型语义一致。
+// 两种写法（$1 = ANY(col) 与 col = ANY($1)）在这里是同一个动作：col 的元素集合里
+// 是否存在一个等于目标标量的值。逐元素比较用"类型标签 + 规范化字面量"
+// （jsonScalarKey）而不是字符串相等，这样 number 5 不会和 string "5" 互相误命中。
 func jsonContainsFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) < 2 {
 		return int64(0), nil
@@ -430,7 +392,7 @@ func jsonContainsFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Va
 
 // jsonEqualsFunc 实现 task_ids = ARRAY[$1]::bigint[]。
 //
-// PG 的数组相等是"长度相同且逐元素相等"，顺序敏感，所以 ['[5]'] != ['[5','6]']。
+// 数组相等是"长度相同且逐元素相等"，顺序敏感，所以 ['[5]'] != ['[5','6]']。
 func jsonEqualsFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) < 2 {
 		return int64(0), nil
@@ -450,13 +412,13 @@ func jsonEqualsFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Valu
 
 // jsonMergeFunc 实现 (SELECT ARRAY(SELECT DISTINCT unnest(a || b)))。
 //
-// 三步与 PG 一一对应：
+// 三步与原实现一一对应：
 //
 //	a || b            → 顺序是"a 在前、b 在后"整体拼接
-//	SELECT DISTINCT   → 按整元素相等去重，PG 保留每组第一次出现的行
+//	SELECT DISTINCT   → 按整元素相等去重，保留每组第一次出现的元素
 //	ARRAY(...)        → 把剩下的行重新装回数组
 //
-// 注意 PG 这里的 `||` **不去重**，去重完全来自外面的 DISTINCT；两边都要留。
+// 注意拼接这一步**不去重**，去重完全来自外面的 DISTINCT；两步都要留。
 // auth 列去重的键是 elem::text（元素整体），也走这个函数。
 func jsonMergeFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) < 2 {
@@ -500,7 +462,7 @@ func jsonAddFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, 
 
 // jsonRemoveFunc 实现 array_remove(a, $1)。
 //
-// PG 的 array_remove 删掉**全部**匹配元素并保持其余元素的相对顺序，不是只删第一个。
+// 删掉**全部**匹配元素并保持其余元素的相对顺序，不是只删第一个。
 func jsonRemoveFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) < 2 {
 		return "[]", nil
@@ -535,9 +497,8 @@ func jsonRemoveFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Valu
 //   - 同端口冲突时保留 service 非空的那条（ORDER BY 里的 0/1 那一列）；
 //   - 输出数组按端口号升序。
 //
-// SQLite 侧 port 可能是 JSON 数字（Go 写出来的），PG 侧 elem->>'port' 拿到的是
-// 文本再 ::int。这里统一按文本取端口、再转整数排序，取不到或转不动的一律排到
-// 最后（PG 里 NULL 在 ASC 里也是最后）。
+// port 可能是 JSON 数字（Go 写出来的）。这里统一按文本取端口、再转整数排序，
+// 取不到或转不动的一律排到最后（与 NULL 在 ASC 里排最后的口径一致）。
 func jsonMergePortsFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) < 2 {
 		return "[]", nil
@@ -559,9 +520,9 @@ func jsonMergePortsFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.
 			e.num, e.hasNum = num, true
 		}
 		if prev, ok := best[portText]; ok {
-			// 同端口：service 非空优先。PG 的 ORDER BY 是
-			// (service 非空 -> 0, 否则 1) 升序，DISTINCT ON 取第一条，
-			// 等价于"0 赢 1"。两个 tiebreak 相同时 PG 的行序不确定，
+			// 同端口：service 非空优先。排序键是
+			// (service 非空 -> 0, 否则 1) 升序，取第一条，
+			// 等价于"0 赢 1"。两个 tiebreak 相同时原实现的行序不确定，
 			// 这里沿用先出现的那条，与 merge 的"首现优先"保持一致。
 			if portServiceRank(el) < portServiceRank(prev.el) {
 				e.seq = i
@@ -592,7 +553,7 @@ func jsonMergePortsFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.
 	return jsonArrayText(out), nil
 }
 
-// portServiceRank 就是 PG 里那一列
+// portServiceRank 就是排序键里的那一列
 // CASE WHEN service 非空 THEN 0 ELSE 1 END。数字小者胜。
 func portServiceRank(el any) int {
 	if svc, ok := jsonStringField(el, "service"); ok && svc != "" {
@@ -612,7 +573,7 @@ func portServiceRank(el any) int {
 // 语义拆开是：
 //   - 键 = (location, name)；
 //   - 同键冲突时保留 elem::text **最大**的那条（DESC）；
-//   - 输出数组按 location、name 升序，NULL 排最后（PG 的 ASC 默认）。
+//   - 输出数组按 location、name 升序，NULL 排最后（ASC 默认）。
 func jsonMergeParamsFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 	if len(args) < 2 {
 		return "[]", nil
@@ -671,7 +632,7 @@ func jsonMergeParamsFunc(_ *sqlite.FunctionContext, args []driver.Value) (driver
 // jsonArrayOf 把一列的原始文本解析成 []any，并且**永远返回一个可解析的数组**：
 //
 //   - 合法 JSON 数组 → 原样；
-//   - PostgreSQL 数组字面量 `{...}`（含 schema 默认值 '{}' 与旧版本写入的 '{5}'）
+//   - 遗留的数组字面量 `{...}`（含 schema 默认值 '{}' 与旧版本写入的 '{5}'）
 //     → 按字面量规则切开再逐元素解码；
 //   - 其它（NULL、空串、损坏文本）→ 空数组。
 //
@@ -698,9 +659,9 @@ func jsonArrayOf(raw string) []any {
 // 真实类型分派：
 //
 //	nil          → 空数组
-//	int64/float64/bool → 单元素数组（对应 PG 的 ARRAY[$1::bigint] 等）
+//	int64/float64/bool → 单元素数组
 //	string/[]byte      → 交给 jsonIncoming 按文本判断（JSON 数组 / JSON 标量 /
-//	                     PG 数组字面量 / 纯文本单元素）
+//	                     遗留数组字面量 / 纯文本单元素）
 func driverIncoming(v driver.Value) []any {
 	switch t := v.(type) {
 	case nil:
@@ -737,11 +698,11 @@ func driverScalarValue(v driver.Value) any {
 	}
 }
 
-// jsonIncoming 解释"新来的那一坨"，用来替代 PG 的 ARRAY[$1::type]：
+// jsonIncoming 解释"新来的那一坨"，对应改写前的 ARRAY[$1::type]：
 //
 //   - 是合法 JSON 数组 → 整段当作数组（对应 EXCLUDED.xxx）；
 //   - 是其它合法 JSON（对象/数字/字符串）→ 包成单元素数组（对应 ARRAY[$1::jsonb]）；
-//   - 长得像 PG 数组字面量 → 按字面量切（对应 EXCLUDED.xxx 仍是 '{}' 的旧写法）；
+//   - 长得像遗留数组字面量 → 按字面量切（对应 EXCLUDED.xxx 仍是 '{}' 的旧写法）；
 //   - 其余（普通文本）→ 包成单元素字符串（对应 ARRAY[$1::text]）。
 func jsonIncoming(raw string) []any {
 	s := strings.TrimSpace(raw)
@@ -762,7 +723,7 @@ func jsonIncoming(raw string) []any {
 
 // argInt 把绑定参数读成 int64，供 array_length(x, dim) 这类"维度号"实参使用。
 //
-// array_length 的第二参在 PG 声明是 integer，实际到手的 driver.Value 可能是
+// array_length 的第二参声明是 integer，实际到手的 driver.Value 可能是
 // int64（`array_length(col, 1)` 的字面量 1）、float64、[]byte 或 string
 // （列名/表达式形式），所以四种都要认；认不出来返回 0，调用方据此判成
 // "维度越界 → NULL"，而不是让整条查询失败。
@@ -807,11 +768,15 @@ func decodeJSONAny(s string) (any, error) {
 	return v, nil
 }
 
-// parsePGArrayLiteral 解析 PostgreSQL 的数组字面量 `{a,b,"c,d"}`。
+// parsePGArrayLiteral 解析遗留的数组字面量 `{a,b,"c,d"}`。
+//
+// 这是**读遗留数据**用的：列上 schema 默认值就是 '{}'，旧版本还写过 '{5}' 这类值，
+// 它们都不是合法 JSON，必须先按字面量规则切开才能送进 json_each / json_valid。
+// 写侧不再产出这种形状（一律 JSON 数组），但存量数据里仍然有。
 //
 // 元素有三种形态，本项目只会产生前两种：
 //
-//	"字符串"      —— 双引号包裹，内部 \" 和 \\ 反斜杠转义（marshalStringArray 的输出）
+//	"字符串"      —— 双引号包裹，内部 \" 和 \\ 反斜杠转义
 //	{"k":1}       —— jsonb 对象，原样 JSON
 //	123           —— 数字，原样 JSON
 //
@@ -863,7 +828,7 @@ func splitPGArrayElements(inner string) []string {
 
 // decodePGArrayElement 把切出来的单个元素还原成 JSON 值。
 //
-// 双引号包裹的按 PG 字面量规则解转义；其余按标准 JSON 解。解不出来就退回原始
+// 双引号包裹的按遗留字面量规则解转义；其余按标准 JSON 解。解不出来就退回原始
 // 文本当字符串——宁可多留一个字符串元素，也不要在合并资产时静默丢数据。
 func decodePGArrayElement(part string) any {
 	if len(part) >= 2 && part[0] == '"' && part[len(part)-1] == '"' {
@@ -896,9 +861,8 @@ func decodePGArrayElement(part string) any {
 
 // jsonCanonicalText 给元素算一个稳定表示，用作去重 / 取最大值的键。
 //
-// Go 的 json.Marshal 会把 map 的键按字典序输出，正好对应 PostgreSQL jsonb 的
-// ::text 规范化形态（键有序、无多余空白），所以"两个元素的 elem::text 相等"
-// 在这里就是"两个元素的规范化文本相等"。
+// Go 的 json.Marshal 会把 map 的键按字典序输出，得到的就是规范化形态（键有序、无
+// 多余空白），所以"两个元素相等"在这里就是"两个元素的规范化文本相等"。
 func jsonCanonicalText(v any) string {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -920,7 +884,7 @@ func jsonArrayText(vals []any) string {
 }
 
 // jsonScalarKey 给 JSON 标量算比较键，带类型标签，保证数字 5 和字符串 "5"
-// 不会互相误命中（PG 的 bigint[] 与 text[] 不会）。
+// 不会互相误命中（bigint[] 与 text[] 的元素不会互相命中）。
 func jsonScalarKey(v any) string {
 	switch t := v.(type) {
 	case nil:
@@ -973,7 +937,7 @@ func normalizeNumberText(s string) string {
 	return strconv.FormatFloat(f, 'g', -1, 64)
 }
 
-// jsonStringField 取对象元素的某个字段并渲染成 PG 里 ->>'k' 会得到的文本。
+// jsonStringField 取对象元素的某个字段并渲染成 ->>'k' 会得到的文本。
 // 第二个返回值区分"字段不存在 / 为 null"和"字段是空字符串"，DISTINCT ON 的
 // 键与 ORDER BY 的 NULL 语义都依赖这个区分。
 func jsonStringField(el any, field string) (string, bool) {

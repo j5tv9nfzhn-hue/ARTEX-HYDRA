@@ -249,8 +249,8 @@ func (d *DB) SetTasksCategory(taskIDs []int64, categoryID *int64) ([]int64, *Tas
 			return nil, nil, ErrTaskCategoryNotFound
 		}
 	}
-	// = ANY($1::bigint[]) 只有 PostgreSQL 有（SQLite 既无 ANY 也绑不了
-	// []int64），SQLite 侧展开成 IN ($2,...)；语句与参数顺序见
+	// 集合判定展开成 IN ($2,...)（SQLite 既无 ANY 也绑不了 []int64）；
+	// 语句与参数顺序见
 	// db/dialect_dml.go:taskCategoryBatchMoveStmt。
 	args := []any{}
 	rows, err := tx.Query(taskCategoryBatchMoveStmt(&args, taskIDs, categoryID), args...)

@@ -29,7 +29,7 @@ type Store struct {
 
 // restoreGate serialises evidence collection against an active archive restore.
 //
-// PostgreSQL expressed this with an advisory lock inside a transaction, and
+// The original form expressed this with an advisory lock inside a transaction, and
 // WithInstalledSnapshots wrapped its callback in that transaction to hold the lock
 // for the whole restore. SQLite has no nested write transactions — the outer BEGIN
 // already owns the database write lock, so the restore's own transaction would
@@ -360,8 +360,9 @@ func (s *Store) InstallSnapshots(ctx context.Context, snapshots []db.TrafficEvid
 // restoreMu so the evidence GC cannot reap a just-installed body.
 //
 // It deliberately does NOT wrap the callback in a database transaction. Under
-// PostgreSQL it did: the surrounding transaction held an advisory lock, which both
-// pinned the bodies against the GC and was harmless to nest (MVCC). SQLite cannot
+// In the original form it did: the surrounding transaction held an advisory lock,
+// which both pinned the bodies against the GC and was harmless to nest (MVCC).
+// SQLite cannot
 // nest write transactions — with _txlock=immediate the outer BEGIN already owns the
 // database write lock, so the restore's own d.Begin() would block until busy_timeout
 // expired and then fail with SQLITE_BUSY. That was a hard self-deadlock, not

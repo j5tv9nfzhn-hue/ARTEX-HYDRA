@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/agent"
-	pgdb "github.com/Autumn-27/artex/db"
+	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/traffic"
 )
 
@@ -148,11 +148,11 @@ func (s *Server) runOneTaskArchiveJobAttempt() (bool, error) {
 	}
 	var runErr error
 	switch job.State {
-	case pgdb.Archiving:
+	case db.Archiving:
 		runErr = s.archiveTask(job)
-	case pgdb.Restoring:
+	case db.Restoring:
 		runErr = s.restoreTaskArchive(job)
-	case pgdb.Deleting:
+	case db.Deleting:
 		runErr = s.deleteTaskArchive(job)
 	default:
 		runErr = fmt.Errorf("unknown claimed archive state %q", job.State)
@@ -168,7 +168,7 @@ func (s *Server) runOneTaskArchiveJobAttempt() (bool, error) {
 	return true, nil
 }
 
-func (s *Server) archiveTask(job *pgdb.TaskArchive) (runErr error) {
+func (s *Server) archiveTask(job *db.TaskArchive) (runErr error) {
 	taskID := strconv.FormatInt(job.TaskID, 10)
 	if !s.beginTaskDelete(taskID) {
 		return errors.New("此任务正在执行其他归档或删除操作")
@@ -193,7 +193,7 @@ func (s *Server) archiveTask(job *pgdb.TaskArchive) (runErr error) {
 		return err
 	}
 	if task == nil {
-		return pgdb.ErrTaskArchiveNotFound
+		return db.ErrTaskArchiveNotFound
 	}
 	_ = s.m.pg.UpdateTaskArchiveProgress(job.ID, "stage_files", 10)
 	fileStage, err := stageTaskArchiveFiles(s.m.dir, job.ID, taskID, task.ExplorationID)
@@ -205,7 +205,7 @@ func (s *Server) archiveTask(job *pgdb.TaskArchive) (runErr error) {
 			runErr = errors.Join(runErr, fileStage.rollback())
 		}
 	}()
-	streamPath := filepath.Join(fileStage.payload, filepath.FromSlash(pgdb.TaskArchiveLLMRecordsPath))
+	streamPath := filepath.Join(fileStage.payload, filepath.FromSlash(db.TaskArchiveLLMRecordsPath))
 	if err := os.MkdirAll(filepath.Dir(streamPath), archiveDirMode); err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func (s *Server) archiveTask(job *pgdb.TaskArchive) (runErr error) {
 		snapshot.DataCounts["traffic"] = trafficCount
 	}
 	archivePath := taskArchivePath(s.m.dir, job.ID, taskID)
-	evidenceSnapshots, err := pgdb.ArchiveEvidenceSnapshots(snapshot)
+	evidenceSnapshots, err := db.ArchiveEvidenceSnapshots(snapshot)
 	if err != nil {
 		return err
 	}
@@ -292,11 +292,11 @@ func (s *Server) archiveTask(job *pgdb.TaskArchive) (runErr error) {
 	return nil
 }
 
-func (s *Server) restoreTaskArchive(job *pgdb.TaskArchive) (runErr error) {
+func (s *Server) restoreTaskArchive(job *db.TaskArchive) (runErr error) {
 	if err := validateArchivePath(s.m.dir, job.ArchivePath); err != nil {
 		return err
 	}
-	// A prior attempt may have committed PostgreSQL and files, then failed only
+	// A prior attempt may have committed the database rows and files, then failed only
 	// while consuming the package. Finish that cleanup without replaying rows.
 	if restored, err := s.m.pg.IsTaskArchiveRestored(job.ID); err != nil {
 		return err
@@ -327,14 +327,14 @@ func (s *Server) restoreTaskArchive(job *pgdb.TaskArchive) (runErr error) {
 	if err != nil {
 		return err
 	}
-	var snapshot pgdb.TaskArchiveSnapshot
+	var snapshot db.TaskArchiveSnapshot
 	if err := json.Unmarshal(manifestRaw, &snapshot); err != nil {
 		return err
 	}
-	if snapshot.TaskID != job.TaskID || !pgdb.IsTaskArchiveFormatSupported(snapshot.FormatVersion) {
-		return pgdb.ErrTaskArchiveFormatMismatch
+	if snapshot.TaskID != job.TaskID || !db.IsTaskArchiveFormatSupported(snapshot.FormatVersion) {
+		return db.ErrTaskArchiveFormatMismatch
 	}
-	evidenceSnapshots, err := pgdb.ArchiveEvidenceSnapshots(&snapshot)
+	evidenceSnapshots, err := db.ArchiveEvidenceSnapshots(&snapshot)
 	if err != nil {
 		return err
 	}
@@ -343,14 +343,14 @@ func (s *Server) restoreTaskArchive(job *pgdb.TaskArchive) (runErr error) {
 	})
 }
 
-func (s *Server) restoreTaskArchivePayload(job *pgdb.TaskArchive, snapshot *pgdb.TaskArchiveSnapshot, extracted string) (runErr error) {
+func (s *Server) restoreTaskArchivePayload(job *db.TaskArchive, snapshot *db.TaskArchiveSnapshot, extracted string) (runErr error) {
 	var err error
 	var llmRecordsFile *os.File
 	relative, hasStreamedLLMRecords := snapshot.StreamedTables["llm_records"]
 	if len(snapshot.StreamedTables) > 0 &&
 		(snapshot.FormatVersion < 2 || !hasStreamedLLMRecords || len(snapshot.StreamedTables) != 1 ||
-			relative != pgdb.TaskArchiveLLMRecordsPath) {
-		return pgdb.ErrTaskArchiveFormatMismatch
+			relative != db.TaskArchiveLLMRecordsPath) {
+		return db.ErrTaskArchiveFormatMismatch
 	}
 	if hasStreamedLLMRecords {
 		llmRecordsFile, err = os.Open(filepath.Join(extracted, filepath.FromSlash(relative)))
@@ -399,7 +399,7 @@ func (s *Server) restoreTaskArchivePayload(job *pgdb.TaskArchive, snapshot *pgdb
 		log.Printf("[task-archive] restored task %d with warning: %s", job.TaskID, warning)
 	}
 	if len(warnings) > 0 {
-		if _, err := s.m.pg.Exploration(snapshot.ExplorationID).AppendActivity(pgdb.Activity{
+		if _, err := s.m.pg.Exploration(snapshot.ExplorationID).AppendActivity(db.Activity{
 			Worker: "system", Kind: "system", Summary: "任务恢复完成，但部分关联项未能完整恢复", Detail: strings.Join(warnings, "\n"),
 		}); err != nil {
 			log.Printf("[task-archive] persist restore warnings for task %d: %v", job.TaskID, err)
@@ -446,7 +446,7 @@ func (s *Server) loadRestoredTask(taskID int64) {
 	}
 }
 
-func (s *Server) deleteTaskArchive(job *pgdb.TaskArchive) error {
+func (s *Server) deleteTaskArchive(job *db.TaskArchive) error {
 	if err := validateArchivePath(s.m.dir, job.ArchivePath); err != nil {
 		return err
 	}
@@ -618,7 +618,7 @@ func (s *Server) queueTaskArchiveActionBatch(w http.ResponseWriter, r *http.Requ
 	ids = s.orderColdTaskArchiveBatch(ids, action == "restore")
 	items := make([]archiveBatchItem, 0, len(ids))
 	for _, id := range ids {
-		var archive *pgdb.TaskArchive
+		var archive *db.TaskArchive
 		if action == "restore" {
 			archive, err = s.m.pg.QueueTaskArchiveRestore(id)
 		} else {
@@ -769,13 +769,13 @@ func topoTaskIDs(ids []string, sources map[string][]string, restore bool) []stri
 
 func writeArchiveError(w http.ResponseWriter, err error) {
 	status := http.StatusConflict
-	if errors.Is(err, pgdb.ErrTaskArchiveNotFound) {
+	if errors.Is(err, db.ErrTaskArchiveNotFound) {
 		status = http.StatusNotFound
-	} else if !errors.Is(err, pgdb.ErrTaskArchiveIneligible) &&
-		!errors.Is(err, pgdb.ErrTaskArchiveQueued) &&
-		!errors.Is(err, pgdb.ErrTaskArchiveDependent) &&
-		!errors.Is(err, pgdb.ErrTaskArchiveState) &&
-		!errors.Is(err, pgdb.ErrTaskArchiveDeleteBlocked) {
+	} else if !errors.Is(err, db.ErrTaskArchiveIneligible) &&
+		!errors.Is(err, db.ErrTaskArchiveQueued) &&
+		!errors.Is(err, db.ErrTaskArchiveDependent) &&
+		!errors.Is(err, db.ErrTaskArchiveState) &&
+		!errors.Is(err, db.ErrTaskArchiveDeleteBlocked) {
 		status = http.StatusInternalServerError
 	}
 	writeErr(w, status, err.Error())

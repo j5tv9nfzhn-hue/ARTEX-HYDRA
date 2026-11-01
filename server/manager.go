@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/agent"
-	pgdb "github.com/Autumn-27/artex/db"
+	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/enrich"
 	"github.com/Autumn-27/artex/guard"
 	"github.com/Autumn-27/artex/intercept"
@@ -23,7 +23,7 @@ import (
 )
 
 // Task is one engagement: a description + goal + its own exploration store,
-// sharing the process-wide asset store. ID is the PG task id as a string; ExpID
+// sharing the process-wide asset store. ID is the tasks.id as a string; ExpID
 // is the exploration the task owns.
 type Task struct {
 	AnalysisDomain string `json:"analysis_domain"`
@@ -55,14 +55,14 @@ type Task struct {
 	CompanyIDs         []int64 `json:"company_ids,omitempty"`
 	Status             string  `json:"status"` // persisted lifecycle status (done/failed/timeout 为终态；空/其它则由运行态推导)
 	// 任务级超时(见 docs/任务级超时与收尾设计.md)。DeadlineAt/FirstRunAt 为 unix 秒,0=未设/未运行。
-	TimeoutSeconds       int                    `json:"timeout_seconds"`
-	PlanHeartbeatSeconds int                    `json:"plan_heartbeat_seconds"` // planner 心跳触发间隔(秒)
-	CoverageEnabled      bool                   `json:"coverage_enabled"`       // 资产覆盖度功能开关(创建时定,默认开)
-	TokenBudget          int                    `json:"token_budget"`           // 任务级 token 预算(0=不限);预算闸每 run 读一次
-	FirstRunAt           int64                  `json:"first_run_at,omitempty"`
-	DeadlineAt           int64                  `json:"deadline_at,omitempty"`
-	Store                *pgdb.ExplorationStore `json:"-"`
-	Guard                *guard.Guard           `json:"-"`
+	TimeoutSeconds       int                  `json:"timeout_seconds"`
+	PlanHeartbeatSeconds int                  `json:"plan_heartbeat_seconds"` // planner 心跳触发间隔(秒)
+	CoverageEnabled      bool                 `json:"coverage_enabled"`       // 资产覆盖度功能开关(创建时定,默认开)
+	TokenBudget          int                  `json:"token_budget"`           // 任务级 token 预算(0=不限);预算闸每 run 读一次
+	FirstRunAt           int64                `json:"first_run_at,omitempty"`
+	DeadlineAt           int64                `json:"deadline_at,omitempty"`
+	Store                *db.ExplorationStore `json:"-"`
+	Guard                *guard.Guard         `json:"-"`
 	notify               chan struct{}
 	lifecycleMu          sync.RWMutex
 	llmMu                sync.RWMutex
@@ -217,18 +217,18 @@ type DeleteTaskResult struct {
 	CleanupWarning    string `json:"cleanup_warning,omitempty"`
 }
 
-// Manager owns the PostgreSQL data source (asset graph + every task's exploration
-// graph + config) and the in-memory set of task handles.
+// Manager owns the database (asset graph + every task's exploration graph +
+// config) and the in-memory set of task handles.
 type Manager struct {
 	dir         string
-	pg          *pgdb.DB
-	assets      *pgdb.AssetStore
+	pg          *db.DB
+	assets      *db.AssetStore
 	traffic     *traffic.Traffic       // process-wide recording proxy (may be nil)
 	enrich      *enrich.Engine         // engine-side asset auto-completion (DNS/HTTP)
 	interceptor *intercept.Interceptor // user-configured tool-call interception rules
 
 	companyMu sync.Mutex // serializes task/company-scope commits with live handle registration
-	// taskStateMu preserves commit order between PostgreSQL lifecycle writes and
+	// taskStateMu preserves commit order between database lifecycle writes and
 	// their in-memory mirrors. lifecycleMu makes snapshots race-free, but without
 	// this outer write lock an older request could commit first and publish last.
 	taskStateMu sync.Mutex
@@ -240,7 +240,7 @@ type Manager struct {
 	// wait on distillation; deletion runs BEFORE the cascade deletes the task data.
 	skillHookMu    sync.RWMutex
 	onTaskTerminal func(taskID, status string)
-	onTaskDeleted  func(taskID string, snapshot *pgdb.Task)
+	onTaskDeleted  func(taskID string, snapshot *db.Task)
 	trafficOn      bool // 流量捕获开关（默认关；settings.traffic_capture）
 	llmRecOn       bool // LLM 录制开关（默认关；settings.llm_record）
 	// 联网搜索开关与来源（默认关；settings.web_search_*）。brave-free 需要 braveKey；tavily 需要 tavilyKey。
@@ -387,8 +387,8 @@ func (m *Manager) SetWorkers(n int) error {
 // Enrich returns the asset auto-completion engine (may be nil if init failed).
 func (m *Manager) Enrich() *enrich.Engine { return m.enrich }
 
-// NewManager connects to PostgreSQL and, if proxyAddr is non-empty, starts the
-// traffic-recording proxy. PostgreSQL is required (it is the single data source).
+// NewManager opens the database and, if proxyAddr is non-empty, starts the
+// traffic-recording proxy. The database is required (it is the single data source).
 func NewManager(dir, proxyAddr string) (*Manager, error) {
 	// Resolve the data dir to an ABSOLUTE path up front. Every data path derives
 	// from it — notably the MITM CA cert, whose path is injected into worker shells
@@ -402,12 +402,12 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
 	}
-	dsn, source, err := pgdb.DSN()
+	dsn, source, err := db.DSN()
 	if err != nil {
 		return nil, err
 	}
 	log.Printf(logT("[db] 数据库配置来源：%s"), source)
-	pg, err := pgdb.Open(dsn)
+	pg, err := db.Open(dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -689,8 +689,8 @@ func (m *Manager) HostTools() []actool.CoreTool {
 	return nil
 }
 
-func (m *Manager) Assets() *pgdb.AssetStore  { return m.assets }
-func (m *Manager) PG() *pgdb.DB              { return m.pg }
+func (m *Manager) Assets() *db.AssetStore    { return m.assets }
+func (m *Manager) PG() *db.DB                { return m.pg }
 func (m *Manager) Traffic() *traffic.Traffic { return m.traffic }
 
 // ProxyAddr returns the egress proxy address agents route target traffic through:
@@ -765,7 +765,7 @@ func (m *Manager) Close() error {
 
 // isTerminalStatus reports whether a task status is terminal (done/failed/timeout).
 // Package-local shim over db.IsTerminal so all server files share one definition.
-func isTerminalStatus(status string) bool { return pgdb.IsTerminal(status) }
+func isTerminalStatus(status string) bool { return db.IsTerminal(status) }
 
 // unixOrZero returns t's unix seconds, or 0 when the time is nil.
 func unixOrZero(t *time.Time) int64 {
@@ -782,7 +782,7 @@ func unixNanoOrZero(t *time.Time) int64 {
 	return t.UnixNano()
 }
 
-func taskFromPG(pt *pgdb.Task, store *pgdb.ExplorationStore, ic *intercept.Interceptor) *Task {
+func taskFromPG(pt *db.Task, store *db.ExplorationStore, ic *intercept.Interceptor) *Task {
 	return &Task{
 		ID: strconv.FormatInt(pt.ID, 10), ExpID: pt.ExplorationID,
 		AnalysisDomain: pt.AnalysisDomain,
@@ -808,7 +808,7 @@ func taskFromPG(pt *pgdb.Task, store *pgdb.ExplorationStore, ic *intercept.Inter
 
 // UpdateTaskMetadata changes list-only task metadata without interrupting any
 // planner, main-agent, or worker call.
-func (m *Manager) UpdateTaskMetadata(taskID string, patch pgdb.TaskPatch) (*Task, error) {
+func (m *Manager) UpdateTaskMetadata(taskID string, patch db.TaskPatch) (*Task, error) {
 	m.taskStateMu.Lock()
 	defer m.taskStateMu.Unlock()
 	id, err := strconv.ParseInt(taskID, 10, 64)
@@ -840,12 +840,12 @@ func (m *Manager) CreateTask(description, goal string, llmProfileID *int64, time
 	if llmProfileID != nil {
 		ids = []int64{*llmProfileID}
 	}
-	return m.CreateTaskWithOptions(description, goal, pgdb.TaskCreateOptions{
+	return m.CreateTaskWithOptions(description, goal, db.TaskCreateOptions{
 		LLMProfileIDs: ids, TimeoutSeconds: timeoutSeconds, PlanHeartbeatSeconds: planHeartbeatSeconds,
 	})
 }
 
-func (m *Manager) CreateTaskWithOptions(description, goal string, opts pgdb.TaskCreateOptions) (*Task, error) {
+func (m *Manager) CreateTaskWithOptions(description, goal string, opts db.TaskCreateOptions) (*Task, error) {
 	if len(opts.CompanyIDs) > 0 {
 		m.companyMu.Lock()
 		defer m.companyMu.Unlock()
@@ -864,7 +864,7 @@ func (m *Manager) CreateTaskWithOptions(description, goal string, opts pgdb.Task
 
 // RenameTaskCategory persists a category name and refreshes every live task DTO
 // that references it. taskStateMu keeps this ordered with task reassignment.
-func (m *Manager) RenameTaskCategory(id int64, name string) (*pgdb.TaskCategory, error) {
+func (m *Manager) RenameTaskCategory(id int64, name string) (*db.TaskCategory, error) {
 	m.taskStateMu.Lock()
 	defer m.taskStateMu.Unlock()
 	category, err := m.pg.RenameTaskCategory(id, name)
@@ -905,12 +905,12 @@ func (m *Manager) DeleteTaskCategory(id int64) (bool, error) {
 }
 
 // SetTaskCategory updates one live task without interrupting its runtime.
-func (m *Manager) SetTaskCategory(taskID string, categoryID *int64) (*pgdb.TaskCategory, error) {
+func (m *Manager) SetTaskCategory(taskID string, categoryID *int64) (*db.TaskCategory, error) {
 	m.taskStateMu.Lock()
 	defer m.taskStateMu.Unlock()
 	id, err := strconv.ParseInt(taskID, 10, 64)
 	if err != nil || id <= 0 {
-		return nil, pgdb.ErrTaskCategoryTaskNotFound
+		return nil, db.ErrTaskCategoryTaskNotFound
 	}
 	category, err := m.pg.SetTaskCategory(id, categoryID)
 	if err != nil {
@@ -935,14 +935,14 @@ func (m *Manager) SetTaskCategory(taskID string, categoryID *int64) (*pgdb.TaskC
 // database write and the in-memory refresh share taskStateMu, so a concurrent
 // single-task update cannot interleave and leave a live DTO stale. The returned
 // set holds the ids that were actually moved; callers report the rest as gone.
-func (m *Manager) SetTasksCategory(taskIDs []string, categoryID *int64) (map[string]bool, *pgdb.TaskCategory, error) {
+func (m *Manager) SetTasksCategory(taskIDs []string, categoryID *int64) (map[string]bool, *db.TaskCategory, error) {
 	m.taskStateMu.Lock()
 	defer m.taskStateMu.Unlock()
 	numeric := make([]int64, 0, len(taskIDs))
 	for _, taskID := range taskIDs {
 		id, err := strconv.ParseInt(taskID, 10, 64)
 		if err != nil || id <= 0 {
-			return nil, nil, pgdb.ErrTaskCategoryTaskNotFound
+			return nil, nil, db.ErrTaskCategoryTaskNotFound
 		}
 		numeric = append(numeric, id)
 	}
@@ -1025,11 +1025,11 @@ func (m *Manager) ReplaceTaskLLMProfiles(id string, profileIDs []int64, activePr
 	// blocked 挪到 open——那里既没人执行,也不再满足「重跑意图」的可重跑条件,
 	// 反而变成死状态。终态任务想接着跑,走重跑意图/新增目标,那条路会把任务重新
 	// admit 回运行态。
-	if pgdb.IsTerminal(pt.Status) {
+	if db.IsTerminal(pt.Status) {
 		return 0, nil
 	}
 	if task, ok := m.Task(id); ok {
-		reopened, reopenErr := task.Store.ReopenIntentsByBlockedReason(pgdb.IntentBlockedLLMQuota)
+		reopened, reopenErr := task.Store.ReopenIntentsByBlockedReason(db.IntentBlockedLLMQuota)
 		if reopenErr != nil {
 			return reopened, reopenErr
 		}
@@ -1038,7 +1038,7 @@ func (m *Manager) ReplaceTaskLLMProfiles(id string, profileIDs []int64, activePr
 	return 0, nil
 }
 
-// LoadExisting rebuilds in-memory task handles from the PG task registry.
+// LoadExisting rebuilds in-memory task handles from the task registry.
 func (m *Manager) LoadExisting() []*Task {
 	pts, err := m.pg.ListTasks()
 	if err != nil {
@@ -1069,7 +1069,7 @@ func (m *Manager) LoadExisting() []*Task {
 		}
 	}
 	if len(loaded) > 0 {
-		log.Printf("[manager] reloaded %d task(s) from PG", len(loaded))
+		log.Printf("[manager] reloaded %d task(s) from the database", len(loaded))
 	}
 	return loaded
 }
@@ -1420,7 +1420,7 @@ func (m *Manager) SetTaskStatus(id, status string) error {
 			state.Status = status
 			// Mirror the DB's completed_at stamp on the live handle so the DTO shows
 			// the finish time without a reload (terminal -> stamp once; else clear).
-			if pgdb.IsTerminal(status) {
+			if db.IsTerminal(status) {
 				if state.CompletedAt == 0 {
 					state.CompletedAt = time.Now().Unix()
 				}
@@ -1433,7 +1433,7 @@ func (m *Manager) SetTaskStatus(id, status string) error {
 	m.taskStateMu.Unlock()
 	if changed {
 		m.emitTaskStatusEvent(n, status, "")
-		if pgdb.IsTerminal(status) {
+		if db.IsTerminal(status) {
 			m.fireTaskTerminal(id, status)
 		}
 	}
@@ -1443,7 +1443,7 @@ func (m *Manager) SetTaskStatus(id, status string) error {
 // DeleteTask removes a task and optionally its related global data. Traffic has
 // no task-id column, so related exchanges are resolved by exact hosts from the
 // task's asset rows. Files are staged before the database operation; traffic is
-// staged while PostgreSQL excludes asset/anchor writers. Both are restored on a
+// staged while the database excludes asset/anchor writers. Both are restored on a
 // database failure and purged only after its commit.
 func (m *Manager) DeleteTask(id string, opts DeleteTaskOptions) (DeleteTaskResult, error) {
 	result := DeleteTaskResult{Deleted: id}
@@ -1475,9 +1475,9 @@ func (m *Manager) DeleteTask(id string, opts DeleteTaskOptions) (DeleteTaskResul
 	}
 
 	var trafficStage *traffic.HostDeleteStage
-	var prepare func(pgdb.TaskDeletePreparation) error
+	var prepare func(db.TaskDeletePreparation) error
 	if opts.DeleteTraffic && m.traffic != nil {
-		prepare = func(p pgdb.TaskDeletePreparation) error {
+		prepare = func(p db.TaskDeletePreparation) error {
 			if len(p.TrafficHosts) == 0 {
 				return nil
 			}
@@ -1501,7 +1501,7 @@ func (m *Manager) DeleteTask(id string, opts DeleteTaskOptions) (DeleteTaskResul
 	result.FindingsDeleted = dbResult.FindingsDeleted
 	result.LLMRecordsDeleted = dbResult.LLMRecordsDeleted
 
-	// PostgreSQL is now authoritative: finalize the staged external deletion and
+	// The database is now authoritative: finalize the staged external deletion and
 	// forget the live task even if a final purge reports an error. Such errors are
 	// typed so the HTTP layer can still tear down the task runtime instead of
 	// incorrectly reviving a task whose database row is already gone.
@@ -1523,7 +1523,7 @@ func (m *Manager) DeleteTask(id string, opts DeleteTaskOptions) (DeleteTaskResul
 	return result, nil
 }
 
-// taskDeleteCommittedError means PostgreSQL deletion succeeded but purging one
+// taskDeleteCommittedError means the database deletion succeeded but purging one
 // of the recoverable staging directories failed. The task must stay deleted.
 type taskDeleteCommittedError struct{ err error }
 
@@ -1536,7 +1536,7 @@ func (e *taskDeleteCommittedError) Unwrap() error { return e.err }
 func rollbackTaskDelete(cause error, trafficStage *traffic.HostDeleteStage, fileStage *taskFileDeleteStage) error {
 	errs := []error{cause}
 	// Reverse the preparation order. Both restorations are attempted even if the
-	// first one fails, and errors.Join preserves the original PostgreSQL error.
+	// first one fails, and errors.Join preserves the original database error.
 	if trafficStage != nil {
 		if err := trafficStage.Rollback(); err != nil {
 			errs = append(errs, fmt.Errorf("restore traffic after task delete failure: %w", err))

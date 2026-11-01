@@ -59,7 +59,7 @@ func TestDeleteFinding(t *testing.T) {
 }
 
 // TestFindingsPageAndStats exercises ListFindingsPage (filter/sort/paging) and
-// FindingStats against the live dev PG. It tags its rows with a unique vulnclass
+// FindingStats against a live dev database. It tags its rows with a unique vulnclass
 // so assertions are isolated from any pre-existing data, and cleans up after.
 func TestFindingsPageAndStats(t *testing.T) {
 	d, err := Open(testDSN(t))

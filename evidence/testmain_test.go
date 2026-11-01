@@ -8,9 +8,9 @@ import (
 
 // TestMain gives the suite its own database file.
 //
-// The previous harness required an explicitly configured ARTEX_PG_DSN and held a
-// PostgreSQL advisory lock (7337741002) for the whole run. ARTEX is SQLite-only
-// now, so the suite needs no configuration at all and no cross-package lock:
+// The previous harness required an explicitly configured DSN and held an advisory
+// lock for the whole run. ARTEX is SQLite-only now, so the suite needs no
+// configuration at all and no cross-package lock:
 // each package gets its own file, and SQLite serialises writers on the file.
 func TestMain(m *testing.M) {
 	dir := ""

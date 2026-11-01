@@ -13,9 +13,9 @@ import (
 // user's data. Pointing ARTEX_SQLITE_PATH at a fresh file under the OS temp dir
 // keeps the suite hermetic and makes it reproducible on any machine.
 //
-// The previous harness held a PostgreSQL advisory lock (7337741002) across the
-// whole run to serialise the db, agent and server packages against one shared
-// dev database. That coordination is gone with the shared server: each package
+// The previous harness held an advisory lock across the whole run to serialise
+// the db, agent and server packages against one shared dev database. That
+// coordination is gone with the shared server: each package
 // now gets its own file, and SQLite serialises writers on the file itself
 // (busy_timeout makes a contended writer wait rather than fail), so there is
 // nothing left for a cross-package lock to protect.

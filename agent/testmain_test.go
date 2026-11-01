@@ -10,8 +10,8 @@ import (
 //
 // ARTEX is SQLite-only, so without this the package's tests would open the real
 // database next to the config file and mutate a user's data. The previous harness
-// instead held a PostgreSQL advisory lock (7337741002) to serialise the db, agent
-// and server packages against one shared dev database; with a file per package
+// instead held an advisory lock to serialise the db, agent and server packages
+// against one shared dev database; with a file per package
 // there is no shared server left to coordinate.
 func TestMain(m *testing.M) {
 	dir := ""

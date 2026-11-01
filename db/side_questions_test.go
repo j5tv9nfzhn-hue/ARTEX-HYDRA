@@ -229,8 +229,8 @@ func TestSideArchiveRowsWithoutNewFields(t *testing.T) {
 	rows := map[string]json.RawMessage{}
 	for _, table := range []string{"side_question_sessions", "side_question_requests"} {
 		var raw []byte
-		// json_agg(t) over a row alias is PostgreSQL-only: SQLite has no way to
-		// say "aggregate this whole row into one JSON object". Aggregating the
+		// SQLite has no way to say "aggregate this whole row into one JSON
+		// object" the way json_agg(t) over a row alias does. Aggregating the
 		// columns individually produces the same array of objects, and taking
 		// the column list from the table keeps it from being hand-maintained.
 		cols, err := tableColumnNamesSQLite(tx, table)

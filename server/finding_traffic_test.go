@@ -317,13 +317,12 @@ func TestFindingTrafficArchiveV3RoundTripAndRetry(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Force a database error after validated body installation; then retry normally.
-	// SQLite 无 plpgsql：用 BEFORE INSERT 触发器 RAISE(ABORT) 制造同样的
-	// 「绑定行写入失败」，让恢复流程走到失败重试分支。
+	// SQLite 没有过程式触发器语言，所以用 BEFORE INSERT 触发器 RAISE(ABORT) 制造
+	// 同样的「绑定行写入失败」，让恢复流程走到失败重试分支。
 	//
 	// 必须用 ABORT 而不是 ROLLBACK：ROLLBACK 会把整个事务连驱动侧的状态一起回卷，
 	// 之后 tx.Commit() 落在一条已经结束的事务上，报 SQLITE_BUSY 而不是预期的写入
-	// 失败。ABORT 只回滚当前语句（与 plpgsql 的 RAISE EXCEPTION 语义一致），
-	// 事务仍由调用方的 Rollback 负责收尾。
+	// 失败。ABORT 只回滚当前语句，事务仍由调用方的 Rollback 负责收尾。
 	if _, err = s.m.pg.Exec(`CREATE TRIGGER fail_evidence_restore_test BEFORE INSERT ON finding_traffic_bindings BEGIN SELECT RAISE(ABORT, 'restore fixture failure'); END`); err != nil {
 		t.Fatal(err)
 	}

@@ -10,9 +10,8 @@ import (
 // by modernc.org/sqlite's own generated constants), so naming them here is a
 // documentation aid rather than a guess.
 //
-// PostgreSQL exposed these as SQLSTATE strings on *pgconn.PgError; SQLite reports
-// them as extended result codes on *sqlite.Error. The call sites below used to
-// switch on "23505" / "23503" and now switch on these.
+// SQLite reports these as extended result codes on *sqlite.Error; the call sites
+// below switch on them.
 const (
 	sqliteConstraintUnique     = 2067 // SQLITE_CONSTRAINT_UNIQUE
 	sqliteConstraintPrimaryKey = 1555 // SQLITE_CONSTRAINT_PRIMARYKEY
@@ -35,7 +34,7 @@ func sqliteErrorCode(err error) int {
 }
 
 // isUniqueViolation reports whether err is a UNIQUE or PRIMARY KEY constraint
-// failure — the SQLite equivalents of PostgreSQL's SQLSTATE 23505.
+// failure (SQLSTATE 23505 in the old SQLSTATE vocabulary).
 func isUniqueViolation(err error) bool {
 	switch sqliteErrorCode(err) {
 	case sqliteConstraintUnique, sqliteConstraintPrimaryKey:
@@ -44,8 +43,8 @@ func isUniqueViolation(err error) bool {
 	return false
 }
 
-// isForeignKeyViolation reports whether err is a FOREIGN KEY constraint failure —
-// the SQLite equivalent of PostgreSQL's SQLSTATE 23503. foreign_keys(ON) is part
+// isForeignKeyViolation reports whether err is a FOREIGN KEY constraint failure
+// (SQLSTATE 23503 in the old SQLSTATE vocabulary). foreign_keys(ON) is part
 // of the DSN contract (see config.SQLiteDSN), so this can actually fire.
 func isForeignKeyViolation(err error) bool {
 	return sqliteErrorCode(err) == sqliteConstraintForeignKey
@@ -63,8 +62,7 @@ func UniqueViolation(err error) bool { return isUniqueViolation(err) }
 
 // ConstraintCode names the constraint failure for logs: "fk_violation(787)",
 // "unique_violation(2067)", or "" when err carries no constraint code. The numeric
-// codes are SQLite's extended result codes; the previous PostgreSQL form reported
-// SQLSTATE strings ("23503" / "23505").
+// codes are SQLite's extended result codes.
 func ConstraintCode(err error) string {
 	switch sqliteErrorCode(err) {
 	case sqliteConstraintForeignKey:

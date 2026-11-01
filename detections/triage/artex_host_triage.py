@@ -7,11 +7,10 @@
 # script serves the other responder: the one standing at a single suspect host's
 # shell, with no SIEM, who needs to answer "did ARTEX run here?" from local state.
 # It operationalizes the same indicators the rest of the directory ships, plus the
-# three host/DB indicators the indicator list deliberately carries WITHOUT a Sigma
-# rule because they are not log- or network-observable and can only be checked on
-# the box itself (see detections/indicators/artex_indicators.csv — the rows whose
-# `rule` column is empty: server-listen-port, recording-proxy-endpoint,
-# postgres-exploration-schema).
+# two host indicators the indicator list deliberately carries WITHOUT a Sigma rule
+# because they are not log- or network-observable and can only be checked on the box
+# itself (see detections/indicators/artex_indicators.csv — the rows whose `rule`
+# column is empty: server-listen-port, recording-proxy-endpoint).
 #
 # It is a TRIAGE LEAD generator, not an alerting rule. Every check is grounded in
 # a string or path verified in this repository's source, and every finding carries
@@ -44,13 +43,7 @@
 #                               history is scanned too; a format with no stdlib
 #                               codec (.zst/.lz4) is reported as skipped, never
 #                               silently treated as clean.
-#   4. PostgreSQL schema      the dual-graph exploration tables (exploration_nodes /
-#                               _edges / _anchors with assets / companies / activity
-#                               and the agent_prompts seed) in the ARTEX store
-#                               (db/schema.sql). Run against a DSN with `psql` if
-#                               available; otherwise the script prints the exact
-#                               read-only query for you to run by hand.
-#   5. Process env injection  a running process whose environment carries the
+#   4. Process env injection  a running process whose environment carries the
 #                               recording proxy (HTTP_PROXY / HTTPS_PROXY / ALL_PROXY)
 #                               together with a toolchain CA-trust var (SSL_CERT_FILE /
 #                               CURL_CA_BUNDLE / REQUESTS_CA_BUNDLE / GIT_SSL_CAINFO /
@@ -65,14 +58,13 @@
 #
 # Safety: pure Python standard library, no network, no writes anywhere except the
 # self-test's own temporary directory. It reads host state (open ports, a data
-# directory, log files, the environments of running processes via /proc, and — only
-# if you pass a DSN — the database) and prints what it found. Use it only on a host
-# you own or are authorized in writing to inspect.
+# directory, log files, and the environments of running processes via /proc) and
+# prints what it found. Use it only on a host you own or are authorized in writing
+# to inspect.
 #
 # Usage:
 #   detections/triage/artex_host_triage.py --data-dir /opt/artex/data \
 #       --log /var/log/syslog --log-dir /var/log/artex
-#   detections/triage/artex_host_triage.py --pg-dsn "$ARTEX_PG_DSN"
 #   detections/triage/artex_host_triage.py --proc-from proc_env_dump.txt  # offline
 #   detections/triage/artex_host_triage.py --self-test     # reproducible fixture test
 #   detections/triage/artex_host_triage.py --json          # machine-readable findings
@@ -132,18 +124,6 @@ LOG_MARKERS = [
         "severity": "high",
         "caveat": "Also appears in logs that merely quote this defense guide or the ARTEX source.",
     },
-]
-
-# Dual-graph exploration schema fingerprint (db/schema.sql). Their presence
-# together is the host-forensic tell; any one table name is generic.
-SCHEMA_TABLES = [
-    "exploration_nodes",
-    "exploration_edges",
-    "exploration_anchors",
-    "assets",
-    "companies",
-    "activity",
-    "agent_prompts",
 ]
 
 # Recording-proxy environment injection into spawned worker tools (agent/worker.go
@@ -407,67 +387,7 @@ def scan_logs(logs, log_dirs):
     return findings, skipped
 
 
-# --- check 4: PostgreSQL exploration schema -----------------------------------
-
-# A single read-only query: how many of the dual-graph tables exist in the public
-# schema. Printed for manual use when psql is unavailable or no DSN was given.
-SCHEMA_QUERY = (
-    "SELECT count(*) FROM information_schema.tables "
-    "WHERE table_schema='public' AND table_name IN ("
-    + ", ".join(f"'{t}'" for t in SCHEMA_TABLES)
-    + ");"
-)
-
-
-def check_pg_schema(dsn):
-    findings = []
-    if not dsn:
-        return findings, (
-            "PostgreSQL schema check skipped (no --pg-dsn / ARTEX_PG_DSN). "
-            "To check by hand, run this read-only query against the suspected store:\n"
-            f"    psql <DSN> -c \"{SCHEMA_QUERY}\"\n"
-            f"    (a count at or near {len(SCHEMA_TABLES)} of these tables together is the dual-graph tell; db/schema.sql)"
-        )
-    if shutil.which("psql") is None:
-        return findings, (
-            "PostgreSQL schema check skipped (psql not found on PATH). "
-            f"Run by hand:\n    psql <DSN> -c \"{SCHEMA_QUERY}\""
-        )
-    try:
-        out = subprocess.run(
-            ["psql", dsn, "-tAc", SCHEMA_QUERY],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError) as e:
-        return findings, f"PostgreSQL schema check could not run: {e}"
-    if out.returncode != 0:
-        return findings, (
-            "PostgreSQL schema check could not connect: "
-            + (out.stderr.strip().splitlines()[-1] if out.stderr.strip() else "psql returned non-zero")
-        )
-    count = out.stdout.strip()
-    try:
-        n = int(count)
-    except ValueError:
-        return findings, f"PostgreSQL schema check returned an unexpected result: {count!r}"
-    if n >= 4:
-        findings.append(
-            Finding(
-                "postgres-schema",
-                "high" if n >= 6 else "medium",
-                "ARTEX dual-graph exploration schema present",
-                f"{n} of {len(SCHEMA_TABLES)} ARTEX exploration-graph tables found in the public schema",
-                "db/schema.sql",
-                "Inspect the database to confirm; a few table names overlap generic apps, the set does not.",
-            )
-        )
-    return findings, f"PostgreSQL schema check: {n} of {len(SCHEMA_TABLES)} ARTEX tables present."
-
-
-# --- check 5: recording-proxy env injection in running processes --------------
+# --- check 4: recording-proxy env injection in running processes --------------
 
 
 def _proxy_env_hit(env):
@@ -663,11 +583,6 @@ def run_checks(args):
     else:
         notes.append("log-marker check skipped (no --log / --log-dir).")
 
-    pg_findings, pg_note = check_pg_schema(args.pg_dsn or os.environ.get("ARTEX_PG_DSN"))
-    findings += pg_findings
-    if pg_note:
-        notes.append(pg_note)
-
     if args.proc_from:
         try:
             with open(args.proc_from, "r", encoding="utf-8", errors="replace") as f:
@@ -811,11 +726,7 @@ def self_test():
         check("clean: no log findings on a benign log", len(clean_lf) == 0 and clean_skip == [])
         check("clean: no port findings on empty listing", len(check_listening_ports("")) == 0)
 
-    # 5. pg schema: skipped path returns a manual-query note, no finding
-    pgf, pgnote = check_pg_schema("")
-    check("pg: no DSN yields a manual-query note and no finding", len(pgf) == 0 and "psql" in pgnote and SCHEMA_TABLES[0] in SCHEMA_QUERY)
-
-    # 6. recording-proxy env injection in running processes (agent/worker.go proxyEnv)
+    # 5. recording-proxy env injection in running processes (agent/worker.go proxyEnv)
     dump = (
         "# pid 101 (curl)\n"
         "PATH=/usr/bin\n"
@@ -874,8 +785,6 @@ def build_parser():
                         ".gz/.bz2/.xz logs are decompressed and scanned too, while "
                         ".zst/.lz4 (no stdlib codec) are reported as skipped "
                         "(repeatable).")
-    p.add_argument("--pg-dsn", default=None, metavar="DSN",
-                   help="PostgreSQL DSN to check for the exploration schema (defaults to $ARTEX_PG_DSN).")
     p.add_argument("--ports-from", default=None, metavar="FILE",
                    help="read a port listing from FILE instead of running ss/netstat/lsof.")
     p.add_argument("--proc-from", default=None, metavar="FILE",

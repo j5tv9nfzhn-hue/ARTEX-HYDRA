@@ -8,7 +8,7 @@ import (
 )
 
 // PromptOverride, if set, returns the stored system-prompt template for an agent
-// key and whether one exists. The server wires it to the PG agent_prompts table.
+// key and whether one exists. The server wires it to the agent_prompts table.
 // When nil or no override exists, agents use their built-in default prompt — so
 // behavior is identical until a user edits a prompt in the UI.
 var PromptOverride func(agentKey string) (string, bool)

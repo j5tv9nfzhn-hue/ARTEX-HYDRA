@@ -108,9 +108,9 @@ func scanNotificationDelivery(sc interface{ Scan(...any) error }) (*Notification
 
 // claimQuery 描述一次领取：由调用方给出**候选行查询**（自带 WHERE/ORDER BY，且只投影
 // dd.id ——它会被嵌进 SQLite 的 UPDATE … WHERE id IN (…) 里，IN 子查询只能返回一列），
-// 行锁子句与 LIMIT 由 claimDeliveries 按引擎统一拼装——PostgreSQL 拼
-// `FOR UPDATE OF dd SKIP LOCKED`，SQLite 拼空串并把整条查询塞进 UPDATE 的子查询里，
-// 用「更新即领取」替代行锁（见 dialect_locking.go 与 claimDeliveryIDs 的注释）。
+// 行锁子句由 claimDeliveries 统一拼装：SQLite 没有 FOR UPDATE，改为把整条查询
+// 塞进 UPDATE 的子查询里，用「更新即领取」替代行锁（见 dialect_locking.go 与
+// claimDeliveryIDs 的注释）。
 // args 里最后一个参数是 limit。
 type claimQuery struct {
 	sql  string
@@ -168,15 +168,13 @@ func (d *DB) DigestBatchDue(ctx context.Context, channelID int64, minAge time.Du
 // sqlNowMinusSeconds 是 sqlNowPlusSeconds 的「减」版本，返回「当前时间 - n 秒」。
 // n 由占位符 arg 给出。
 //
-//	PG:      now() - make_interval(secs => $n)
-//	SQLite:  strftime('%Y-%m-%d %H:%M:%f+00:00','now','-'||$n||' seconds')
+//	strftime('%Y-%m-%d %H:%M:%f+00:00','now','-'||$n||' seconds')
 //
-// 为什么单独写一个而不是复用 sqlNowPlusSeconds：后者的 PG 分支是 `+`，套到
-// 「减」上会写出 `now() + make_interval(secs => -$n)`——PG 语义上碰巧也成立，
-// 但生成的 SQL 与原来那句 `now() - make_interval(secs => $4)` 不是同一句话，
-// 而这条语句的 PG 分支必须逐字保留。
+// 为什么单独写一个而不是复用 sqlNowPlusSeconds：后者拼的是 `+`，套到「减」上会
+// 写出 `now() + ... seconds` 的负秒形式，与原来那句 `now() - make_interval(...)`
+// 不是同一句话，而这条语句想保持原来的形状。
 //
-// make_interval 的 `secs => $n` 命名参数是 PG 专有写法，SQLite 解析到 `=>`
+// make_interval 的 `secs => $n` 命名参数在 SQLite 上解析到 `=>`
 // 会断在 `>` 上（实测 `near ">": syntax error`），只能走字符串拼接；格式串
 // 与 dialect_mixed.go 的 sqlNowPlusSeconds 完全一致，理由见那里的注释
 // （与列默认值同一形状，字典序即时间序）。
@@ -186,14 +184,13 @@ func sqlNowMinusSeconds(arg string) string {
 
 // sqlNotAfterExpr 返回「时间戳表达式 <= 某个时间表达式」的比较。
 //
-//	PG:      col <= tsExpr
-//	SQLite:  CAST(col AS TEXT) <= tsExpr
+//	CAST(col AS TEXT) <= tsExpr
 //
 // 它是 dialect_locking.go 里 sqlTimestampNotAfterNow 的同一条论证的泛化版：
 // 那个助手把右操作数固定成 now()，这里右操作数由调用方给（本文件里是
-// sqlNowMinusSeconds 的结果，也是 TEXT）。PG 侧两边都是 timestamptz，按时间
-// 比较；SQLite 侧时间戳列声明为 TIMESTAMP（NUMERIC 亲和性）而 strftime 返回
-// TEXT，CAST 给左操作数 TEXT 亲和性后比较退回字典序——对本项目这些列等价，
+// sqlNowMinusSeconds 的结果，也是 TEXT）。时间戳列声明为 TIMESTAMP（NUMERIC
+// 亲和性）而 strftime 返回 TEXT，CAST 给左操作数 TEXT 亲和性后比较退回字典序
+// ——对本项目这些列等价，
 // 因为写入路径只有列默认值与 now()/strftime 两种，产出同一形状
 // 「2026-10-14 19:16:05.123+00:00」（定宽、UTC、固定 +00:00）。
 //
@@ -280,9 +277,9 @@ func (d *DB) claimDeliveries(ctx context.Context, lease time.Duration, cq claimQ
 // claimDeliveryIDs 完成一次领取的前半段——挑出候选行、把它们置为 sending 并延长租约，
 // 返回领到的 id 列表（顺序无意义）。两个引擎走两条写法，等价性论证见 dialect_locking.go：
 //
-//   - PG：SELECT … FOR UPDATE OF dd SKIP LOCKED LIMIT n 挑行，再单独一条 UPDATE 写占用态，
-//     行锁持有到本事务提交。保持原样。
-//   - SQLite：合成一条 UPDATE … WHERE id IN (SELECT … LIMIT n) RETURNING id。领取与占用
+//   - 改写前：SELECT … FOR UPDATE OF dd SKIP LOCKED LIMIT n 挑行，再单独一条 UPDATE
+//     写占用态，行锁持有到本事务提交。
+//   - 现在：合成一条 UPDATE … WHERE id IN (SELECT … LIMIT n) RETURNING id。领取与占用
 //     标记原子完成，且它是本事务的第一条语句，一开口就拿到库级写锁：并发的第二个
 //     dispatcher 只会在 busy_timeout 内等第一个提交，提交之后它的子查询重新求值时
 //     看到的 next_attempt_at 已被推到未来，于是自然地领到下一批，不会两人领到同一行。

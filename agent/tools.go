@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -48,7 +49,7 @@ func compactIntents(ns []*db.Node, parentsOf, yieldsOf map[int64][]int64) []map[
 	return out
 }
 
-// ToolSet exposes the PG-backed dual graph (asset + exploration) to an LLM agent.
+// ToolSet exposes the database-backed dual graph (asset + exploration) to an LLM agent.
 // One ToolSet is created per planner/worker run; per-run signals live here.
 type ToolSet struct {
 	verificationState verificationState // bounded verification state shared by this ToolSet
@@ -57,7 +58,7 @@ type ToolSet struct {
 	cs                *db.CompanyStore // company store (optional)
 	ts                *db.ExplorationStore
 	worker            string
-	taskID            int64  // PG tasks.id; 0 when unknown (tests / orchestrator cross-task reads)
+	taskID            int64  // tasks.id; 0 when unknown (tests / orchestrator cross-task reads)
 	proxyAddr         string // recording MITM or egress proxy URL for built-in HTTP tools
 	proxyCACert       string // recording MITM CA cert path for built-in HTTP tools
 	workDir           string // per-run working directory for built-in file/wordlist tools
@@ -195,17 +196,6 @@ type WriteCounts struct {
 	Facts    int
 	Assets   int
 	Findings int
-	// Quota 非空 = 本条意图因**工具额度用尽**而收尾（任务 27）。它携带模型被强制
-	// 产出的结构化进度报告，由宿主写进交接单，作为下一轮/人工接手的正文。
-	Quota *QuotaOutcome `json:"quota,omitempty"`
-}
-
-// QuotaOutcome 是一次「额度用尽收尾」的快照。
-type QuotaOutcome struct {
-	Cap     int    `json:"cap"`
-	Calls   int    `json:"calls"`
-	Refused int    `json:"refused,omitempty"`
-	Report  string `json:"report,omitempty"`
 }
 
 // Total is every node persisted this run, regardless of kind — the
@@ -226,7 +216,7 @@ func NewToolSet(ts *db.ExplorationStore, worker string) *ToolSet {
 	return &ToolSet{ts: ts, worker: worker}
 }
 
-// SetTaskID sets the PG task id on this ToolSet so that report_finding can
+// SetTaskID sets the task id on this ToolSet so that report_finding can
 // dual-write to the standalone findings table (which survives task deletion).
 func (t *ToolSet) SetTaskID(id int64) { t.taskID = id }
 
@@ -1451,17 +1441,82 @@ func (t *ToolSet) goalMet() actool.CoreTool {
 
 // --- worker write tools ---
 
+// findingConfidenceLevels 是 report_finding 的置信度取值，与 Strix 的
+// _VALID_CONFIDENCE 同集合（high / medium / low）。
+//
+// 注意与 record_fact 的 confidence（observed|inferred）区分：那个问的是
+// 「这条事实是怎么知道的」（直接看到 vs 据现象推断），这个问的是
+// 「这条漏洞有多可能为真」。同名不同义，改任一侧都要同时看另一侧。
+var findingConfidenceLevels = []string{"high", "medium", "low"}
+
+// findingAnalysisFields 是 report_finding 的「反证闭环」四个字段。
+type findingAnalysisFields struct {
+	Counterevidence          string
+	Confidence               string
+	ConfidenceRationale      string
+	SeverityChangeConditions string
+}
+
+// validateFindingAnalysis 校验反证闭环，逐条移植自 Strix 的
+// _validate_analysis_fields（strix/tools/reporting/tool.py）。
+//
+// 这是**反伪证**的核心闸门：上报前必须主动构造「这条不是漏洞 / 没那么严重」的
+// 最强论证，并诚实标注置信度。没有这道闸门，模型天然会只写支持性证据——那不是
+// 它不诚实，而是它的生成方向本来就沿着「我发现了什么」走。
+//
+// 返回的错误信息刻意写成**可行动的**（照搬 Strix 的措辞）：告诉模型该补什么、
+// 给一个合格样例，而不是只说「字段为空」。模型看到的是这条报错，报错质量直接
+// 决定它下一轮能不能补对。
+func validateFindingAnalysis(f findingAnalysisFields) []string {
+	var errs []string
+	if strings.TrimSpace(f.Counterevidence) == "" {
+		errs = append(errs,
+			"counterevidence 不能为空：写出针对本条发现最强的不利证据，或写清你查过什么没查到"+
+				"（例如「该路径未见输入校验、WAF 或鉴权检查；已分别以已登录/未登录测过」）。"+
+				"笼统的信任说法（如「框架会自动转义」）不算反证，除非你在本上下文确认过那个具体调用。")
+	}
+	if strings.TrimSpace(f.SeverityChangeConditions) == "" {
+		errs = append(errs,
+			"severity_change_conditions 不能为空：一句话说明再多哪一条具体证据会上调或下调本条严重级别"+
+				"（例如「确认该路由暴露在未认证公网流量下则升为 critical」）。")
+	}
+	if !slices.Contains(findingConfidenceLevels, f.Confidence) {
+		errs = append(errs, fmt.Sprintf("confidence 取值非法：%q，必须是 %v 之一", f.Confidence, findingConfidenceLevels))
+	} else if f.Confidence != "high" && strings.TrimSpace(f.ConfidenceRationale) == "" {
+		errs = append(errs,
+			"confidence 不为 high 时必须填 confidence_rationale：点名具体缺口"+
+				"（例如「仅有静态链路，没能起服务复现」「该路由能否从未认证流量触达未确认」）。")
+	}
+	return errs
+}
+
 func (t *ToolSet) addFinding() actool.CoreTool {
 	return writeTool("report_finding", "记录确认的漏洞，用 evidence 提供命令输出、日志等可验证证据。任务上下文传当前 intent_id。返回的 finding_id 是独立漏洞记录 ID，finding_node_id 是探索节点 ID（第一行保留该节点编号）。", obj(map[string]any{
 		"vulnclass": str("漏洞类别"), "name": str("漏洞名称"), "severity": str("critical|high|medium|low"), "summary": str("发现摘要"),
 		"intent_id": idp("当前任务的意图 id"), "asset_ids": map[string]any{"type": "array", "items": map[string]any{"type": "integer"}, "description": "受影响资产 id"},
-		"evidence":         str("证据/PoC 文本"),
-		"evidence_hint_id": idp("可选：本任务中对应此漏洞的提示节点 ID，自动携带其结构化 traffic_refs；不能引用继承提示或其他漏洞的提示"),
+		"evidence": str("证据/PoC 文本"),
+		// ↓↓↓ 反证闭环（移植自 Strix reporting 工具的必填四项）。上报前必须主动构造
+		// 「这条不是漏洞 / 没那么严重」的最强论证，否则模型只会沿着「我发现了什么」
+		// 的方向写支持性证据——那不是它不诚实，而是生成方向本就如此。
+		"counterevidence": str("【必填】反证：主动去找过之后，针对本条发现最强的不利证据——可能漏掉的防护、部署约束、前置条件。确实没找到就写清你查了什么（如「该路径未见输入校验、WAF 或鉴权检查；已分别以已登录/未登录测过」），不能只写「无」。笼统的信任说法（如「框架会自动转义」）不算反证，除非你在本上下文确认过那个具体调用。"),
+		"confidence": map[string]any{
+			"type": "string", "enum": []string{"high", "medium", "low"},
+			"description": "【必填】置信度：high = 对真实目标有可运行的 PoC，或完整可达的 source→sink 链路；medium = 有强静态证据但没能完整执行；low = 合理但存在实质性未决缺口。不要虚高——一个准确的 medium 比一个过不了复核的 high 有用。**未能真正执行的发现最高只能给 medium。**",
+		},
+		"confidence_rationale":       str("confidence 不为 high 时必填：点名具体缺口（如「仅有静态链路，没能起服务复现」「该路由能否从未认证流量触达未确认」）。"),
+		"severity_change_conditions": str("【必填】一句话说明再多哪一条具体证据会上调或下调本条严重级别（如「确认该路由暴露在未认证公网流量下则升为 critical」）。"),
+		"evidence_hint_id":           idp("可选：本任务中对应此漏洞的提示节点 ID，自动携带其结构化 traffic_refs；不能引用继承提示或其他漏洞的提示"),
 		"traffic_refs": map[string]any{"type": "array", "description": "可选；HTTP/HTTPS 漏洞先检索并逐条核实请求/响应确实支持漏洞结论，再按复现顺序填写真实 ID。TCP 等非 HTTP 漏洞、未采集或找不到确切记录时省略或传 []，不阻止上报；可在 evidence 说明原因并提供其他可验证证据。不要猜测 ID、按域名/时间推定关联或仅为补包重复探测。用途 baseline 正常对照 / proof 漏洞证明 / verification 补充验证 / supporting 辅助证据。",
 			"items": obj(map[string]any{"traffic_id": str("traffic_search 返回的真实流量 ID"), "role": map[string]any{"type": "string", "enum": []string{"baseline", "proof", "verification", "supporting"}}, "note": str("该流量如何支持漏洞结论")}, "traffic_id")},
-	}, "vulnclass", "severity", "summary"), func(ctx context.Context, in json.RawMessage) (actool.Result, error) {
+		// confidence_rationale 不在 required 里：它是「条件必填」（confidence 非 high
+		// 时才要），由 validateFindingAnalysis 在代码里判，schema 层表达不了。
+	}, "vulnclass", "severity", "summary", "counterevidence", "confidence", "severity_change_conditions"), func(ctx context.Context, in json.RawMessage) (actool.Result, error) {
 		var a struct {
 			VulnClass, Name, Severity, Summary, Evidence string
+			Counterevidence                              string            `json:"counterevidence"`
+			Confidence                                   string            `json:"confidence"`
+			ConfidenceRationale                          string            `json:"confidence_rationale"`
+			SeverityChangeConditions                     string            `json:"severity_change_conditions"`
 			IntentID                                     json.RawMessage   `json:"intent_id"`
 			AssetIDs                                     []json.RawMessage `json:"asset_ids"`
 			TrafficRefs                                  []db.TrafficRef   `json:"traffic_refs"`
@@ -1469,6 +1524,17 @@ func (t *ToolSet) addFinding() actool.CoreTool {
 		}
 		if err := json.Unmarshal(in, &a); err != nil {
 			return actool.Errorf(err.Error()), nil
+		}
+		// 反证闭环闸门：放在「需要任务上下文」之前——字段不合法是**模型这一侧**的
+		// 问题，与环境无关。先报它，模型才知道下一轮该补什么，而不是先撞上一个
+		// 它无法解决的环境错误再回来补字段。
+		if errs := validateFindingAnalysis(findingAnalysisFields{
+			Counterevidence:          a.Counterevidence,
+			Confidence:               a.Confidence,
+			ConfidenceRationale:      a.ConfidenceRationale,
+			SeverityChangeConditions: a.SeverityChangeConditions,
+		}); len(errs) > 0 {
+			return actool.Errorf("漏洞未登记，反证闭环校验未通过：\n- " + strings.Join(errs, "\n- ")), nil
 		}
 		if t.ts == nil {
 			return actool.Errorf("report_finding 需要任务上下文；平台对话请通过 add_task_hint 向对应任务交接漏洞，并在提示中携带已有的 traffic_refs，由任务 Agent 登记。已登记漏洞可用 bind_finding_traffic 补绑。"), nil
@@ -1488,7 +1554,8 @@ func (t *ToolSet) addFinding() actool.CoreTool {
 		if err != nil {
 			return actool.Errorf(err.Error()), nil
 		}
-		input := db.RecordFindingInput{TaskID: t.taskID, ExplorationID: t.ts.ID(), IntentID: pid(a.IntentID), VulnClass: a.VulnClass, Name: a.Name, Severity: a.Severity, Summary: a.Summary, Evidence: a.Evidence, Worker: t.worker, AssetIDs: pidList(a.AssetIDs)}
+		input := db.RecordFindingInput{TaskID: t.taskID, ExplorationID: t.ts.ID(), IntentID: pid(a.IntentID), VulnClass: a.VulnClass, Name: a.Name, Severity: a.Severity, Summary: a.Summary, Evidence: a.Evidence, Worker: t.worker, AssetIDs: pidList(a.AssetIDs),
+			Counterevidence: a.Counterevidence, Confidence: a.Confidence, ConfidenceRationale: a.ConfidenceRationale, SeverityChangeConditions: a.SeverityChangeConditions}
 		var recorded *db.RecordedFinding
 		if t.findingRecorder != nil {
 			recorded, err = t.findingRecorder.Record(ctx, input, refs)

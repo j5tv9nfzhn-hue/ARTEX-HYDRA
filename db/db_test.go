@@ -6,8 +6,8 @@ import (
 
 // testDSN returns the DSN the suite should use.
 //
-// Unlike the PostgreSQL backend this replaces, resolution cannot fail: the
-// database is a file that TestMain points at a temp directory (or that the
+// Resolution cannot fail: the database is a file that TestMain points at a temp
+// directory (or that the
 // developer pinned via ARTEX_SQLITE_PATH), so there is no "no database
 // configured" case to skip on.
 func testDSN(t *testing.T) string {

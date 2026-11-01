@@ -69,10 +69,6 @@ const (
 	ErrClassEnv       = "env"       // 环境依赖缺失（python 未装、PATH 不含该工具）
 	ErrClassTimeout   = "timeout"   // 超时/被取消
 	ErrClassTransport = "transport" // 网络/代理层失败
-	// ErrClassQuota 是第 9 类、且不属于 Shell：本条意图的工具额度用尽、调用被闸门
-	// 拒绝（任务 27）。它必须单独成类——否则「额度打满」会被算进 Bash 的错误率里，
-	// 把真实失败率污染掉，也无法据此调阈值。
-	ErrClassQuota = "quota"
 	// ErrClassUnknownTool 是第 10 类：模型调用了本 agent 工具集里根本没有的工具
 	// （例如 worker 没有 Write，模型却照着旧文案去调）。它既不是参数写错，也不是
 	// 环境缺依赖，而是「文案许诺了不存在的工具」。单独成类，这类回归才会在账本上
@@ -269,7 +265,6 @@ func ErrorClassLegend() []map[string]string {
 		{"class": ErrClassEnv, "label": "环境依赖缺失"},
 		{"class": ErrClassTimeout, "label": "超时/被取消"},
 		{"class": ErrClassTransport, "label": "网络/代理失败"},
-		{"class": ErrClassQuota, "label": "意图工具额度用尽"},
 		{"class": ErrClassUnknownTool, "label": "调用了不存在的工具"},
 	}
 }
@@ -315,10 +310,6 @@ func classifyErrorText(text string) string {
 	// 再往下走容易被当成参数错误。
 	if strings.Contains(lower, "unknown tool") || strings.Contains(text, "未知工具") {
 		return ErrClassUnknownTool
-	}
-	// 额度闸门的拒绝最优先：它不是工具/执行器的问题，是预算问题。
-	if strings.HasPrefix(strings.TrimSpace(text), "【额度】") {
-		return ErrClassQuota
 	}
 	if strings.Contains(text, "【配置错误：执行器不可用") {
 		return ErrClassConfig

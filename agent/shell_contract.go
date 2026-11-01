@@ -37,6 +37,43 @@ func shellContractLine() string {
 	}
 }
 
+func shellContractBlock() string {
+	return shellContractBody() + "\n" + shellLongRunContract()
+}
+
+// shellLongRunContract 是「长任务必须转后台」的契约。
+//
+// 移植自 Strix：它的 shell 把「等待输出」硬顶在 30s（PTY_YIELD_TIME_MS_MAX），
+// 到点无论命令请求了多久都返回，命令仍在跑就回一句「Process running with session
+// ID N」。因此 Strix 的惯用法是——任何可能超过 30s 的命令，一上手就写成后台。
+//
+// 这条契约不是性能优化，是正确性约束：不转后台，命令会被超时截断，截断的输出会
+// 让模型误判为「工具失败」或「目标不可达」，进而编造结论。
+// ARTEX 侧对应三个改动：
+//   - Bash 默认等待窗口 30s（shellDefaultWait，与 Strix 同值），显式请求仍可到 600s；
+//   - 后台执行走 runOwnBackground（shell_bg.go），输出落临时日志文件、立刻返回 pid；
+//   - 超时/取消后收割输出不再无限等待（reapProcessOutput，shell_exec.go）。
+//
+// 指向 run_in_background 而不是教各执行器的后台语法：这个参数是工具自带的，
+// 三端一致（PowerShell / cmd / bash 都走 shell_builtins.go 的那条分支），比让模型
+// 现场拼 Start-Process 或 `&` 更可靠，也更省字节。
+//
+// ## 篇幅是硬约束（改这段前先读）
+//
+// 这段落在 Bash 的 Prompt() 上，而 lean 瘦身**只处理 Description、不动 Prompt**
+// （见 tool_lean.go：Prompt 是「操作守则」，运行时原样下发），且 lean 默认开启。
+// 所以加进来的每个字节都会同时抬高瘦身前后体积，直接稀释 P3 的「工具面下降
+// 40%」验收比例。实测 worker 面基线仅 40.4%，余量约 300 字节，故本文本压在
+// 210 字节以内。再加内容请同步复核 TestToolSchemaSlimmingMeetsBudget。
+func shellLongRunContract() string {
+	return strings.Join([]string{
+		"【长任务：超 30 秒先转后台】",
+		"- 默认只等 30 秒，到点判超时。",
+		"- 跑得久的命令用 run_in_background=true，之后按日志路径读结果。",
+		"- 别 sleep 硬等，下一轮再来读。",
+	}, "\n")
+}
+
 func powershellDisplayName(spec ShellSpec) string {
 	if spec.Flavor == "pwsh" || spec.Major() >= 6 {
 		return "PowerShell " + nonEmpty(spec.Version, "7")
@@ -52,7 +89,7 @@ func nonEmpty(s, fallback string) string {
 }
 
 // shellContractBlock 是详细契约，挂在 Prompt 上（随 schema 一起给到模型）。
-func shellContractBlock() string {
+func shellContractBody() string {
 	spec := CurrentShellSpec()
 	switch spec.Mode {
 	case ShellModePowerShell:

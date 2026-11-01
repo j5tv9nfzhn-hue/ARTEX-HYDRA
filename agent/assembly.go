@@ -33,7 +33,7 @@ type DeferredInfo struct {
 // built-in base set — the agent's visible skills (packed into one Skill meta-tool)
 // and visible MCP servers (expanded to mcp__server__tool). It also returns the
 // DeferredInfo describing how those MCP tools are deferred/gated. The server wires
-// it to the PG agent_visibility table. cleanup releases any spawned MCP clients.
+// it to the agent_visibility table. cleanup releases any spawned MCP clients.
 //
 // When nil, agents run with only their built-in tools — behavior is unchanged
 // until a user assigns a skill/MCP to the agent in the UI.
@@ -251,10 +251,12 @@ func (g *guardedTool) Call(ctx context.Context, in json.RawMessage, tc *actool.T
 		return *blocked, nil
 	}
 	defer release()
-	// 【P4 拆除：单意图工具额度闸门】这里原本按 ctx 上的 intentBudget 拦调用，
-	// 额度用尽不进入工具实现。它属于「意图」这一控制流概念的配套设施，新链路
-	// 没有意图节点（子 agent 就是意图的替代物），预算由 MaxTurns/MaxDuration 在
-	// 会话层约束。留着它只会让"到底谁在限制工具调用"多一个假答案。
+	// 预算由会话层的 MaxTurns / MaxDuration 约束（MaxTurns 见 agents.max_turns，
+	// Strix 的 DEFAULT_MAX_TURNS=500 为同量级）。单意图的「工具调用额度闸门」已随
+	// P4 拆除，其残留实现与测试于本轮删除——它没有任何生产调用点，留着只会让
+	// 「到底谁在限制工具调用」多一个假答案。
+	// 单轮的退化防护由 toolstream.go 的 perTurnToolLimiter 承担（移植自 Strix 的
+	// TurnToolCallLimiter，默认 32），作用点是模型单次响应，不是整条意图的终身总量。
 	res, err = g.CoreTool.Call(callCtx, in, tc)
 	// 统一输出裁剪（第三阶段）：head 70% / tail 30% + 全量落盘。
 	// 只处理「工具自己没裁过」的长文本——SDK 的 tool.Capture、MCP 与自定义工具

@@ -60,9 +60,8 @@ func restoreFindingTrafficTx(tx *sql.Tx, snapshot *TaskArchiveSnapshot) error {
 		}
 	}
 	if len(rows) > 0 {
-		// 回写绑定行。PostgreSQL 侧原本用
-		// `INSERT INTO finding_traffic_bindings SELECT * FROM json_populate_recordset(...)`,
-		// 但 SQLite 没有该函数，改走按表定义顺序逐列绑定的通用回写助手
+		// 回写绑定行。SQLite 没有把 JSON 展开成行的函数，改走按表定义顺序逐列
+		// 绑定的通用回写助手
 		// （见 archive_restore_sqlite.go）：列顺序与缺列补 NULL 的语义一字未变。
 		if err = insertArchiveRowMaps(tx, "finding_traffic_bindings", rows, ""); err != nil {
 			return err

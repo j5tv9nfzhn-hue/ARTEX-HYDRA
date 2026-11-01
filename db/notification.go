@@ -218,10 +218,10 @@ func (d *DB) DeleteNotificationChannel(ctx context.Context, id int64) error {
 //
 // 两个关键设计，都不是随手写的：
 //
-//  1. **为什么用 SAVEPOINT**：PostgreSQL 里事务内任一语句报错会让整个事务进入
-//     aborted 状态，此后所有语句（含 COMMIT）一律失败。所以「忽略这条 INSERT
-//     的错误、让调用方继续提交」在 PG 里是做不到的——除非用保存点把错误隔离在
-//     这一条语句上。没有保存点，就只剩「整笔回滚」这一个选项。
+//  1. **为什么用 SAVEPOINT**：事务内任一语句报错会让整个事务进入 aborted 状态，
+//     此后所有语句（含 COMMIT）一律失败。所以「忽略这条 INSERT 的错误、让调用方
+//     继续提交」做不到——除非用保存点把错误隔离在这一条语句上。没有保存点，就
+//     只剩「整笔回滚」这一个选项。
 //
 //  2. **为什么整笔回滚是错的**：推送是便利功能，漏洞记录才是产品本身。一个通知
 //     表的问题（旧库未迁移、磁盘瞬时故障）不该让高危漏洞存不进库。所以这里隔离
@@ -575,7 +575,7 @@ type NotificationStats struct {
 	BacklogAgeMS int64 `json:"backlog_age_ms"` // 最老的待发投递距今毫秒数
 }
 
-// notificationStatsQuerySQLite 是通知统计语句的 SQLite 写法，只换掉三处 PG 专有构造，
+// notificationStatsQuerySQLite 是通知统计语句的 SQLite 写法，只换掉三处构造，
 // 其余（列、表、参数编号 $1..$4、COALESCE 语义）完全共用：
 //
 //  1. `sent_at >= date_trunc('day', now())`
@@ -590,14 +590,14 @@ type NotificationStats struct {
 //     'now' 在 SQLite 里是 UTC，与列值的 UTC 基准一致。
 //
 //  2. `EXTRACT(EPOCH FROM (now() - min(created_at)))`
-//     SQLite 的 EXTRACT 是 SQL/PG 语法糖，解析到 FROM 就断（`near "FROM": syntax
+//     SQLite 的 EXTRACT 只是语法糖，解析到 FROM 就断（`near "FROM": syntax
 //     error`）。换成 julian day 之差：`(julianday(now()) - julianday(min(created_at))) *
 //     86400000`。julianday 解析同样的时间文本（含 +00:00 时区后缀），两个 JD 相减
 //     即天数，乘 86400000 得毫秒——与 EXTRACT(EPOCH …) 同义同量纲。
 //     精度：JD 量级约 2^21、float64 尾数 52 位，绝对误差约 1e-10 天（约 0.01ms），
 //     远小于 BacklogAgeMS 的实际取值区间。
 //
-//  3. 末尾的 `::bigint` 是 PG 的类型转换，SQLite 认 `:`（报 `unrecognized token`）。
+//  3. 末尾的 `::bigint` 是类型转换，SQLite 认 `:`（报 `unrecognized token`）。
 //     改成 `CAST(… AS INTEGER)`，顺带把 julianday 相减产生的 REAL 截成整数：
 //     少了这一步，database/sql 会拿 "29499.98…" 去 ParseInt 而失败。
 const notificationStatsQuerySQLite = `SELECT

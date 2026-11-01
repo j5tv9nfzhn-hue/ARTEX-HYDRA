@@ -36,14 +36,26 @@ import (
 // IsConcurrencySafe == true——它与任何调用并行都不会产出错误结果，因为同键的
 // 冲突已经由锁串起来了。键分四个命名空间：
 //
-//	""         全局独占：进程级/未知工具（Bash、shell_*、ExecuteExtraTool…）
+//	""         全局独占：进程级/未知工具（ExecuteExtraTool…）
 //	graph      任务内探索图 + 资产图 + 目标/意图（读共享、写独占）
+//	shell:目录  一个工作目录（同目录串行、跨目录并行）
 //	file:路径   单个文件（读共享、写独占）
 //	mcp:服务    一个 MCP 服务（同服务串行、跨服务并行）
 //
 // 于是：写文件不再挡住记录事实、记录事实不再挡住抓 HTTP、抓 HTTP 不再挡住读文件；
 // 只有「同一文件」「同一张图」「同一个 MCP 服务」「全局工具」这四种真正冲突的组合
 // 才排队。未知写工具仍然退化成全局独占（fail-closed，等价于改造前的行为）。
+//
+// ## 为什么 Bash 从全局独占挪到了 shell:目录
+//
+// strix 的隔离单元是**容器**：每个 agent 一个沙箱，命令之间天然互不干扰，因此
+// 它既没有全局工具锁，也没有进程信号量——隔离由沙箱承担，不由互斥承担。
+// ARTEX 没有容器，最接近的等价隔离单元是工作目录：同一目录里的命令共享 cwd 与
+// 相对路径（谁先 chdir、谁后写文件是有序的），不同目录之间互不相干。
+//
+// 改造前 Bash 落在 keyGlobal，而 Bash 恰恰是渗透里用得最多的工具，于是 n 个
+// 子代理退化成串行，且一次卡死会连带挡住 record_fact / http_request / Read
+// 等全部工具。
 //
 // 与 SDK 侧的对应关系见 docs/工具并发与多文件补丁-落地说明.md。
 
@@ -52,6 +64,33 @@ const keyGlobal = ""
 
 // keyGraph 是任务内图（探索图/资产图/目标意图/worker 控制）的共享键。
 const keyGraph = "graph"
+
+// keyShellOf 生成 Shell 执行域的键：同一工作目录串行、跨工作目录并行。
+//
+// 工作目录为空时退到 shell:default——此时所有无目录的调用彼此串行，但它们
+// **不再**挡住其它命名空间的工具（读文件、记事实、发 HTTP 照常并行），这正是
+// 相对 keyGlobal 的关键改善。
+func keyShellOf(dir string) string {
+	d := strings.TrimSpace(dir)
+	if d == "" {
+		return "shell:default"
+	}
+	// 与 fsPathKey 同一套归一化：Clean + Abs + Windows 下小写。不归一化的话
+	// /work/a 与 /work/a/（或大小写不同）会算出两个键，于是两条命令在同一个
+	// 目录里真的并行执行——而它们共享 cwd 与相对路径，顺序是有意义的。
+	d = filepath.Clean(d)
+	if abs, err := filepath.Abs(d); err == nil {
+		d = abs
+	}
+	if runtime.GOOS == "windows" {
+		d = strings.ToLower(d)
+	}
+	return "shell:" + d
+}
+
+// shellTools 是走本机 Shell 执行器的工具。Bash 由 SDK 提供、经
+// crossPlatformBashTool 装饰（Name 仍是 "Bash"）。
+var shellTools = nameSet("Bash")
 
 // keyFile / keyMCP 生成单文件键与 MCP 服务键。
 func keyFile(pathKey string) string { return "file:" + pathKey }
@@ -154,6 +193,14 @@ func lockKeys(reads, writes []string) func() {
 	}
 }
 
+// workDirOf 取工具上下文里的工作目录，作为 Shell 执行域的边界。
+func workDirOf(tc *actool.ToolContext) string {
+	if tc == nil {
+		return ""
+	}
+	return tc.WorkingDir
+}
+
 // fsPathKey 把工具入参里的路径规范化成锁键：相对路径按工作目录展开、Clean、
 // Abs、尽量解析软链接，Windows 下不区分大小写。解析不出具体路径时返回空串，
 // 由调用方退化成全局独占（fail-closed）。
@@ -249,7 +296,7 @@ func mcpServerOf(name string) string {
 
 // toolAccessKeys 决定一次调用要占哪些资源键。
 //
-// 顺序有意义：先按名字认领（文件 → 图 → 独立工具 → MCP），其余只读工具完全并行，
+// 顺序有意义：先按名字认领（文件 → 图 → Shell → 独立工具 → MCP），其余只读工具完全并行，
 // 其余写工具一律全局独占——**新加的工具默认落在最保守的一档**，要并行必须显式登记。
 func toolAccessKeys(t actool.CoreTool, in json.RawMessage, tc *actool.ToolContext) (reads, writes []string) {
 	name := t.Name()
@@ -290,6 +337,10 @@ func toolAccessKeys(t actool.CoreTool, in json.RawMessage, tc *actool.ToolContex
 			return []string{keyGraph}, nil
 		}
 		return nil, []string{keyGraph}
+	case shellTools[name]:
+		// 命令有副作用，按执行域独占。工作目录即执行域：不同任务/ agent 的
+		// 工作目录不同，因此它们之间不再互相排队。
+		return nil, []string{keyShellOf(workDirOf(tc))}
 	case independentTools[name]:
 		return nil, nil
 	case strings.HasPrefix(name, "mcp__"):

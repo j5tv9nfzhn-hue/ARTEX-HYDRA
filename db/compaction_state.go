@@ -61,7 +61,7 @@ ON CONFLICT(scope) DO UPDATE SET
   -- 只在本次带值时覆盖：start 事件没有产出规模,不能让 0 把上一轮的数字冲掉。
   injected_bytes=CASE WHEN EXCLUDED.injected_bytes IS NULL THEN compaction_state.injected_bytes ELSE EXCLUDED.injected_bytes END,
   digest_tokens_est=CASE WHEN EXCLUDED.digest_tokens_est IS NULL THEN compaction_state.digest_tokens_est ELSE EXCLUDED.digest_tokens_est END`,
-		scope, phase, string(jsonbClean(b)), CompactionPhaseRunning,
+		scope, phase, string(jsonTextClean(b)), CompactionPhaseRunning,
 		boundaryInt(boundary, "injected_bytes"), boundaryInt(boundary, "digest_tokens_est"))
 	return err
 }
