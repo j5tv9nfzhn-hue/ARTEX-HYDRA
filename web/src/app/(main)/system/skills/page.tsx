@@ -21,7 +21,7 @@ import {
   UploadIcon,
   XCircleIcon,
 } from "lucide-react";
-import { Masthead } from "@/components/editorial";
+import { ApiBar, Masthead } from "@/components/editorial";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -297,6 +297,7 @@ function SkillsOverview({
             </button>
           );
         })}
+        <ApiBar methods={["skills"]} />
       </div>
 
       {/* 指标卡 */}
@@ -308,6 +309,7 @@ function SkillsOverview({
             {s.hint && <p className="mt-0.5 text-xs text-muted-foreground">{s.hint}</p>}
           </div>
         ))}
+        <ApiBar methods={["skills", "missingSkills"]} />
       </div>
 
       {/* 调用排行 */}
@@ -342,6 +344,7 @@ function SkillsOverview({
             ))}
           </div>
         )}
+        <ApiBar methods={["skills"]} />
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2">
@@ -394,6 +397,7 @@ function SkillsOverview({
             </div>
           )}
         </div>
+        <ApiBar methods={["skills"]} />
       </div>
     </div>
   );

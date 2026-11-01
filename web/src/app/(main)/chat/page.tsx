@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { AgentPhaseBadge } from "@/components/agent-phase-badge";
 import { ApprovalExecutionFocus, useApprovalFocus, useApprovalHistory } from "@/components/approval-execution-focus";
 import { CheckpointTimelineButton } from "@/components/checkpoint-timeline";
+import { ApiBar } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { MessageRollbackDialog } from "@/components/message-rollback-dialog";
@@ -1730,6 +1731,7 @@ export default function ChatPage() {
         {/* left: conversation fleet rail */}
         <div className="flex flex-col overflow-hidden border-border/75 bg-sidebar/40 max-md:border-b md:border-r">
           <div className="flex flex-col gap-2 border-b p-2.5">
+            <span data-editorial="secnum">01</span>
             <Button size="sm" className="w-full" onClick={() => selectConversation(null)}>
               <PlusIcon /> {t("newConversation")}
             </Button>
@@ -1882,10 +1884,12 @@ export default function ChatPage() {
               )}
             </div>
           </ScrollArea>
+          <ApiBar methods={["conversations", "agents", "deleteConversation", "deleteConversations", "pinConversation", "renameConversation"]} />
         </div>
 
         {/* right: chat view */}
         <div className="flex min-w-0 flex-col overflow-hidden bg-card">
+          <span data-editorial="secnum">02</span>
           {selected ? (
             <ChatView
               key={selected.id}
@@ -1921,6 +1925,7 @@ export default function ChatPage() {
               }}
             />
           )}
+          <ApiBar methods={["conversationMessages", "conversationHistory", "sendConversationMessage", "createConversation", "chatUpload", "conversationMsgDetail", "conversationBudget", "rollbackConversationMessage", "stopConversation", "updateConversationProfile", "llmProfiles"]} />
         </div>
       </div>
       <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
