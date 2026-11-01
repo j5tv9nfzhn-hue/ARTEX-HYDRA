@@ -309,6 +309,13 @@ func openSQLite(dsn string) (*DB, error) {
 	if err := convertSQLiteAutoVacuum(context.Background(), conn); err != nil {
 		log.Printf("[db] 主库增量回收转换失败（不影响启动）：%v", err)
 	}
+	// 已下线内置技能的存量引用清理必须早于 seedBuiltins：它会清掉技能可见性的
+	// 播种闸门，seedBuiltinSkillVisibility 紧接着为新技能重跑一次。反过来排会让
+	// 老库停在"旧技能指向空、新技能没播种"的状态，且没有任何报错。
+	if _, err := d.retireSkillRefs(); err != nil {
+		sqlDB.Close()
+		return nil, fmt.Errorf("retire skill refs: %w", err)
+	}
 	if err := d.seedBuiltins(); err != nil {
 		sqlDB.Close()
 		return nil, fmt.Errorf("seed builtins: %w", err)

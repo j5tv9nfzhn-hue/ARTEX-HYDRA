@@ -529,6 +529,17 @@ var retiredSkills = []string{
 	"wasm-cloud-saas-tactics", "web-vuln-tactics", "wpe64-mcp",
 }
 
+// RetiredSkillNames 返回已下线内置技能的目录名。
+//
+// 给 db 层做存量数据迁移用：换库前建的存量库里可能还留着这些名字的行（可见性 /
+// 使用记录 / 待审阅提议），升级后它们指向的技能在磁盘上已经不存在。名单随
+// retiredSkills 走，换库不需要同步改 db 层。返回副本，调用方改不污染包内状态。
+func RetiredSkillNames() []string {
+	out := make([]string, len(retiredSkills))
+	copy(out, retiredSkills)
+	return out
+}
+
 // EnsureBundled idempotently writes embedded built-in skill files into dstDir.
 // Existing files on disk are NEVER overwritten so user edits via the Web UI
 // ("技能包" page) survive restarts.
