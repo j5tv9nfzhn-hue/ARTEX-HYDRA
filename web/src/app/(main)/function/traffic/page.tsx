@@ -617,7 +617,7 @@ export default function TrafficPage() {
       </div>
       {/* History table */}
       <div className="flex h-[calc(100vh-15rem)] min-h-0 flex-col">
-        <PaperSheet className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
+        <PaperSheet api={["traffic", "trafficHosts"]} className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
           <div className="min-h-0 flex-1 overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-card">

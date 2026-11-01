@@ -321,8 +321,8 @@ export default function NotifyPage() {
         </div>
       )}
 
-      <PaperSheet>
-        <SheetHead title={t("global.title")} />
+      <PaperSheet api={["setSettings", "notifyTestChannel"]}>
+        <SheetHead index="01" title={t("global.title")} />
         <div className="grid gap-4 px-4 py-3 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label htmlFor="n-base">{t("global.baseUrl")}</Label>
@@ -388,11 +388,12 @@ export default function NotifyPage() {
 
             {channels.map((ch) => (
               <PaperSheet
+                api={["notifyCreateChannel", "notifyUpdateChannel", "notifyDeleteChannel"]}
                 key={ch.id}
                 onClick={() => openEdit(ch)}
                 className="cursor-pointer gap-3 transition hover:border-primary/60 hover:shadow-sm"
               >
-                <SheetHead
+                <SheetHead index="02"
                   icon={BellIcon}
                   title={<span className="block max-w-[12rem] truncate">{ch.name}</span>}
                   actions={

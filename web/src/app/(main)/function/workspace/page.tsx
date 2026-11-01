@@ -236,7 +236,7 @@ export default function WorkspacePage() {
         <span>{t("summary", { files: summary.files, dirs: summary.dirs })}</span>
       </div>
 
-      <PaperSheet>
+      <PaperSheet api={["workspaceBackup", "workspaceDownload", "workspaceDelete"]}>
         <div className="p-0">
           <Table>
             <TableHeader>

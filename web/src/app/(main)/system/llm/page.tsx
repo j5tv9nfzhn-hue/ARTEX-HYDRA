@@ -1072,8 +1072,8 @@ function ProviderCard({
   };
 
   return (
-    <PaperSheet className="gap-0 overflow-hidden py-0">
-      <SheetHead
+    <PaperSheet api={["llmProviders", "llmProfiles", "testLLM", "fetchLLMModels", "activateLLMProfile", "saveLLMProfile", "saveLLMProvider", "deleteLLMProfile", "deleteLLMProvider", "llmPool", "resetLLMPool", "setSettings"]} className="gap-0 overflow-hidden py-0">
+      <SheetHead index="01"
         icon={PlugZapIcon}
         title={<span className="truncate">{provider?.name ?? t("page.orphanTitle")}</span>}
         actions={

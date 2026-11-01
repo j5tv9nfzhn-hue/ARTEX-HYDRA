@@ -437,8 +437,8 @@ export default function ToolsPage() {
         </TabsList>
 
         <TabsContent value="system">
-          <PaperSheet>
-            <SheetHead title={t("tabSystem")} />
+          <PaperSheet api={["tools", "saveTool", "testCustomTool"]}>
+            <SheetHead index="01" title={t("tabSystem")} />
             <div className="px-4 py-3">
               <p className="text-muted-foreground text-sm">
                 {query.trim()
@@ -459,8 +459,8 @@ export default function ToolsPage() {
         </TabsContent>
 
         <TabsContent value="custom">
-          <PaperSheet>
-            <SheetHead
+          <PaperSheet api={["tools", "createCustomTool", "deleteCustomTool", "resetTool", "updateCustomTool"]}>
+            <SheetHead index="02"
               title={t("tabCustom")}
               actions={
                 <Button size="sm" onClick={() => setCustomEdit("new")}>

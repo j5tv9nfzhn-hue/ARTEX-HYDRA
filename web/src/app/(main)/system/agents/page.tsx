@@ -244,8 +244,8 @@ export default function AgentsPage() {
         />
       </div>
 
-      <PaperSheet>
-        <SheetHead title={t("listTitle")} count={agents.length} />
+      <PaperSheet api={["agents", "createAgent", "deleteAgent"]}>
+        <SheetHead index="01" title={t("listTitle")} count={agents.length} />
         <div className="px-4 py-3">
           {agents.length === 0 ? (
             <EmptyState illustration="nodes" title={t("empty")} />

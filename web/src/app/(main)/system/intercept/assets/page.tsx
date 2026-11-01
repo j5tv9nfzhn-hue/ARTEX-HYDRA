@@ -195,7 +195,7 @@ export default function AssetInterceptPage() {
         </Button>
       </div>
 
-      <PaperSheet>
+      <PaperSheet api={["assetInterceptRules", "createAssetInterceptRule", "updateAssetInterceptRule", "deleteAssetInterceptRule", "toggleAssetInterceptRule"]}>
         <div className="p-0">
           {loading ? (
             <p className="p-6 text-sm text-muted-foreground">{t("loading")}</p>

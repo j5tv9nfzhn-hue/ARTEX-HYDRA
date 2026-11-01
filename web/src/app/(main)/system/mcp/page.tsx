@@ -398,11 +398,12 @@ export default function MCPPage() {
 
         {servers.map((s) => (
           <PaperSheet
+            api={["mcpTools", "saveMcpServer", "deleteMcpServer", "refreshMcpServer", "toggleVisibility"]}
             key={s.id}
             onClick={() => openEdit(s)}
             className="min-w-0 cursor-pointer gap-3 overflow-hidden transition hover:border-primary/60 hover:shadow-sm"
           >
-            <SheetHead
+            <SheetHead index="01"
               icon={ServerIcon}
               title={<span className="block max-w-[14rem] truncate">{s.name}</span>}
               actions={
