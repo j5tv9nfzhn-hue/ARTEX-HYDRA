@@ -40,7 +40,7 @@ export function AboutCard() {
 
   return (
     // 设置页是多列瀑布流布局，卡片自己负责行间距并禁止跨列断开（见 page.tsx 的注释）。
-    <Sheet className="mb-4 break-inside-avoid md:mb-6">
+    <Sheet api={["health"]} className="mb-4 break-inside-avoid md:mb-6">
       <SheetHead icon={LayersIcon} title={t("about.title")} />
       <div className="flex flex-col gap-4 px-4 py-3">
         <p className="text-muted-foreground text-sm">

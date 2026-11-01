@@ -195,7 +195,7 @@ function JudgeCard() {
       {cfg.enabled && (
         <div className="grid gap-4 lg:grid-cols-5">
           {/* 左侧：默认展开的主要提示编辑区。 */}
-          <PaperSheet className="lg:col-span-3">
+          <PaperSheet api={["interceptGetJudgeConfig", "interceptSetJudgeConfig"]} className="lg:col-span-3">
             <div className="flex h-full flex-col gap-2 p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -220,7 +220,7 @@ function JudgeCard() {
           </PaperSheet>
 
           {/* 右侧：判定参数设置。 */}
-          <PaperSheet className="lg:col-span-2">
+          <PaperSheet api={["interceptGetJudgeConfig", "interceptSetJudgeConfig", "llmProfiles"]} className="lg:col-span-2">
             <div className="space-y-5 p-4">
               <div className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -586,7 +586,7 @@ export default function InterceptPage() {
             </Button>
           </div>
 
-          <PaperSheet>
+          <PaperSheet api={["interceptRules", "createInterceptRule", "updateInterceptRule", "deleteInterceptRule", "toggleInterceptRule", "interceptGetToolConfig", "interceptSetToolConfig", "tools"]}>
             <div className="p-0">
               {loading ? (
                 <p className="p-6 text-sm text-muted-foreground">{t("rules.loading")}</p>

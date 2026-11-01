@@ -842,7 +842,7 @@ export default function FindingsPage() {
 
   // 平铺视图与资产视图右侧是同一张表 + 同一份分页,只是筛选条件不同。
   const flatListCard = (
-    <Sheet className="gap-0 py-0">
+    <Sheet api={["findingsPage", "getFinding", "updateFinding", "deleteFinding", "setFindingStatus", "activeFindingRetests", "activeFindingVerifications"]} className="gap-0 py-0">
       <div className="px-0">
         {flat.loading && !flat.loaded ? (
           <div className="flex min-h-36 items-center justify-center">
@@ -885,7 +885,7 @@ export default function FindingsPage() {
           {statCards.map((stat, index) => {
             const StatIcon = stat.icon;
             return (
-              <Sheet
+              <Sheet api={["findingStats"]}
                 key={stat.label}
                 className="animate-fade-up gap-1 py-4"
                 style={{ animationDelay: `${index * 50}ms` }}
@@ -1025,7 +1025,7 @@ export default function FindingsPage() {
 
         {view === "asset" && (
           <div className="grid min-h-0 items-start gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)]">
-            <Sheet className="gap-0 py-3 lg:sticky lg:top-4">
+            <Sheet api={["findingAssetTree"]} className="gap-0 py-3 lg:sticky lg:top-4">
               <div className="flex flex-col px-3">
                 {assetTree.loading && !assetTree.loaded ? (
                   <div className="flex min-h-36 items-center justify-center">
@@ -1093,7 +1093,7 @@ export default function FindingsPage() {
                 loading: false,
               };
               return (
-                <Sheet key={key} className="gap-0 py-0">
+                <Sheet api={["findingsPage", "findingGroups", "getFinding", "updateFinding", "deleteFinding", "setFindingStatus"]} key={key} className="gap-0 py-0">
                   <div className="grid auto-rows-min items-start gap-1 px-4 py-3">
                     <div className="flex min-w-0 flex-wrap items-center gap-3">
                       <button

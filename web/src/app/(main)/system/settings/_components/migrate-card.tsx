@@ -110,7 +110,7 @@ export function MigrateCard() {
   }, [confirm, mode, selected, t]);
 
   return (
-    <Sheet className="mb-4 break-inside-avoid md:mb-6">
+    <Sheet api={["migrateImport", "migrateInspect", "migrateScan"]} className="mb-4 break-inside-avoid md:mb-6">
       <SheetHead icon={DatabaseZapIcon} title={t("migrate.title")} />
       <div className="flex flex-col gap-4 px-4 py-3">
         <p className="text-muted-foreground text-sm">{t("migrate.desc")}</p>

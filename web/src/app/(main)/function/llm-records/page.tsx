@@ -435,7 +435,7 @@ export default function LLMRecordsPage() {
 
       {/* History table + inline detail (Burp-style split) */}
       <div className="flex h-[calc(100vh-13rem)] min-h-0 flex-col gap-3">
-        <Sheet className="flex min-h-0 flex-1 flex-col">
+        <Sheet api={["llmRecords", "llmTasks"]} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-card">
@@ -524,7 +524,7 @@ export default function LLMRecordsPage() {
 
         {/* Inline detail panel */}
         {selected && (
-          <Sheet className="flex h-[42%] min-h-0 flex-col">
+          <Sheet api={["llmRecordDetail", "llmRecordsDeleteTask"]} className="flex h-[42%] min-h-0 flex-col">
             {/* Detail header */}
             <div data-editorial="sheet-head" className="flex items-center gap-2 border-b px-3 py-2">
               <Badge variant="outline" className="text-xs font-mono">

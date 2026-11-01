@@ -88,7 +88,7 @@ export function PasswordCard() {
   };
 
   return (
-    <Sheet className="mb-4 break-inside-avoid md:mb-6">
+    <Sheet api={["POST /auth/change-password", "POST /password/reset"]} className="mb-4 break-inside-avoid md:mb-6">
       <SheetHead icon={KeyRoundIcon} title={t("title")} />
       <div className="flex flex-col gap-3 px-4 py-3">
         <p className="text-muted-foreground text-sm">{t("desc")}</p>

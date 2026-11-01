@@ -357,7 +357,7 @@ export default function AssetsPage() {
 
         {/* 公司。 */}
         <TabsContent value="company" className="mt-0 flex min-h-0 flex-1 flex-col">
-          <PaperSheet className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
+          <PaperSheet api={["companies", "deleteCompany"]} className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
             <div className="min-h-0 flex-1 overflow-auto">
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-card">
@@ -932,7 +932,7 @@ function AssetCard({
   const someSelected = selected != null && pageIds.some((id) => selected.has(id));
 
   return (
-    <PaperSheet className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
+    <PaperSheet api={["assets", "searchAssets", "deleteAssets", "assetCounts"]} className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
       <div className="min-h-0 flex-1 overflow-auto scrollbar-thin scrollbar-track-transparent">
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-card">

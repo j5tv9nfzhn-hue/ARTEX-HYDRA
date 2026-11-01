@@ -234,7 +234,7 @@ export default function CommandsPage() {
 
       {/* History table */}
       <div className="flex h-[calc(100vh-13rem)] min-h-0 flex-col">
-        <PaperSheet api={["commands"]} className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
+        <PaperSheet api={["commands", "commandStats"]} className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
           <div className="min-h-0 flex-1 overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-card">
