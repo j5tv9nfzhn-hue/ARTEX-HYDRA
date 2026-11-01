@@ -5,3 +5,6 @@ out/
 # stray audio renders at repo root (audio/ keeps its own copy via audio/.gitignore)
 /score.wav
 /sfx_sync.json
+
+# rendered showreel output (rebuild with: node tools/render_video.js)
+*.mp4

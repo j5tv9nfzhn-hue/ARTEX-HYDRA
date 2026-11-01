@@ -2,3 +2,7 @@ node_modules/
 .wrangler/
 .env*
 *.log
+
+# Lighthouse measurement output (rebuild with: npm run measure)
+reports/
+site/reports/
