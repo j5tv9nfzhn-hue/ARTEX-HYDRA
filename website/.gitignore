@@ -3,6 +3,7 @@ node_modules/
 .env*
 *.log
 
-# Lighthouse measurement output (rebuild with: npm run measure)
-reports/
-site/reports/
+# Lighthouse measurement output (rebuild with: npm run measure).
+# 只忽略 website 根级的 reports/：site/reports/ 是线上 benchmarks 页
+# 实际引用的内容，属于发布产物的一部分，必须保留跟踪。
+/reports/
