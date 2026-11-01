@@ -138,8 +138,8 @@ export function HarnessTargetsCard() {
   };
 
   return (
-    <Sheet>
-      <SheetHead
+    <Sheet api={["harnessScan", "harnessPlan", "harnessApply"]}>
+      <SheetHead index="01"
         icon={WrenchIcon}
         title={t("harnessTitle")}
         count={scan ? `${scan.stats.linked}/${scan.stats.total}` : undefined}

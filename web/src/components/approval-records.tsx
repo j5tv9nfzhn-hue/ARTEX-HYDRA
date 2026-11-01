@@ -18,6 +18,7 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { ApiBar } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { TablePagination } from "@/components/table-pagination";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -893,6 +894,7 @@ export function ApprovalRecords({ taskId }: { taskId?: string }) {
       {pending.length ? (
         <section className="overflow-hidden rounded-xl border">
           <div className="flex items-center gap-2 border-b bg-muted/40 px-4 py-3 font-medium text-sm">
+            <span data-editorial="secnum">01</span>
             <ShieldAlertIcon className="size-4" />
             {t("pendingSection", { count: pending.length })}{" "}
             <span className="text-muted-foreground text-xs">{t("pendingHint")}</span>
@@ -904,10 +906,12 @@ export function ApprovalRecords({ taskId }: { taskId?: string }) {
             revision={revision}
             label={t("pendingTableLabel")}
           />
+          <ApiBar methods={["interceptPending", "interceptDecide"]} />
         </section>
       ) : null}
       <section className="overflow-hidden rounded-xl border">
         <div className="border-b px-4 py-3 font-medium text-sm">
+          <span data-editorial="secnum">02</span>
           {filtered ? t("filteredResults") : t("allRecords")} ({total})
         </div>
         {loading ? (
@@ -943,6 +947,7 @@ export function ApprovalRecords({ taskId }: { taskId?: string }) {
             pageSizeOptions={[10, 20, 50]}
           />
         ) : null}
+        <ApiBar methods={["interceptHistoryPage", "interceptDecide"]} />
       </section>
     </div>
   );

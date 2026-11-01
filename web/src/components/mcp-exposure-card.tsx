@@ -184,8 +184,8 @@ export function MCPExposureCard() {
   };
 
   return (
-    <Sheet>
-      <SheetHead
+    <Sheet api={["mcpExposure", "saveMcpExposure", "rotateMcpExposureToken"]}>
+      <SheetHead index="02"
         icon={KeyRoundIcon}
         title={t("title")}
         hint={t("subtitle")}

@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { useTranslations } from "next-intl";
 
-import { Masthead } from "@/components/editorial";
+import { ApiBar, Masthead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -317,6 +317,7 @@ export default function LogsPage() {
             })
           )}
           <div ref={bottom} />
+          <ApiBar methods={["SSE /api/logs/stream", "GET /api/logs/history"]} />
         </div>
       </div>
     </div>
