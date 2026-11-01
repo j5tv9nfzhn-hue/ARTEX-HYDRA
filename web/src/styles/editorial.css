@@ -35,6 +35,13 @@
   display: none;
 }
 
+/* 接口锚点条：和章节号同理，默认不显形。
+   只在纸本皮肤（data-skin="editorial"）下由 skin-editorial.css 显形并排版，
+   其余 8 套主题完全不受影响 —— 否则「后端接口 xxx()」会以无样式文本漏出来。 */
+[data-editorial="apibar"] {
+  display: none;
+}
+
 /* ── 纸本主题：报头 ───────────────────────────────────────────────────────── */
 
 [data-theme-preset="paper"] {
