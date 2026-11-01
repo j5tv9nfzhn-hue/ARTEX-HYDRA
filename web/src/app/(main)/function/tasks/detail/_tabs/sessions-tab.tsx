@@ -30,6 +30,7 @@ import { toast } from "sonner";
 
 import { AgentPhaseBadge } from "@/components/agent-phase-badge";
 import { ApprovalExecutionFocus, useApprovalFocus, useApprovalHistory } from "@/components/approval-execution-focus";
+import { ApiBar } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { LiveDot } from "@/components/live-dot";
 import { MentionTextarea } from "@/components/mention-textarea";
@@ -1929,6 +1930,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
         {/* Left: session fleet rail */}
         <div className="flex min-h-0 flex-col overflow-hidden border-border/75 bg-sidebar/40 max-lg:border-b lg:border-r">
           <div className="border-b px-3 py-2.5">
+            <span data-editorial="secnum">01</span>
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
@@ -2138,6 +2140,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
               )}
             </div>
           </ScrollArea>
+          <ApiBar methods={["mainSessions", "intentsPage", "newMainSession", "llmProfiles", "tokenStats", "activityHistory"]} />
         </div>
 
         {/* Right: transcript */}
@@ -2146,6 +2149,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
           label={active.role === "worker" ? `Worker #${active.intent_id} / ${activeDisplayTitle}` : activeDisplayTitle}
         >
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-card">
+            <span data-editorial="secnum">02</span>
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 border-b bg-background/35 px-3.5 py-2 backdrop-blur-xs sm:px-4 sm:py-2.5">
               {(() => {
                 const isWorker = active.role === "worker";
@@ -2558,6 +2562,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                 />
               </div>
             )}
+            <ApiBar methods={["activity", "activityHistory", "chat", "chatStatus", "chatUpload", "stopChat", "sendWorkerMessage", "steerIntent", "rollbackTaskMessage", "activityDetail", "controlIntent", "interceptTask", "taskIntentAssets", "taskLLMResolution", "taskReviewerVerdicts"]} />
           </div>
         </SideQuestionWorkspace>
         {/* 引导（steer）对话框：只对运行中的 Worker 开放。 */}

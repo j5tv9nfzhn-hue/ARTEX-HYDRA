@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useTranslations } from "next-intl";
 
+import { ApiBar } from "@/components/editorial";
 import { api } from "@/lib/api";
 import type {
   REDataPage,
@@ -440,6 +441,7 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
               {t("attach")}
             </button>
           </div>
+          <ApiBar methods={["reOverview", "reAttach", "reLibrary", "reUpload"]} />
         </section>
         <section className={panel}>
           <h3 className="font-medium">{t("sessions")}</h3>
@@ -555,6 +557,7 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
           >
             {t("release")}
           </button>
+          <ApiBar methods={["reOverview", "reControl", "reOpen"]} />
         </section>
       </div>
       <section className={panel}>
@@ -711,6 +714,7 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
             </div>
           </>
         )}
+        <ApiBar methods={["reQuery", "reData"]} />
       </section>
       <section className={panel}>
         <h3 className="font-medium">
@@ -775,6 +779,7 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
             </button>
           </>
         )}
+        <ApiBar methods={["reObservation", "reEvidence"]} />
       </section>
       <details className={panel}>
         <summary className="cursor-pointer font-medium">{t("providerSettings")}</summary>
@@ -924,6 +929,7 @@ export function SoftwareRETab({ taskId }: { taskId: string }) {
             <p className="text-muted-foreground text-xs">{t("catalogUnknown")}</p>
           )}
         </details>
+        <ApiBar methods={["reOverview", "reMCPCandidates", "reDiscover", "reSaveProvider"]} />
       </details>
     </div>
   );

@@ -821,7 +821,7 @@ export default function TasksPage() {
         <TabsTrigger value="archived">{t("tab.archived")}</TabsTrigger>
       </TabsList>
       <TabsContent value="current">
-        <PaperSheet>
+        <PaperSheet api={["tasks", "taskCategories", "createTask", "deleteTask", "renameTask", "pinTask", "archiveTask", "archiveTasks", "controlTask", "controlTasksBatch", "updateTasksCategory", "createTaskCategory", "renameTaskCategory", "deleteTaskCategory", "updateTaskCategory", "chatUpload", "companies", "llmProfiles", "settings", "setSettings"]}>
           <div className="flex flex-col gap-4 px-0 pt-4">
             <div className="flex flex-wrap items-center gap-2 px-4 lg:px-6">
               <div className="relative w-full sm:max-w-xs">
@@ -1881,7 +1881,7 @@ function TaskArchivesPanel({ onChanged }: { onChanged: () => void }) {
   }
 
   return (
-    <PaperSheet>
+    <PaperSheet api={["taskArchives", "taskArchive", "archiveTask", "deleteTaskArchive", "deleteTaskArchives", "restoreTaskArchive", "restoreTaskArchives"]}>
       <div className="flex flex-col gap-4 px-0 pt-4">
         <div className="flex flex-wrap items-center gap-2 px-4 lg:px-6">
           <div className="relative w-full sm:max-w-xs">

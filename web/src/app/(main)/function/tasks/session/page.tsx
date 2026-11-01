@@ -8,7 +8,7 @@ import { useSearchParams } from "next/navigation";
 import { ArrowLeftIcon, MessagesSquareIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { Masthead } from "@/components/editorial";
+import { ApiBar, Masthead } from "@/components/editorial";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
@@ -104,6 +104,7 @@ function TaskSessionInner() {
             <p className="text-muted-foreground text-sm">{td("header.notFound", { id })}</p>
           </div>
         )}
+        <ApiBar methods={["task"]} />
       </div>
     </div>
   );

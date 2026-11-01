@@ -21,7 +21,7 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { KpiRow } from "@/components/editorial";
+import { ApiBar, KpiRow } from "@/components/editorial";
 import { StatusBadge } from "@/components/status-badge";
 import { TaskLLMProfileChain } from "@/components/task-llm-profile-chain";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -508,6 +508,7 @@ function TaskDetailInner() {
         {/* 书眉：编号 / 分类 / 状态 / 标题 / 目标 */}
         <div className="flex flex-col gap-1 px-4 pt-3 pb-2 lg:px-6">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular-nums">
+            <span data-editorial="secnum">01</span>
             <code className="rounded-[2px] border border-border/60 px-1 py-px font-mono text-xs">#{task.id}</code>
             <span>{t(task.analysis_domain === "software_re" ? "analysisDomain.software" : "analysisDomain.web")}</span>
             <span className="h-2 w-px bg-border" />
@@ -598,6 +599,7 @@ function TaskDetailInner() {
             ))}
           </TabsList>
         </div>
+        <ApiBar methods={["task", "stats", "taskBranches", "interceptTask", "llmProfiles", "updateTaskLLMProfiles", "controlTask", "archiveTask", "distillTaskSkill"]} />
       </header>
 
       {/* Tab content */}
