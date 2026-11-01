@@ -40,7 +40,7 @@ var builtinTacticalRoutes = []tacticalRouteRule{
 			"supabase", "anon key", "service_role", "rls", "e2b", "vercel", "在线编程", "ai 编程",
 			"代码生成", "容器逃逸", "单行编码", "free.ai",
 		},
-		action: "优先调用 `Skill({\\"name\\":\\"supabase\\"})` 加载 Supabase 行级安全（RLS）与 PostgREST 越权审计 SOP；Next.js Server Actions 场景并载 `Skill({\\"name\\":\\"nextjs\\"})`，AI agent / MCP 工具链场景并载 `Skill({\\"name\\":\\"agentic-system-security\\"})`。",
+		action: "优先调用 `Skill({\"name\":\"supabase\"})` 加载 Supabase 行级安全（RLS）与 PostgREST 越权审计 SOP；Next.js Server Actions 场景并载 `Skill({\"name\":\"nextjs\"})`，AI agent / MCP 工具链场景并载 `Skill({\"name\":\"agentic-system-security\"})`。",
 	},
 	{
 		skillName:   "aws",
@@ -52,7 +52,7 @@ var builtinTacticalRoutes = []tacticalRouteRule{
 			"presigned", "预签名", "oss", "s3", "cos", "r2", "bucket", "积分", "配额",
 			"credits", "quota", "consume", "计费", "扣费", "ai saas", "notegpt",
 		},
-		action: "优先调用 `Skill({\\"name\\":\\"aws\\"})` 加载云存储与预签名 URL 的越权枚举 SOP；积分/配额绕过并载 `Skill({\\"name\\":\\"business-logic\\"})`，前端 WASM 与浏览器侧信任边界并载 `Skill({\\"name\\":\\"browser-security\\"})`。",
+		action: "优先调用 `Skill({\"name\":\"aws\"})` 加载云存储与预签名 URL 的越权枚举 SOP；积分/配额绕过并载 `Skill({\"name\":\"business-logic\"})`，前端 WASM 与浏览器侧信任边界并载 `Skill({\"name\":\"browser-security\"})`。",
 	},
 	{
 		skillName:   "api_spec_testing",
@@ -63,7 +63,7 @@ var builtinTacticalRoutes = []tacticalRouteRule{
 			"api", "swagger", "openapi", "graphql", "actuator", "wsdl", "wadl",
 			"接口", "端点", "endpoint", "rest", "v1/", "v2/", "jwt", "bola", "idor",
 		},
-		action: "优先调用 `Skill({\\"name\\":\\"api_spec_testing\\"})` 按 spec 逐个端点系统过一遍，并用 curl 或现场编写的 Python 脚本探测文档端点与越权参数；对象级越权并载 `Skill({\\"name\\":\\"idor\\"})`，功能级越权并载 `Skill({\\"name\\":\\"broken-function-level-authorization\\"})`。",
+		action: "优先调用 `Skill({\"name\":\"api_spec_testing\"})` 按 spec 逐个端点系统过一遍，并用 curl 或现场编写的 Python 脚本探测文档端点与越权参数；对象级越权并载 `Skill({\"name\":\"idor\"})`，功能级越权并载 `Skill({\"name\":\"broken-function-level-authorization\"})`。",
 	},
 	{
 		skillName:   "sql-injection",
@@ -74,7 +74,7 @@ var builtinTacticalRoutes = []tacticalRouteRule{
 			"sql", "sqli", "注入", "ssrf", "rce", "命令执行", "ssti", "模板注入",
 			"xxe", "上传", "upload", "lfi", "文件包含", "反序列化", "越权", "绕过", "waf",
 		},
-		action: "按命中的具体漏洞类分别加载：注入 → `Skill({\\"name\\":\\"sql-injection\\"})`，SSRF → `Skill({\\"name\\":\\"ssrf\\"})`，命令执行/RCE → `Skill({\\"name\\":\\"rce\\"})`，模板注入 → `Skill({\\"name\\":\\"ssti\\"})`，XXE → `Skill({\\"name\\":\\"xxe\\"})`，上传 → `Skill({\\"name\\":\\"insecure-file-uploads\\"})`，越权 → `Skill({\\"name\\":\\"idor\\"})`。",
+		action: "按命中的具体漏洞类分别加载：注入 → `Skill({\"name\":\"sql-injection\"})`，SSRF → `Skill({\"name\":\"ssrf\"})`，命令执行/RCE → `Skill({\"name\":\"rce\"})`，模板注入 → `Skill({\"name\":\"ssti\"})`，XXE → `Skill({\"name\":\"xxe\"})`，上传 → `Skill({\"name\":\"insecure-file-uploads\"})`，越权 → `Skill({\"name\":\"idor\"})`。",
 	},
 	{
 		skillName:   "source-aware-sast",
@@ -86,7 +86,7 @@ var builtinTacticalRoutes = []tacticalRouteRule{
 			"ghidra", "radare2", "objdump", "加壳", "脱壳", "签名算法", "webpack", "混淆", "源码审计", "代码审计",
 			"逆向分析", "二进制", "样本", "hook", "idascript", "arsc", "dex",
 		},
-		action: "优先调用 `Skill({\\"name\\":\\"source-aware-sast\\"})` 做 semgrep / AST 静态审计（只读分析，动态执行须另行授权），并结合 `Grep` / `Glob` / `Read` 定位关键校验与加解密逻辑；桌面端 Electron 应用并载 `Skill({\\"name\\":\\"electron-desktop-apps\\"})`。",
+		action: "优先调用 `Skill({\"name\":\"source-aware-sast\"})` 做 semgrep / AST 静态审计（只读分析，动态执行须另行授权），并结合 `Grep` / `Glob` / `Read` 定位关键校验与加解密逻辑；桌面端 Electron 应用并载 `Skill({\"name\":\"electron-desktop-apps\"})`。",
 	},
 	{
 		skillName:   "dependency-cve-scanning",
@@ -97,7 +97,7 @@ var builtinTacticalRoutes = []tacticalRouteRule{
 			"cve-", "cve", "nday", "1day", "poc", "exp", "shiro", "fastjson",
 			"spring", "struts", "log4j", "thinkphp", "weblogic", "oa", "中间件", "组件版本",
 		},
-		action: "优先调用 `Skill({\\"name\\":\\"dependency-cve-scanning\\"})` 扫仓库 lockfile 的已知依赖 CVE；包名/可执行文件身份混淆并载 `Skill({\\"name\\":\\"npx-confusion\\"})`。",
+		action: "优先调用 `Skill({\"name\":\"dependency-cve-scanning\"})` 扫仓库 lockfile 的已知依赖 CVE；包名/可执行文件身份混淆并载 `Skill({\"name\":\"npx-confusion\"})`。",
 	},
 	{
 		skillName:   "counterevidence",
@@ -108,7 +108,7 @@ var builtinTacticalRoutes = []tacticalRouteRule{
 			"受阻", "失败", "超时", "403", "404", "拦截", "无回显", "盲注",
 			"旁路", "横向", "跳板", "提权", "权限提升", "pivot", "复盘", "卡住",
 		},
-		action: "立即调用 `Skill({\\"name\\":\\"counterevidence\\"})` 做证据分诊：什么算真凭实据、什么只是假阳性；定级拿不准并载 `Skill({\\"name\\":\\"severity-calibration\\"})`，内网域横向并载 `Skill({\\"name\\":\\"active_directory\\"})`。",
+		action: "立即调用 `Skill({\"name\":\"counterevidence\"})` 做证据分诊：什么算真凭实据、什么只是假阳性；定级拿不准并载 `Skill({\"name\":\"severity-calibration\"})`，内网域横向并载 `Skill({\"name\":\"active_directory\"})`。",
 	},
 }
 

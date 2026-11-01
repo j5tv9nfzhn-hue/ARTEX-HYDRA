@@ -29,7 +29,7 @@ var Bundled embed.FS
 // 只删这里列出的名字；用户自建或改过的技能不在本表内，EnsureBundled
 // 也从不覆盖磁盘上已存在的文件，因此不会波及用户内容。
 var retiredSkills = []string{
-"abusing-dpapi-for-credential-access", "abusing-shadow-credentials-for-privesc",
+	"abusing-dpapi-for-credential-access", "abusing-shadow-credentials-for-privesc",
 	"achieving-cmmc-level-2-compliance", "acquiring-disk-image-with-dd-and-dcfldd",
 	"ai-coding-sandbox-tactics", "ai-gateway-logic", "analyzing-active-directory-acl-abuse",
 	"analyzing-android-malware-with-apktool", "analyzing-api-gateway-access-logs",

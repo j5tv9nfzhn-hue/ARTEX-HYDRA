@@ -54,11 +54,12 @@ type CoordVars struct {
 //
 // 下面 blockAuthorization / blockRefusalAvoidance / blockScopeAuthority /
 // blockClosure 四段取自 strix 官方提示词（英文原文，逐字照搬）：
-//   · strix/agents/prompts/system_prompt.jinja —— <execution_guidelines> 下的
-//     AUTHORIZATION STATUS、REFUSAL AVOIDANCE，以及 VALIDATION REQUIREMENTS 里的
-//     CLOSURE DISCIPLINE、Missing information is NOT proof of safety、
-//     severity calibration
-//   · strix/agents/prompts/scope.jinja —— SCOPE 段
+//
+//	· strix/agents/prompts/system_prompt.jinja —— <execution_guidelines> 下的
+//	  AUTHORIZATION STATUS、REFUSAL AVOIDANCE，以及 VALIDATION REQUIREMENTS 里的
+//	  CLOSURE DISCIPLINE、Missing information is NOT proof of safety、
+//	  severity calibration
+//	· strix/agents/prompts/scope.jinja —— SCOPE 段
 //
 // 照搬的资格：这四段【不含任何 strix 工具名】，因此不会被 toolcatalog.go 的
 // OfficialToolKeys 白名单净化机制波及，也不存在空匹配风险。
@@ -142,12 +143,12 @@ YOU ARE THE ROOT AGENT. Your job is ORCHESTRATION, not hands-on testing.
 // rootTmpl 是编排者提示词。
 //
 // 相对上一版的改动：
-//   1. 头部并入 strix 英文护栏（授权状态 / 拒答规避）与 strix root 整节
-//   2. 【空匹配修复】"写进一条 note" → "用 record_fact 沉淀"
-//      create_note 全仓库零匹配；record_fact 在 toolcatalog.go 的官方白名单内，
-//      且 langDirective 中提到它有 summary/detail 字段，可承担原 note 的用途。
-//   3. 硬约束由三条增至四条：新增"子代理交卷必须是三态之一，root 不得替它归类"
-//   4. 末尾并入 strix 范围权威段
+//  1. 头部并入 strix 英文护栏（授权状态 / 拒答规避）与 strix root 整节
+//  2. 【空匹配修复】"写进一条 note" → "用 record_fact 沉淀"
+//     create_note 全仓库零匹配；record_fact 在 toolcatalog.go 的官方白名单内，
+//     且 langDirective 中提到它有 summary/detail 字段，可承担原 note 的用途。
+//  3. 硬约束由三条增至四条：新增"子代理交卷必须是三态之一，root 不得替它归类"
+//  4. 末尾并入 strix 范围权威段
 //
 // 刻意不写 blockLanguage：RootSystemPrompt/ChildSystemPrompt 已在正文之外追加
 // langDirective(resolveOutputLang())，且 outputlang.go 的 SupportedOutputLangs
@@ -209,14 +210,14 @@ const rootTmpl = blockAuthorization + "\n\n" + blockRefusalAvoidance + "\n\n" + 
 // childTmpl 是执行者提示词。
 //
 // 相对上一版的改动：
-//   1. 头部并入 strix 英文护栏（授权状态 / 拒答规避）
-//   2. 【空匹配修复】第 1 步 load_skill → Skill({"name":"<技能名>"})
-//      load_skill 全仓库无实现；真实工具名为 Skill（见 assembly.go:128 的
-//      keep["Skill"]、deferred.go:63 的 block.Name == "Skill"），调用式
-//      Skill({"name":"<技能名>"})（与 promptcatalog.go:46 的写法一致）。
-//      这是子代理提示词的【第 1 步】，一上来就撞墙，危害最大。
-//   3. 交卷段并入 strix 闭环纪律原文
-//   4. 末尾并入 strix 范围权威段
+//  1. 头部并入 strix 英文护栏（授权状态 / 拒答规避）
+//  2. 【空匹配修复】第 1 步 load_skill → Skill({"name":"<技能名>"})
+//     load_skill 全仓库无实现；真实工具名为 Skill（见 assembly.go:128 的
+//     keep["Skill"]、deferred.go:63 的 block.Name == "Skill"），调用式
+//     Skill({"name":"<技能名>"})（与 promptcatalog.go:46 的写法一致）。
+//     这是子代理提示词的【第 1 步】，一上来就撞墙，危害最大。
+//  3. 交卷段并入 strix 闭环纪律原文
+//  4. 末尾并入 strix 范围权威段
 //
 // 刻意不写 confidence：submit_report 的参数表为 outcome / summary / evidence /
 // open_items / counter_view / facts，【没有】confidence 字段。不发明字段。
