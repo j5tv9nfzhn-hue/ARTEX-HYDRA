@@ -805,9 +805,12 @@ func (s *Server) seedSkillEvolutionBindings() {
 		return
 	}
 	defer func() { _ = s.m.pg.SetSetting(flagV2, "true") }()
-	for _, sk := range []string{"ai-coding-sandbox-tactics", "wasm-cloud-saas-tactics"} {
-		s.bindDefaultSkillVisibility(sk)
-	}
+	// 这里原本默认放开 ARTEX 自有的两个手写技能（ai-coding-sandbox-tactics /
+	// wasm-cloud-saas-tactics）。内置库换成 usestrix/strix 后，随版本发布的 75 个
+	// 技能都是知识库条目——和此前 818 个上游技能一样，交给用户在「技能包」页面按需
+	// 挂载，不再默认绑定到核心 agent：一次性把整库挂上去会挤掉每个 agent 有限的
+	// 技能槽位（单 agent 上限 5 个）。新建/上传的技能仍由 fsCreateSkill 走
+	// bindDefaultSkillVisibility 自动放开，不受此处影响。
 	for _, ag := range []string{"auto", "mainagent", "pentest"} {
 		if err := s.m.pg.AddAgentToToolBinding(ag, []string{"distill_report_skill"}); err != nil {
 			log.Printf("[skills] %s 报告沉淀工具默认绑定失败: %v", ag, err)

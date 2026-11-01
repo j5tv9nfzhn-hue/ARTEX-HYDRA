@@ -6,6 +6,11 @@
 // <available-deferred-tools> 块重复。
 //
 // 保留理由与恢复方式同 tool_router_test.go。
+//
+// 冻结说明：本文件断言的是「内置技能库换成 usestrix/strix 之前」的那一批技能名
+// （ai-coding-sandbox-tactics / wasm-cloud-saas-tactics 等）。那一批已整体下线，
+// 若将来恢复本文件，除下面的别名期望值外，fixture 里的 <available_skills> 清单也要
+// 换成现行技能名。
 package agent
 
 import (
@@ -88,11 +93,11 @@ func TestBuildTacticalRoutingHintMatchesDistilledCaseSkill(t *testing.T) {
 }
 
 func TestCanonicalSkillAliasesIncludeNewCombatPackages(t *testing.T) {
-	if got := CanonicalSkillAlias("sandbox"); got != "ai-coding-sandbox-tactics" {
-		t.Fatalf("CanonicalSkillAlias(sandbox) = %q, want ai-coding-sandbox-tactics", got)
+	if got := CanonicalSkillAlias("sandbox"); got != "supabase" {
+		t.Fatalf("CanonicalSkillAlias(sandbox) = %q, want supabase", got)
 	}
-	if got := CanonicalSkillAlias("wasm"); got != "wasm-cloud-saas-tactics" {
-		t.Fatalf("CanonicalSkillAlias(wasm) = %q, want wasm-cloud-saas-tactics", got)
+	if got := CanonicalSkillAlias("wasm"); got != "aws" {
+		t.Fatalf("CanonicalSkillAlias(wasm) = %q, want aws", got)
 	}
 }
 

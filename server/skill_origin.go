@@ -56,10 +56,13 @@ var builtinSkillDirs = func() map[string]bool {
 //
 // 它们仍属知识库（随版本发布、走代码评审），只是来源是报告而非实战复盘——这个
 // 细分决定了两类内置技能该由谁来维护，值得单独标出来。
-var builtinSkillFromReport = map[string]bool{
-	"ai-coding-sandbox-tactics": true,
-	"wasm-cloud-saas-tactics":   true,
-}
+//
+// 内置技能库切换为 usestrix/strix 后，随版本发布的技能全部是上游知识库条目，
+// 没有一个是报告提炼的产物，因此此表为空。报告提炼的技能走 `report-` 前缀，
+// 由 classifySkillOrigin 的前缀分支判给 SkillOriginReport，不经过这里。
+// 表保留（而非删除）是因为它表达的是"来源可以是报告"这个分类维度，将来若再
+// 内置报告提炼的技能，往这里加名字即可。
+var builtinSkillFromReport = map[string]bool{}
 
 // classifySkillOrigin 判定技能来源。命名前缀是既有的约定（agent/skill_router.go
 // 用同一套前缀区分内置路由与沉淀路由），这里沿用而不另造一套。

@@ -245,8 +245,12 @@ ON CONFLICT DO NOTHING`, r.kind, r.pattern, r.note); err != nil {
 // builtinSkillAgentKeys 是内置技能包默认可见的五类内置 Agent。
 var builtinSkillAgentKeys = []string{"auto", "pentest", "worker", "planner", "mainagent"}
 
-// builtinSkillNames 列出随二进制下发的内置技能包目录名（818 个上游开源技能 +
-// 任务沉淀技能）。技能文件本身在文件系统上（SkillDir，由 SDK 加载），DB 只存可见性绑定。
+// builtinSkillNames 列出随二进制下发的内置技能包目录名。技能文件本身在文件系统上
+// （SkillDir，由 SDK 加载），DB 只存可见性绑定。
+//
+// 直接读 skills.Bundled（//go:embed 的内嵌目录），不维护手写名单——内置库此前整包
+// 拷贝上游 818 个技能，现已整体换成 usestrix/strix 的 75 个技能，名单随内嵌目录走，
+// 换库不需要同步改这里。
 func builtinSkillNames() []string {
 	entries, err := fs.ReadDir(skills.Bundled, ".")
 	if err != nil {

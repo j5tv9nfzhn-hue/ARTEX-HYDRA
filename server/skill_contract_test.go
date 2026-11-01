@@ -10,7 +10,7 @@ import (
 
 func TestSkillCanonicalContractAndLegacyAliases(t *testing.T) {
 	// fixture 用一个不在别名表里的名字。原来用 "api-recon"，而 "api" 在
-	// agent.CanonicalSkillAlias 里映射到 performing-api-inventory-and-discovery，
+	// agent.CanonicalSkillAlias 里映射到 api_spec_testing，
 	// 于是 `{"skill":"api"}` 按设计解析成别名目标而不是 fixture —— 测试就红了。
 	// 但这是**正确的产品行为**（用户自建的精确名优先于历史别名，见
 	// TestSkillExactVisibleCustomNamePrecedesAlias）。这条测试真正要守的是

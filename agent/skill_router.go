@@ -31,78 +31,84 @@ type tacticalRouteRule struct {
 
 var builtinTacticalRoutes = []tacticalRouteRule{
 	{
-		skillName:   "ai-coding-sandbox-tactics",
+		skillName:   "supabase",
 		nativeTools: []string{"http_sequence", "web_recon"},
+		companions:  []string{"nextjs", "agentic-system-security"},
 		title:       "AI 编程平台、Next.js Server Actions、云沙箱穿透与 Supabase 审计",
 		keywords: []string{
 			"sandbox", "沙箱", "next.js", "nextjs", "server action", "next-action", "_next/static",
 			"supabase", "anon key", "service_role", "rls", "e2b", "vercel", "在线编程", "ai 编程",
 			"代码生成", "容器逃逸", "单行编码", "free.ai",
 		},
-		action: "优先调用 `Skill({\"name\":\"ai-coding-sandbox-tactics\"})` 加载 AI 编程平台与沙箱穿透实战包（自动附带 `references/pitfalls-and-bypasses.md` 单行 Base64 防截断绕过与 `references/attack-chains-and-pocs.md` 攻击推导链）。",
+		action: "优先调用 `Skill({\\"name\\":\\"supabase\\"})` 加载 Supabase 行级安全（RLS）与 PostgREST 越权审计 SOP；Next.js Server Actions 场景并载 `Skill({\\"name\\":\\"nextjs\\"})`，AI agent / MCP 工具链场景并载 `Skill({\\"name\\":\\"agentic-system-security\\"})`。",
 	},
 	{
-		skillName:   "wasm-cloud-saas-tactics",
+		skillName:   "aws",
 		nativeTools: []string{"web_recon", "codec_crypto"},
+		companions:  []string{"business-logic", "browser-security"},
 		title:       "WebAssembly (Go WASM) 逆向、WebSocket 越权、预签名云存储与 AI SaaS 计费绕过",
 		keywords: []string{
 			"wasm", "webassembly", "wasm_exec", "go wasm", "websocket", "ws://", "wss://",
 			"presigned", "预签名", "oss", "s3", "cos", "r2", "bucket", "积分", "配额",
 			"credits", "quota", "consume", "计费", "扣费", "ai saas", "notegpt",
 		},
-		action: "优先调用 `Skill({\"name\":\"wasm-cloud-saas-tactics\"})` 加载 Go WASM 内存钩子取密钥、WebSocket 帧级越权、预签名 Bucket 列举与客户端积分拦截实战包（自动附带 `references/*` 防踩坑与 PoC 手册）。",
+		action: "优先调用 `Skill({\\"name\\":\\"aws\\"})` 加载云存储与预签名 URL 的越权枚举 SOP；积分/配额绕过并载 `Skill({\\"name\\":\\"business-logic\\"})`，前端 WASM 与浏览器侧信任边界并载 `Skill({\\"name\\":\\"browser-security\\"})`。",
 	},
 	{
-		skillName:   "performing-api-inventory-and-discovery",
+		skillName:   "api_spec_testing",
 		nativeTools: []string{"web_recon", "http_fuzz", "http_request"},
-		companions:  []string{"performing-web-application-penetration-test"},
+		companions:  []string{"idor", "broken-function-level-authorization", "graphql"},
 		title:       "REST/GraphQL API 枚举与未授权测试",
 		keywords: []string{
 			"api", "swagger", "openapi", "graphql", "actuator", "wsdl", "wadl",
 			"接口", "端点", "endpoint", "rest", "v1/", "v2/", "jwt", "bola", "idor",
 		},
-		action: "优先调用 `Skill({\"name\":\"performing-api-inventory-and-discovery\"})` 加载 API 侦察 SOP，并用 curl 或现场编写的 Python 脚本探测文档端点与越权参数。",
+		action: "优先调用 `Skill({\\"name\\":\\"api_spec_testing\\"})` 按 spec 逐个端点系统过一遍，并用 curl 或现场编写的 Python 脚本探测文档端点与越权参数；对象级越权并载 `Skill({\\"name\\":\\"idor\\"})`，功能级越权并载 `Skill({\\"name\\":\\"broken-function-level-authorization\\"})`。",
 	},
 	{
-		skillName:   "performing-web-application-penetration-test",
+		skillName:   "sql-injection",
 		nativeTools: []string{"http_sequence", "http_fuzz", "http_request"},
+		companions:  []string{"ssrf", "rce", "idor", "insecure-file-uploads"},
 		title:       "Web 核心漏洞深度利用 (SQLi/SSRF/RCE/SSTI/XXE/上传/越权)",
 		keywords: []string{
 			"sql", "sqli", "注入", "ssrf", "rce", "命令执行", "ssti", "模板注入",
 			"xxe", "上传", "upload", "lfi", "文件包含", "反序列化", "越权", "绕过", "waf",
 		},
-		action: "优先调用 `Skill({\"name\":\"performing-web-application-penetration-test\"})` 获取 Web 漏洞验证与 WAF 绕过决策树（含载荷与复现模板）。",
+		action: "按命中的具体漏洞类分别加载：注入 → `Skill({\\"name\\":\\"sql-injection\\"})`，SSRF → `Skill({\\"name\\":\\"ssrf\\"})`，命令执行/RCE → `Skill({\\"name\\":\\"rce\\"})`，模板注入 → `Skill({\\"name\\":\\"ssti\\"})`，XXE → `Skill({\\"name\\":\\"xxe\\"})`，上传 → `Skill({\\"name\\":\\"insecure-file-uploads\\"})`，越权 → `Skill({\\"name\\":\\"idor\\"})`。",
 	},
 	{
-		skillName:   "reverse-engineering-malware-with-ghidra",
+		skillName:   "source-aware-sast",
 		nativeTools: []string{"binary_inspect", "codec_crypto"},
+		companions:  []string{"electron-desktop-apps", "source_aware_discovery"},
 		title:       "二进制/固件/APK/前端加密逆向与静态源码审计",
 		keywords: []string{
 			"逆向", "reverse", "elf", "pe", "apk", "固件", "firmware", "反编译",
 			"ghidra", "radare2", "objdump", "加壳", "脱壳", "签名算法", "webpack", "混淆", "源码审计", "代码审计",
 			"逆向分析", "二进制", "样本", "hook", "idascript", "arsc", "dex",
 		},
-		action: "优先调用 `Skill({\"name\":\"reverse-engineering-malware-with-ghidra\"})` 加载只读静态分析 SOP（动态执行须另行授权），并结合 `Grep` / `Glob` / `Read` 定位关键校验与加解密逻辑。",
+		action: "优先调用 `Skill({\\"name\\":\\"source-aware-sast\\"})` 做 semgrep / AST 静态审计（只读分析，动态执行须另行授权），并结合 `Grep` / `Glob` / `Read` 定位关键校验与加解密逻辑；桌面端 Electron 应用并载 `Skill({\\"name\\":\\"electron-desktop-apps\\"})`。",
 	},
 	{
-		skillName:   "performing-cve-prioritization-with-kev-catalog",
+		skillName:   "dependency-cve-scanning",
 		nativeTools: []string{"http_sequence", "http_fuzz"},
+		companions:  []string{"npx-confusion", "asset-discovery"},
 		title:       "Nday/CVE 漏洞快速画像与 PoC 载荷库检索",
 		keywords: []string{
 			"cve-", "cve", "nday", "1day", "poc", "exp", "shiro", "fastjson",
 			"spring", "struts", "log4j", "thinkphp", "weblogic", "oa", "中间件", "组件版本",
 		},
-		action: "优先调用 `Skill({\"name\":\"performing-cve-prioritization-with-kev-catalog\"})` 检索已知漏洞指纹与 PoC 链。",
+		action: "优先调用 `Skill({\\"name\\":\\"dependency-cve-scanning\\"})` 扫仓库 lockfile 的已知依赖 CVE；包名/可执行文件身份混淆并载 `Skill({\\"name\\":\\"npx-confusion\\"})`。",
 	},
 	{
-		skillName:   "performing-web-application-vulnerability-triage",
+		skillName:   "counterevidence",
 		nativeTools: []string{"http_sequence", "http_fuzz", "web_recon"},
+		companions:  []string{"severity-calibration", "active_directory"},
 		title:       "受阻研判、WAF/403 突破、假阳性证伪与内网横向",
 		keywords: []string{
 			"受阻", "失败", "超时", "403", "404", "拦截", "无回显", "盲注",
 			"旁路", "横向", "跳板", "提权", "权限提升", "pivot", "复盘", "卡住",
 		},
-		action: "立即调用 `Skill({\"name\":\"performing-web-application-vulnerability-triage\"})` 执行专家级原因分诊（WAF 拦截 vs 路由错误 vs 假阳性）并切换攻击路径。",
+		action: "立即调用 `Skill({\\"name\\":\\"counterevidence\\"})` 做证据分诊：什么算真凭实据、什么只是假阳性；定级拿不准并载 `Skill({\\"name\\":\\"severity-calibration\\"})`，内网域横向并载 `Skill({\\"name\\":\\"active_directory\\"})`。",
 	},
 }
 
@@ -337,7 +343,7 @@ func BuildTacticalRoutingHint(taskText string, tools []actool.CoreTool, def Defe
 	b.WriteString("【关键词路由建议（不是能力就绪证明）】\n")
 
 	if len(matched) > 0 && hasSkillTool {
-		b.WriteString("系统检测到当前任务/指令命中以下专业领域场景，**仅当下列技能出现在当前可见清单时，必须在第一轮优先调用对应 `Skill`（多文件技能包会自动附带加载 `references/*` 防踩坑与攻击链手册）；缺失时明确报告未配置。技能调用以可见清单中的真实名称为准**：\n")
+		b.WriteString("系统检测到当前任务/指令命中以下专业领域场景，**仅当下列技能出现在当前可见清单时，必须在第一轮优先调用对应 `Skill`（`Skill` 会直接返回该技能的完整 SOP 正文）；缺失时明确报告未配置。技能调用以可见清单中的真实名称为准**：\n")
 		for i, m := range matched {
 			if i >= maxTacticalRoutes {
 				break // 最多展示 maxTacticalRoutes 条最相关路由（已按相关度降序）
@@ -345,11 +351,11 @@ func BuildTacticalRoutingHint(taskText string, tools []actool.CoreTool, def Defe
 			fmt.Fprintf(&b, "- 🎯 **%s** (`%s`)：%s%s\n", m.title, m.skillName, m.action, nativeToolBadges(m.nativeTools, mounted))
 		}
 		if len(matched) > 1 {
-			// 覆盖面：一次只加载一条会退化成「永远只用 performing-web-application-penetration-test / performing-api-inventory-and-discovery」。
-			b.WriteString("- 🔁 **多条命中时的加载纪律**：先加载**最相关的一条**（上面第一条）；其余命中项不要一次性全灌进上下文——在后续 intent 里按当前子任务需要再加载（例如出现二进制/协议逆向证据时加载逆向类技能）。**同一任务内已加载过的技能不要重复调用**；只想回看某章节时，用 `Grep` 在该技能目录的 `references/*.md` 上按关键词定位（`Skill` 的返回结果里带着该目录下的绝对路径），避免重复整包注入。\n")
+			// 覆盖面：一次只加载一条会退化成「永远只用 sql-injection / api_spec_testing」。
+			b.WriteString("- 🔁 **多条命中时的加载纪律**：先加载**最相关的一条**（上面第一条）；其余命中项不要一次性全灌进上下文——在后续 intent 里按当前子任务需要再加载（例如出现二进制/协议逆向证据时加载逆向类技能）。**同一任务内已加载过的技能不要重复调用**；只想回看某章节时，用 `Grep` 在该技能目录的 `*.md` 上按关键词定位（`Skill` 的返回结果里带着该文件的绝对路径），避免重复整篇注入。\n")
 		}
 	} else if hasSkillTool {
-		b.WriteString("- 💡 **技能库先行**：当前已挂载 `Skill` 工具，具体技能以可见清单为准。遇到具体渗透/逆向/侦察子方向时，**请先调用 `Skill({\"name\":\"<技能名>\"})` 加载专家 SOP（含配套 `references/*` 防踩坑与 PoC 手册）**，切忌盲目硬猜。\n")
+		b.WriteString("- 💡 **技能库先行**：当前已挂载 `Skill` 工具，具体技能以可见清单为准。遇到具体渗透/逆向/侦察子方向时，**请先调用 `Skill({\"name\":\"<技能名>\"})` 加载专家 SOP**，切忌盲目硬猜。\n")
 	}
 
 	if len(activeServers) > 0 {

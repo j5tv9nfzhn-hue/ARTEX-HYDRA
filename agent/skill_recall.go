@@ -1,6 +1,6 @@
 // skill_recall.go — 技能再加载（skill recall）：让技能在多轮工具、压缩之后、跨 run 续跑时被重新取回。
 //
-// 背景（问题不是「索引」，是「时效」）：内置技能库 830 个，走渐进式披露——第一层只有
+// 背景（问题不是「索引」，是「时效」）：内置技能库 75 个，走渐进式披露——第一层只有
 // 名称+描述，正文只在模型主动调用 Skill 时才进入上下文。现有实现只在 run 开始时按
 // 任务/意图文本给一次路由建议（BuildTacticalRoutingHint），于是：
 //
@@ -362,7 +362,7 @@ func skillIndexFor(skillToolDesc string) *skillIndex {
 		}
 		idx.entries = append(idx.entries, skillIndexEntry{name: e.name, tokens: toks})
 	}
-	// 830 个技能每条几十个词，索引常驻内存可以接受；但按可见清单描述缓存，
+	// 75 个技能每条几十个词，索引常驻内存可以接受；但按可见清单描述缓存，
 	// 条数封顶，避免多 Agent 反复装配把缓存涨爆。
 	skillIndexCache.Lock()
 	if len(skillIndexCache.m) >= skillRecallIndexMax {
