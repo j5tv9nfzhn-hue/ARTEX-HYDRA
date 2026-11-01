@@ -2,7 +2,7 @@
 #
 # Runs every detection test suite under this directory in one command — the
 # local-developer and pre-commit counterpart to the per-suite CI steps in
-# ../../.github/workflows/detections.yml. CONTRIBUTING.md and this directory's
+# ../../.github/workflows/detections.yml. docs/05-开发与贡献.md and this directory's
 # README.md promise that each suite "drops straight into CI or a pre-commit
 # hook"; this is the single entry point that honours that promise for all of
 # them at once, so a contributor does not have to invoke the eight run.sh scripts

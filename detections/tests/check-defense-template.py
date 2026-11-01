@@ -3,7 +3,7 @@
 # Documentation-claim consistency check for the inline Sigma correlation template
 # in the defense guide. check-defense-template.sh launches this inside a container
 # that has a pinned sigma-cli (plus the splunk, elasticsearch, loki, and kusto
-# backends) installed, with docs/defense.md mounted
+# backends) installed, with docs/04-防御与检测.md mounted
 # read-only under /docs.
 #
 # Why this is a gate and not one of the eight detection suites. The rules under
@@ -60,7 +60,7 @@ import tempfile
 DOCS = os.environ.get("ARTEX_DOCS_DIR", "/docs")
 # 本仓库只保留简体中文一份防御指南，因此不存在跨语言规则体一致性比对这一层；
 # 指南内模板的正确性改由下面的 sigma check 与 convert 矩阵直接验证。
-GUIDE = os.path.join(DOCS, "defense.md")
+GUIDE = os.path.join(DOCS, "04-防御与检测.md")
 
 # The auth leg of the template matches `/login`, `/auth`, `/verify`, `/otp`. The
 # bare word "login" is alphanumeric, so no backend escapes it; its survival into a
@@ -152,9 +152,9 @@ def main():
     print("== 1  指南内模板结构完整（非空规则体） ==")
     body = rule_body(block)
     if body.strip():
-        ok("defense.md 携带非空的 Sigma 规则体")
+        ok("04-防御与检测.md 携带非空的 Sigma 规则体")
     else:
-        bad("defense.md 的 ```yaml 代码块没有规则体")
+        bad("04-防御与检测.md 的 ```yaml 代码块没有规则体")
 
     with tempfile.NamedTemporaryFile(
         "w", suffix=".yml", encoding="utf-8", delete=False
@@ -166,9 +166,9 @@ def main():
         print("== 2  sigma check passes with zero errors ==")
         rc, out = run_sigma(["check", template_path])
         if rc == 0 and "Found 0 errors" in out and "0 issues" in out:
-            ok("defense.md: sigma check → 0 errors, 0 condition errors, 0 issues")
+            ok("04-防御与检测.md: sigma check → 0 errors, 0 condition errors, 0 issues")
         else:
-            bad(f"defense.md: sigma check did not report a clean pass (exit {rc})")
+            bad(f"04-防御与检测.md: sigma check did not report a clean pass (exit {rc})")
             for line in out.splitlines():
                 if "error" in line.lower() or "issue" in line.lower():
                     note(f"        {line}")

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本仓库对 AI 助手 / 自动化代理的**硬性约定**。完整版见 [`README.md` 的「开发与发布约定」](README.md#开发与发布约定长期生效--最高优先级)，冲突时以该节为准。
+本仓库对 AI 助手 / 自动化代理的**硬性约定**。完整背景见 [docs/05-开发与贡献.md](docs/05-开发与贡献.md)。
 
 ## 一、本机只读 + 只写，不构建
 
@@ -18,13 +18,13 @@ build.sh、dev.sh、任何打包脚本
 
 构建与验证一律由 GitHub Actions 承担（`release.yml` 构建与发布，`detections.yml` 检测规则）。
 
-本仓库只交付 Web 版（`cmd/artex` 单一可执行 + 内嵌前端）。原先的 `desktop/`（Wails V2 桌面壳）已整体移除，`release.yml` 也不再包含 `desktop` job；历史记录见 CHANGELOG。
+本仓库只交付 Web 版（`cmd/artex` 单一可执行 + 内嵌前端）。原先的 `desktop/`（Wails V2 桌面壳）已整体移除。
 
 ## 二、门禁分层
 
 - **编译 / 静态检查失败 = 必须拦住**，不得出包（`release.yml` 的 `gate` job：build / vet / embedui-vet / gofmt / golangci-lint）。
 - **测试失败 = 只是健康度信号**，不得阻塞打包与发版（`release.yml` 的 `signals` job，`continue-on-error`）。
-- **发布流程失败 = 必须失败并清理**，不留半成品（`release.yml` 失败即删草稿、保 tag）。
+- **发布流程失败 = 必须失败并清理**，不留半成品（失败即删草稿、保 tag）。
 
 "测试不拦"不等于"什么都不拦"：编译类确定性失败必须拦死。
 
