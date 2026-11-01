@@ -77,7 +77,7 @@ function ScopeSentryPanel() {
       {ready ? (
         <SyncWorkbench />
       ) : (
-        <Sheet>
+        <Sheet api={["ssDatasource"]}>
           <div className="py-8 text-center text-muted-foreground text-sm">{t("notReady")}</div>
         </Sheet>
       )}
@@ -134,8 +134,8 @@ function DataSourceCard({
   };
 
   return (
-    <Sheet>
-      <SheetHead
+    <Sheet api={["ssDatasource", "ssProjects", "ssTasks"]}>
+      <SheetHead index="01"
         icon={PlugZapIcon}
         title={
           <span className="flex items-center gap-2">
@@ -336,8 +336,8 @@ function SyncWorkbench() {
   };
 
   return (
-    <Sheet>
-      <SheetHead title={t("workbenchTitle")} />
+    <Sheet api={["ssTasks", "ssSync"]}>
+      <SheetHead index="02" title={t("workbenchTitle")} />
       <div className="space-y-4 px-4 py-3">
         {/* 切换维度。 */}
         <Tabs

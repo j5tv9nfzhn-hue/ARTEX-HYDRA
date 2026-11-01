@@ -487,7 +487,7 @@ export default function DashboardPage() {
         {/* 主 KPI:活跃任务(running 大排印,数字走 Space Grotesk + 等宽数字)。
             进场用 .animate-fade-up 直接挂 Card(不包 div)—— 该卡是栅格子项、要跟着
             右侧矩阵拉伸对齐,包装层会把"卡片本身"替换成 div、破坏等高。 */}
-        <Sheet className="animate-fade-up justify-between gap-4 p-5">
+        <Sheet api={["tasks"]} className="animate-fade-up justify-between gap-4 p-5">
           <div className="flex items-center gap-1.5 font-medium text-xs text-muted-foreground uppercase tracking-widest">
             <TargetIcon className="size-3" /> {t("activeTasks")}
           </div>
@@ -522,7 +522,7 @@ export default function DashboardPage() {
             与不包时的布局逐像素一致,不引入等高问题。 */}
         <KpiRow delay={60} className="grid grid-cols-2 gap-3">
           {/* 确认发现 */}
-          <Sheet className="gap-1 py-3">
+          <Sheet api={["findings"]} className="gap-1 py-3">
             <div className="grid auto-rows-min items-start gap-1 px-3 pb-0">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <BugIcon className="size-3" /> {t("confirmedFindings")}
@@ -547,7 +547,7 @@ export default function DashboardPage() {
           </Sheet>
 
           {/* 资产节点 */}
-          <Sheet className="gap-1 py-3">
+          <Sheet api={["assetCounts"]} className="gap-1 py-3">
             <div className="grid auto-rows-min items-start gap-1 px-3 pb-0">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <NetworkIcon className="size-3" /> {t("assetNodes")}
@@ -558,7 +558,7 @@ export default function DashboardPage() {
           </Sheet>
 
           {/* 流量交互 */}
-          <Sheet className="gap-1 py-3">
+          <Sheet api={["traffic"]} className="gap-1 py-3">
             <div className="grid auto-rows-min items-start gap-1 px-3 pb-0">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <ActivityIcon className="size-3" /> {t("trafficExchanges")}
@@ -578,7 +578,7 @@ export default function DashboardPage() {
           </Sheet>
 
           {/* LLM 用量 */}
-          <Sheet className="gap-1 py-3">
+          <Sheet api={["conversationTokens"]} className="gap-1 py-3">
             <div className="grid auto-rows-min items-start gap-1 px-3 pb-0">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider">
                 <ZapIcon className="size-3" /> {t("tokenUsage")}
@@ -599,7 +599,7 @@ export default function DashboardPage() {
       </KpiBand>
 
       {/* ── Row 2: LLM Token 消耗 ── */}
-      <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "120ms" }}>
+      <Sheet api={["usageStats", "activity"]} className="animate-fade-up gap-4 p-4" style={{ animationDelay: "120ms" }}>
         {/* Header */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold">
@@ -861,7 +861,7 @@ export default function DashboardPage() {
       {/* ── Row 3: 活动流 | 发现(不等宽:活动流更宽,减少摘要截断) ── */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         {/* 活动流 */}
-        <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "160ms" }}>
+        <Sheet api={["activity", "tasks"]} className="animate-fade-up gap-4 p-4" style={{ animationDelay: "160ms" }}>
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-semibold">
               <ActivityIcon className="size-3.5 text-muted-foreground" />
@@ -925,7 +925,7 @@ export default function DashboardPage() {
         </Sheet>
 
         {/* 发现 */}
-        <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "200ms" }}>
+        <Sheet api={["findings"]} className="animate-fade-up gap-4 p-4" style={{ animationDelay: "200ms" }}>
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-semibold">
               <BugIcon className="size-3.5 text-muted-foreground" />
@@ -970,7 +970,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Row 4: 任务表格 ── */}
-      <Sheet className="animate-fade-up gap-4 overflow-hidden p-0" style={{ animationDelay: "240ms" }}>
+      <Sheet api={["tasks"]} className="animate-fade-up gap-4 overflow-hidden p-0" style={{ animationDelay: "240ms" }}>
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-1.5 text-xs font-semibold">
             <ClockIcon className="size-3.5 text-muted-foreground" />
@@ -1073,7 +1073,7 @@ export default function DashboardPage() {
       {/* ── Row 5: 资产分布 | 流量状态码 | 拦截 & 待审批 ── */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {/* 资产分布 */}
-        <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "280ms" }}>
+        <Sheet api={["assetCounts"]} className="animate-fade-up gap-4 p-4" style={{ animationDelay: "280ms" }}>
           <SectionHead index="01" icon={NetworkIcon} sub={t("byType")}>
             {t("assetDistribution")}
           </SectionHead>
@@ -1105,7 +1105,7 @@ export default function DashboardPage() {
         </Sheet>
 
         {/* 流量状态码 */}
-        <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "320ms" }}>
+        <Sheet api={["traffic"]} className="animate-fade-up gap-4 p-4" style={{ animationDelay: "320ms" }}>
           <SectionHead index="02" icon={ActivityIcon} sub={t("requestCount", { count: traffic.length })}>
             {t("trafficStatusCodes")}
           </SectionHead>
@@ -1157,7 +1157,7 @@ export default function DashboardPage() {
         </Sheet>
 
         {/* 系统状态 & 待审批 */}
-        <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "360ms" }}>
+        <Sheet api={["stats", "settings", "interceptPending"]} className="animate-fade-up gap-4 p-4" style={{ animationDelay: "360ms" }}>
           <SectionHead index="03" icon={ShieldCheckIcon}>{t("systemStatus")}</SectionHead>
 
           <div className="flex flex-col gap-2">
@@ -1241,7 +1241,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Row 6: 可靠性（工具调用/崩溃重放/中断恢复，#1–3、#36、#165–171） ── */}
-      <Sheet className="animate-fade-up gap-4 p-4" style={{ animationDelay: "400ms" }}>
+      <Sheet api={["metrics"]} className="animate-fade-up gap-4 p-4" style={{ animationDelay: "400ms" }}>
         <SectionHead index="04" icon={ShieldCheckIcon} sub={t("sinceStart")}>
           {t("reliability")}
         </SectionHead>

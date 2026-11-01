@@ -143,7 +143,7 @@ export default function LanPage() {
       ) : null}
 
       {switching ? (
-        <Sheet>
+        <Sheet api={["GET /lan", "health"]}>
           <div className="flex items-center gap-2 p-4 text-sm">
             <RefreshCwIcon className="animate-spin" />
             {t("restarting")}
@@ -151,8 +151,8 @@ export default function LanPage() {
         </Sheet>
       ) : null}
 
-      <Sheet>
-        <SheetHead title={t("statusTitle")} />
+      <Sheet api={["GET /lan"]}>
+        <SheetHead index="01" title={t("statusTitle")} />
         <div className="px-4 py-3">
           <p className="text-muted-foreground text-sm">{t("statusDesc")}</p>
           <InfoRow label={t("listenLabel")}>{info?.listen_addr ?? "-"}</InfoRow>
@@ -170,8 +170,8 @@ export default function LanPage() {
       </Sheet>
 
       {lanOpen ? (
-        <Sheet>
-          <SheetHead title={t("webEntryTitle")} />
+        <Sheet api={["GET /lan"]}>
+          <SheetHead index="02" title={t("webEntryTitle")} />
           <div className="space-y-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("webEntryHint")}</p>
             <div className="flex flex-wrap items-center gap-2">
@@ -208,8 +208,8 @@ export default function LanPage() {
           </div>
         </Sheet>
       ) : (
-        <Sheet>
-          <SheetHead title={t("enableTitle")} />
+        <Sheet api={["POST /lan/enable", "POST /lan/disable"]}>
+          <SheetHead index="03" title={t("enableTitle")} />
           <div className="space-y-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("enableDesc")}</p>
             <div className="flex flex-wrap items-center gap-2">
@@ -252,7 +252,7 @@ export default function LanPage() {
       )}
 
       <Sheet>
-        <SheetHead
+        <SheetHead index="04"
           icon={ShieldAlertIcon}
           title={<span className="font-medium text-foreground">{t("securityTitle")}</span>}
         />

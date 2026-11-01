@@ -204,8 +204,8 @@ export default function StoragePage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* 数据库 */}
-        <Sheet>
-          <SheetHead icon={DatabaseIcon} title={t("dbTitle")} />
+        <Sheet api={["workspaceList"]}>
+          <SheetHead index="01" icon={DatabaseIcon} title={t("dbTitle")} />
           <div className="space-y-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("dbDesc")}</p>
             {loading || !db ? (
@@ -254,8 +254,8 @@ export default function StoragePage() {
         </Sheet>
 
         {/* 内存 */}
-        <Sheet>
-          <SheetHead title={t("memTitle")} />
+        <Sheet api={["workspaceList"]}>
+          <SheetHead index="02" title={t("memTitle")} />
           <div className="space-y-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("memDesc")}</p>
             {loading || !mem ? (
@@ -313,8 +313,8 @@ export default function StoragePage() {
         </Sheet>
 
         {/* 记忆库 */}
-        <Sheet>
-          <SheetHead title={t("mdbTitle")} />
+        <Sheet api={["workspaceList"]}>
+          <SheetHead index="03" title={t("mdbTitle")} />
           <div className="space-y-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("mdbDesc")}</p>
             {loading || !mdb ? (
@@ -423,8 +423,8 @@ export default function StoragePage() {
         窄屏一律退化为单列，顺序仍是 写入 → WAL → 保留。
       */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Sheet>
-          <SheetHead title={t("wqTitle")} />
+        <Sheet api={["workspaceList"]}>
+          <SheetHead index="04" title={t("wqTitle")} />
           <div className="space-y-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("wqDesc")}</p>
             {loading || !wq ? (
@@ -447,8 +447,8 @@ export default function StoragePage() {
           </div>
         </Sheet>
 
-        <Sheet>
-          <SheetHead title={t("walTitle")} />
+        <Sheet api={["workspaceList"]}>
+          <SheetHead index="05" title={t("walTitle")} />
           <div className="space-y-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("walDesc")}</p>
             {loading || !wal ? (
@@ -493,8 +493,8 @@ export default function StoragePage() {
         </Sheet>
       </div>
 
-      <Sheet>
-        <SheetHead title={t("retentionTitle")} />
+      <Sheet api={["workspaceList"]}>
+        <SheetHead index="06" title={t("retentionTitle")} />
         <div className="space-y-3 px-4 py-3">
           <p className="text-muted-foreground text-sm">{t("retentionDesc")}</p>
           <div className="flex items-end gap-2">
@@ -559,8 +559,8 @@ export default function StoragePage() {
       </Sheet>
 
       {/* 表行数 */}
-      <Sheet>
-        <SheetHead title={t("tablesTitle")} />
+      <Sheet api={["workspaceList"]}>
+        <SheetHead index="07" title={t("tablesTitle")} />
         <div className="px-4 py-3">
           <p className="text-muted-foreground text-sm">
             {t("tablesDesc")}
@@ -571,8 +571,8 @@ export default function StoragePage() {
       </Sheet>
 
       {/* 文件 */}
-      <Sheet>
-        <SheetHead title={t("filesTitle")} />
+      <Sheet api={["workspaceList"]}>
+        <SheetHead index="08" title={t("filesTitle")} />
         <div className="space-y-3 px-4 py-3">
           <p className="text-muted-foreground text-sm">{t("filesDesc")}</p>
           {!ws ? (
