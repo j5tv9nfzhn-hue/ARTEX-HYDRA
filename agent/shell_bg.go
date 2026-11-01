@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	actool "github.com/Autumn-27/norma/tool"
 )
@@ -32,8 +33,22 @@ func shellBackgroundDelegable() bool {
 	return spec.Mode == ShellModePowerShell && !spec.Zero()
 }
 
+// backgroundProcWait 是等待后台进程名额的上限。
+//
+// 名额稀缺（默认只有全局额度的一半），但也不该让模型干等：等满 3 秒还拿不到就明确
+// 报错，让模型自己决定是复用已有任务还是先干别的。
+const backgroundProcWait = 3 * time.Second
+
 // runOwnBackground 用当前执行器直接起一个后台进程。
 func runOwnBackground(ctx context.Context, command, workDir string, tc *actool.ToolContext) actool.Result {
+	return runOwnBackgroundWait(ctx, command, workDir, tc, backgroundProcWait)
+}
+
+// runOwnBackgroundWait 是 runOwnBackground 的可测版本：名额等待上限由参数给出。
+//
+// 后台进程不吃前台那条全局令牌（理由见 proc_limiter.go 的头注），而是单独占一个
+// 后台名额：名额按「进程还活着」计，所以必须在起进程之前占住，进程退出后归还。
+func runOwnBackgroundWait(ctx context.Context, command, workDir string, tc *actool.ToolContext, wait time.Duration) actool.Result {
 	spec := CurrentShellSpec()
 	if spec.Zero() {
 		shellRT.mu.RLock()
@@ -45,6 +60,27 @@ func runOwnBackground(ctx context.Context, command, workDir string, tc *actool.T
 		}
 		return actool.Errorf(msg + "。请在设置页选择本机存在的 Shell，或设置 ARTEX_SHELL_BIN。")
 	}
+
+	// 名额用尽时明确报错，不静默排队：后台进程不随本轮对话结束而中断，排队会让模型
+	// 以为命令已经开跑，转头又起一条重复的。
+	acquireCtx, cancel := context.WithTimeout(ctx, wait)
+	defer cancel()
+	release, err := AcquireBackgroundProc(acquireCtx)
+	if err != nil {
+		if ctx.Err() != nil {
+			return actool.Errorf("后台启动被取消：" + ctx.Err().Error())
+		}
+		return actool.Errorf(fmt.Sprintf(
+			"后台进程名额已满（上限 %d）：已经有后台任务在跑。先读已有任务的 output.log 判断能否复用，或等它们结束后再起新的。",
+			maxConcurrentBackgroundProcs()))
+	}
+	// 名额在后台进程退出时归还；下面每条提前返回的路径都得自己还。
+	started := false
+	defer func() {
+		if !started {
+			release()
+		}
+	}()
 
 	dir, err := os.MkdirTemp("", "artex-bg-")
 	if err != nil {
@@ -87,11 +123,14 @@ func runOwnBackground(ctx context.Context, command, workDir string, tc *actool.T
 		_ = os.RemoveAll(dir)
 		return actool.Errorf("后台启动失败：" + err.Error())
 	}
+	started = true
 	pid := cmd.Process.Pid
-	// 回收子进程（这里不需要它的结果，只是别留僵尸）。
+	// 回收子进程（这里不需要它的结果，只是别留僵尸）；进程一退出就归还后台名额，
+	// 名额不还的话后台功能会被慢慢耗死。
 	go func() {
 		_ = cmd.Wait()
 		_ = logFile.Close()
+		release()
 	}()
 
 	killHint := fmt.Sprintf("taskkill /PID %d /T /F", pid)

@@ -419,7 +419,9 @@ func (p *psPool) idleCount() int {
 	return len(p.idle)
 }
 
-// acquire 取一个可用会话。池已满且无空闲时阻塞等待；等待超时则返回错误，
+// acquire 取一个可用会话。没有空闲会话时直接新建一个——池只限制「空闲」列表的长度
+//（target），不限制「存活」会话数，并发由 Bash 工具入口持有的全局外部进程令牌兜住
+//（见 proc_limiter.go 的头注）；只有新建失败才按 200ms 间隔重试，超过 3 秒返回错误，
 // 由调用方降级为一次性 spawn。
 func (p *psPool) acquire(ctx context.Context) (*psSession, error) {
 	deadline := time.Now().Add(3 * time.Second)
