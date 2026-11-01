@@ -113,8 +113,8 @@ export function RetentionAudit({
   let emptyMessage: string | null = null;
   if (!busy && !error) emptyMessage = loaded ? t("audit.empty") : t("audit.notLoaded");
   return (
-    <Sheet>
-      <SheetHead
+    <Sheet api={["retentionApi.audit"]}>
+      <SheetHead index="04"
         icon={ScrollTextIcon}
         title={t("audit.title")}
         hint={t("audit.description")}

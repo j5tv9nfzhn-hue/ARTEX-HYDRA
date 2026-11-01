@@ -1,5 +1,6 @@
 import type * as React from "react";
 
+import { ApiBar } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 
 // ── 版块原语（纸本页面语言）────────────────────────────────────────────────
@@ -23,8 +24,22 @@ import { cn } from "@/lib/utils";
 export function Sheet({
   className,
   children,
+  api,
+  apiLabel,
   ...rest
-}: React.ComponentProps<"section"> & { children: React.ReactNode }) {
+}: React.ComponentProps<"section"> & {
+  children: React.ReactNode;
+  /**
+   * 该版块依赖的 api.ts 方法名，渲染成版块末尾的接口锚点条。
+   * 这是「不违背后端、杜绝空匹配」的落点：让版块上每个控件都能追溯到真实接口，
+   * 而不是「看起来应该有」的假控件。留空则不渲染锚点条。
+   *
+   * 刻意在这里解构掉而不随 rest 透传 —— rest 会落到 <section> 上，
+   * 未知属性会触发 React 的 DOM 属性告警。
+   */
+  api?: string[];
+  apiLabel?: React.ReactNode;
+}) {
   return (
     <section
       data-slot="card"
@@ -33,6 +48,7 @@ export function Sheet({
       {...rest}
     >
       {children}
+      {api && api.length > 0 ? <ApiBar methods={api} label={apiLabel} /> : null}
     </section>
   );
 }
@@ -44,6 +60,7 @@ export function Sheet({
  * 让「这一卷有多少条」有个落脚点。
  */
 export function SheetHead({
+  index,
   title,
   count,
   hint,
@@ -52,6 +69,8 @@ export function SheetHead({
   icon: Icon,
   iconClassName,
 }: {
+  /** 纸本下渲染为章节号（01 / 02…），由 CSS 决定是否显形。 */
+  index?: string;
   title: React.ReactNode;
   count?: React.ReactNode;
   hint?: React.ReactNode;
@@ -65,6 +84,7 @@ export function SheetHead({
       data-editorial="sheet-head"
       className={cn("flex shrink-0 items-center gap-2 border-b px-4 py-2", className)}
     >
+      {index ? <span data-editorial="secnum">{index}</span> : null}
       {Icon ? <Icon className={cn("size-3.5 shrink-0 text-muted-foreground", iconClassName)} /> : null}
       <h2 className="shrink-0 font-semibold text-sm">{title}</h2>
       {count !== undefined && count !== null ? (

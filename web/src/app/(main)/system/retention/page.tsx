@@ -125,8 +125,8 @@ export default function RetentionPage() {
       )}
 
       <div className="grid items-start gap-4 xl:grid-cols-2">
-        <Sheet>
-          <SheetHead icon={DatabaseIcon} title={t("policy.title")} />
+        <Sheet api={["retentionApi.policy", "retentionApi.save"]}>
+          <SheetHead index="01" icon={DatabaseIcon} title={t("policy.title")} />
           <div className="space-y-5 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("policy.description")}</p>
             <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
@@ -190,8 +190,8 @@ export default function RetentionPage() {
           </div>
         </Sheet>
 
-        <Sheet>
-          <SheetHead icon={EyeIcon} title={t("preview.title")} />
+        <Sheet api={["retentionApi.preview", "retentionApi.execute"]}>
+          <SheetHead index="02" icon={EyeIcon} title={t("preview.title")} />
           <div className="space-y-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("preview.description")}</p>
             <Button variant="outline" disabled={!model.canPreview} onClick={() => void model.preview()}>
@@ -233,8 +233,8 @@ export default function RetentionPage() {
       </div>
 
       {model.result && (
-        <Sheet>
-          <SheetHead title={t("result.title")} />
+        <Sheet api={["retentionApi.execute"]}>
+          <SheetHead index="03" title={t("result.title")} />
           <div className="px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("result.description")}</p>
             <RetentionCounts rows={model.result.counts} result />
