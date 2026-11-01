@@ -80,8 +80,8 @@ export function ReportTab({
   }
 
   return (
-    <Sheet>
-      <SheetHead
+    <Sheet api={["report"]}>
+      <SheetHead index="01"
         icon={FileTextIcon}
         title={t(softwareRE ? "softwareTitle" : "title")}
         count={report ? t("chars", { n: report.length.toLocaleString("zh-CN") }) : undefined}

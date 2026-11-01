@@ -230,8 +230,8 @@ export function FindingsTab({ taskId }: { taskId: string }) {
     g === "critical" || g === "high" ? "red" : g === "medium" ? "amber" : g === "low" ? "green" : "muted";
 
   return (
-    <Sheet>
-      <SheetHead
+    <Sheet api={["findings", "setFindingStatus"]}>
+      <SheetHead index="01"
         title={t("columnFinding")}
         count={items.length}
         actions={

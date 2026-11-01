@@ -780,7 +780,7 @@ function GraphInner({ taskId, coverageEnabled = true }: { taskId: string; covera
 
 export function CoverageGraphTab({ taskId, coverageEnabled = true }: { taskId: string; coverageEnabled?: boolean }) {
   return (
-    <PaperSheet>
+    <PaperSheet api={["taskCoverageGraph", "taskAssetRefs"]}>
       <div data-editorial="body" className="h-[72vh] w-full overflow-hidden">
         <GraphInner taskId={taskId} coverageEnabled={coverageEnabled} />
       </div>

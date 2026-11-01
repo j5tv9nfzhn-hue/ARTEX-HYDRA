@@ -13,7 +13,7 @@ export function TimelineTab({ taskId, onReverted }: { taskId: string; onReverted
   const t = useTranslations("taskDetail.timeline");
   return (
     <Sheet>
-      <SheetHead icon={HistoryIcon} title={t("title")} hint={t("description")} />
+      <SheetHead index="01" icon={HistoryIcon} title={t("title")} hint={t("description")} />
       <div className="px-4 pt-1">
         <CheckpointTimeline scope="task" id={taskId} onReverted={onReverted} />
       </div>

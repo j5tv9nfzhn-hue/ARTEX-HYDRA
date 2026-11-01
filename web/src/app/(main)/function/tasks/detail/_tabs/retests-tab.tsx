@@ -83,8 +83,8 @@ export function RetestsTab({ taskId }: { taskId: string }) {
         </Alert>
       ) : null}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
-        <Sheet className="min-w-0">
-          <SheetHead
+        <Sheet api={["findingsPage"]} className="min-w-0">
+          <SheetHead index="01"
             title={t("retests.selectTitle")}
             count={data ? data.total : undefined}
             hint={t("retests.selectDesc")}

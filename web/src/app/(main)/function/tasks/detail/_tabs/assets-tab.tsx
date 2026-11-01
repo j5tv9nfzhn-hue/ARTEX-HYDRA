@@ -206,7 +206,7 @@ function AssetCard({
     );
   }
   return (
-    <PaperSheet className="flex min-h-0 flex-1 flex-col">
+    <PaperSheet api={["taskAssets", "searchTaskAssets", "detachTaskAsset", "assetCounts"]} className="flex min-h-0 flex-1 flex-col">
       <div
         data-editorial="body"
         className="scrollbar-thin scrollbar-track-transparent min-h-0 flex-1 overflow-auto"

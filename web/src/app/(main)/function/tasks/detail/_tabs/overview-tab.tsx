@@ -555,8 +555,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
        * 任务为终态或暂停时会自动恢复。
        */}
       {blocked.length > 0 && (
-        <Sheet className="border-red-500/30">
-          <SheetHead
+        <Sheet api={["intents", "rerunIntent", "rerunBlocked"]} className="border-red-500/30">
+          <SheetHead index="01"
             icon={AlertTriangleIcon}
             iconClassName="size-4 text-red-500"
             title={
@@ -599,8 +599,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
       )}
       {/* 未收口分支：跑崩/耗尽/被停但没人收口。P2 会自动回炉，到上限转人工。 */}
       {branches.length > 0 && (
-        <Sheet className="border-amber-500/30">
-          <SheetHead
+        <Sheet api={["taskBranches", "forceDone", "closeIntent"]} className="border-amber-500/30">
+          <SheetHead index="02"
             icon={ShieldAlertIcon}
             iconClassName="size-4 text-amber-500"
             title={
@@ -702,8 +702,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
         </DialogContent>
       </Dialog>
       {/* Heartbeat */}
-      <Sheet>
-        <SheetHead icon={ActivityIcon} iconClassName="text-blue-500" title={t("heartbeat.title")} />
+      <Sheet api={["task", "stats", "intents"]}>
+        <SheetHead index="03" icon={ActivityIcon} iconClassName="text-blue-500" title={t("heartbeat.title")} />
         <div data-editorial="body" className="grid grid-cols-2 gap-4 sm:grid-cols-4 px-4 pt-2 pb-4">
           <div>
             <div className="text-muted-foreground text-xs">{t("heartbeat.engineState")}</div>
@@ -772,8 +772,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
       </div>
       {/* Work set */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Sheet>
-          <SheetHead icon={TargetIcon} title={t("running.title")} />
+        <Sheet api={["intents"]}>
+          <SheetHead index="04" icon={TargetIcon} title={t("running.title")} />
           <div data-editorial="body" className="flex flex-col gap-2 px-4 pt-2 pb-4">
             {running.slice(0, 6).map((i) => (
               <div key={i.id} className="flex items-center gap-2 text-sm">
@@ -787,8 +787,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
           </div>
         </Sheet>
 
-        <Sheet>
-          <SheetHead icon={AlertTriangleIcon} iconClassName="text-amber-500" title={t("attention.title")} />
+        <Sheet api={["findings", "intents"]}>
+          <SheetHead index="05" icon={AlertTriangleIcon} iconClassName="text-amber-500" title={t("attention.title")} />
           <div data-editorial="body" className="grid grid-cols-2 gap-3 text-sm px-4 pt-2 pb-4">
             <div>
               <div className="font-semibold text-2xl text-red-600 tabular-nums">{taskFindings.length}</div>
@@ -809,8 +809,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
           </div>
         </Sheet>
 
-        <Sheet>
-          <SheetHead icon={BugIcon} iconClassName="text-red-500" title={t("recent.title")} />
+        <Sheet api={["findings"]}>
+          <SheetHead index="06" icon={BugIcon} iconClassName="text-red-500" title={t("recent.title")} />
           <div data-editorial="body" className="flex flex-col gap-2 px-4 pt-2 pb-4">
             {taskFindings.slice(0, 6).map((f) => (
               <div key={f.id} className="flex items-center gap-2 text-sm">
@@ -825,8 +825,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
         </Sheet>
       </div>
       {coverage?.enabled && coverage.scope_rows > 0 && (
-        <Sheet>
-          <SheetHead icon={TargetIcon} iconClassName="text-emerald-500" title={t("coverage.title")} hint={t("coverage.rough")} />
+        <Sheet api={["taskCoverage"]}>
+          <SheetHead index="07" icon={TargetIcon} iconClassName="text-emerald-500" title={t("coverage.title")} hint={t("coverage.rough")} />
           <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
             <div className="flex items-baseline gap-3">
               <span className="font-semibold text-2xl tabular-nums">
@@ -855,8 +855,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
         <div className="flex flex-col gap-4 xl:col-span-6">
           {/* 创建时的原始任务描述、目标放在顶部，便于随时查看。 */}
-          <Sheet>
-            <SheetHead icon={TargetIcon} iconClassName="text-primary" title={t("desc.title")} />
+          <Sheet api={["task"]}>
+            <SheetHead index="08" icon={TargetIcon} iconClassName="text-primary" title={t("desc.title")} />
             <div data-editorial="body" className="grid grid-cols-1 gap-4 sm:grid-cols-2 px-4 pt-2 pb-4">
               <div className="flex flex-col gap-1.5">
                 <div className="font-medium text-muted-foreground text-xs">{t("desc.descLabel")}</div>
@@ -872,8 +872,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
            * 目标管理支持查询、添加、修改、删除。添加、修改通知 Planner 并恢复任务；
            * 删除只通知 Planner，不恢复。目标是最终可验证成果，而非执行步骤或侦察动作。
            */}
-          <Sheet>
-            <SheetHead icon={ListChecksIcon} iconClassName="text-primary" title={t("goals.title")} hint={t("goals.hint", { count: goals.length })} />
+          <Sheet api={["taskGoals", "addGoal", "updateGoal", "deleteGoal"]}>
+            <SheetHead index="09" icon={ListChecksIcon} iconClassName="text-primary" title={t("goals.title")} hint={t("goals.hint", { count: goals.length })} />
             <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
               {/* 添加表单。 */}
               <div className="flex flex-wrap items-center gap-2">
@@ -996,8 +996,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
            * 行为约束：allow=允许、deny=禁止。下一轮将约束注入 Planner、Worker 系统提示，
            * 各角色是否注入由系统设置控制。修改不会立即中断运行，下一轮自然读取。
            */}
-          <Sheet>
-            <SheetHead icon={ShieldAlertIcon} iconClassName="text-amber-500" title={t("constraints.title")} hint={t("constraints.hint", { count: constraints.length })} />
+          <Sheet api={["taskConstraints", "addConstraint", "updateConstraint", "deleteConstraint"]}>
+            <SheetHead index="10" icon={ShieldAlertIcon} iconClassName="text-amber-500" title={t("constraints.title")} hint={t("constraints.hint", { count: constraints.length })} />
             <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
               {/* 添加表单。 */}
               <div className="flex flex-wrap items-center gap-2">
@@ -1113,8 +1113,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
             </div>
           </Sheet>
           {/* 测试范围既是覆盖率分母，也是授权边界，可手工添加、删除。 */}
-          <Sheet>
-            <SheetHead icon={ShieldCheckIcon} iconClassName="text-emerald-500" title={t("scope.title")} hint={t("scope.hint", { count: scope.length })} />
+          <Sheet api={["taskScope", "addTaskScope", "deleteTaskScope"]}>
+            <SheetHead index="11" icon={ShieldCheckIcon} iconClassName="text-emerald-500" title={t("scope.title")} hint={t("scope.hint", { count: scope.length })} />
             <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
               {/* 添加表单。 */}
               <div className="flex flex-wrap items-center gap-2">
@@ -1203,8 +1203,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
         </div>
         <div className="flex flex-col gap-4 xl:col-span-7">
           {/* LLM token 用量按模型分组，来自 llm_usage 计量账本，不依赖是否开启 LLM 录制。 */}
-          <Sheet>
-            <SheetHead icon={CoinsIcon} iconClassName="text-amber-500" title={t("tokens.title")} hint={t("tokens.hint", { calls: tokenTotals.calls })} />
+          <Sheet api={["tokensByModel", "tokensByWorker", "updateTask"]}>
+            <SheetHead index="12" icon={CoinsIcon} iconClassName="text-amber-500" title={t("tokens.title")} hint={t("tokens.hint", { calls: tokenTotals.calls })} />
             <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
               {/* 任务级 Token 预算:按 llm_usage 累计 input+output 计量,与后端预算闸同口径;
               达到预算时后端自动暂停任务。这里的编辑是「调高预算后恢复」的回环入口,0=不限。 */}
@@ -1505,8 +1505,8 @@ function TaskInterceptRulesCard({ taskId }: { taskId: string }) {
   const placeholder = TASK_RULE_KIND_OPTIONS.find((o) => o.value === newKind)?.placeholder ?? "";
 
   return (
-    <Sheet>
-      <SheetHead icon={ShieldCheckIcon} iconClassName="text-sky-500" title={t("rule.title")} hint={t("rule.hint", { count: rules.length })} />
+    <Sheet api={["taskInterceptRules", "createTaskInterceptRule", "updateTaskInterceptRule", "deleteTaskInterceptRule", "toggleTaskInterceptRule"]}>
+      <SheetHead index="13" icon={ShieldCheckIcon} iconClassName="text-sky-500" title={t("rule.title")} hint={t("rule.hint", { count: rules.length })} />
       <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
         {/* 添加表单。 */}
         <div className="flex flex-wrap items-center gap-2">

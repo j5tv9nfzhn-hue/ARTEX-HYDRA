@@ -564,7 +564,7 @@ export function BroadcastTab({ taskId }: { taskId: string }) {
   }
 
   return (
-    <Sheet>
+    <Sheet api={["explorationNodes"]}>
       {/* 工具条 */}
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5">
         <div className="relative w-full sm:w-64">

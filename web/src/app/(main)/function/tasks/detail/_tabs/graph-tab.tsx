@@ -80,8 +80,8 @@ export function GraphTab({ taskId }: { taskId: string }) {
   );
 
   return (
-    <Sheet>
-      <SheetHead title={t("tabs.graph")} count={`${nodes.length} / ${edges.length}`} hint={t("graph.hint")} />
+    <Sheet api={["explorationGraph"]}>
+      <SheetHead index="01" title={t("tabs.graph")} count={`${nodes.length} / ${edges.length}`} hint={t("graph.hint")} />
       <div className="px-0">
         <ExplorationGraph nodes={nodes} edges={edges} className="h-[72vh]" />
       </div>
