@@ -1,12 +1,12 @@
 "use client";
 
+import { Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { KeyRoundIcon, RefreshCwIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

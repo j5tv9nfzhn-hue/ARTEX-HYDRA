@@ -1,12 +1,11 @@
 "use client";
 
+import { Masthead, Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { RefreshCwIcon, ShieldAlertIcon, WifiIcon, WifiOffIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { Masthead } from "@/components/editorial";
-import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { CopyButton } from "@/components/copy-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

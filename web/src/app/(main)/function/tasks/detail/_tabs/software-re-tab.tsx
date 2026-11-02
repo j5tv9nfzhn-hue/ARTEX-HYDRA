@@ -1,10 +1,10 @@
 "use client";
 
+import { ApiBar } from "@/ui/container";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useTranslations } from "next-intl";
 
-import { ApiBar } from "@/components/editorial";
 import { api } from "@/lib/api";
 import type {
   REDataPage,

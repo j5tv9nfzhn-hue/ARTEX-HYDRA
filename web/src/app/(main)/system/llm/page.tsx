@@ -1,5 +1,6 @@
 "use client";
 
+import { Masthead, RecordSub, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -19,8 +20,6 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { Masthead } from "@/components/editorial";
-import { RecordSub, Sheet as PaperSheet, SheetHead } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import {
   AlertDialog,

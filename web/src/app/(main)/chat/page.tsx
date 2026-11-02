@@ -1,5 +1,6 @@
 "use client";
 
+import { ApiBar } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -29,7 +30,6 @@ import { toast } from "sonner";
 import { AgentPhaseBadge } from "@/components/agent-phase-badge";
 import { ApprovalExecutionFocus, useApprovalFocus, useApprovalHistory } from "@/components/approval-execution-focus";
 import { CheckpointTimelineButton } from "@/components/checkpoint-timeline";
-import { ApiBar } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { MessageRollbackDialog } from "@/components/message-rollback-dialog";

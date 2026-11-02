@@ -1,5 +1,6 @@
 "use client";
 
+import { KpiRow, Masthead, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -9,8 +10,6 @@ import { ArrowLeftIcon, ShieldCheckIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { ApprovalDetail } from "@/components/approval-records";
-import { KpiRow, Masthead } from "@/components/editorial";
-import { Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";

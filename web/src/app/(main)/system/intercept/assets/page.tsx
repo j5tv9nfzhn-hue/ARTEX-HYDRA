@@ -1,13 +1,12 @@
 "use client";
 
+import { Masthead, Sheet as PaperSheet } from "@/ui/container";
 import * as React from "react";
 
 import { BanIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { Masthead } from "@/components/editorial";
-import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

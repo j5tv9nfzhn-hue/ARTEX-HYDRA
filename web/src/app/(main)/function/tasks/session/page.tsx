@@ -1,5 +1,6 @@
 "use client";
 
+import { ApiBar, Masthead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -8,7 +9,6 @@ import { useSearchParams } from "next/navigation";
 import { ArrowLeftIcon, MessagesSquareIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { ApiBar, Masthead } from "@/components/editorial";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";

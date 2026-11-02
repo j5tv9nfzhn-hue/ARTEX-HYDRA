@@ -1,5 +1,6 @@
 "use client";
 
+import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -7,7 +8,6 @@ import Link from "next/link";
 import { ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { FindingRetestPanel } from "@/components/finding-retest-panel";
 import { StatusBadge } from "@/components/status-badge";

@@ -1,5 +1,6 @@
 "use client";
 
+import { Sheet } from "@/ui/container";
 import * as React from "react";
 
 import {
@@ -25,7 +26,6 @@ import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Sheet } from "@/components/editorial-sheet";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

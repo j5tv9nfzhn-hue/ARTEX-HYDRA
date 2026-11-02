@@ -1,5 +1,6 @@
 "use client";
 
+import { Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import {
@@ -24,7 +25,6 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/empty-state";
-import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
 import {

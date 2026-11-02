@@ -1,9 +1,11 @@
+"use client";
+
+import { Sheet, SheetHead } from "@/ui/container";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { siX } from "simple-icons";
 
-import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { SimpleIcon } from "@/components/simple-icon";
 
 export function SidebarSupportCard() {

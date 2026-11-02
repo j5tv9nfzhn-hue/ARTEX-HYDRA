@@ -1,5 +1,6 @@
 "use client";
 
+import { GroupHead, KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -8,8 +9,6 @@ import { useSearchParams } from "next/navigation";
 import { ArrowLeftIcon, ArrowUpRightIcon, BoxesIcon, NetworkIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { KpiRow, Masthead } from "@/components/editorial";
-import { GroupHead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";

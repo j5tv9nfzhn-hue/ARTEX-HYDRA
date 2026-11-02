@@ -1,9 +1,9 @@
 "use client";
 
+import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import { RefreshCwIcon, ScrollTextIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { parseRetentionPolicy, RETENTION_TABLES, type RetentionAuditEntry, type RetentionTable } from "@/lib/retention";

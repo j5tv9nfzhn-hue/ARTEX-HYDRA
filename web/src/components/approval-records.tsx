@@ -1,5 +1,6 @@
 "use client";
 
+import { ApiBar } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -18,7 +19,6 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { ApiBar } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { TablePagination } from "@/components/table-pagination";
 import { Alert, AlertDescription } from "@/components/ui/alert";

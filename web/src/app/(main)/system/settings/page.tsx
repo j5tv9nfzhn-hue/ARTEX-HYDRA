@@ -1,5 +1,6 @@
 "use client";
 
+import { Masthead, Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -21,8 +22,6 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { Masthead } from "@/components/editorial";
-import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

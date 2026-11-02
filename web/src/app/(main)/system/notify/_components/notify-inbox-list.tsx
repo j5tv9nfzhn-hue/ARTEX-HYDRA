@@ -1,5 +1,6 @@
 "use client";
 
+import { Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -8,7 +9,6 @@ import { ChevronDown, ExternalLink, Inbox, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { useNotifyInbox } from "@/hooks/use-notify-inbox";
 import {
   BUCKET_ORDER,

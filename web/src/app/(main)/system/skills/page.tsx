@@ -1,5 +1,6 @@
 "use client";
 
+import { ApiBar, Masthead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -21,7 +22,6 @@ import {
   UploadIcon,
   XCircleIcon,
 } from "lucide-react";
-import { ApiBar, Masthead } from "@/components/editorial";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 

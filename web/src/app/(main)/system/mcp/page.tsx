@@ -1,5 +1,6 @@
 "use client";
 
+import { Masthead, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -8,8 +9,6 @@ import { ArrowUpRightIcon, PlusIcon, RefreshCwIcon, ServerIcon, Trash2Icon } fro
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { Masthead } from "@/components/editorial";
-import { Sheet as PaperSheet, SheetHead } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

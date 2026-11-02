@@ -1,5 +1,6 @@
 "use client";
 
+import { Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { useTranslations } from "next-intl";
@@ -7,7 +8,6 @@ import Link from "next/link";
 
 import { BotIcon, LayersIcon, ShieldCheckIcon, SparklesIcon, TargetIcon } from "lucide-react";
 
-import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { APP_CONFIG } from "@/config/app-config";

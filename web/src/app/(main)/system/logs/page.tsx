@@ -1,10 +1,10 @@
 "use client";
 
+import { ApiBar, Masthead } from "@/ui/container";
 import * as React from "react";
 
 import { useTranslations } from "next-intl";
 
-import { ApiBar, Masthead } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

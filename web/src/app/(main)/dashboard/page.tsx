@@ -1,5 +1,6 @@
 "use client";
 
+import { KpiBand, KpiRow, Masthead, SectionHead, Sheet } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -17,8 +18,6 @@ import {
 import { useTranslations } from "next-intl";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
-import { KpiBand, KpiRow, Masthead, SectionHead } from "@/components/editorial";
-import { Sheet } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { useNewFindingsAlert } from "@/components/finding-alert";
 import { LiveDot } from "@/components/live-dot";

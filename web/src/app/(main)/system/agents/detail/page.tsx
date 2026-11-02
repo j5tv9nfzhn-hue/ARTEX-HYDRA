@@ -1,5 +1,6 @@
 "use client";
 
+import { Masthead, Sheet } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -9,8 +10,6 @@ import { ArrowLeftIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { AgentEditor } from "@/components/agent-editor";
-import { Masthead } from "@/components/editorial";
-import { Sheet } from "@/components/editorial-sheet";
 import { Button } from "@/components/ui/button";
 
 /**

@@ -1,5 +1,6 @@
 "use client";
 
+import { Masthead, Sheet as PaperSheet } from "@/ui/container";
 import * as React from "react";
 
 import {
@@ -15,8 +16,6 @@ import {
   TriangleAlertIcon,
   UploadIcon,
 } from "lucide-react";
-import { Masthead } from "@/components/editorial";
-import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 

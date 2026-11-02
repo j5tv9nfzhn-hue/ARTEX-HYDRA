@@ -47,3 +47,56 @@
 :root[data-ui="v2"] [data-editorial] {
   animation: none !important;
 }
+
+/* ── 2. 页面级容器（src/ui/v2/container.tsx） ─────────────────────────────
+   v2 容器自带 Tailwind 结构类，本文件只补三件 Tailwind 表达不了的事：
+     ① 记录行的显式栅格（--rec-cols 由调用方按需覆盖）；
+     ② 序号的固定等宽槽位，让多行序号右对齐成一条竖线；
+     ③ 批注的四种语义 —— 与 skin-editorial.css 的小签语言保持一致
+        （不铺底色，只换字色与边框），两代外观因此可读同一套标注。
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root[data-ui="v2"] [data-ui-record] {
+  grid-template-columns: var(--rec-cols, minmax(0, 1fr));
+}
+
+:root[data-ui="v2"] [data-ui-secnum] {
+  display: inline-block;
+  flex: none;
+  width: 1.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-ui="v2"] [data-ui-annotation] {
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+  letter-spacing: 0.04em;
+}
+
+:root[data-ui="v2"] [data-ui-annotation][data-kind="add"] {
+  color: var(--primary);
+  border-color: color-mix(in oklab, var(--primary) 40%, transparent);
+}
+
+:root[data-ui="v2"] [data-ui-annotation][data-kind="trim"] {
+  color: var(--destructive);
+  border-color: color-mix(in oklab, var(--destructive) 40%, transparent);
+}
+
+:root[data-ui="v2"] [data-ui-annotation][data-kind="keep"] {
+  border-style: dashed;
+}
+
+/* 记录行在 v2 里是「可点击的栅格行」，hover 只给一点背景，不加描边、
+   不加圆角 —— 否则整张表会退化成 v1 那样的卡片堆。 */
+:root[data-ui="v2"] button[data-ui-record]:hover {
+  background: color-mix(in oklab, var(--foreground) 4%, transparent);
+}
+
+:root[data-ui="v2"] [data-ui-record][data-expanded] {
+  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+}

@@ -1,13 +1,12 @@
 "use client";
 
+import { Masthead, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { Bot, PlusIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { Masthead } from "@/components/editorial";
-import { Sheet as PaperSheet, SheetHead } from "@/components/editorial-sheet";
 import { AgentEditor } from "@/components/agent-editor";
 import { EmptyState } from "@/components/empty-state";
 import { useStaggerOnce } from "@/components/motion";

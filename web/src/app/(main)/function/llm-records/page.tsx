@@ -1,5 +1,6 @@
 "use client";
 
+import { Masthead, Sheet } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -14,7 +15,6 @@ import {
   Trash2Icon,
   XIcon,
 } from "lucide-react";
-import { Masthead } from "@/components/editorial";
 import { useTranslations } from "next-intl";
 
 import { EmptyState } from "@/components/empty-state";
@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet } from "@/components/editorial-sheet";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";

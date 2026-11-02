@@ -1,5 +1,6 @@
 "use client";
 
+import { ApiBar, KpiRow } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -21,7 +22,6 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { ApiBar, KpiRow } from "@/components/editorial";
 import { StatusBadge } from "@/components/status-badge";
 import { TaskLLMProfileChain } from "@/components/task-llm-profile-chain";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

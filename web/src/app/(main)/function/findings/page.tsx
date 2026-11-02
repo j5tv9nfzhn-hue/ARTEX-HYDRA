@@ -1,5 +1,6 @@
 "use client";
 
+import { Masthead, Sheet } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -18,8 +19,6 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { Masthead } from "@/components/editorial";
-import { Sheet } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { useNewFindingsAlert } from "@/components/finding-alert";
 import { FindingRetestDialog } from "@/components/finding-retest-dialog";

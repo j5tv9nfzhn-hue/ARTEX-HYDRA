@@ -1,6 +1,8 @@
+"use client";
+
+import { Masthead } from "@/ui/container";
 import { useTranslations } from "next-intl";
 
-import { Masthead } from "@/components/editorial";
 import { HarnessTargetsCard } from "@/components/harness-targets-card";
 import { MCPExposureCard } from "@/components/mcp-exposure-card";
 

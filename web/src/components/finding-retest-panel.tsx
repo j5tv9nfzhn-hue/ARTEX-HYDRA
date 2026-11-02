@@ -1,5 +1,6 @@
 "use client";
 
+import { RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -7,7 +8,6 @@ import Link from "next/link";
 import { RotateCcwIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { FindingRetestDialog } from "@/components/finding-retest-dialog";
 import { Markdown } from "@/components/markdown";

@@ -1,5 +1,6 @@
 "use client";
 
+import { ApiBar } from "@/ui/container";
 import * as React from "react";
 
 import {
@@ -30,7 +31,6 @@ import { toast } from "sonner";
 
 import { AgentPhaseBadge } from "@/components/agent-phase-badge";
 import { ApprovalExecutionFocus, useApprovalFocus, useApprovalHistory } from "@/components/approval-execution-focus";
-import { ApiBar } from "@/components/editorial";
 import { EmptyState } from "@/components/empty-state";
 import { LiveDot } from "@/components/live-dot";
 import { MentionTextarea } from "@/components/mention-textarea";

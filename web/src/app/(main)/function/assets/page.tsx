@@ -1,5 +1,6 @@
 "use client";
 
+import { Masthead, Sheet as PaperSheet } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -22,8 +23,6 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { Masthead } from "@/components/editorial";
-import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { AssetDslSearch } from "@/components/asset-dsl-search";
 import { EmptyState } from "@/components/empty-state";
 import { ScopeTextEditor } from "@/components/scope-text-editor";

@@ -1,10 +1,10 @@
 "use client";
 
+import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { useTranslations } from "next-intl";
 
-import { Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { ExplorationGraph } from "@/components/exploration-graph";
 import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api";

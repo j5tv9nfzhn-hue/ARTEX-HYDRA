@@ -1,12 +1,11 @@
 "use client";
 
+import { Masthead, Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
 
 import { AlertTriangleIcon, DatabaseIcon, RefreshCwIcon, ShieldCheckIcon, Trash2Icon } from "lucide-react";
-import { Masthead } from "@/components/editorial";
-import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { useTranslations } from "next-intl";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

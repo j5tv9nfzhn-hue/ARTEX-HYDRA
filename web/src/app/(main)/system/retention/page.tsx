@@ -1,9 +1,9 @@
 "use client";
 
+import { Masthead, Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { AlertTriangleIcon, DatabaseIcon, EyeIcon, RefreshCwIcon, ShieldCheckIcon, Trash2Icon } from "lucide-react";
-import { Masthead } from "@/components/editorial";
 import { useTranslations } from "next-intl";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetHead } from "@/components/editorial-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";

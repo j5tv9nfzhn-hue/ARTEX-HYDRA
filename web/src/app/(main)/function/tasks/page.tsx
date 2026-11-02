@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { Sheet as PaperSheet } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -47,7 +48,6 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { AssetInterceptRulesEditor } from "@/components/asset-intercept-rules-editor";
-import { Sheet as PaperSheet } from "@/components/editorial-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { useStaggerOnce } from "@/components/motion";
 import { StatusBadge } from "@/components/status-badge";

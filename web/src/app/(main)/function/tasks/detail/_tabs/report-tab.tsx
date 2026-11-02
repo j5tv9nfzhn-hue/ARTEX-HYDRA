@@ -1,5 +1,6 @@
 "use client";
 
+import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { CheckIcon, CopyIcon, FileTextIcon } from "lucide-react";
@@ -9,7 +10,6 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetFoot, SheetHead } from "@/components/editorial-sheet";
 import { api } from "@/lib/api";
 import { copyText } from "@/lib/utils";
 
