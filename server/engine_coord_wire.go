@@ -296,6 +296,12 @@ func (e *Engine) coordToolset(t *Task) *agent.ToolSet {
 	if e.m != nil && e.m.pg != nil {
 		ts.SetFindingDedupe(&dedupeService{pg: e.m.pg, provider: e.m.dedupeProvider})
 	}
+	// 漏洞登记的原子写入实现。不注入它，report_finding 会退回「只写 findings 行」的
+	// 兜底路径：带 traffic_refs 的上报直接失败（「流量证据存储不可用；未登记漏洞」），
+	// 也就是引擎起了工具面却登记不了带流量的漏洞。
+	if store := evidenceStoreFor(e.m); store != nil {
+		ts.SetFindingRecorder(store)
+	}
 	return ts
 }
 

@@ -164,6 +164,11 @@ func (s *Server) delegateToTask(ctx context.Context, in json.RawMessage, pick fu
 	if s.m != nil && s.m.pg != nil {
 		tsx.SetFindingDedupe(&dedupeService{pg: s.m.pg, provider: s.m.dedupeProvider})
 	}
+	// 漏洞登记的原子写入实现：与判重同理，这条路径也能直接调 report_finding，
+	// 不注入 recorder 就登记不了带 traffic_refs 的漏洞。
+	if store := evidenceStoreFor(s.m); store != nil {
+		tsx.SetFindingRecorder(store)
+	}
 	return pick(tsx).Call(ctx, inner, nil)
 }
 

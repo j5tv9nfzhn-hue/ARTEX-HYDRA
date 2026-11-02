@@ -30,7 +30,23 @@ const (
 )
 
 func (s *Server) evidenceStore() *evidence.Store {
-	return evidence.New(s.m.pg, s.m.traffic, filepath.Join(s.m.dir, "evidence"))
+	return evidenceStoreFor(s.m)
+}
+
+// evidenceStoreFor 是 evidence.Store 的唯一构造入口。
+//
+// 它同时就是漏洞登记的原子写入实现（agent.FindingRecorder）。Agent 侧的 report_finding
+// 拿不到 recorder 时会退回「只写 findings 行」的兜底路径，那时任何带 traffic_refs 的上报
+// 都会以「流量证据存储不可用；未登记漏洞」失败——所以引擎侧起工具面时必须把它注进去
+// （见 engine_coord_wire.go 的 coordToolset）。Server 侧与引擎侧都从这个入口取，别各造一份。
+//
+// Manager 缺失（测试里直接构造 Engine）时返回 nil，调用方据此跳过注入；注意不要把它当作
+// 接口值直接注入——typed nil 进 interface 之后不等于 nil。
+func evidenceStoreFor(m *Manager) *evidence.Store {
+	if m == nil || m.pg == nil {
+		return nil
+	}
+	return evidence.New(m.pg, m.traffic, filepath.Join(m.dir, "evidence"))
 }
 
 // Add only new optional properties; preserve edited descriptions, existing
