@@ -80,7 +80,8 @@ func (o RetryOverride) Clamped() RetryOverride {
 // per-request layers (a profile may override them, see LLMProfile.Retry);
 // Breaker and Intent are process-wide by nature and live only here.
 type LLMRetryPolicy struct {
-	// Connect：SDK 建连重试(连接重置/超时/429/5xx，流开始前)。默认 3 次、指数退避。
+	// Connect：SDK 建连重试(连接重置/超时/429/5xx，流开始前)。默认 5 次(对齐 Strix 的
+	// DEFAULT_MODEL_RETRY，见 agent.defaultConnectAttempts)、指数退避。
 	Connect RetryRule `json:"connect"`
 	// Empty：SDK 空响应重试(完成但无 content block，仅 openai 格式)。默认 2 次、指数退避。
 	Empty RetryRule `json:"empty"`

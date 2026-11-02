@@ -87,7 +87,8 @@ type Config struct {
 // 0 = 用该层原本的指数退避;>0 = 改用这个固定间隔。
 type RetryConfig struct {
 	// ConnectAttempts/ConnectInterval:SDK 建连重试(连接重置/超时/429/5xx,流开始前),
-	// 直接映射为 llm.Config.MaxRetries / RetryInterval。默认 3 次、0.5s 起指数(封顶 8s)。
+	// 直接映射为 llm.Config.MaxRetries / RetryInterval。未配置时 5 次（见
+	// defaultConnectAttempts）、0.5s 起指数(封顶 8s)。
 	ConnectAttempts int
 	ConnectInterval time.Duration
 	// EmptyAttempts/EmptyInterval:SDK 空响应重试(完成但无 content block,仅 openai
@@ -101,6 +102,16 @@ type RetryConfig struct {
 	StreamAttempts int
 	StreamInterval time.Duration
 }
+
+// defaultConnectAttempts 是「全局策略与单个配置都没填过」时 SDK 建连重试的次数。
+//
+// 对齐 Strix 的 DEFAULT_MODEL_RETRY（max_retries=5）：两个系统在重试次数上的差别只该
+// 来自配置，不该来自内置默认。norma 自己的默认是 3，而「0 = 未配置、用内置默认」这个
+// 语义要留给配置层，所以这里必须显式传 5，不能靠传 0 让 SDK 兜底。
+//
+// 人工设置仍然优先：全局策略 llm_retry_policy 或单个配置的 retry_connect_attempts 填了值
+// 就按填的走，填 -1 仍是「关掉该层重试」（负值原样透传给 SDK）。
+const defaultConnectAttempts = 5
 
 // compaction window resolution bounds (in K tokens). Below the floor the
 // threshold math (window − summary reserve − buffer) would go non-positive and
@@ -460,8 +471,13 @@ func (c Config) NewProvider() (llm.Provider, error) {
 	// 输出上限的字段名选择(空 = 用 max_tokens)。上限的「值」不在这里:它每轮随
 	// agentcore.Options.MaxTokens 走,provider 只决定把它塞进哪个键。
 	lc.MaxTokensField = c.MaxTokensField
-	// 重试参数与 SDK 同语义(次数 0=默认/负=关闭,间隔 0=指数退避/>0=固定),原样透传。
-	lc.MaxRetries = c.Retry.ConnectAttempts
+	// 重试参数与 SDK 同语义(次数 0=默认/负=关闭,间隔 0=指数退避/>0=固定)。
+	// 唯一的例外是建连次数：未配置(0)时传本项目的默认值，而不是让 SDK 用它的 3
+	// （对齐 Strix 的 DEFAULT_MODEL_RETRY，见 defaultConnectAttempts）。
+	lc.MaxRetries = defaultConnectAttempts
+	if c.Retry.ConnectAttempts != 0 {
+		lc.MaxRetries = c.Retry.ConnectAttempts
+	}
 	lc.RetryInterval = c.Retry.ConnectInterval
 	lc.EmptyResponseRetries = c.Retry.EmptyAttempts
 	lc.EmptyResponseInterval = c.Retry.EmptyInterval
