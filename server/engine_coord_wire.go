@@ -299,6 +299,12 @@ func (e *Engine) coordToolset(t *Task) *agent.ToolSet {
 	// 漏洞登记的原子写入实现。不注入它，report_finding 会退回「只写 findings 行」的
 	// 兜底路径：带 traffic_refs 的上报直接失败（「流量证据存储不可用；未登记漏洞」），
 	// 也就是引擎起了工具面却登记不了带流量的漏洞。
+	//
+	// 连带效果（都是该有的，之前因为缺注入而没发生）：evidence.Store.Record 会在事务
+	// 提交后调 db.EmitFindingInserted，而「漏洞落库」通知与自动复核派发（见
+	// server/ui_notify.go 与 server/finding_verify.go）都挂在这个钩子上；兜底路径走的是
+	// db.RecordFindingTx，它不触发该钩子。所以这条注入同时修好了「Agent 上报的漏洞不
+	// 进入自动复核队列」。钩子只在 Record 里触发一次，不会重复。
 	if store := evidenceStoreFor(e.m); store != nil {
 		ts.SetFindingRecorder(store)
 	}
