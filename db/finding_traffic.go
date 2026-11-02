@@ -414,6 +414,11 @@ type RecordFindingInput struct {
 	Confidence               string
 	ConfidenceRationale      string
 	SeverityChangeConditions string
+	// CVSS v3.1(移植自 Strix reporting 工具)。由 agent 侧算好后落库:分、向量与
+	// 八项基础指标都留着,复核与报告阶段才能复算「这条为什么是这个分」。
+	CVSS          string
+	CVSSBreakdown string
+	CVSSVector    string
 }
 
 type RecordedFinding struct {
@@ -447,7 +452,8 @@ func RecordFindingTx(ctx context.Context, tx *sql.Tx, in RecordFindingInput, pre
 		}
 	}
 	payload, _ := json.Marshal(map[string]any{"vulnclass": in.VulnClass, "name": in.Name, "severity": in.Severity, "summary": in.Summary, "evidence": map[string]any{"by": in.Worker, "poc": in.Evidence},
-		"counterevidence": in.Counterevidence, "confidence": in.Confidence, "confidence_rationale": in.ConfidenceRationale, "severity_change_conditions": in.SeverityChangeConditions})
+		"counterevidence": in.Counterevidence, "confidence": in.Confidence, "confidence_rationale": in.ConfidenceRationale, "severity_change_conditions": in.SeverityChangeConditions,
+		"cvss": in.CVSS, "cvss_breakdown": in.CVSSBreakdown, "cvss_vector": in.CVSSVector})
 	out := &RecordedFinding{}
 	if err := tx.QueryRow(`INSERT INTO exploration_nodes(exploration_id,kind,payload,priority,state,origin)
 VALUES($1,'finding',$2,9,'confirmed',$3) RETURNING id`, in.ExplorationID, string(payload), in.Worker).Scan(&out.NodeID); err != nil {
@@ -469,10 +475,11 @@ VALUES($1,'finding',$2,9,'confirmed',$3) RETURNING id`, in.ExplorationID, string
 	}
 	raw, _ := json.Marshal(assets)
 	if err := tx.QueryRow(`INSERT INTO findings(task_id,node_id,vulnclass,name,severity,summary,evidence,worker,asset_ids,
-counterevidence,confidence,confidence_rationale,severity_change_conditions)
-VALUES(NULLIF($1,0),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+counterevidence,confidence,confidence_rationale,severity_change_conditions,cvss,cvss_breakdown,cvss_vector)
+VALUES(NULLIF($1,0),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
 		in.TaskID, out.NodeID, in.VulnClass, in.Name, in.Severity, in.Summary, in.Evidence, in.Worker, string(raw),
-		in.Counterevidence, in.Confidence, in.ConfidenceRationale, in.SeverityChangeConditions).Scan(&out.FindingID); err != nil {
+		in.Counterevidence, in.Confidence, in.ConfidenceRationale, in.SeverityChangeConditions,
+		in.CVSS, in.CVSSBreakdown, in.CVSSVector).Scan(&out.FindingID); err != nil {
 		return nil, err
 	}
 	// 在**同一事务**里登记一条推送事件：提交即保证「漏洞落库」与「推送任务存在」

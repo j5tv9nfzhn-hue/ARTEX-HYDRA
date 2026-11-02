@@ -282,6 +282,16 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	// 用 "reviewer" 角色解析任务链。Reviewer 已删除，这个钩子没有消费者。
 	// reviewerComplete 方法本身随 server/reviewer.go 一起下线。
 	s.installSkillCuratorHooks()
+	// 判重（移植自 Strix）：落库前问模型「这条是不是已经报过了」。模型解析函数挂在
+	// Manager 上——引擎侧只有 Manager，没有 Server 的 provider 池。
+	m.SetDedupeProvider(func(profileID int64) (llm.Provider, bool) {
+		if profileID > 0 {
+			prov, _, ok := s.providerForProfile(profileID)
+			return prov, ok
+		}
+		prov, _, ok := s.globalProvider()
+		return prov, ok
+	})
 	// 应用内通知：把「漏洞落库」这条（唯一发生在 db 包的）业务时刻接上内存事件流。
 	// 其余三个收敛点（任务终态 / 子代理结算 / AI 回复结束）都在 server 包内直接发。
 	s.installUINotifyHooks()
@@ -3737,6 +3747,11 @@ func (s *Server) settingsPayload() map[string]any {
 	verifyThreshold, verifySamplePercent := verifyAutoSettings(s.m.pg)
 	payload["verify_auto_threshold"] = verifyThreshold
 	payload["verify_sample_percent"] = verifySamplePercent
+	// 判重（移植自 Strix，见 server/dedupe.go）：回显「当前真正生效」的值（含默认值），
+	// 否则开关会显示关、实际却在按默认值判重。读取口径与判重本身同一处。
+	payload["dedupe_enabled"] = dedupeEnabled(s.m.pg)
+	payload["dedupe_profile_id"] = dedupeProfileID(s.m.pg)
+	payload["dedupe_timeout_seconds"] = dedupeTimeoutSecs(s.m.pg)
 	return payload
 }
 
@@ -3832,6 +3847,11 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		// 两项都在发现入库时读取，改完即对之后入库的发现生效，不需要重建 agent。
 		VerifyAutoThreshold *string `json:"verify_auto_threshold"`
 		VerifySamplePercent *int    `json:"verify_sample_percent"`
+		// 判重（移植自 Strix，见 server/dedupe.go）：开关、专用模型配置 id
+		//（0 = 用当前启用的配置）、单次判重超时秒数。与复核闸门一样在入库时读取。
+		DedupeEnabled    *bool   `json:"dedupe_enabled"`
+		DedupeProfileID  *int64  `json:"dedupe_profile_id"`
+		DedupeTimeoutSec *int    `json:"dedupe_timeout_seconds"`
 		// 工具执行器：PowerShell / CMD / Git Bash（无 auto）。shell_bin 是显式路径覆盖。
 		// 两者都先真跑探测，跑不起来直接 400 且不写库（见 server/shell_settings.go）。
 		ShellMode *string `json:"shell_mode"`
@@ -4026,6 +4046,40 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := s.m.pg.SetSetting(settingVerifySamplePercent, strconv.Itoa(percent)); err != nil {
+			writeErr(w, 500, err.Error())
+			return
+		}
+	}
+	// 判重（移植自 Strix，见 server/dedupe.go）：开关、专用模型配置 id、单次超时。
+	// 三项都在发现入库时读取，改完即对之后入库的发现生效，不需要重建 agent。
+	if req.DedupeEnabled != nil {
+		value := "on"
+		if !*req.DedupeEnabled {
+			value = "off"
+		}
+		if err := s.m.pg.SetSetting(settingDedupeEnabled, value); err != nil {
+			writeErr(w, 500, err.Error())
+			return
+		}
+	}
+	if req.DedupeProfileID != nil {
+		id := *req.DedupeProfileID
+		if id < 0 {
+			writeErr(w, 400, "判重专用模型配置 id 不能为负（0 = 用当前启用的配置）")
+			return
+		}
+		if err := s.m.pg.SetSetting(settingDedupeProfileID, strconv.FormatInt(id, 10)); err != nil {
+			writeErr(w, 500, err.Error())
+			return
+		}
+	}
+	if req.DedupeTimeoutSec != nil {
+		secs := *req.DedupeTimeoutSec
+		if secs < 1 || secs > 3600 {
+			writeErr(w, 400, "判重超时必须在 1–3600 秒之间")
+			return
+		}
+		if err := s.m.pg.SetSetting(settingDedupeTimeout, strconv.Itoa(secs)); err != nil {
 			writeErr(w, 500, err.Error())
 			return
 		}

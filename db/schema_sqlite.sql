@@ -1227,7 +1227,14 @@ CREATE TABLE IF NOT EXISTS findings (
     counterevidence             TEXT NOT NULL DEFAULT '',
     confidence                  TEXT NOT NULL DEFAULT '',
     confidence_rationale        TEXT NOT NULL DEFAULT '',
-    severity_change_conditions  TEXT NOT NULL DEFAULT ''
+    severity_change_conditions  TEXT NOT NULL DEFAULT '',
+    -- CVSS v3.1（移植自 Strix reporting 工具的 cvss_breakdown / _calculate_cvss）。
+    -- cvss 是基础分字符串（"9.8"），cvss_breakdown 是八项基础指标的规范化 JSON，
+    -- cvss_vector 是 CVSS:3.1 向量串。三列一律用空串而不是默认值填充：
+    -- 空串 = 上报时没有评分，与「评过分且是 0.0 分」（写 "0.0"）必须区分开。
+    cvss                        TEXT NOT NULL DEFAULT '',
+    cvss_breakdown              TEXT NOT NULL DEFAULT '',
+    cvss_vector                 TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_findings_task ON findings(task_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_findings_time ON findings(created_at DESC);

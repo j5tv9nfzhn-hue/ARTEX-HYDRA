@@ -360,6 +360,11 @@ type FindingDTO struct {
 	Inherited       bool              `json:"inherited,omitempty"`
 	Assets          []FindingAssetDTO `json:"assets,omitempty"`
 	TS              string            `json:"ts"`
+	// CVSS v3.1（移植自 Strix reporting 工具）。一律 omitempty：历史漏洞这三列是
+	// 空串，不带出来可以让列表 payload 保持原大小。
+	CVSS          string `json:"cvss,omitempty"`
+	CVSSBreakdown string `json:"cvss_breakdown,omitempty"`
+	CVSSVector    string `json:"cvss_vector,omitempty"`
 }
 
 // FindingAssetDTO is one asset a finding is anchored to, pre-labelled for display.
@@ -414,6 +419,10 @@ type findingPayload struct {
 	Confidence               string `json:"confidence"`
 	ConfidenceRationale      string `json:"confidence_rationale"`
 	SeverityChangeConditions string `json:"severity_change_conditions"`
+	// CVSS v3.1:同反证闭环,节点 payload 里也带着,任务内「发现」Tab 要同步解析。
+	CVSS          string `json:"cvss"`
+	CVSSBreakdown string `json:"cvss_breakdown"`
+	CVSSVector    string `json:"cvss_vector"`
 }
 
 func findingDTO(n *db.Node) FindingDTO {
@@ -435,6 +444,9 @@ func findingDTO(n *db.Node) FindingDTO {
 		Confidence:               p.Confidence,
 		ConfidenceRationale:      p.ConfidenceRationale,
 		SeverityChangeConditions: p.SeverityChangeConditions,
+		CVSS:                     p.CVSS,
+		CVSSBreakdown:            p.CVSSBreakdown,
+		CVSSVector:               p.CVSSVector,
 	}
 	if n.SourceTaskID > 0 {
 		d.SourceTaskID = i64s(n.SourceTaskID)
@@ -519,6 +531,9 @@ func findingFromDB(f *db.DBFinding, assets map[int64]*db.Asset) FindingDTO {
 		Confidence:               f.Confidence,
 		ConfidenceRationale:      f.ConfidenceRationale,
 		SeverityChangeConditions: f.SeverityChangeConditions,
+		CVSS:                     f.CVSS,
+		CVSSBreakdown:            f.CVSSBreakdown,
+		CVSSVector:               f.CVSSVector,
 	}
 	d.Assets = findingAssetDTOs(f.AssetIDs, assets)
 	if f.TaskID != nil {

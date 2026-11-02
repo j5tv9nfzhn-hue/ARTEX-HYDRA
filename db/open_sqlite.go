@@ -181,6 +181,23 @@ var sqliteColumnAdds = []struct {
 		`ALTER TABLE findings ADD COLUMN severity_change_conditions TEXT NOT NULL DEFAULT ''`,
 	},
 	{
+		// CVSS v3.1 三列(移植自 Strix reporting 工具)。历史漏洞一律回填空串:
+		// 它们上报时没走过 CVSS 校准,空串表示「没评过分」,不能写成 0.0 假装评过。
+		"findings",
+		"cvss",
+		`ALTER TABLE findings ADD COLUMN cvss TEXT NOT NULL DEFAULT ''`,
+	},
+	{
+		"findings",
+		"cvss_breakdown",
+		`ALTER TABLE findings ADD COLUMN cvss_breakdown TEXT NOT NULL DEFAULT ''`,
+	},
+	{
+		"findings",
+		"cvss_vector",
+		`ALTER TABLE findings ADD COLUMN cvss_vector TEXT NOT NULL DEFAULT ''`,
+	},
+	{
 		// 工具错误标记(见 server/tool_usage.go)。历史行没有错误信息可回溯,统一回填
 		// 0=未报错——宁可低估,也不要把「不知道」记成错误。
 		"tool_usage",

@@ -175,6 +175,8 @@ func TestReportFindingPersistsAnalysis(t *testing.T) {
 		wantConf = "medium"
 		wantRat  = "仅静态链路，未能在目标上完整复现"
 		wantSCC  = "若能在真实目标上 dump 出库名则升为 critical"
+		wantCVSS = "8.8"
+		wantVec  = "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
 	)
 	res, err := ts.addFinding().Call(t.Context(), json.RawMessage(`{
 		"vulnclass":"SQLI","severity":"high","summary":"persisted analysis fixture",
@@ -182,7 +184,8 @@ func TestReportFindingPersistsAnalysis(t *testing.T) {
 		"counterevidence":"`+wantCE+`",
 		"confidence":"`+wantConf+`",
 		"confidence_rationale":"`+wantRat+`",
-		"severity_change_conditions":"`+wantSCC+`"
+		"severity_change_conditions":"`+wantSCC+`",
+		"cvss_breakdown":{"attack_vector":"N","attack_complexity":"L","privileges_required":"L","user_interaction":"N","scope":"U","confidentiality":"H","integrity":"H","availability":"H"}
 	}`), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -212,6 +215,16 @@ func TestReportFindingPersistsAnalysis(t *testing.T) {
 	if f.SeverityChangeConditions != wantSCC {
 		t.Errorf("severity_change_conditions 未落库：%q", f.SeverityChangeConditions)
 	}
+	// CVSS 三列同样要落库、能读回：算出来却存不下，等于这道校准白做。
+	if f.CVSS != wantCVSS {
+		t.Errorf("cvss 未落库：%q", f.CVSS)
+	}
+	if f.CVSSVector != wantVec {
+		t.Errorf("cvss_vector 未落库：%q", f.CVSSVector)
+	}
+	if !strings.Contains(f.CVSSBreakdown, `"attack_vector":"N"`) {
+		t.Errorf("cvss_breakdown 未落库：%q", f.CVSSBreakdown)
+	}
 	// 列表查询走的是同一套 findingSelectCols，也必须带上，否则详情页有、列表页没有。
 	page, _, err := d.ListFindingsPage(db.FindingFilter{TaskID: strconv.FormatInt(task.ID, 10)}, 1, 10)
 	if err != nil {
@@ -223,6 +236,10 @@ func TestReportFindingPersistsAnalysis(t *testing.T) {
 			found = true
 			if it.Confidence != wantConf || it.Counterevidence != wantCE {
 				t.Errorf("列表查询丢掉了反证字段：confidence=%q counterevidence=%q", it.Confidence, it.Counterevidence)
+			}
+			// CVSS 三列走的是同一套 findingSelectCols：漏了就会出现「详情页有分、列表页没有」。
+			if it.CVSS != wantCVSS || it.CVSSVector != wantVec {
+				t.Errorf("列表查询丢掉了 CVSS：cvss=%q vector=%q", it.CVSS, it.CVSSVector)
 			}
 		}
 	}

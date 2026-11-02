@@ -42,6 +42,11 @@ type DBFinding struct {
 	Confidence               string
 	ConfidenceRationale      string
 	SeverityChangeConditions string
+	// CVSS v3.1(移植自 Strix reporting 工具的 cvss_breakdown / _calculate_cvss)。
+	// 空串 = 上报时没有评分;与「评过分且是 0.0 分」(CVSS 为 "0.0")在数据上分得开。
+	CVSS          string
+	CVSSBreakdown string
+	CVSSVector    string
 	Report                   string // 详细报告(Markdown);仅 GetFinding 填充,列表查询不带
 	CreatedAt                time.Time
 	TaskDescription          string // populated via LEFT JOIN on tasks
@@ -177,7 +182,8 @@ const findingSelectCols = `f.id, f.task_id, f.node_id, f.vulnclass, COALESCE(f.n
  (SELECT count(*) FROM finding_traffic_bindings b WHERE b.finding_id=f.id),
 	       COALESCE(f.validation, 'unverified'),
 	       COALESCE(f.counterevidence, ''), COALESCE(f.confidence, ''),
-	       COALESCE(f.confidence_rationale, ''), COALESCE(f.severity_change_conditions, '')`
+	       COALESCE(f.confidence_rationale, ''), COALESCE(f.severity_change_conditions, ''),
+	       COALESCE(f.cvss, ''), COALESCE(f.cvss_breakdown, ''), COALESCE(f.cvss_vector, '')`
 
 // scanFindings materializes rows selected via findingSelectCols.
 func scanFindings(rows interface {
@@ -190,7 +196,8 @@ func scanFindings(rows interface {
 		f := &DBFinding{}
 		var aidsJSON string
 		if err := rows.Scan(&f.ID, &f.TaskID, &f.NodeID, &f.VulnClass, &f.Name, &f.Severity,
-			&f.Summary, &f.Evidence, &f.Worker, &aidsJSON, &f.Status, &f.CreatedAt, &f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation, &f.Counterevidence, &f.Confidence, &f.ConfidenceRationale, &f.SeverityChangeConditions); err != nil {
+			&f.Summary, &f.Evidence, &f.Worker, &aidsJSON, &f.Status, &f.CreatedAt, &f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation, &f.Counterevidence, &f.Confidence, &f.ConfidenceRationale, &f.SeverityChangeConditions,
+			&f.CVSS, &f.CVSSBreakdown, &f.CVSSVector); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(aidsJSON), &f.AssetIDs)
@@ -589,7 +596,8 @@ func (d *DB) ListFindingsForExport(f FindingFilter, ids []int64) ([]*DBFinding, 
 		var aidsJSON string
 		if err := rows.Scan(&f.ID, &f.TaskID, &f.NodeID, &f.VulnClass, &f.Name, &f.Severity,
 			&f.Summary, &f.Evidence, &f.Worker, &aidsJSON, &f.Status, &f.CreatedAt,
-			&f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation, &f.Counterevidence, &f.Confidence, &f.ConfidenceRationale, &f.SeverityChangeConditions, &f.Report); err != nil {
+			&f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation, &f.Counterevidence, &f.Confidence, &f.ConfidenceRationale, &f.SeverityChangeConditions,
+			&f.CVSS, &f.CVSSBreakdown, &f.CVSSVector, &f.Report); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(aidsJSON), &f.AssetIDs)
@@ -724,7 +732,8 @@ func (d *DB) GetFinding(id int64) (*DBFinding, error) {
 		WHERE f.id = $1`, id).Scan(
 		&f.ID, &f.TaskID, &f.NodeID, &f.VulnClass, &f.Name, &f.Severity,
 		&f.Summary, &f.Evidence, &f.Worker, &aidsJSON, &f.Status, &f.CreatedAt,
-		&f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation, &f.Counterevidence, &f.Confidence, &f.ConfidenceRationale, &f.SeverityChangeConditions, &f.Report)
+		&f.TaskDescription, &f.EvidenceVersion, &f.ReportEvidenceVersion, &f.TrafficCount, &f.Validation, &f.Counterevidence, &f.Confidence, &f.ConfidenceRationale, &f.SeverityChangeConditions,
+		&f.CVSS, &f.CVSSBreakdown, &f.CVSSVector, &f.Report)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

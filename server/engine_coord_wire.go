@@ -290,7 +290,13 @@ func (e *Engine) coordToolset(t *Task) *agent.ToolSet {
 	}
 	// role 传 "worker"：协调器工具由 runner 追加，这里只决定**领域工具面**，
 	// 而领域工具面的可见性在旧代码里是按 role 查表的；用 worker 与原执行者一致。
-	return agent.NewToolSet(t.Store, "worker")
+	ts := agent.NewToolSet(t.Store, "worker")
+	// 判重（移植自 Strix）：落库前问一次「这条是不是已经报过了」。裁判要一次模型
+	// 调用，模型解析挂在 Manager 上（引擎侧拿不到 Server 的 provider 池）。
+	if e.m != nil && e.m.pg != nil {
+		ts.SetFindingDedupe(&dedupeService{pg: e.m.pg, provider: e.m.dedupeProvider})
+	}
+	return ts
 }
 
 // coordToolOutputDir 是工具输出溢出落盘目录。放在任务数据目录下，

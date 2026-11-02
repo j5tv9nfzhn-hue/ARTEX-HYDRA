@@ -159,6 +159,11 @@ func (s *Server) delegateToTask(ctx context.Context, in json.RawMessage, pick fu
 	tsx.SetNotifyHint(t.NotifyHint)                                  // add_hint → 记一条「人新增了 N 条战略提示：…」触发并唤醒 planner
 	tsx.SetKillWork(s.engine.KillWork)                               // kill_task_worker → 终止指定 work
 	tsx.SetDirectionGate(nil, func() { s.engine.AckDispatch(t.ID) }) // 直投成功解冻派发闸
+	// 判重（移植自 Strix）：这条路径也能直接调 report_finding 落库，所以要和协调器
+	// 工具面注入同一个判重实现，否则「同一个漏洞报两遍」只在新链路上被挡住。
+	if s.m != nil && s.m.pg != nil {
+		tsx.SetFindingDedupe(&dedupeService{pg: s.m.pg, provider: s.m.dedupeProvider})
+	}
 	return pick(tsx).Call(ctx, inner, nil)
 }
 

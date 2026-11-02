@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/Autumn-27/artex/cvss"
 	"github.com/Autumn-27/artex/db"
+	"github.com/Autumn-27/artex/dedupe"
 	acperm "github.com/Autumn-27/norma/permission"
 	actool "github.com/Autumn-27/norma/tool"
 )
@@ -54,6 +57,8 @@ func compactIntents(ns []*db.Node, parentsOf, yieldsOf map[int64][]int64) []map[
 type ToolSet struct {
 	verificationState verificationState // bounded verification state shared by this ToolSet
 	findingRecorder   FindingRecorder
+	// findingDedupe 由宿主注入：判断候选发现是不是已有发现的重复（nil = 不判重）。
+	findingDedupe FindingDedupe
 	as                *db.AssetStore   // asset store (optional; nil = asset tools not available)
 	cs                *db.CompanyStore // company store (optional)
 	ts                *db.ExplorationStore
@@ -1492,9 +1497,22 @@ func validateFindingAnalysis(f findingAnalysisFields) []string {
 
 func (t *ToolSet) addFinding() actool.CoreTool {
 	return writeTool("report_finding", "记录确认的漏洞，用 evidence 提供命令输出、日志等可验证证据。任务上下文传当前 intent_id。返回的 finding_id 是独立漏洞记录 ID，finding_node_id 是探索节点 ID（第一行保留该节点编号）。", obj(map[string]any{
-		"vulnclass": str("漏洞类别"), "name": str("漏洞名称"), "severity": str("critical|high|medium|low"), "summary": str("发现摘要"),
+		"vulnclass": str("漏洞类别"), "name": str("漏洞名称"), "severity": str("critical|high|medium|low；由 cvss_breakdown 算出的档位决定，必须与之一致"), "summary": str("发现摘要"),
 		"intent_id": idp("当前任务的意图 id"), "asset_ids": map[string]any{"type": "array", "items": map[string]any{"type": "integer"}, "description": "受影响资产 id"},
 		"evidence": str("证据/PoC 文本"),
+		// CVSS v3.1 校准（移植自 Strix reporting 工具的 cvss_breakdown）：八项基础指标齐全
+		// 合法后由系统算分并定级，严重度以向量为准。校准的是你**证明了**的那个弱点，
+		// 不是你推测的上限：没有实证影响的指标一律给 N（无）。
+		"cvss_breakdown": obj(map[string]any{
+			"attack_vector":       cvssMetricSchema("攻击向量：N 网络 / A 相邻网 / L 本地 / P 物理", "N", "A", "L", "P"),
+			"attack_complexity":   cvssMetricSchema("攻击复杂度：L 低 / H 高", "L", "H"),
+			"privileges_required": cvssMetricSchema("所需权限：N 无 / L 低 / H 高", "N", "L", "H"),
+			"user_interaction":    cvssMetricSchema("用户参与：N 无需交互 / R 需用户交互", "N", "R"),
+			"scope":               cvssMetricSchema("影响范围：U 不变 / C 改变", "U", "C"),
+			"confidentiality":     cvssMetricSchema("机密性影响：N 无 / L 低 / H 高", "N", "L", "H"),
+			"integrity":           cvssMetricSchema("完整性影响：N 无 / L 低 / H 高", "N", "L", "H"),
+			"availability":        cvssMetricSchema("可用性影响：N 无 / L 低 / H 高", "N", "L", "H"),
+		}, "attack_vector", "attack_complexity", "privileges_required", "user_interaction", "scope", "confidentiality", "integrity", "availability"),
 		// ↓↓↓ 反证闭环（移植自 Strix reporting 工具的必填四项）。上报前必须主动构造
 		// 「这条不是漏洞 / 没那么严重」的最强论证，否则模型只会沿着「我发现了什么」
 		// 的方向写支持性证据——那不是它不诚实，而是生成方向本就如此。
@@ -1510,7 +1528,7 @@ func (t *ToolSet) addFinding() actool.CoreTool {
 			"items": obj(map[string]any{"traffic_id": str("traffic_search 返回的真实流量 ID"), "role": map[string]any{"type": "string", "enum": []string{"baseline", "proof", "verification", "supporting"}}, "note": str("该流量如何支持漏洞结论")}, "traffic_id")},
 		// confidence_rationale 不在 required 里：它是「条件必填」（confidence 非 high
 		// 时才要），由 validateFindingAnalysis 在代码里判，schema 层表达不了。
-	}, "vulnclass", "severity", "summary", "counterevidence", "confidence", "severity_change_conditions"), func(ctx context.Context, in json.RawMessage) (actool.Result, error) {
+	}, "vulnclass", "severity", "summary", "counterevidence", "confidence", "severity_change_conditions", "cvss_breakdown"), func(ctx context.Context, in json.RawMessage) (actool.Result, error) {
 		var a struct {
 			VulnClass, Name, Severity, Summary, Evidence string
 			Counterevidence                              string            `json:"counterevidence"`
@@ -1521,6 +1539,7 @@ func (t *ToolSet) addFinding() actool.CoreTool {
 			AssetIDs                                     []json.RawMessage `json:"asset_ids"`
 			TrafficRefs                                  []db.TrafficRef   `json:"traffic_refs"`
 			EvidenceHintID                               json.RawMessage   `json:"evidence_hint_id"`
+			CVSSBreakdown                                map[string]any    `json:"cvss_breakdown"`
 		}
 		if err := json.Unmarshal(in, &a); err != nil {
 			return actool.Errorf(err.Error()), nil
@@ -1535,6 +1554,29 @@ func (t *ToolSet) addFinding() actool.CoreTool {
 			SeverityChangeConditions: a.SeverityChangeConditions,
 		}); len(errs) > 0 {
 			return actool.Errorf("漏洞未登记，反证闭环校验未通过：\n- " + strings.Join(errs, "\n- ")), nil
+		}
+		// CVSS 校准闸门（移植自 Strix reporting 工具）：八项基础指标必须齐全合法，系统据此
+		// 算分并定级。severity 以向量为准——两者不一致说明模型自己也没算清这条有多严重，
+		// 让它改到一致为止，别让库里留下「严重度与分数打架」的行。
+		cvssErrs := cvss.Validate(a.CVSSBreakdown)
+		if len(cvssErrs) > 0 {
+			return actool.Errorf("漏洞未登记，CVSS 校验未通过：\n- "+strings.Join(cvssErrs, "\n- ")+
+				"\n- cvss_breakdown 必须给出全部八项 CVSS v3.1 基础指标：attack_vector / attack_complexity /"+
+				" privileges_required / user_interaction / scope / confidentiality / integrity / availability。"), nil
+		}
+		cvssBreakdown := cvss.Parse(a.CVSSBreakdown)
+		cvssScore, _, cvssVector, cvssErr := cvss.Calculate(cvssBreakdown)
+		if cvssErr != nil {
+			return actool.Errorf("漏洞未登记，CVSS 计算失败："+cvssErr.Error()), nil
+		}
+		cvssScoreText := strconv.FormatFloat(cvssScore, 'f', 1, 64)
+		cvssBreakdownJSON := cvssBreakdown.CanonicalJSON()
+		cvssBand := cvss.Band(cvssScore)
+		if !strings.EqualFold(strings.TrimSpace(a.Severity), cvssBand) {
+			return actool.Errorf(fmt.Sprintf(
+				"漏洞未登记：severity=%q 与 cvss_breakdown 算出的 %.1f 分（%s 档）不一致。"+
+					"严重度由 CVSS 向量决定：要么把 severity 改成 %s，要么调整向量让分数落进该档。",
+				a.Severity, cvssScore, cvssBand, cvssBand)), nil
 		}
 		if t.ts == nil {
 			return actool.Errorf("report_finding 需要任务上下文；平台对话请通过 add_task_hint 向对应任务交接漏洞，并在提示中携带已有的 traffic_refs，由任务 Agent 登记。已登记漏洞可用 bind_finding_traffic 补绑。"), nil
@@ -1554,8 +1596,28 @@ func (t *ToolSet) addFinding() actool.CoreTool {
 		if err != nil {
 			return actool.Errorf(err.Error()), nil
 		}
+		// 判重（移植自 Strix reporting 工具）：落库前问一次「这条是不是已经报过了」。
+		// 判为重复就不落库，并把重复对象与理由回给模型——模型据此把证据并进已有那条，
+		// 而不是把同一件事再报一遍。判重失败一律放行（fail-open）。
+		if t.findingDedupe != nil {
+			result, derr := t.findingDedupe.Check(ctx, t.taskID, dedupe.Candidate{
+				Title:             a.Name,
+				Description:       a.Summary,
+				Impact:            findingImpactText(a.Severity, cvssScoreText),
+				Target:            assetIDText(a.AssetIDs),
+				TechnicalAnalysis: a.Counterevidence,
+				PoC:               a.Evidence,
+			})
+			switch {
+			case derr != nil:
+				log.Printf("[dedupe] 判重失败，按未重复处理: %v", derr)
+			case result.IsDuplicate:
+				return actool.Errorf(dedupeDuplicateMessage(result)), nil
+			}
+		}
 		input := db.RecordFindingInput{TaskID: t.taskID, ExplorationID: t.ts.ID(), IntentID: pid(a.IntentID), VulnClass: a.VulnClass, Name: a.Name, Severity: a.Severity, Summary: a.Summary, Evidence: a.Evidence, Worker: t.worker, AssetIDs: pidList(a.AssetIDs),
-			Counterevidence: a.Counterevidence, Confidence: a.Confidence, ConfidenceRationale: a.ConfidenceRationale, SeverityChangeConditions: a.SeverityChangeConditions}
+			Counterevidence: a.Counterevidence, Confidence: a.Confidence, ConfidenceRationale: a.ConfidenceRationale, SeverityChangeConditions: a.SeverityChangeConditions,
+			CVSS: cvssScoreText, CVSSBreakdown: cvssBreakdownJSON, CVSSVector: cvssVector}
 		var recorded *db.RecordedFinding
 		if t.findingRecorder != nil {
 			recorded, err = t.findingRecorder.Record(ctx, input, refs)

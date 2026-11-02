@@ -97,7 +97,20 @@ func TestFindingWorkflowAutoHintToPlannerAndSetting(t *testing.T) {
 		t.Fatal("Planner missed runtime guidance")
 	}
 	report := workflowTool(t, tools, "report_finding")
-	result := workflowCall(t, ctx, report, map[string]any{"vulnclass": "TEST", "severity": "low", "summary": "Planner handoff fixture", "evidence_hint_id": hints.IDs[0]}, false)
+	// report_finding 的必填面（反证闭环四字段 + CVSS 八项，见 agent/tools.go）：这条用例
+	// 测的是「hint → Planner → 入库并绑定流量」的交接链路，所以补一份合格样本。
+	// 逐字段赋值而不是写一个字面量：字面量的对齐由 gofmt 按最长键算，手写容易差一格。
+	payload := map[string]any{"vulnclass": "TEST", "severity": "low", "summary": "Planner handoff fixture", "evidence_hint_id": hints.IDs[0]}
+	payload["counterevidence"] = "该路径未见输入校验、WAF 或鉴权检查；已分别以已登录/未登录测过"
+	payload["confidence"] = "medium"
+	payload["confidence_rationale"] = "仅有静态链路，没能起服务复现"
+	payload["severity_change_conditions"] = "确认该路由暴露在未认证公网流量下则升为 critical"
+	// 3.0 分（AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:L/A:N）→ low 档，与上面的 severity 一致。
+	payload["cvss_breakdown"] = map[string]any{
+		"attack_vector": "L", "attack_complexity": "H", "privileges_required": "H", "user_interaction": "N",
+		"scope": "U", "confidentiality": "L", "integrity": "L", "availability": "N",
+	}
+	result := workflowCall(t, ctx, report, payload, false)
 	var recorded db.RecordedFinding
 	if err := json.Unmarshal([]byte(strings.SplitN(result, "\n", 2)[1]), &recorded); err != nil {
 		t.Fatal(err)

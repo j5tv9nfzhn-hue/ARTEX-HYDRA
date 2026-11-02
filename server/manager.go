@@ -19,6 +19,7 @@ import (
 	"github.com/Autumn-27/artex/guard"
 	"github.com/Autumn-27/artex/intercept"
 	"github.com/Autumn-27/artex/traffic"
+	"github.com/Autumn-27/norma/llm"
 	actool "github.com/Autumn-27/norma/tool"
 )
 
@@ -241,6 +242,10 @@ type Manager struct {
 	skillHookMu    sync.RWMutex
 	onTaskTerminal func(taskID, status string)
 	onTaskDeleted  func(taskID string, snapshot *db.Task)
+	// dedupeProvider 由 Server 注入：按配置 id 解析判重用的模型（0 = 当前启用的配置）。
+	// 引擎侧只有 Manager、拿不到 Server 的 provider 池，所以解析函数挂在 Manager 上——
+	// 与上面那几个 hook 同一套路。
+	dedupeProvider func(profileID int64) (llm.Provider, bool)
 	trafficOn      bool // 流量捕获开关（默认关；settings.traffic_capture）
 	llmRecOn       bool // LLM 录制开关（默认关；settings.llm_record）
 	// 联网搜索开关与来源（默认关；settings.web_search_*）。brave-free 需要 braveKey；tavily 需要 tavilyKey。
@@ -319,6 +324,9 @@ func (m *Manager) ConcurrencyLimit() (enabled bool, limit int) {
 	}
 	return true, limit
 }
+
+// SetDedupeProvider 注入判重模型的解析函数（见 Manager.dedupeProvider）。
+func (m *Manager) SetDedupeProvider(fn func(profileID int64) (llm.Provider, bool)) { m.dedupeProvider = fn }
 
 // SetConcurrency persists the running-task concurrency cap. limit<1 is clamped to 1.
 func (m *Manager) SetConcurrency(enabled bool, limit int) error {

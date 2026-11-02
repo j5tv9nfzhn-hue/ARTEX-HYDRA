@@ -26,6 +26,12 @@ func (failingFindingRecorder) Record(context.Context, db.RecordFindingInput, []d
 const analysisJSON = `,"counterevidence":"该路径未见输入校验、WAF 或鉴权检查；已分别以已登录/未登录测过"` +
 	`,"confidence":"medium","confidence_rationale":"仅有静态链路，没能起服务复现"` +
 	`,"severity_change_conditions":"确认该路由暴露在未认证公网流量下则升为 critical"`
+// cvssLowJSON 是「CVSS 校准」的合格样本：AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:L/A:N 算得 3.0 分，
+// 落在 low 档，与这些用例里的 severity=low 一致。
+//
+// 与 analysisJSON 同理：用例测的是流量绑定与落库原子性，不是 CVSS 闸门；带上合格样本让它们
+// 继续测自己该测的东西。CVSS 的校验与算分本身由 cvss 包的用例覆盖。
+const cvssLowJSON = `,"cvss_breakdown":{"attack_vector":"L","attack_complexity":"H","privileges_required":"H","user_interaction":"N","scope":"U","confidentiality":"L","integrity":"L","availability":"N"}`
 
 func TestReportFindingOptionalTrafficWithoutCapture(t *testing.T) {
 	d := testDB(t)
@@ -41,7 +47,7 @@ func TestReportFindingOptionalTrafficWithoutCapture(t *testing.T) {
 	notices := 0
 	ts.notifyFinding = func(int64, string) { notices++ }
 	for _, refs := range []string{"", `,"traffic_refs":[]`, `,"traffic_refs":null`} {
-		res, err := ts.addFinding().Call(t.Context(), json.RawMessage(`{"vulnclass":"TCP","severity":"low","summary":"verified TCP fixture","evidence":"command output proves the finding"`+analysisJSON+refs+`}`), nil)
+		res, err := ts.addFinding().Call(t.Context(), json.RawMessage(`{"vulnclass":"TCP","severity":"low","summary":"verified TCP fixture","evidence":"command output proves the finding"`+analysisJSON+cvssLowJSON+refs+`}`), nil)
 		if err != nil || !strings.HasPrefix(res.Flatten(), "finding recorded: ") {
 			t.Fatalf("optional traffic rejected: %v %s", err, res.Flatten())
 		}
@@ -85,14 +91,14 @@ func TestReportFindingAtomicContract(t *testing.T) {
 		return res.Flatten()
 	}
 	ts.SetFindingRecorder(failingFindingRecorder{})
-	if got := call(`{"vulnclass":"TEST","summary":"fail","severity":"low"` + analysisJSON + `,"traffic_refs":[{"traffic_id":"x"}]}`); !strings.Contains(got, "persistence failed") {
+	if got := call(`{"vulnclass":"TEST","summary":"fail","severity":"low"` + analysisJSON + cvssLowJSON + `,"traffic_refs":[{"traffic_id":"x"}]}`); !strings.Contains(got, "persistence failed") {
 		t.Fatal(got)
 	}
 	if notices != 0 || ts.writes.Findings != 0 {
 		t.Fatal("notified before commit")
 	}
 	ts.SetFindingRecorder(nil)
-	got := call(`{"vulnclass":"TEST","summary":"legacy report","severity":"low"` + analysisJSON + `}`)
+	got := call(`{"vulnclass":"TEST","summary":"legacy report","severity":"low"` + analysisJSON + cvssLowJSON + `}`)
 	lines := strings.SplitN(got, "\n", 2)
 	if len(lines) != 2 {
 		t.Fatal(got)
@@ -108,7 +114,7 @@ func TestReportFindingAtomicContract(t *testing.T) {
 	if err != nil || f == nil || f.NodeID == nil || *f.NodeID != out.NodeID {
 		t.Fatalf("wrong finding/node mapping: %+v %v", f, err)
 	}
-	if got = call(`{"vulnclass":"TEST","summary":"no storage","severity":"low"` + analysisJSON + `,"traffic_refs":[{"traffic_id":"x"}]}`); !strings.Contains(got, "未登记") {
+	if got = call(`{"vulnclass":"TEST","summary":"no storage","severity":"low"` + analysisJSON + cvssLowJSON + `,"traffic_refs":[{"traffic_id":"x"}]}`); !strings.Contains(got, "未登记") {
 		t.Fatal(got)
 	}
 	if notices != 1 {

@@ -31,6 +31,18 @@ func findingTitle(f *db.DBFinding) string {
 	return nz(f.Name, nz(f.VulnClass, "未分类"))
 }
 
+// findingCVSSLine 渲染一条发现的 CVSS：分数 + 向量串。空串 = 上报时没有评分。
+func findingCVSSLine(f *db.DBFinding) string {
+	score := strings.TrimSpace(f.CVSS)
+	if score == "" {
+		return ""
+	}
+	if vector := strings.TrimSpace(f.CVSSVector); vector != "" {
+		return score + "（" + vector + "）"
+	}
+	return score
+}
+
 // FindingsMarkdown 将多条 findings 合并为汇总报告：严重等级分组与总览，
 // 每条包含类型、状态、所属任务、证据和详细报告。
 func FindingsMarkdown(fs []*db.DBFinding, generatedAt time.Time) string {
@@ -68,6 +80,9 @@ func FindingsMarkdown(fs []*db.DBFinding, generatedAt time.Time) string {
 			fmt.Fprintf(&b, "- **类型**：%s\n", f.VulnClass)
 		}
 		fmt.Fprintf(&b, "- **状态**：%s\n", nz(f.Status, "pending"))
+		if line := findingCVSSLine(f); line != "" {
+			fmt.Fprintf(&b, "- **CVSS**：%s\n", line)
+		}
 		if desc := strings.TrimSpace(f.TaskDescription); desc != "" {
 			fmt.Fprintf(&b, "- **所属任务**：%s\n", desc)
 		}
@@ -98,6 +113,9 @@ func SingleFindingMarkdown(f *db.DBFinding, generatedAt time.Time) string {
 	}
 	fmt.Fprintf(&b, "- **严重等级**：%s\n", nz(f.Severity, "info"))
 	fmt.Fprintf(&b, "- **状态**：%s\n", nz(f.Status, "pending"))
+	if line := findingCVSSLine(f); line != "" {
+		fmt.Fprintf(&b, "- **CVSS**：%s\n", line)
+	}
 	if desc := strings.TrimSpace(f.TaskDescription); desc != "" {
 		fmt.Fprintf(&b, "- **所属任务**：%s\n", desc)
 	}
@@ -148,13 +166,14 @@ func FindingsCSV(fs []*db.DBFinding) []byte {
 	var buf bytes.Buffer
 	buf.WriteString("\xEF\xBB\xBF") // UTF-8 BOM
 	w := csv.NewWriter(&buf)
-	_ = w.Write([]string{"ID", "名称", "类型", "严重度", "状态", "所属任务", "发现时间", "总览", "流量证据数量", "流量证据 ID"})
+	_ = w.Write([]string{"ID", "名称", "类型", "严重度", "CVSS", "状态", "所属任务", "发现时间", "总览", "流量证据数量", "流量证据 ID"})
 	for _, f := range items {
 		_ = w.Write([]string{
 			fmt.Sprintf("%d", f.ID),
 			findingTitle(f),
 			f.VulnClass,
 			nz(f.Severity, "info"),
+			f.CVSS,
 			nz(f.Status, "pending"),
 			f.TaskDescription,
 			f.CreatedAt.Format("2006-01-02 15:04:05"),
