@@ -1,0 +1,49 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   新版骨架（v2）独立主题包
+   ────────────────────────────────────────────────────────────────────────────
+   与 styles/skin-editorial.css 的本质区别：
+
+     skin-editorial.css = **换肤**：作用在旧骨架的 shadcn 组件上（~130 个
+       data-slot），把「描边盒子」翻译成「发丝线」。骨架没变，只是皮换了。
+     ui-v2.css          = **自带主题**：新骨架（src/ui/shell/v2）本来就不需要
+       那层翻译，它直接用自己的令牌与版式，因此本文件只服务 data-ui="v2"，
+       对 v1（data-ui 缺省）零影响。
+
+   解耦机制在 preferences/theme-utils.ts 的 applyUIVersion()：切到 v2 时把
+   data-skin 钉回 classic，让 1434 行的换肤层整份失效，避免两套外观规则
+   在同一棵 DOM 上互相覆盖。
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:root[data-ui="v2"] {
+  /* 骨架层令牌：只定义 v2 自己需要的，不重复 presets/*.css 已有的主题色。 */
+  --v2-rail-width: 15rem;
+  --v2-rail-collapsed: 0px;
+  --v2-header-height: 3rem;
+  --v2-panel-width: 24rem;
+}
+
+/* 1. 侧栏 rail：单列、不分组、行高统一 —— 对齐 STRIX 的 h-9 nav row。 */
+:root[data-ui="v2"] aside nav button,
+:root[data-ui="v2"] aside nav a {
+  min-height: 2.25rem;
+  letter-spacing: 0;
+}
+
+:root[data-ui="v2"] aside nav a[aria-current="page"] {
+  font-weight: 500;
+}
+
+/* 2. 内容区：新骨架自己承担内边距，不再依赖 v1 的 data-editorial="body" 钩子。 */
+:root[data-ui="v2"] [data-ui-body="v2"] {
+  container-type: inline-size;
+}
+
+/* 3. 详情面板：STRIX 式下钻（面板而非路由）的容器。 */
+:root[data-ui="v2"] [data-ui-panel] {
+  scrollbar-width: thin;
+}
+
+/* 4. 动效收敛：v2 不用 v1 的 stagger 显影系统，避免两套动画叠加。 */
+:root[data-ui="v2"] [data-editorial] {
+  animation: none !important;
+}

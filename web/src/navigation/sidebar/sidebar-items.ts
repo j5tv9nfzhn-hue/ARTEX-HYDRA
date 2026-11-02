@@ -55,8 +55,14 @@ export interface NavMainLinkItem extends NavItemBase {
 }
 
 export interface NavMainParentItem extends NavItemBase {
+  /**
+   * v2 导航：父项自身可点击，指向该域的主页面。
+   * 对既有渲染方是纯可选字段 —— v1 数据不带它，行为完全不变。
+   */
+  url?: string;
   subItems: NavSubItem[];
 }
+
 
 export type NavMainItem = NavMainLinkItem | NavMainParentItem;
 

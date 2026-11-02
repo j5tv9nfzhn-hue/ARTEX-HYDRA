@@ -28,7 +28,9 @@ import { persistPreference } from "@/lib/preferences/preferences-storage";
 import { THEME_MODE_OPTIONS, THEME_PRESET_OPTIONS, type ThemeMode, type ThemePreset } from "@/lib/preferences/theme";
 import { applyThemePreset } from "@/lib/preferences/theme-utils";
 import type { NavMainItem } from "@/navigation/sidebar/sidebar-items";
-import { navGroupMessageKey, sidebarItems } from "@/navigation/sidebar/sidebar-items";
+import { navGroupMessageKey } from "@/navigation/sidebar/sidebar-items";
+import { getNavItems } from "@/ui/nav";
+import { useUIVersion, type UIVersion } from "@/ui/version";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 // 搜索数据仅保存 nav 命名空间键，不保存展示文本。
@@ -57,39 +59,41 @@ const NAV_SEARCH_ALIASES: Record<string, string[]> = {
   tasks: ["任务列表"],
 };
 
-const searchItems: SearchItem[] = sidebarItems.flatMap((group) => {
-  const headingKey = navGroupMessageKey(group.id);
-  return group.items.flatMap((item): SearchItem[] => {
-    if (item.subItems) {
-      return item.subItems.map((sub) => ({
-        id: sub.id,
-        headingKey,
-        labelKey: `item.${sub.id}`,
-        fallbackLabel: sub.title,
-        url: sub.url,
-        icon: item.icon,
-        disabled: sub.disabled,
-        newTab: sub.newTab,
-        topLevel: false,
-        keywords: [sub.id, ...(NAV_SEARCH_ALIASES[sub.id] ?? [])],
-      }));
-    }
-    return [
-      {
-        id: item.id,
-        headingKey,
-        labelKey: `item.${item.id}`,
-        fallbackLabel: item.title,
-        url: item.url,
-        icon: item.icon,
-        disabled: item.disabled,
-        newTab: item.newTab,
-        topLevel: true,
-        keywords: [item.id, ...(NAV_SEARCH_ALIASES[item.id] ?? [])],
-      },
-    ];
+function buildSearchItems(version: UIVersion): SearchItem[] {
+  return getNavItems(version).flatMap((group) => {
+    const headingKey = navGroupMessageKey(group.id);
+    return group.items.flatMap((item): SearchItem[] => {
+      if (item.subItems) {
+        return item.subItems.map((sub) => ({
+          id: sub.id,
+          headingKey,
+          labelKey: `item.${sub.id}`,
+          fallbackLabel: sub.title,
+          url: sub.url,
+          icon: item.icon,
+          disabled: sub.disabled,
+          newTab: sub.newTab,
+          topLevel: false,
+          keywords: [sub.id, ...(NAV_SEARCH_ALIASES[sub.id] ?? [])],
+        }));
+      }
+      return [
+        {
+          id: item.id,
+          headingKey,
+          labelKey: `item.${item.id}`,
+          fallbackLabel: item.title,
+          url: item.url,
+          icon: item.icon,
+          disabled: item.disabled,
+          newTab: item.newTab,
+          topLevel: true,
+          keywords: [item.id, ...(NAV_SEARCH_ALIASES[item.id] ?? [])],
+        },
+      ];
+    });
   });
-});
+}
 
 function getAvailableItems(items: SearchItem[]) {
   return items.filter((item) => !item.disabled && !item.url.includes("coming-soon"));
@@ -98,10 +102,20 @@ function getAvailableItems(items: SearchItem[]) {
 // 跳转组与搜索组由同一份 searchItems 按层级拆分，避免同一入口出现两次：
 // 一级条目进「跳转」，子条目（若未来出现）作为深层链接进「搜索」。
 // 无查询时只显示可用项（旧搜索的默认视图）；输入查询后显示全量（含禁用项，保持旧搜索行为）。
-const jumpItems = searchItems.filter((item) => item.topLevel);
-const deepLinkItems = searchItems.filter((item) => !item.topLevel);
-const availableJumpItems = getAvailableItems(jumpItems);
-const availableDeepLinkItems = getAvailableItems(deepLinkItems);
+function buildLists(version: UIVersion) {
+  const items = buildSearchItems(version);
+  const jump = items.filter((item) => item.topLevel);
+  const deep = items.filter((item) => !item.topLevel);
+  return {
+    jumpItems: jump,
+    deepLinkItems: deep,
+    availableJumpItems: getAvailableItems(jump),
+    availableDeepLinkItems: getAvailableItems(deep),
+  };
+}
+
+const LISTS_V1 = buildLists("v1");
+const LISTS_V2 = buildLists("v2");
 
 // 「操作」条目：label 即最终展示文案；keywords 参与 cmdk 模糊匹配。
 type PaletteAction = {
@@ -122,6 +136,10 @@ const THEME_MODE_ICONS: Record<ThemeMode, LucideIcon> = {
 };
 
 export function SearchDialog() {
+  const uiVersion = useUIVersion();
+  const { jumpItems, deepLinkItems, availableJumpItems, availableDeepLinkItems } =
+    uiVersion === "v2" ? LISTS_V2 : LISTS_V1;
+
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const router = useRouter();

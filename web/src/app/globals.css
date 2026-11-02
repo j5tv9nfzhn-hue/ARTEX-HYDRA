@@ -19,6 +19,11 @@
    令牌取 presets/paper.css，版式（卡片/表格/页签/侧栏/浮层）在这里翻译。 */
 @import "../styles/skin-editorial.css";
 
+/* 新版骨架（v2）独立主题包：只在 data-ui="v2" 下生效，v1 零影响。
+   与 skin-editorial.css 的分工：前者是「旧骨架的换肤」，这里是「新骨架自带主题」。 */
+@import "../styles/ui-v2.css";
+
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

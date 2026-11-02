@@ -1088,7 +1088,14 @@
     "verOld": "旧版",
     "viewTasks": "查看任务"
   },
+  "uiVersion": {
+    "v1": "经典骨架",
+    "v2": "新版骨架",
+    "switchTo": "切换到{version}",
+    "hint": "新版骨架整合导航与页面结构，经典骨架保持原样，两者可随时来回切换"
+  },
   "explorationGraph": {
+
     "detail": {
       "attributes": "属性",
       "copied": "已复制",
@@ -2620,6 +2627,7 @@
       "title": "文档"
     },
     "group": {
+      "10": "导航",
       "function": "功能",
       "pinned": "收藏",
       "system": "系统"
