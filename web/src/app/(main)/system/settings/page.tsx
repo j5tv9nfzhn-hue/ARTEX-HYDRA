@@ -88,6 +88,12 @@ export default function SystemSettingsPage() {
   const [verifyThreshold, setVerifyThreshold] = React.useState("high");
   const [verifySamplePercent, setVerifySamplePercent] = React.useState("25");
   const [savingVerifyGate, setSavingVerifyGate] = React.useState(false);
+  // 漏洞判重（移植自 Strix，见 server/dedupe.go）：默认开；专用配置 0 = 跟随当前启用的
+  // 配置；单次超时默认 60s。
+  const [dedupeEnabled, setDedupeEnabled] = React.useState(true);
+  const [dedupeProfileId, setDedupeProfileId] = React.useState("0");
+  const [dedupeTimeoutSecs, setDedupeTimeoutSecs] = React.useState("60");
+  const [savingDedupe, setSavingDedupe] = React.useState(false);
   // AI 自我进化沉淀：任务完成/删除时自动生成技能；审阅门控默认开启。
   const [skillReviewGate, setSkillReviewGate] = React.useState(true);
   const [skillAutoDistill, setSkillAutoDistill] = React.useState(true);
@@ -118,6 +124,9 @@ export default function SystemSettingsPage() {
     setSkillAutoDistillApply(!!s.skill_auto_distill_apply);
     setVerifyThreshold(s.verify_auto_threshold || "high");
     setVerifySamplePercent(String(s.verify_sample_percent ?? 25));
+    setDedupeEnabled(s.dedupe_enabled !== false);
+    setDedupeProfileId(String(s.dedupe_profile_id ?? 0));
+    setDedupeTimeoutSecs(String(s.dedupe_timeout_seconds ?? 60));
   }, []);
 
   const saveWorkers = () => {
@@ -172,6 +181,34 @@ export default function SystemSettingsPage() {
       })
       .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
       .finally(() => setSavingVerifyGate(false));
+  };
+
+  // 漏洞判重（移植自 Strix，见 server/dedupe.go）：入库前问一次模型「这条是不是已经报过了」。
+  // 本地只做能确定的校验（非负整数、区间）；配置是否存在由后端再判一次。
+  const saveDedupe = () => {
+    const profileId = Number(dedupeProfileId);
+    const timeoutSecs = Number(dedupeTimeoutSecs);
+    if (!Number.isInteger(profileId) || profileId < 0) {
+      toast.error(t("toast.dedupeInvalid"));
+      return;
+    }
+    if (!Number.isInteger(timeoutSecs) || timeoutSecs < 1 || timeoutSecs > 3600) {
+      toast.error(t("toast.dedupeTimeoutInvalid"));
+      return;
+    }
+    setSavingDedupe(true);
+    api
+      .setSettings({
+        dedupe_enabled: dedupeEnabled,
+        dedupe_profile_id: profileId,
+        dedupe_timeout_seconds: timeoutSecs,
+      })
+      .then((s) => {
+        apply(s);
+        toast.success(t("toast.dedupeSaved"));
+      })
+      .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
+      .finally(() => setSavingDedupe(false));
   };
 
   const savePriceTable = () => {
@@ -544,7 +581,65 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="04" icon={RadioTowerIcon} title={t("globalProxy.title")} />
+          <SheetHead index="04" icon={ShieldCheckIcon} title={t("dedupe.title")} />
+          <div className="flex flex-col gap-3 px-4 py-3">
+            <p className="text-muted-foreground text-sm" id="dedupe-description">
+              {t.rich("dedupe.desc", richTags)}
+            </p>
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="dedupe-enabled" className="text-sm font-normal text-muted-foreground">
+                {dedupeEnabled ? t("dedupe.on") : t("dedupe.off")}
+              </Label>
+              <Switch
+                id="dedupe-enabled"
+                aria-describedby="dedupe-description"
+                checked={dedupeEnabled}
+                disabled={!loaded || savingDedupe}
+                onCheckedChange={setDedupeEnabled}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Label htmlFor="dedupe-profile" className="text-sm font-normal text-muted-foreground">
+                {t("dedupe.profileLabel")}
+              </Label>
+              <Input
+                id="dedupe-profile"
+                type="number"
+                min={0}
+                step={1}
+                className="w-24 font-mono text-sm"
+                value={dedupeProfileId}
+                disabled={!loaded || savingDedupe || !dedupeEnabled}
+                onChange={(e) => setDedupeProfileId(e.target.value)}
+              />
+              <Label htmlFor="dedupe-timeout" className="text-sm font-normal text-muted-foreground">
+                {t("dedupe.timeoutLabel")}
+              </Label>
+              <Input
+                id="dedupe-timeout"
+                type="number"
+                min={1}
+                max={3600}
+                step={1}
+                className="w-24 font-mono text-sm"
+                value={dedupeTimeoutSecs}
+                disabled={!loaded || savingDedupe || !dedupeEnabled}
+                onChange={(e) => setDedupeTimeoutSecs(e.target.value)}
+              />
+              <span className="text-sm text-muted-foreground">s</span>
+            </div>
+            <p className="text-muted-foreground text-xs">{t("dedupe.profileHint")}</p>
+            <p className="text-muted-foreground text-xs">{t("dedupe.timeoutHint")}</p>
+            <div className="flex items-center justify-end">
+              <Button onClick={saveDedupe} disabled={!loaded || savingDedupe}>
+                {t("save")}
+              </Button>
+            </div>
+          </div>
+        </Sheet>
+
+        <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
+          <SheetHead index="05" icon={RadioTowerIcon} title={t("globalProxy.title")} />
           <div className="flex flex-col gap-2 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("globalProxy.desc", richTags)}</p>
             <Label htmlFor="global-proxy" className="text-sm font-normal text-muted-foreground">
@@ -570,7 +665,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="05" icon={ShieldAlertIcon} title={t("constraints.title")} />
+          <SheetHead index="06" icon={ShieldAlertIcon} title={t("constraints.title")} />
           <div className="flex flex-col gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("constraints.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
@@ -601,7 +696,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="06" icon={FlaskConicalIcon} title={t("experimental.title")} />
+          <SheetHead index="07" icon={FlaskConicalIcon} title={t("experimental.title")} />
           <div className="flex flex-col gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("experimental.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
@@ -624,7 +719,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="07" icon={SparklesIcon} title={t("skillEvolution.title")} />
+          <SheetHead index="08" icon={SparklesIcon} title={t("skillEvolution.title")} />
           <div className="flex flex-col gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("skillEvolution.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
@@ -680,7 +775,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings", "testWebSearch"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="08" icon={SearchIcon} title={t("webSearch.title")} />
+          <SheetHead index="09" icon={SearchIcon} title={t("webSearch.title")} />
           <div className="flex flex-col gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("webSearch.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
@@ -839,7 +934,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings", "detectPython"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="09" icon={RadioTowerIcon} title={t("python.title")} />
+          <SheetHead index="10" icon={RadioTowerIcon} title={t("python.title")} />
           <div className="flex flex-col gap-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("python.desc", richTags)}</p>
             <div className="flex items-center gap-2">
@@ -861,7 +956,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["shellSettings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="10" icon={TerminalIcon} title={t("shell.title")} />
+          <SheetHead index="11" icon={TerminalIcon} title={t("shell.title")} />
           <div className="flex flex-col gap-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("shell.desc")}</p>
             <div className="flex flex-col gap-1.5">
@@ -924,7 +1019,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="11" icon={CpuIcon} title={t("workers.title")} />
+          <SheetHead index="12" icon={CpuIcon} title={t("workers.title")} />
           <div className="flex flex-col gap-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("workers.desc", richTags)}</p>
             <div className="flex items-center gap-2">
@@ -945,7 +1040,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="12" icon={CoinsIcon} title={t("budget.title")} />
+          <SheetHead index="13" icon={CoinsIcon} title={t("budget.title")} />
           <div className="flex flex-col gap-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("budget.desc", richTags)}</p>
             <div className="flex items-center gap-2">
@@ -968,7 +1063,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="13" icon={CircleDollarSignIcon} title={t("pricing.title")} />
+          <SheetHead index="14" icon={CircleDollarSignIcon} title={t("pricing.title")} />
           <div className="flex flex-col gap-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("pricing.desc", richTags)}</p>
             {/* 等宽多行文本框；示例 JSON 用 t.raw 取原文，避免 ICU 把大括号当占位符解析。 */}
@@ -989,7 +1084,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="14" icon={LanguagesIcon} title={t("language.title")} />
+          <SheetHead index="15" icon={LanguagesIcon} title={t("language.title")} />
           <div className="flex flex-col gap-2 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("language.desc")}</p>
             <p className="text-sm text-muted-foreground">{LOCALE_LABELS.zh}</p>
@@ -997,7 +1092,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="15" icon={KeyboardIcon} title={t("sendKey.title")} />
+          <SheetHead index="16" icon={KeyboardIcon} title={t("sendKey.title")} />
           <div className="flex items-center justify-between gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("sendKey.desc", richTags)}</p>
             <Label htmlFor="chat-send-mode" className="text-sm font-normal text-muted-foreground">

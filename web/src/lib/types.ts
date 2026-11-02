@@ -1136,6 +1136,12 @@ export interface Settings {
   // 选 off 则只保留在漏洞详情里手动发起复核。改完对之后入库的发现立即生效。
   verify_auto_threshold: string;
   verify_sample_percent: number;
+  // 漏洞判重(见 server/dedupe.go，移植自 Strix)：每条发现入库前先问一次模型「这是不是
+  // 已经报过的同一个漏洞」，判为重复就不重复入库。dedupe_profile_id = 0 表示跟随当前
+  // 启用的配置，>0 时判重走该配置自己的端点与凭据；超时秒数默认 60。判重失败一律放行。
+  dedupe_enabled: boolean;
+  dedupe_profile_id: number;
+  dedupe_timeout_seconds: number;
   llm_record: boolean; // LLM 录制开关（默认关）；关闭时不记录任何 LLM 调用
   // Web search. brave_key_set / tavily_key_set reflect whether a key is stored
   // (the values are never returned). On PUT, send the corresponding field to set/clear.

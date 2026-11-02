@@ -3421,6 +3421,16 @@
       "thresholdLabel": "强制复核的最低等级",
       "title": "自动复核闸门"
     },
+    "dedupe": {
+      "desc": "每条发现<b>入库前</b>先问一次模型「这是不是已经报过的同一个漏洞」：判为重复就<b>不重复入库</b>，并把已有那条回给 Agent，让它把证据并进去。<br></br>判重是一次额外的模型调用（用下面指定的配置，未指定就用当前启用的配置）；<b>判重失败一律放行</b>——挡住一条真发现的代价，远大于多留一条重复条目。改完对之后入库的发现立即生效。",
+      "off": "关闭，不判重",
+      "on": "启用",
+      "profileHint": "判重专用模型配置的 id：留 0 = 跟随当前启用的配置；填入某个配置的 id，判重就只走那个配置的端点与凭据。id 见「模型」页的配置列表。",
+      "profileLabel": "专用模型配置 id",
+      "timeoutHint": "单次判重的超时（1–3600 秒）；超时按「没判成」处理并放行入库。",
+      "timeoutLabel": "单次超时",
+      "title": "漏洞判重"
+    },
     "globalProxy": {
       "addrLabel": "代理地址",
       "configured": "已配置，所有目标流量经此代理出网",
@@ -3461,6 +3471,9 @@
       "braveKeySaved": "已保存 Brave API Key",
       "budgetInvalid": "默认 Token 预算必须是不小于 0 的整数（单位：千 token）",
       "budgetSaved": "已保存默认 Token 预算（对之后创建且未单独指定预算的任务生效）",
+      "dedupeInvalid": "专用模型配置 id 必须是不小于 0 的整数",
+      "dedupeSaved": "已保存漏洞判重设置（对之后入库的发现生效）",
+      "dedupeTimeoutInvalid": "单次判重超时必须是 1–3600 的整数秒",
       "globalProxyCleared": "已清除全局代理（改为直连）",
       "globalProxySaved": "已保存全局代理",
       "priceTableSaved": "已保存模型价格表（费用估算立即按新价生效，历史用量也随之重算）",
