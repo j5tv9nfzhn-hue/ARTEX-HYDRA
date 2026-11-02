@@ -14,6 +14,7 @@ import (
 
 	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
+	"github.com/Autumn-27/artex/llmclass"
 	"github.com/Autumn-27/artex/llmrec"
 	"github.com/Autumn-27/norma/llm"
 )
@@ -461,32 +462,14 @@ func sameProviderRetryPolicy(r agent.RetryConfig) (retries int, backoff func(int
 	return retries, backoff
 }
 
-// isRetryableStreamError 判断「提交前的流失败」是否值得在同一 provider 上重放。
-// 瞬时的传输中断 / 供应商过载 / 限流会自行恢复,可安全重试;而以下三类不重试:
-//   - 额度耗尽:交给 profile 故障转移处理,别在这里白烧重试
-//   - 上下文过长:相同请求重放也没用,交给 harness 的 reactive 压缩兜底
-//   - 4xx 确定性拒绝(400/401/403/404/422):到哪个 provider 都一样会失败
+// isRetryableStreamError 判断一次失败是否值得在**同一个端点**上原样重放。
+//
+// 口径来自 llmclass（统一判定）：只有瞬时故障（限流、5xx、系统繁忙、传输层故障）
+// 才重试。端点级故障（余额不足、封号、鉴权失效、上游不可用）不重试——重试改变不了
+// 它，该交给 profile 故障转移换一个模型/供应商；请求本身不合法（400、上下文超长）
+// 同样不重试。
 func isRetryableStreamError(err error) bool {
-	if err == nil {
-		return false
-	}
-	if isQuotaExhaustedError(err) {
-		return false
-	}
-	s := strings.ToLower(err.Error())
-	if strings.Contains(s, "too long") || strings.Contains(s, "context length") ||
-		strings.Contains(s, "context_length") || strings.Contains(s, "maximum context") ||
-		strings.Contains(s, "status 413") {
-		return false
-	}
-	for _, code := range []string{"status 400", "status 401", "status 403", "status 404", "status 422"} {
-		if strings.Contains(s, code) {
-			return false
-		}
-	}
-	// 其余(传输 reset/EOF/timeout、408/429/5xx、流内 error 事件如 anthropic
-	// overloaded_error 等)一律视为瞬时,允许重试。
-	return true
+	return llmclass.Classify(err) == llmclass.VerdictRetry
 }
 
 // ---- 上下文超限：把供应商的真实窗口记下来 ----

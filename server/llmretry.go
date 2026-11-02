@@ -5,6 +5,7 @@ import (
 
 	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
+	"github.com/Autumn-27/artex/llmclass"
 	"github.com/Autumn-27/artex/llmpool"
 	"github.com/Autumn-27/norma/harness"
 )
@@ -27,6 +28,14 @@ func (s *Server) retryPolicy() db.LLMRetryPolicy {
 	return s.m.pg.LLMRetryPolicy()
 }
 
+// errorRules 读人工增补的错误分类关键词。缺库时回落到空规则（= 用内置词表）。
+func (s *Server) errorRules() llmclass.Rules {
+	if s == nil || s.m == nil || s.m.pg == nil {
+		return llmclass.Rules{}
+	}
+	return s.m.pg.LLMErrorRules()
+}
+
 // resolveRetry layers one profile's override on top of the global policy and
 // converts the result into the form agent.Config carries. Rules combine field by
 // field, so a profile that only pins an interval still inherits the global count.
@@ -34,12 +43,17 @@ func resolveRetry(o db.RetryOverride, pol db.LLMRetryPolicy) agent.RetryConfig {
 	connect := o.Connect.Or(pol.Connect)
 	empty := o.Empty.Or(pol.Empty)
 	stream := o.Stream.Or(pol.Stream)
+	initialMS, multiplier, maxMS := connect.Ladder()
 	return agent.RetryConfig{
 		// 次数在这里保持「0=默认 / 负=关闭」的原始语义:SDK 的 MaxRetries /
 		// EmptyResponseRetries 与之完全同构,交给它自己解析即可。
 		ConnectAttempts: connect.Attempts, ConnectInterval: connect.Interval(),
-		EmptyAttempts: empty.Attempts, EmptyInterval: empty.Interval(),
-		StreamAttempts: stream.Attempts, StreamInterval: stream.Interval(),
+		// 指数梯度三旋钮：0 = 未配置，agent 侧套用自己的默认（2s 起 ×2 封顶 90s）。
+		ConnectInitial:    time.Duration(initialMS) * time.Millisecond,
+		ConnectMultiplier: float64(multiplier),
+		ConnectMax:        time.Duration(maxMS) * time.Millisecond,
+		EmptyAttempts:     empty.Attempts, EmptyInterval: empty.Interval(),
+		StreamAttempts:    stream.Attempts, StreamInterval: stream.Interval(),
 	}
 }
 
@@ -83,6 +97,9 @@ func (s *Server) applyRetryPolicy() {
 		reg.SetPolicy(pol.Breaker.Attempts, pol.Breaker.Interval())
 	}
 	s.roleHealthMu.Unlock()
+	// 错误分类词表同样是进程级的：设置页改了关键词就立即对所有判定路径生效
+	// （provider 的建连重试、llmpool 的故障转移与熔断、安全窗口重试）。
+	llmclass.SetRules(s.errorRules())
 }
 
 // modelErrorRetryPolicyFor picks the retry budget from the failure that just

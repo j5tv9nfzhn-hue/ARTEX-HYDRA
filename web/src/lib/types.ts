@@ -1346,12 +1346,35 @@ export interface LLMProvider {
 }
 
 // ---- LLM 重试策略 ----
-// 一层重试的两个旋钮。两者都是「0 = 未配置」：
+// 一层重试的旋钮。都是「0 = 未配置」：
 //   attempts    0=用默认次数 | -1=关闭该层重试 | >0=重试次数
 //   interval_ms 0=用默认的指数退避 | >0=改用这个固定毫秒间隔
+// 指数梯度三旋钮（只有建连层消费，其余层留空即用各自默认）：
+//   initial_ms  0=用默认起始延迟(2000) | >0=起始延迟
+//   multiplier  0=用默认倍数(2) | >0=每次翻倍的倍数（允许 1.5 这种半档）
+//   max_ms      0=用默认封顶(90000) | >0=封顶
 export interface LLMRetryRule {
   attempts: number;
   interval_ms: number;
+  initial_ms?: number;
+  multiplier?: number;
+  max_ms?: number;
+}
+
+// ---- 错误分类关键词（人工增补）----
+// 供应商的失败措辞千奇百怪，内置词表接不上的可以在这里补。三张表都是「追加」：
+// 命中的词决定该失败被归到哪一类——
+//   retry_keywords  瞬时故障：在同一端点上按梯度重试（限流、5xx、系统繁忙）
+//   switch_keywords 端点级故障：本端点重试无意义，尽快换模型/供应商（余额不足、封号、401）
+//   fail_keywords   请求本身有问题：重试与换端点都没意义（400、上下文超长）
+// 禁用某条内置词用 disable_* 三张表（填内置词表里的原文）。
+export interface LLMErrorRules {
+  retry_keywords?: string[];
+  switch_keywords?: string[];
+  fail_keywords?: string[];
+  disable_retry?: string[];
+  disable_switch?: string[];
+  disable_fail?: string[];
 }
 
 // 单个 LLM 配置能覆盖的三层（都是「跟着端点走」的重试）。

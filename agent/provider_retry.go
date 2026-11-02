@@ -21,21 +21,18 @@ package agent
 
 import (
 	"context"
-	"errors"
 	"iter"
-	"net"
-	"regexp"
-	"strconv"
 	"time"
 
+	"github.com/Autumn-27/artex/llmclass"
 	"github.com/Autumn-27/norma/llm"
 )
-
 // Strix DEFAULT_MODEL_RETRY 的梯度：2s 起、每次翻倍、封顶 90s。次数见
 // defaultConnectAttempts（5）。与 Strix 唯一的形式差别是抖动：那边 jitter=False，
 // 这里也不加抖动，好让两边每一次的等待完全相同。
 const (
 	defaultRetryInitialDelay = 2 * time.Second
+	defaultRetryMultiplier   = 2.0
 	defaultRetryMaxDelay     = 90 * time.Second
 )
 
@@ -44,58 +41,50 @@ const (
 // 用循环而不是位移：次数由配置层给（允许到 20），位移在极端值上会溢出，而这里只需要
 // 「翻倍到封顶就停」。
 func retryLadderDelay(attempt int) time.Duration {
-	d := defaultRetryInitialDelay
-	for i := 0; i < attempt; i++ {
-		if d >= defaultRetryMaxDelay {
-			return defaultRetryMaxDelay
-		}
-		d *= 2
-	}
-	if d > defaultRetryMaxDelay {
-		return defaultRetryMaxDelay
-	}
-	return d
+	return ladderDelay(attempt, defaultRetryInitialDelay, defaultRetryMultiplier, defaultRetryMaxDelay)
 }
 
-// modelErrorStatusRe 从模型调用错误里取 HTTP 状态码。
+// ladderDelay 是可配版本的退避梯度：起始延迟 × 倍数^attempt，封顶。
 //
-// norma 的错误文案是 "<前缀>: status <code>: <body>"，llmpool.statusOf 用的是同一个
-// 约定——SDK 没有把状态码放进错误类型，只能靠文案，两处都认同一个格式就不会各自漂移。
-var modelErrorStatusRe = regexp.MustCompile(`\bstatus (\d{3})\b`)
-
-// modelErrorStatus 返回错误里的 HTTP 状态码，取不到返回 0（还没走到 HTTP 响应）。
+// 倍数是 float64：设置页允许填 1.5 这种「半档」退避（2s → 3s → 4.5s），整数倍不够用。
+func ladderDelay(attempt int, initial time.Duration, multiplier float64, max time.Duration) time.Duration {
+	if attempt < 0 {
+		attempt = 0
+	}
+	if initial <= 0 {
+		initial = defaultRetryInitialDelay
+	}
+	if multiplier <= 1 {
+		multiplier = defaultRetryMultiplier
+	}
+	if max <= 0 {
+		max = defaultRetryMaxDelay
+	}
+	d := float64(initial)
+	for i := 0; i < attempt; i++ {
+		if d >= float64(max) {
+			return max
+		}
+		d *= multiplier
+	}
+	if d > float64(max) {
+		return max
+	}
+	return time.Duration(d)
+}
+// 重试、server 的安全窗口重试都按同一个约定读它，各自再写一份正则迟早会漂移。
 func modelErrorStatus(err error) int {
-	if err == nil {
-		return 0
-	}
-	m := modelErrorStatusRe.FindStringSubmatch(err.Error())
-	if m == nil {
-		return 0
-	}
-	code, convErr := strconv.Atoi(m[1])
-	if convErr != nil {
-		return 0
-	}
-	return code
+	return llmclass.StatusOf(err)
 }
 
-// retryableModelCallError 报告一次模型调用失败是否值得原样重放（口径见文件头）。
+// retryableModelCallError 报告一次模型调用失败是否值得原样重放。
+//
+// 口径来自 llmclass（统一判定，见该包的头注）：只有「瞬时故障」才原地重试——
+// 限流、5xx、系统繁忙、传输层故障。端点级故障（余额不足、封号、鉴权失效、
+// 上游不可用）不重试，直接上抛给外层的端点轮询；请求本身不合法（400、上下文
+// 超长）同样不重试。
 func retryableModelCallError(err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return false
-	}
-	if status := modelErrorStatus(err); status != 0 {
-		switch status {
-		case 408, 429, 500, 502, 503, 504, 529:
-			return true
-		}
-		return false
-	}
-	var netErr net.Error
-	return errors.As(err, &netErr)
+	return llmclass.Classify(err) == llmclass.VerdictRetry
 }
 
 // retryProvider 在建连层重放失败的模型调用（见文件头）。
@@ -123,15 +112,20 @@ func wrapProviderRetry(inner llm.Provider, r RetryConfig) llm.Provider {
 // retryPolicy 解析这次调用用哪套建连重试：次数与退避梯度。
 //
 // 次数：未配置(0) → defaultConnectAttempts；负数 → 关掉这层；>0 → 用该值。
-// 梯度：未配置 → Strix 的 2s/×2/90s；配了固定间隔 → 用那个固定值（这个旋钮的原有语义
-// 就是「拿固定间隔替换指数退避」，见 db.RetryRule.Interval）。
+// 梯度：未配置 → Strix 的 2s/×2/90s；设置页配了梯度三旋钮就用它；配了固定间隔 →
+// 用那个固定值（这个旋钮的原有语义就是「拿固定间隔替换指数退避」，见
+// db.RetryRule.Interval）。
 func retryPolicy(r RetryConfig) (attempts int, backoff func(int) time.Duration) {
-	attempts, backoff = defaultConnectAttempts, retryLadderDelay
+	attempts = defaultConnectAttempts
 	if r.ConnectAttempts != 0 {
 		attempts = r.ConnectAttempts
 	}
 	if attempts < 0 {
 		attempts = 0
+	}
+	initial, multiplier, max := r.ConnectInitial, r.ConnectMultiplier, r.ConnectMax
+	backoff = func(attempt int) time.Duration {
+		return ladderDelay(attempt, initial, multiplier, max)
 	}
 	if r.ConnectInterval > 0 {
 		fixed := r.ConnectInterval

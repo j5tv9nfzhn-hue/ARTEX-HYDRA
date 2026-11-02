@@ -3,6 +3,8 @@ package db
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/Autumn-27/artex/llmclass"
 )
 
 // LLM 重试策略：五层重试的「次数 + 间隔」全局配置，见 docs/LLM重试设计.md。
@@ -20,6 +22,15 @@ const settingLLMRetryPolicy = "llm_retry_policy"
 type RetryRule struct {
 	Attempts   int `json:"attempts"`
 	IntervalMS int `json:"interval_ms"`
+	// 指数梯度的三个旋钮（只有建连层消费，其余层留空即用各自默认）：
+	//   InitialMS  起始延迟（0 = 用内置默认 2000）
+	//   Multiplier 每次翻倍的倍数（0 = 用内置默认 2）
+	//   MaxMS      封顶（0 = 用内置默认 90000，与 Strix 的 DEFAULT_MODEL_RETRY 一致）
+	// 之所以放进这一层而不是新建一个结构：梯度与次数、间隔一样，都是「这一层重试
+	// 怎么等」的一部分，跟着端点走、也能被单个配置逐字段覆盖。
+	InitialMS  int `json:"initial_ms,omitempty"`
+	Multiplier int `json:"multiplier,omitempty"`
+	MaxMS      int `json:"max_ms,omitempty"`
 }
 
 // Interval returns the configured fixed interval, or 0 when unset (caller keeps
@@ -41,7 +52,24 @@ func (r RetryRule) Or(fallback RetryRule) RetryRule {
 	if r.IntervalMS == 0 {
 		r.IntervalMS = fallback.IntervalMS
 	}
+	if r.InitialMS == 0 {
+		r.InitialMS = fallback.InitialMS
+	}
+	if r.Multiplier == 0 {
+		r.Multiplier = fallback.Multiplier
+	}
+	if r.MaxMS == 0 {
+		r.MaxMS = fallback.MaxMS
+	}
 	return r
+}
+
+// Ladder 返回该层配置的指数梯度参数；未配置的项返回 0，由调用方套用自己的默认。
+//
+// 三项分开返回而不是一个打包结构：调用方（agent 的建连重试层）才知道自己的默认
+// 是多少，db 不该替它决定。
+func (r RetryRule) Ladder() (initialMS, multiplier, maxMS int) {
+	return r.InitialMS, r.Multiplier, r.MaxMS
 }
 
 // retry knob bounds. A count above the cap turns a blip into a token bonfire;
@@ -49,10 +77,15 @@ func (r RetryRule) Or(fallback RetryRule) RetryRule {
 const (
 	maxRetryAttempts   = 20
 	maxRetryIntervalMS = 3600_000 // 1h
+	// maxRetryMultiplier 兜住「手滑填了 1000」——那会让第二次重试就等到天荒地老。
+	maxRetryMultiplier = 10
+	// minRetryMultiplier 让「不翻倍」也有地方表达（用 IntervalMS 更直接，但有人
+	// 就是想只调倍数）。
+	minRetryMultiplier = 1
 )
 
 // Clamped returns the rule with out-of-range values pulled back into the sane
-// band (attempts within [-1, 20], interval within [0, 1h]).
+// band (attempts within [-1, 20], interval within [0, 1h], ladder sane).
 func (r RetryRule) Clamped() RetryRule {
 	if r.Attempts < -1 {
 		r.Attempts = -1
@@ -65,6 +98,24 @@ func (r RetryRule) Clamped() RetryRule {
 	}
 	if r.IntervalMS > maxRetryIntervalMS {
 		r.IntervalMS = maxRetryIntervalMS
+	}
+	if r.InitialMS < 0 {
+		r.InitialMS = 0
+	}
+	if r.InitialMS > maxRetryIntervalMS {
+		r.InitialMS = maxRetryIntervalMS
+	}
+	if r.Multiplier < minRetryMultiplier {
+		r.Multiplier = 0 // 0 = 未配置；1 以上的值才生效
+	}
+	if r.Multiplier > maxRetryMultiplier {
+		r.Multiplier = maxRetryMultiplier
+	}
+	if r.MaxMS < 0 {
+		r.MaxMS = 0
+	}
+	if r.MaxMS > maxRetryIntervalMS {
+		r.MaxMS = maxRetryIntervalMS
 	}
 	return r
 }
@@ -126,4 +177,38 @@ func (d *DB) SetLLMRetryPolicy(p LLMRetryPolicy) error {
 		return err
 	}
 	return d.SetSetting(settingLLMRetryPolicy, string(raw))
+}
+
+// settingLLMErrorRules 存人工增补的错误分类关键词（见 llmclass.Rules）。
+//
+// 存 settings 表的一格 JSON：它是「接上没见过的供应商措辞」用的少量词，不值得为它
+// 开一张表；键不存在（全新库 / 从未配置过）时行为与写死常量时代完全一致。
+const settingLLMErrorRules = "llm_error_rules"
+
+// LLMErrorRules 读人工增补的分类关键词。
+//
+// 缺失或解析失败一律回落到空规则（= 用 llmclass 的内置词表）：解析失败不该让系统
+// 失去判定能力，退回内置词表仍然能工作。
+func (d *DB) LLMErrorRules() llmclass.Rules {
+	var r llmclass.Rules
+	if d == nil {
+		return r
+	}
+	raw, ok, err := d.GetSetting(settingLLMErrorRules)
+	if err != nil || !ok || raw == "" {
+		return r
+	}
+	if err := json.Unmarshal([]byte(raw), &r); err != nil {
+		return llmclass.Rules{}
+	}
+	return r
+}
+
+// SetLLMErrorRules 保存人工增补的分类关键词。
+func (d *DB) SetLLMErrorRules(r llmclass.Rules) error {
+	raw, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+	return d.SetSetting(settingLLMErrorRules, string(raw))
 }

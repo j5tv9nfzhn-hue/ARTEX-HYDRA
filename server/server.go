@@ -1211,6 +1211,10 @@ func (s *Server) Handler() http.Handler {
 	// 凭据实体（计划 46–47）：可被多个 LLM 配置引用
 	mux.HandleFunc("GET /api/llm/retry-policy", s.pgGetLLMRetryPolicy)
 	mux.HandleFunc("POST /api/llm/retry-policy", s.pgSaveLLMRetryPolicy)
+	// 错误分类关键词（人工增补）：与 retry-policy 分开，因为它不是「次数/间隔」这类
+	// 数值旋钮，而是一张词表，且热生效方式不同（进程级，立即生效，不重建 provider）。
+	mux.HandleFunc("GET /api/llm/error-rules", s.pgGetLLMErrorRules)
+	mux.HandleFunc("POST /api/llm/error-rules", s.pgSaveLLMErrorRules)
 	mux.HandleFunc("GET /api/llm/pool", s.pgLLMPoolStatus)
 	mux.HandleFunc("POST /api/llm/pool/reset", s.pgLLMPoolReset)
 	mux.HandleFunc("POST /api/llm/models", s.pgListModels)

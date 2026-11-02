@@ -26,6 +26,7 @@ import (
 	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/fsutil"
+	"github.com/Autumn-27/artex/llmclass"
 	"github.com/Autumn-27/artex/notify"
 	"github.com/Autumn-27/norma/llm"
 	"github.com/Autumn-27/norma/skill"
@@ -2357,6 +2358,38 @@ func (s *Server) pgSaveLLMRetryPolicy(w http.ResponseWriter, r *http.Request) {
 	s.invalidateProfileAgents()
 	s.reapplyActiveProfile()
 	writeJSON(w, 200, pg.LLMRetryPolicy())
+}
+
+// pgGetLLMErrorRules 返回人工增补的错误分类关键词。未配置过 → 空对象，
+// 前端显示成「沿用内置词表」。
+func (s *Server) pgGetLLMErrorRules(w http.ResponseWriter, r *http.Request) {
+	pg := s.pg(w)
+	if pg == nil {
+		return
+	}
+	writeJSON(w, 200, pg.LLMErrorRules())
+}
+
+// pgSaveLLMErrorRules 保存人工增补的错误分类关键词。
+//
+// 词表是进程级的（llmclass.SetRules）：保存后立即对所有判定路径生效——provider 的
+// 建连重试、llmpool 的故障转移与熔断、安全窗口重试都不需要重建。
+func (s *Server) pgSaveLLMErrorRules(w http.ResponseWriter, r *http.Request) {
+	pg := s.pg(w)
+	if pg == nil {
+		return
+	}
+	var rules llmclass.Rules
+	if err := decode(r, &rules); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	if err := pg.SetLLMErrorRules(rules); err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	llmclass.SetRules(rules)
+	writeJSON(w, 200, rules)
 }
 
 func (s *Server) pgDeleteProfile(w http.ResponseWriter, r *http.Request) {

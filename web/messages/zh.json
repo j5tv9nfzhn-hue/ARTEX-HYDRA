@@ -2299,6 +2299,25 @@
     },
     "retry": {
       "defaultBackoff": "默认退避",
+      "ladderInitial": "起始延迟 ms",
+      "ladderInitialDefault": "默认 2000",
+      "ladderMax": "封顶 ms",
+      "ladderMaxDefault": "默认 90000",
+      "ladderMultiplier": "倍数",
+      "ladderMultiplierDefault": "默认 2",
+      "rules": {
+        "disablePlaceholder": "禁用内置词（一行一个）",
+        "failLabel": "请求本身不合法（不重试、不换端点）",
+        "failPlaceholder": "追加关键词（一行一个）",
+        "hint": "供应商的失败措辞千奇百怪：限流有 429 也有「系统繁忙」，余额不足有 402 也有「insufficient balance」，封号可能只是一句「账号已停用」。系统按<b>文案语义</b>先于状态码判定，把一次失败归到下面三类之一。<br></br>内置词表已覆盖常见说法；这里可以追加没见过的供应商措辞（一行一个），或禁用某个内置词（下面的小框，填内置词表里的原文）。改完<b>立即生效</b>，不需要重启。",
+        "reset": "清空增补",
+        "retryLabel": "瞬时故障（原地按梯度重试）",
+        "retryPlaceholder": "追加关键词（一行一个）",
+        "save": "保存词表",
+        "switchLabel": "端点级故障（尽快换模型/供应商）",
+        "switchPlaceholder": "追加关键词（一行一个）",
+        "title": "错误分类"
+      },
       "defaultN": "默认 {n}",
       "emptyLine": "留空 = 用默认；{hint}。",
       "fixed": "固定 {human}",
@@ -2314,6 +2333,7 @@
       "skipsLabel": "不走这层",
       "toast": {
         "loadFailed": "读取重试策略失败：{msg}",
+        "rulesSaved": "已保存错误分类词表，即时生效",
         "saveFailed": "保存失败：{msg}",
         "saved": "已保存，即时生效（正在跑的这一轮调用仍用旧参数）"
       },

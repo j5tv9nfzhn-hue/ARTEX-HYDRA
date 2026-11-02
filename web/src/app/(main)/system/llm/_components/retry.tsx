@@ -1,15 +1,16 @@
+import * as React from "react";
 "use client";
 
-// LLM 重试配置的共用件：五层重试各自的「次数 + 间隔」。
+import * as React from "react";
+// LLM 重试配置的共用件：五层重试各自的「次数 + 间隔」，外加错误分类词表。
 //
-// 五层从内到外：建连(SDK) → 空响应(SDK) → 同 provider 安全窗口 → 轮询熔断 → 意图重跑。
+// 五层从内到外：建连 → 空响应 → 同 provider 安全窗口 → 轮询熔断 → 意图重跑。
 // 前三层跟着端点走，所以每个模型配置都能覆盖全局默认；后两层是进程级的，只有全局一份。
 //
 // 所有输入都遵循同一套「留空 = 不配置」语义，与后端 db.RetryRule 一致：
 //   次数   空/0 = 用内置默认 | -1 = 关闭这层重试 | >0 = 用这个次数
 //   间隔   空/0 = 用这层原本的指数退避 | >0 = 改用这个固定毫秒间隔
-
-import * as React from "react";
+//   梯度   空/0 = 用内置默认（建连层独有：2s 起、×2、封顶 90s，与 Strix 一致）
 
 import { Loader2Icon, SaveIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -18,10 +19,22 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import type { LLMRetryOverride, LLMRetryPolicy, LLMRetryRule } from "@/lib/types";
+import type {
+  LLMErrorRules,
+  LLMRetryOverride,
+  LLMRetryPolicy,
+  LLMRetryRule,
+} from "@/lib/types";
 
-export const ZERO_RULE: LLMRetryRule = { attempts: 0, interval_ms: 0 };
+export const ZERO_RULE: LLMRetryRule = {
+  attempts: 0,
+  interval_ms: 0,
+  initial_ms: 0,
+  multiplier: 0,
+  max_ms: 0,
+};
 export const ZERO_OVERRIDE: LLMRetryOverride = {
   connect: ZERO_RULE,
   empty: ZERO_RULE,
@@ -32,11 +45,19 @@ const ZERO_POLICY: LLMRetryPolicy = {
   breaker: ZERO_RULE,
   intent: ZERO_RULE,
 };
+const ZERO_RULES: LLMErrorRules = {
+  retry_keywords: [],
+  switch_keywords: [],
+  fail_keywords: [],
+  disable_retry: [],
+  disable_switch: [],
+  disable_fail: [],
+};
 
 // 每层的「次数留空时的默认值」，仅用于输入框占位符。其余文案（标题 / 触发 / 说明等）
 // 走 i18n（llmPage.retryLayer.<层>.*），按运行时语言渲染。
 export const RETRY_LAYERS = {
-  connect: { defAttempts: 3 },
+  connect: { defAttempts: 5 },
   empty: { defAttempts: 2 },
   stream: { defAttempts: 2 },
   breaker: { defAttempts: 3 },
@@ -88,6 +109,65 @@ function NumField({
         onChange(e.target.value.trim() === "" || !Number.isFinite(n) ? 0 : Math.trunc(n));
       }}
     />
+  );
+}
+
+/**
+ * 建连层的指数梯度三旋钮（起始延迟 / 倍数 / 封顶）。
+ *
+ * 只有建连层有这一组——其余四层的退避是各自写死的（空响应与安全窗口用 SDK 与外层
+ * 的固定梯度），给它们加旋钮不会有人用。默认 2s 起、×2、封顶 90s，与 Strix 的
+ * DEFAULT_MODEL_RETRY 一致。
+ */
+function LadderFields({
+  idPrefix,
+  value,
+  onChange,
+}: {
+  idPrefix: string;
+  value: LLMRetryRule;
+  onChange: (r: LLMRetryRule) => void;
+}) {
+  const t = useTranslations("llmPage");
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3">
+      <div className="flex items-center gap-2">
+        <Label htmlFor={`${idPrefix}-ladder-init`} className="text-muted-foreground text-xs">
+          {t("retry.ladderInitial")}
+        </Label>
+        <NumField
+          id={`${idPrefix}-ladder-init`}
+          min={0}
+          value={value.initial_ms ?? 0}
+          placeholder={t("retry.ladderInitialDefault")}
+          onChange={(n) => onChange({ ...value, initial_ms: n })}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <Label htmlFor={`${idPrefix}-ladder-mult`} className="text-muted-foreground text-xs">
+          {t("retry.ladderMultiplier")}
+        </Label>
+        <NumField
+          id={`${idPrefix}-ladder-mult`}
+          min={0}
+          value={value.multiplier ?? 0}
+          placeholder={t("retry.ladderMultiplierDefault")}
+          onChange={(n) => onChange({ ...value, multiplier: n })}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <Label htmlFor={`${idPrefix}-ladder-max`} className="text-muted-foreground text-xs">
+          {t("retry.ladderMax")}
+        </Label>
+        <NumField
+          id={`${idPrefix}-ladder-max`}
+          min={0}
+          value={value.max_ms ?? 0}
+          placeholder={t("retry.ladderMaxDefault")}
+          onChange={(n) => onChange({ ...value, max_ms: n })}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -158,6 +238,10 @@ export function RetryRuleFields({
           </span>
         </div>
       </div>
+      {/* 梯度三旋钮只在建连层出现：其余层的退避是写死的，给它们加旋钮没人会用。 */}
+      {layer === "connect" && !compact && (
+        <LadderFields idPrefix={idPrefix} value={value} onChange={onChange} />
+      )}
       {!compact && (
         <p className="text-muted-foreground text-xs">
           {t("retry.emptyLine", { hint: t(`retryLayer.${layer}.offHint`) })}
@@ -197,7 +281,167 @@ export function ProfileRetryFields({
   );
 }
 
-/** 「重试与退避」tab：五层的全局默认值。 */
+/** 一行一个词的文本域 ↔ 字符串数组。空行忽略。 */
+function KeywordsField({
+  id,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  value: string[] | undefined;
+  onChange: (v: string[]) => void;
+  placeholder: string;
+}) {
+  const [text, setText] = React.useState((value ?? []).join("\n"));
+  React.useEffect(() => {
+    const incoming = (value ?? []).join("\n");
+    setText((cur) => (cur === incoming ? cur : incoming));
+  }, [value]);
+  return (
+    <Textarea
+      id={id}
+      className="min-h-20 font-mono text-xs"
+      value={text}
+      placeholder={placeholder}
+      onChange={(e) => {
+        setText(e.target.value);
+        onChange(
+          e.target.value
+            .split("\n")
+            .map((s) => s.trim())
+            .filter((s) => s !== ""),
+        );
+      }}
+    />
+  );
+}
+
+/**
+ * 错误分类词表：决定一次失败被归到哪一类，从而决定「原地重试」还是「换端点」。
+ *
+ * 内置词表覆盖了常见措辞；这里补的是没见过的供应商说法。三张表都是追加语义，
+ * 禁用内置词用下面三张 disable 表（填内置词表里的原文）。
+ */
+function ErrorRulesPanel() {
+  const t = useTranslations("llmPage");
+  const [rules, setRules] = React.useState<LLMErrorRules>(ZERO_RULES);
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await api.llmErrorRules();
+      setRules({ ...ZERO_RULES, ...r });
+    } catch (e) {
+      toast.error(t("retry.toast.loadFailed", { msg: (e as Error).message }));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function save() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const saved = await api.saveLLMErrorRules(rules);
+      setRules({ ...ZERO_RULES, ...saved });
+      toast.success(t("retry.toast.rulesSaved"));
+    } catch (e) {
+      toast.error(t("retry.toast.saveFailed", { msg: (e as Error).message }));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-dashed p-10 text-muted-foreground text-sm">
+        <Loader2Icon className="size-4 animate-spin" /> {t("retry.loading")}
+      </div>
+    );
+  }
+
+  const set = (k: keyof LLMErrorRules) => (v: string[]) => setRules((p) => ({ ...p, [k]: v }));
+
+  return (
+    <div className="grid gap-3 rounded-lg border p-3">
+      <div className="grid gap-0.5">
+        <Label className="text-sm">{t("retry.rules.title")}</Label>
+        <p className="text-muted-foreground text-xs">{t("retry.rules.hint")}</p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="rules-retry" className="text-muted-foreground text-xs">
+            {t("retry.rules.retryLabel")}
+          </Label>
+          <KeywordsField
+            id="rules-retry"
+            value={rules.retry_keywords}
+            onChange={set("retry_keywords")}
+            placeholder={t("retry.rules.retryPlaceholder")}
+          />
+          <KeywordsField
+            id="rules-disable-retry"
+            value={rules.disable_retry}
+            onChange={set("disable_retry")}
+            placeholder={t("retry.rules.disablePlaceholder")}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="rules-switch" className="text-muted-foreground text-xs">
+            {t("retry.rules.switchLabel")}
+          </Label>
+          <KeywordsField
+            id="rules-switch"
+            value={rules.switch_keywords}
+            onChange={set("switch_keywords")}
+            placeholder={t("retry.rules.switchPlaceholder")}
+          />
+          <KeywordsField
+            id="rules-disable-switch"
+            value={rules.disable_switch}
+            onChange={set("disable_switch")}
+            placeholder={t("retry.rules.disablePlaceholder")}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="rules-fail" className="text-muted-foreground text-xs">
+            {t("retry.rules.failLabel")}
+          </Label>
+          <KeywordsField
+            id="rules-fail"
+            value={rules.fail_keywords}
+            onChange={set("fail_keywords")}
+            placeholder={t("retry.rules.failPlaceholder")}
+          />
+          <KeywordsField
+            id="rules-disable-fail"
+            value={rules.disable_fail}
+            onChange={set("disable_fail")}
+            placeholder={t("retry.rules.disablePlaceholder")}
+          />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button onClick={save} disabled={saving}>
+          {saving ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
+          {t("retry.rules.save")}
+        </Button>
+        <Button variant="outline" onClick={() => setRules(ZERO_RULES)} disabled={saving}>
+          {t("retry.rules.reset")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** 「重试与退避」tab：五层的全局默认值 + 错误分类词表。 */
 export function RetryPolicyPanel() {
   const t = useTranslations("llmPage");
   const [policy, setPolicy] = React.useState<LLMRetryPolicy>(ZERO_POLICY);
@@ -269,6 +513,8 @@ export function RetryPolicyPanel() {
           {t("retry.resetAll")}
         </Button>
       </div>
+
+      <ErrorRulesPanel />
     </div>
   );
 }

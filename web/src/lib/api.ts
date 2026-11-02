@@ -65,6 +65,7 @@ import type {
   LLMProfile,
   LLMProvider,
   LLMRecordDetail,
+  LLMErrorRules,
   LLMRecordItem,
   LLMRetryOverride,
   LLMRetryPolicy,
@@ -1218,6 +1219,9 @@ export const api = {
   // 全局重试策略（五层各自的次数+间隔）。全 0 = 全部走内置默认。
   llmRetryPolicy: () => get<LLMRetryPolicy>("/llm/retry-policy"),
   saveLLMRetryPolicy: (p: LLMRetryPolicy) => post<LLMRetryPolicy>("/llm/retry-policy", p),
+  // 错误分类关键词（人工增补）：内置词表接不上的供应商措辞在这里补。
+  llmErrorRules: () => get<LLMErrorRules>("/llm/error-rules"),
+  saveLLMErrorRules: (r: LLMErrorRules) => post<LLMErrorRules>("/llm/error-rules", r),
   fetchLLMModels: (
     provider: string,
     base_url: string,

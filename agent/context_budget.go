@@ -16,15 +16,15 @@ package agent
 // 静默截断（或者 413）。ARTEX 之前把 context_window_k 原样当窗口用，声明 1000K
 // 直接把阈值抬到 800K，8 天一次都没触发——本文件的 ResolveContextWindowTokens
 // 就是修这个：默认按 200K 计，超出上限一律夹到上限并告警，真实上限靠报错学习。
-
 import (
-	"errors"
 	"log"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/Autumn-27/artex/llmclass"
 )
 
 const (
@@ -134,29 +134,13 @@ func CompactionTriggerTokens(window int) int {
 // 各家措辞不一样，但都会把真实上限写进去。能捞到就直接把它当成这个 profile 的
 // 观测上限（比声明值可信）；捞不到就整体降档——总之不能让声明值一直虚高。
 
-var contextOverflowHints = []string{
-	"context length", "context_length", "context window", "context size",
-	"maximum context", "too many tokens", "prompt is too long", "input is too long",
-	"exceeds the context", "reduce the length", "status 413", "exceed_context_size",
-}
-
 // IsContextOverflowError 判断是不是「请求超出上下文窗口」类错误。
 // 这类错误重试同一份请求必然还失败，必须靠压缩而不是重试。
+//
+// 判据在 llmclass（统一口径）：这里是薄封装，agent 侧与 llmclass 问的是同一个问题，
+// 答案必须来自同一处——否则「上下文超长该不该重试」会在两处得到不同结论。
 func IsContextOverflowError(err error) bool {
-	if err == nil {
-		return false
-	}
-	s := strings.ToLower(err.Error())
-	for _, h := range contextOverflowHints {
-		if strings.Contains(s, h) {
-			return true
-		}
-	}
-	var apiErr interface{ StatusCode() int }
-	if errors.As(err, &apiErr) && apiErr.StatusCode() == 413 {
-		return true
-	}
-	return false
+	return llmclass.IsContextOverflow(err)
 }
 
 var contextLimitPatterns = []*regexp.Regexp{

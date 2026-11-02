@@ -16,11 +16,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Autumn-27/artex/llmclass"
 	"github.com/Autumn-27/artex/llmrec"
 	"github.com/Autumn-27/norma/agentcore"
 	"github.com/Autumn-27/norma/compaction"
@@ -92,11 +92,17 @@ type RetryConfig struct {
 	// ConnectInterval>0 时改用该固定间隔替代指数梯度。
 	ConnectAttempts int
 	ConnectInterval time.Duration
+	// ConnectInitial / ConnectMultiplier / ConnectMax 是建连层的指数梯度三旋钮：
+	// 0 = 用内置默认（2s 起、×2、封顶 90s，与 Strix 一致）。由 server 从设置页
+	// 的「重试与退避」解析后带进来。
+	ConnectInitial    time.Duration
+	ConnectMultiplier float64
+	ConnectMax        time.Duration
 	// EmptyAttempts/EmptyInterval:SDK 空响应重试(完成但无 content block,仅 openai
 	// 格式),映射为 llm.Config.EmptyResponseRetries / EmptyResponseInterval。
 	// 默认 2 次、同一条指数梯度。
-	EmptyAttempts int
-	EmptyInterval time.Duration
+	EmptyAttempts  int
+	EmptyInterval  time.Duration
 	// StreamAttempts/StreamInterval:同 provider 安全窗口重试——本项目在 SDK 之上补的
 	// 一层,只在「还没向调用方交付任何输出」时重放断流/过载/流内 429。SDK 看不到它,
 	// 由 server/task_llm.go 消费。默认 2 次、0.5s 起指数(封顶 4s)。
@@ -509,40 +515,12 @@ func (c Config) NewProvider() (llm.Provider, error) {
 // IsQuotaExhaustedMessage deliberately recognizes only explicit balance,
 // billing, credit, or quota-exhaustion signals. Generic 429/rate-limit text,
 // authentication failures, network errors, and server failures are excluded.
-var nonFailoverHTTPStatus = regexp.MustCompile(`(?:status(?:\s+code)?|http(?:\s+status)?)\s*[=:]?\s*(?:401|403|5\d\d)\b`)
-var transientQuotaLimit = regexp.MustCompile(`(?i)(?:\b(?:rpm|tpm|rpd|qps)\b|quota[_\s-]*metric|rate[_\s-]*limit|too many requests|(?:requests?|tokens?)\s+(?:per|/)\s*(?:second|minute)|(?:per|/)\s*(?:second|minute)\s+(?:requests?|tokens?)|generate[_\s-]*requests[_\s-]*per[_\s-]*(?:minute|second)|tokens?[_\s-]*per[_\s-]*(?:minute|second))`)
-
+//
+// 判据在 llmclass（统一口径，见该包的头注）：这里是薄封装，agent 侧与 server 侧
+// 问的是同一个问题，答案必须来自同一处——否则「额度耗尽要不要换供应商」会在两处
+// 得到不同结论。
 func IsQuotaExhaustedMessage(message string) bool {
-	message = strings.ToLower(message)
-	// Authentication/authorization and provider-side 5xx failures never rotate,
-	// even when a gateway happens to echo a quota-looking phrase in the body.
-	if nonFailoverHTTPStatus.MatchString(message) {
-		return false
-	}
-	// Provider APIs frequently describe an ordinary rate limit as "quota
-	// exceeded", especially Google-style responses containing a quota metric.
-	// These limits recover with time and must stay on the current provider.
-	if transientQuotaLimit.MatchString(message) {
-		return false
-	}
-	markers := []string{
-		"insufficient_quota", "quota_exceeded", "quota exceeded", "quota exhausted",
-		"exceeded your current quota", "billing_hard_limit_reached",
-		"billing hard limit", "billing_not_active", "credit balance", "insufficient credit",
-		"insufficient balance", "balance is too low", "payment required", "status 402",
-		"余额不足", "额度不足", "额度已用尽", "欠费",
-	}
-	for _, marker := range markers {
-		if strings.Contains(message, marker) {
-			return true
-		}
-	}
-	// gRPC RESOURCE_EXHAUSTED is overloaded for both account quota and ordinary
-	// request-rate limiting. Preserve it as an explicit exhaustion signal only
-	// when the same error does not identify a transient rate limit.
-	return strings.Contains(message, "resource_exhausted") &&
-		!strings.Contains(message, "rate limit") &&
-		!strings.Contains(message, "too many requests")
+	return llmclass.IsQuotaExhausted(message)
 }
 
 // quotaAwareTransport preserves Norma's normal retry behavior except for a 429

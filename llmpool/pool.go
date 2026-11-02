@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"iter"
 	"log"
-	"regexp"
-	"strconv"
 	"strings"
 	"sync/atomic"
 
+	"github.com/Autumn-27/artex/llmclass"
 	"github.com/Autumn-27/artex/llmrepair"
 	"github.com/Autumn-27/norma/llm"
 )
@@ -253,27 +252,12 @@ func rotateGroups(in []*Member, n uint64) []*Member {
 	return out
 }
 
-// statusRe pulls the HTTP status out of the SDK's error text, which is formatted
-// as "<prefix>: status <code>: <body>" (norma/llm/retry.go). The SDK exposes no
-// typed error, so the string is what we have.
-var statusRe = regexp.MustCompile(`status (\d{3})`)
-
-// statusOf returns the HTTP status carried by err, or 0 if it isn't one.
-func statusOf(err error) int {
-	m := statusRe.FindStringSubmatch(err.Error())
-	if m == nil {
-		return 0
-	}
-	code, _ := strconv.Atoi(m[1])
-	return code
-}
-
 // shouldFailover reports whether err justifies trying the next profile.
 //
-// Never fails over on context cancellation — that's the user stopping a task or a
-// task-level timeout, and burning a backup key on it would both waste credit and
-// pollute the run's termination diagnosis. Never on 400 either: a malformed or
-// over-long request fails identically everywhere.
+// 口径来自 llmclass（统一判定）：端点级故障（余额不足、封号、鉴权失效、上游不可用）
+// 与瞬时故障都该换端点——前者换得越快越好，后者在本端点重试耗尽后也该换。
+// 请求本身不合法（400、上下文超长）与调用被取消不换：前者换到哪家都一样失败，
+// 后者是用户停的任务，换端点只是白烧额度。
 func shouldFailover(ctx context.Context, err error) bool {
 	if err == nil {
 		return false
@@ -284,14 +268,8 @@ func shouldFailover(ctx context.Context, err error) bool {
 	if llmrepair.IsQualityError(err) {
 		return llmrepair.FailoverEligible(err)
 	}
-	switch code := statusOf(err); {
-	case code == 0:
-		return true // no status → transport-level failure (reset / DNS / timeout)
-	case code == 400:
-		return false // bad or over-long request: identical everywhere
-	case code == 401, code == 402, code == 403, code == 404, code == 408, code == 429:
-		return true
-	case code >= 500:
+	switch llmclass.Classify(err) {
+	case llmclass.VerdictRetry, llmclass.VerdictSwitch:
 		return true
 	}
 	return false
@@ -303,12 +281,12 @@ func shouldFailover(ctx context.Context, err error) bool {
 //
 // Exported so the engine's intent-level retry budget can ask the same question
 // instead of growing a second, drifting copy of the status-code list.
+//
+// 口径来自 llmclass：端点级故障（余额不足、封号、鉴权失效、上游不可用）才是硬失败
+// ——重试和等待都改变不了它，必须由人处理，所以立刻熔断这个端点，把流量让给别的
+// 模型/供应商。限流与 5xx 是瞬时的，重复几次会自行恢复，不该一次就熔断。
 func IsHardFailure(err error) bool {
-	switch statusOf(err) {
-	case 401, 402, 403, 404:
-		return true
-	}
-	return false
+	return llmclass.Classify(err) == llmclass.VerdictSwitch
 }
 
 // isHardFailure is the in-package spelling kept for the breaker hot path.
