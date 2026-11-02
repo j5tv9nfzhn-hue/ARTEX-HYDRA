@@ -86,9 +86,10 @@ type Config struct {
 // 0 = 用内置默认次数;负数 = 关闭该层重试;>0 = 用该值。每层的「间隔」:
 // 0 = 用该层原本的指数退避;>0 = 改用这个固定间隔。
 type RetryConfig struct {
-	// ConnectAttempts/ConnectInterval:SDK 建连重试(连接重置/超时/429/5xx,流开始前),
-	// 直接映射为 llm.Config.MaxRetries / RetryInterval。未配置时 5 次（见
-	// defaultConnectAttempts）、0.5s 起指数(封顶 8s)。
+	// ConnectAttempts/ConnectInterval:SDK 原来那层建连重试(连接重置/超时/429/5xx,
+	// 流开始前)。现在由本项目跑(见 provider_retry.go,SDK 那层已关):未配置时 5 次
+	// (见 defaultConnectAttempts)、梯度 2s 起 ×2 封顶 90s(对齐 Strix);
+	// ConnectInterval>0 时改用该固定间隔替代指数梯度。
 	ConnectAttempts int
 	ConnectInterval time.Duration
 	// EmptyAttempts/EmptyInterval:SDK 空响应重试(完成但无 content block,仅 openai
@@ -103,14 +104,14 @@ type RetryConfig struct {
 	StreamInterval time.Duration
 }
 
-// defaultConnectAttempts 是「全局策略与单个配置都没填过」时 SDK 建连重试的次数。
+// defaultConnectAttempts 是「全局策略与单个配置都没填过」时建连重试的次数。
 //
 // 对齐 Strix 的 DEFAULT_MODEL_RETRY（max_retries=5）：两个系统在重试次数上的差别只该
-// 来自配置，不该来自内置默认。norma 自己的默认是 3，而「0 = 未配置、用内置默认」这个
-// 语义要留给配置层，所以这里必须显式传 5，不能靠传 0 让 SDK 兜底。
+// 来自配置，不该来自内置默认。退避梯度同源于那一份默认（2s 起、×2、封顶 90s），见
+// provider_retry.go 的 retryLadderDelay。
 //
 // 人工设置仍然优先：全局策略 llm_retry_policy 或单个配置的 retry_connect_attempts 填了值
-// 就按填的走，填 -1 仍是「关掉该层重试」（负值原样透传给 SDK）。
+// 就按填的走，填 -1 仍是「关掉该层重试」。
 const defaultConnectAttempts = 5
 
 // compaction window resolution bounds (in K tokens). Below the floor the
@@ -471,14 +472,13 @@ func (c Config) NewProvider() (llm.Provider, error) {
 	// 输出上限的字段名选择(空 = 用 max_tokens)。上限的「值」不在这里:它每轮随
 	// agentcore.Options.MaxTokens 走,provider 只决定把它塞进哪个键。
 	lc.MaxTokensField = c.MaxTokensField
-	// 重试参数与 SDK 同语义(次数 0=默认/负=关闭,间隔 0=指数退避/>0=固定)。
-	// 唯一的例外是建连次数：未配置(0)时传本项目的默认值，而不是让 SDK 用它的 3
-	// （对齐 Strix 的 DEFAULT_MODEL_RETRY，见 defaultConnectAttempts）。
-	lc.MaxRetries = defaultConnectAttempts
-	if c.Retry.ConnectAttempts != 0 {
-		lc.MaxRetries = c.Retry.ConnectAttempts
-	}
-	lc.RetryInterval = c.Retry.ConnectInterval
+	// 建连重试交给本项目跑（见 provider_retry.go）：梯度要与 Strix 一致，而 SDK 只能给
+	// 「它的内置梯队」（0.5s 起、封顶 8s）或「一个固定间隔」，表达不出 2s/×2/90s。
+	// 这里关掉 SDK 那层，由下面的 wrapProviderRetry 接手，保证只有一条梯队——两层叠加
+	// 会把一次瞬时故障变成十次模型调用、总退避时长翻倍。
+	lc.MaxRetries = -1
+	// 空响应重试仍留给 SDK：它是「200 但一个内容块都没有」的补充层（仅 openai 格式），
+	// Strix 没有对应物，梯度也就没有可对齐的对象。参数原样透传(0=默认/负=关闭)。
 	lc.EmptyResponseRetries = c.Retry.EmptyAttempts
 	lc.EmptyResponseInterval = c.Retry.EmptyInterval
 	if c.RatePerSecond > 0 || c.RatePerMinute > 0 {
@@ -488,7 +488,10 @@ func (c Config) NewProvider() (llm.Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	// 最内层再套一层「工具入参截流」：模型一边生成参数，界面一边显示（见 toolstream.go）。
+	// 建连重试紧贴 SDK 之下：上面每一层装饰器（工具入参截流、思考拆分、输出上限钳制）
+	// 于是看到的都是「一次逻辑调用」，重试发生在它们之下，不会重复它们各自的状态。
+	prov = wrapProviderRetry(prov, c.Retry)
+	// 再套一层「工具入参截流」：模型一边生成参数，界面一边显示（见 toolstream.go）。
 	prov = wrapToolStream(prov)
 	// Anthropic 格式不套「内联思考拆分」：Anthropic 要求回放 thinking 块时带 signature，
 	// 拆出来的思考块没有签名，下一轮请求会被 400 拒掉——它的原生 thinking 块本来也不走
