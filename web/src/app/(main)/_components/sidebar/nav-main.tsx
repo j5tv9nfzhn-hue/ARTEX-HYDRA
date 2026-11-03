@@ -266,7 +266,9 @@ function NavItem({ item, isItemActive, isSubItemActive, isSubmenuOpen }: NavItem
     <NavCollapsibleItem
       item={item}
       isActive={isItemActive(item)}
-      defaultOpen={isSubmenuOpen(item)}
+      // 父项默认展开：折叠是「可选收纳」，不是导航层级。
+      // 数据里可用 defaultOpen 显式声明，路由命中时仍然展开。
+      defaultOpen={item.defaultOpen === true || isSubmenuOpen(item)}
       isSubItemActive={isSubItemActive}
     />
   );

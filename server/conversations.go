@@ -26,6 +26,8 @@ const (
 	maxConversationRequestBytes  = 64 << 10
 	maxConversationAgentKeyRunes = 120
 	maxConversationTitleRunes    = 200
+	// task_id 与其它表一致用字符串形态（任务 id 在引擎侧就是字符串）。
+	maxConversationTaskIDRunes = 64
 )
 
 // 对话端点的中文 HTTP 错误响应，失败时直接展示为 toast。
@@ -39,9 +41,11 @@ const (
 	convErrAgentNotFound   = "找不到 Agent"
 	convErrLLMProfile      = "指定的 LLM 配置不存在或未设置 API Key"
 	convErrTitleTooLong    = "标题最多 %d 个字符"
-	convErrTitleOrPinned   = "至少提供 title 或 pinned 之一"
+	convErrTitleOrPinned   = "至少提供 title、pinned 或 task_id 之一"
 	convErrTitleEmpty      = "标题不能为空"
 	convErrBadConvID       = "对话 id 无效"
+	convErrTaskNotFound    = "绑定的任务不存在"
+	convErrBadTaskID       = "task_id 必须是数字或空"
 	convErrIDsCount        = "ids 数量必须在 1 到 %d 之间"
 	convErrMessageEmpty    = "消息不能为空"
 	convErrBusy            = "此对话正在处理上一条消息，请稍候"
@@ -108,6 +112,18 @@ func (s *Server) pgListConversations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cs, err := pg.ListConversations()
+	// ?task=<id> 只回该任务的线程；不带参数=全部（现有调用方行为不变）。
+	// 放在内存里筛而不是加一条 SQL：线程总量是「人的对话数」量级，
+	// 拼一条新查询只为省一次线性扫描不值得，且会让排序语义分叉。
+	if task := strings.TrimSpace(r.URL.Query().Get("task")); task != "" && err == nil {
+		filtered := make([]*db.Conversation, 0, len(cs))
+		for _, c := range cs {
+			if c.TaskID == task {
+				filtered = append(filtered, c)
+			}
+		}
+		cs = filtered
+	}
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -130,6 +146,8 @@ func (s *Server) pgCreateConversation(w http.ResponseWriter, r *http.Request) {
 		AgentKey     string `json:"agent_key"`
 		Title        string `json:"title"`
 		LLMProfileID *int64 `json:"llm_profile_id"`
+		// TaskID 可选：建线程时就绑到某个任务上（对话页任务带的依据）。
+		TaskID string `json:"task_id"`
 	}
 	if !decodeConversationRequest(w, r, &req) {
 		return
@@ -166,7 +184,17 @@ func (s *Server) pgCreateConversation(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, fmt.Sprintf(convErrTitleTooLong, maxConversationTitleRunes))
 		return
 	}
-	c, err := pg.CreateConversation(req.AgentKey, title, req.LLMProfileID)
+	taskID := strings.TrimSpace(req.TaskID)
+	if utf8.RuneCountInString(taskID) > maxConversationTaskIDRunes {
+		writeErr(w, 400, fmt.Sprintf("task_id 最多 %d 个字符", maxConversationTaskIDRunes))
+		return
+	}
+	// 只验证「给了就必须存在」：不校验归属与状态，因为线程可以绑到已完成的任务
+	// 上做复盘，那是最常见的用法之一。
+	if !s.convTaskExists(w, pg, taskID) {
+		return
+	}
+	c, err := pg.CreateConversationForTask(req.AgentKey, title, req.LLMProfileID, taskID)
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -182,6 +210,8 @@ func (s *Server) pgUpdateConversation(w http.ResponseWriter, r *http.Request) {
 	// llm_profile_id 用 RawMessage 而不是 *int64：这里必须区分「没传」和「显式传 null」。
 	var req struct {
 		LLMProfileID json.RawMessage `json:"llm_profile_id"`
+		// task_id 同样用 RawMessage：没传=不动；null 或 ""=解绑。
+		TaskID json.RawMessage `json:"task_id"`
 	}
 	if !decodeConversationRequest(w, r, &req) {
 		return
@@ -207,7 +237,54 @@ func (s *Server) pgUpdateConversation(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// task_id 绑定/解绑走 UpdateConversation 的 patch，和 title/pin 同一条 UPDATE，
+	// 不额外开事务：解绑和改名不会有中间态。
+	if raw := bytes.TrimSpace(req.TaskID); len(raw) > 0 {
+		taskID := ""
+		if !bytes.Equal(raw, []byte("null")) {
+			var value string
+			if err := json.Unmarshal(raw, &value); err != nil {
+				writeErr(w, 400, "task_id 必须是字符串或 null")
+				return
+			}
+			taskID = strings.TrimSpace(value)
+		}
+		if utf8.RuneCountInString(taskID) > maxConversationTaskIDRunes {
+			writeErr(w, 400, fmt.Sprintf("task_id 最多 %d 个字符", maxConversationTaskIDRunes))
+			return
+		}
+		if !s.convTaskExists(w, pg, taskID) {
+			return
+		}
+		if _, err := pg.UpdateConversation(c.ID, db.ConversationPatch{TaskID: &taskID}); err != nil {
+			writeErr(w, 500, err.Error())
+			return
+		}
+	}
 	writeJSON(w, 200, map[string]any{"ok": true})
+}
+
+// convTaskExists 校验线程要绑定的 task_id：空串（= 解绑）直接放行；
+// 非空必须是十进制任务 id 且任务行存在。写回 false 表示已经写过错误响应。
+func (s *Server) convTaskExists(w http.ResponseWriter, pg *db.DB, taskID string) bool {
+	if taskID == "" {
+		return true
+	}
+	n, err := strconv.ParseInt(taskID, 10, 64)
+	if err != nil || n <= 0 {
+		writeErr(w, 400, convErrBadTaskID)
+		return false
+	}
+	t, err := pg.GetTask(n)
+	if err != nil {
+		writeErr(w, 500, err.Error())
+		return false
+	}
+	if t == nil {
+		writeErr(w, 404, convErrTaskNotFound)
+		return false
+	}
+	return true
 }
 
 // convByID resolves the {id} path value to a conversation (404 if absent).

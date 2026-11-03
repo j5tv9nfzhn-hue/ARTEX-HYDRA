@@ -1,10 +1,8 @@
 "use client";
 
-import { ApiBar } from "@/ui/container";
 import * as React from "react";
 
 import {
-  ArrowUpIcon,
   ChevronDownIcon,
   CircleCheckIcon,
   CircleSlashIcon,
@@ -12,18 +10,14 @@ import {
   ClockIcon,
   HistoryIcon,
   Loader2Icon,
-  NavigationIcon,
-  PaperclipIcon,
+  LockIcon,
   PauseIcon,
-  PlusIcon,
   RadioIcon,
   RotateCwIcon,
   ShieldAlertIcon,
-  SquareIcon,
   Trash2Icon,
   UserIcon,
   WifiOffIcon,
-  XIcon,
   ZapOffIcon,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -33,74 +27,40 @@ import { AgentPhaseBadge } from "@/components/agent-phase-badge";
 import { ApprovalExecutionFocus, useApprovalFocus, useApprovalHistory } from "@/components/approval-execution-focus";
 import { EmptyState } from "@/components/empty-state";
 import { LiveDot } from "@/components/live-dot";
-import { MentionTextarea } from "@/components/mention-textarea";
-import { MessageRollbackDialog } from "@/components/message-rollback-dialog";
-import { SideQuestionButton, SideQuestionWorkspace } from "@/components/side-question-workspace";
-import { TodoPopover } from "@/components/todo-popover";
-import { ContextUsageRing } from "@/components/transcript/context-usage";
-import { parseUserBody, Transcript } from "@/components/transcript";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { SideQuestionWorkspace } from "@/components/side-question-workspace";
+import { Transcript } from "@/components/transcript";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Spinner } from "@/components/ui/spinner";
-import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePolling } from "@/hooks/use-polling";
 import { useSideQuestions } from "@/hooks/use-side-questions";
 import { deriveAgentPhase } from "@/lib/agent-phase";
 import { api, sseUrl } from "@/lib/api";
-import { shouldSubmitOnKey, useChatSendMode } from "@/lib/chat-send-mode";
 import { MOCK } from "@/lib/mock/enabled";
-import { isBtwCommand } from "@/lib/side-questions";
 import type {
   Activity,
-  ChatAttachment,
   IntentAsset,
   InterceptApprovalRow,
   LLMProfile,
+  ReviewerVerdict,
   Session,
   SessionStatus,
   SessionTokenUsage,
   TaskLLMResolution,
   TaskLLMResolutions,
-  ReviewerVerdict,
   TaskNode,
   TokenTotal,
 } from "@/lib/types";
 import { useStickToBottom } from "@/lib/use-stick-to-bottom";
 import { cn } from "@/lib/utils";
+import { ApiBar } from "@/ui/container";
 
 // resolutionLabel names the LLM a session runs on. The badge shows this alone and
 // keeps the model id in its tooltip. Env-backed configs can arrive without a name,
 // so fall back to the model id rather than rendering an empty badge.
 function resolutionLabel(r: TaskLLMResolution, unnamed: string): string {
   return r.name || r.model || unnamed;
-}
-
-// fmtBytes renders a human file size for attachment chips (mirrors transcript.tsx).
-function fmtBytes(n: number): string {
-  if (n >= 1 << 20) return `${(n / (1 << 20)).toFixed(1)} MB`;
-  if (n >= 1 << 10) return `${(n / (1 << 10)).toFixed(1)} KB`;
-  return `${n} B`;
 }
 
 // ── Reliability model ────────────────────────────────────────────────────────
@@ -118,18 +78,6 @@ const PAGE = 200; // history page size
 const SYSTEM_SCAN_PAGE = 500; // generic activity pages scanned to recover sparse system audit events
 const MAX_KEEP = 4000; // per-session in-memory cap; older pages re-fetched on scroll-up
 const STREAM_WINDOW_MS = 5000; // "live" = activity seen within this window
-const MAX_WORKER_MESSAGE_CHARS = 4000;
-
-function newWorkerMessageRequestID(): string {
-  return (
-    globalThis.crypto?.randomUUID?.() ??
-    `worker-message-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
-  );
-}
-
-function workerMessageCharCount(value: string): number {
-  return Array.from(value).length;
-}
 
 // One session's lazily-loaded, reverse-paginated cache. `lastTs`/`unread` are kept
 // live even for sessions that were never opened, so the list shows liveness + unread
@@ -160,12 +108,15 @@ function emptyState(): SessionState {
   };
 }
 
-// sessionKeyOf routes an activity to its stable session key. worker="planner" covers
-// BOTH the Goal Agent's round-0 decomposition and the Planner (single Plan session).
+// sessionKeyOf routes an activity to its stable session key.
+//
+// worker="goals" 是一次性的 LLM 目标拆解（server/goals.go 的 createGoals）。
+// 历史任务里同一批行标的是 "planner"——规划者早已下线，但那些行还在库里，
+// 所以两个值都归到同一个「目标拆解」会话，老任务的分栏不会凭空消失。
 function sessionKeyOf(a: Activity): string {
   if (a.worker === "system" || a.kind === "llm_switch" || a.kind === "llm_failover") return "system";
   if (a.worker === "mainagent") return `main:${a.main_seg ?? 0}`; // one key per conversation segment
-  if (a.worker === "planner") return "plan";
+  if (a.worker === "goals" || a.worker === "planner") return "goal";
   // 回顾者的过程行也带 intent_id，但它的归属是那一次判定（run），不是 Worker
   // 会话——先在这里截住，否则实时帧会把判定过程混进 Worker 的记录里。
   if (a.worker === "reviewer") {
@@ -267,6 +218,27 @@ function fmtDuration(ms: number): string {
 // 为什么不做成「会话/对话」形态：Reviewer 不是聊天 Agent，它一次 run 只产出一条
 // 结构化判决，做成气泡流会伪造出一段并不存在的对话。这里按台账字段原样呈现，
 // facts/clues/carry/negative 都是后端清洗过的 JSON 字符串，解析失败时就落回原文。
+// 判决面板里的分组块。原来定义在 ReviewerVerdictPanel 内部，每次渲染都会重建组件，
+// 提到模块作用域以避免重复挂载（biome noNestedComponentDefinitions）。
+function VerdictSection({ title, items }: { title: string; items: string[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="grid gap-1">
+      <div className="font-medium text-muted-foreground text-xs">{title}</div>
+      <ul className="grid gap-1">
+        {items.map((it, i) => (
+          <li
+            key={`${title}-${i}-${it.slice(0, 12)}`}
+            className="rounded-md border bg-muted/30 px-2 py-1 text-xs leading-relaxed"
+          >
+            {it}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function ReviewerVerdictPanel({ v }: { v: ReviewerVerdict }) {
   const t = useTranslations("sessions");
   const listOf = (raw: string): string[] => {
@@ -283,32 +255,13 @@ function ReviewerVerdictPanel({ v }: { v: ReviewerVerdict }) {
   const carry = listOf(v.carry_json);
   const negative = listOf(v.negative_json);
   const evidence = listOf(v.evidence_json);
-  const verdictKey = ["advance", "pivot", "abandon", "escalate"].includes(v.verdict)
-    ? v.verdict
-    : "unknown";
+  const verdictKey = ["advance", "pivot", "abandon", "escalate"].includes(v.verdict) ? v.verdict : "unknown";
   const verdictTone =
     v.verdict === "advance"
       ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
       : v.verdict === "abandon"
         ? "border-destructive/40 text-destructive"
         : "border-amber-500/40 text-amber-600 dark:text-amber-400";
-
-  const Section = ({ title, items }: { title: string; items: string[] }) =>
-    items.length ? (
-      <div className="grid gap-1">
-        <div className="font-medium text-muted-foreground text-xs">{title}</div>
-        <ul className="grid gap-1">
-          {items.map((it, i) => (
-            <li
-              key={`${title}-${i}-${it.slice(0, 12)}`}
-              className="rounded-md border bg-muted/30 px-2 py-1 text-xs leading-relaxed"
-            >
-              {it}
-            </li>
-          ))}
-        </ul>
-      </div>
-    ) : null;
 
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-3 px-1 py-2">
@@ -326,7 +279,10 @@ function ReviewerVerdictPanel({ v }: { v: ReviewerVerdict }) {
           {t("reviewer.decidedBy")}: {v.decided_by || "—"}
         </Badge>
         {v.sanitized && (
-          <Badge variant="outline" className="border-amber-500/40 font-normal text-amber-600 text-xs dark:text-amber-400">
+          <Badge
+            variant="outline"
+            className="border-amber-500/40 font-normal text-amber-600 text-xs dark:text-amber-400"
+          >
             {t("reviewer.sanitized")}
           </Badge>
         )}
@@ -338,10 +294,10 @@ function ReviewerVerdictPanel({ v }: { v: ReviewerVerdict }) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Section title={t("reviewer.facts")} items={facts} />
-        <Section title={t("reviewer.clues")} items={clues} />
-        <Section title={t("reviewer.carry")} items={carry} />
-        <Section title={t("reviewer.negative")} items={negative} />
+        <VerdictSection title={t("reviewer.facts")} items={facts} />
+        <VerdictSection title={t("reviewer.clues")} items={clues} />
+        <VerdictSection title={t("reviewer.carry")} items={carry} />
+        <VerdictSection title={t("reviewer.negative")} items={negative} />
       </div>
 
       {evidence.length > 0 && (
@@ -398,14 +354,15 @@ const MAIN_SESSION: Session = {
   seg: 0,
 };
 
-// The planner session is, like the main-agent session, a fixed UI affordance with
-// no dedicated backend "sessions" endpoint — its transcript is every activity step
-// the planner emits (worker === "planner", which also carries the Goal Agent's
-// round-0 decomposition; the planner carries no intent_id since it generates intents).
-const PLANNER_ID = "s-planner";
-const PLANNER_SESSION: Session = {
-  id: PLANNER_ID,
-  role: "planner",
+// The goal-decomposition session is, like the main-agent session, a fixed UI
+// affordance with no dedicated backend "sessions" endpoint — its transcript is the
+// activity rows emitted by the one-shot LLM goal breakdown (worker === "goals",
+// plus historical "planner" rows). It carries no intent_id because it runs before
+// any sub-agent is dispatched.
+const GOAL_SESSION_ID = "s-goals";
+const GOAL_SESSION: Session = {
+  id: GOAL_SESSION_ID,
+  role: "goals",
   title: "",
   status: "running",
   live: true,
@@ -425,14 +382,14 @@ const SYSTEM_SESSION: Session = {
   last_activity: "",
 };
 
-// keyForSession maps a UI Session → its stable store key (main:<seg> | plan | intent:<id>).
+// keyForSession maps a UI Session → its stable store key (main:<seg> | goal | intent:<id>).
 function keyForSession(s: Session): string {
   if (s.role === "mainagent") return `main:${s.seg ?? 0}`;
-  if (s.role === "planner") return "plan";
+  if (s.role === "goals") return "goal";
   if (s.role === "system") return "system";
   // 回顾者：一次判定 = 一条会话，用 run_id 定位它的过程行（review:<run>）。
   // run_id 缺失的历史判决退回旧 key —— 那条 key 不参与加载，面板只显示结论。
-  if (s.role === "reviewer") return s.run_id ? `review:${s.run_id}` : `reviewer:${s.id}`;
+  if ((s.role as string) === "reviewer") return s.run_id ? `review:${s.run_id}` : `reviewer:${s.id}`;
   return `intent:${s.intent_id}`;
 }
 
@@ -483,8 +440,6 @@ function SessionItem({
   hasPending,
   unread,
   onClick,
-  onCancel,
-  controlling,
   deleted,
 }: {
   s: Session;
@@ -493,8 +448,6 @@ function SessionItem({
   hasPending?: boolean;
   unread?: number;
   onClick: () => void;
-  onCancel?: () => void;
-  controlling?: boolean;
   deleted?: boolean;
 }) {
   const t = useTranslations("sessions");
@@ -506,12 +459,6 @@ function SessionItem({
     <Loader2Icon className="size-3.5 animate-spin text-blue-500" />
   ) : null;
 
-  const cancellable =
-    s.role === "worker" &&
-    !s.inherited &&
-    !deleted &&
-    // pending = 待领(open)意图;连同运行中/已暂停都允许删除。
-    (s.status === "running" || s.status === "paused" || s.status === "pending");
   let leftBorderClass = "border-l-transparent hover:bg-accent/45";
   if (active) {
     leftBorderClass = "border-l-primary bg-accent text-accent-foreground shadow-2xs";
@@ -563,22 +510,6 @@ function SessionItem({
           </span>
         )}
       </button>
-      {cancellable && (
-        <div className="flex shrink-0 items-center gap-0.5 pr-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover/session:opacity-100 sm:group-focus-within/session:opacity-100">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            onClick={onCancel}
-            disabled={controlling}
-            title={t("item.deleteTitle")}
-            aria-label={t("item.deleteTitle")}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2Icon />
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
@@ -628,7 +559,6 @@ function WorkerAssetBadge({ assets }: { assets: IntentAsset[] }) {
 
 export function SessionsTab({ taskId }: { taskId: string }) {
   const t = useTranslations("sessions");
-  const tc = useTranslations("checkpoints");
   const approvalFocus = useApprovalFocus({ taskId });
   const [selectedSessionId, setActiveId] = React.useState(MAIN_ID);
   const focusSession = React.useMemo<Session | undefined>(() => {
@@ -638,7 +568,8 @@ export function SessionsTab({ taskId }: { taskId: string }) {
       const seg = Number(source.session.slice(5));
       return { ...MAIN_SESSION, id: mainSessionId(seg), seg, title: t("title.main", { n: seg + 1 }), live: false };
     }
-    if (source.session === "plan") return { ...PLANNER_SESSION, title: t("title.planner"), live: false };
+    if (source.session === "goal" || source.session === "plan")
+      return { ...GOAL_SESSION, title: t("title.goalBreakdown"), live: false };
     if (source.session.startsWith("intent:")) {
       const id = source.session.slice(7);
       return {
@@ -663,8 +594,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   // Main-agent conversation segments (newest-first); currentSeg is the writable one.
   const [mainSegs, setMainSegs] = React.useState<{ seq: number; created_at: string }[]>([{ seq: 0, created_at: "" }]);
   const [currentSeg, setCurrentSeg] = React.useState(0);
-  const [creatingMain, setCreatingMain] = React.useState(false);
-  const [confirmNewMain, setConfirmNewMain] = React.useState(false);
   // 手机端（<lg）会话列表默认折叠：屏幕高度本就紧张，列表若固定占掉 10~15rem，
   // 下方的会话记录会被挤到只剩标题与输入框。折叠后记录区拿到几乎全部高度，
   // 点标题栏可展开选会话，选完自动收起。桌面端不受影响（lg 起始终展开）。
@@ -693,119 +622,12 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   const [olderIntentsHasMore, setOlderIntentsHasMore] = React.useState(false);
   const [hasLoadedOlderIntentsPage, setHasLoadedOlderIntentsPage] = React.useState(false);
   const [loadingOlderIntents, setLoadingOlderIntents] = React.useState(false);
-  const [input, setInput] = React.useState("");
-  const [sending, setSending] = React.useState(false);
-  const [stopping, setStopping] = React.useState(false);
-  const [mainChatRunning, setMainChatRunning] = React.useState<boolean | null>(null);
-  const [controllingIntent, setControllingIntent] = React.useState<string | null>(null);
-  const [cancelIntent, setCancelIntent] = React.useState<Session | null>(null);
-  const [cancelReason, setCancelReason] = React.useState("");
-  // 删除模式:soft=假删除(默认,置 deleted + 记原因,保留数据)| hard=真删除(级联移除独占子孙)。
-  const [deleteMode, setDeleteMode] = React.useState<"soft" | "hard">("soft");
-  const [workerMessage, setWorkerMessage] = React.useState("");
-  const [workerMessageRequestId, setWorkerMessageRequestId] = React.useState("");
-  const [workerMessageSending, setWorkerMessageSending] = React.useState(false);
-  // 引导（steer）运行中的意图：对话框里的目标会话 + 文本 + 提交中标记。
-  // 只在 running 的 Worker 上开放：后端会把文本投进引擎 steer 队列，
-  // 下一步工具调用前注入，不暂停、不重跑。
-  const [steerTarget, setSteerTarget] = React.useState<Session | null>(null);
-  const [steerText, setSteerText] = React.useState("");
-  const [steerSending, setSteerSending] = React.useState(false);
-  // 消息级回滚（总 AGENT 气泡箭头）：待确认的用户消息 + 提交中标记。确认后整任务
-  // 回滚到该消息之前，消息原文回填输入框。
-  const [rollbackTarget, setRollbackTarget] = React.useState<Activity | null>(null);
-  const [rollbackBusy, setRollbackBusy] = React.useState(false);
-  // 方式1 文件上传:选好的附件(已落到任务工作目录 uploads/),随下条消息一起发。
-  const [attachments, setAttachments] = React.useState<ChatAttachment[]>([]);
-  const [uploading, setUploading] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  async function pickFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    setUploading(true);
-    try {
-      const r = await api.chatUpload("task", taskId, Array.from(files));
-      setAttachments((prev) => [...prev, ...r.attachments]);
-    } catch (e) {
-      toast.error(t("toast.uploadFailed", { msg: (e as Error).message }));
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }
+  // 只读化（H1）：本页不再持有任何发送/上传/steer/回滚相关的 state。
+  // 这些能力统一收进对话页（harness），见 harness-refactor-plan.md 第三节。
 
   // Start a fresh main-agent session: only the segment counter advances — the task's
   // graph/assets/goal are untouched, so the agent continues over the same task with a
   // clean context. The old segment stays as read-only history you can switch back to.
-  async function createMainSession() {
-    if (creatingMain) return;
-    setCreatingMain(true);
-    try {
-      const r = await api.newMainSession(taskId);
-      setMainSegs((prev) => [{ seq: r.seq, created_at: r.created_at }, ...prev.filter((m) => m.seq !== r.seq)]);
-      setCurrentSeg(r.current ?? r.seq);
-      // Seed an empty, loaded state so the new (empty) session renders immediately.
-      setStore((prev) => ({ ...prev, [mainSessionKey(r.seq)]: { ...emptyState(), loaded: true } }));
-      setActiveId(mainSessionId(r.seq));
-      setListOpen(false);
-      setInput("");
-    } catch (e) {
-      toast.error(t("toast.createSessionFailed", { msg: (e as Error).message }));
-    } finally {
-      setCreatingMain(false);
-      setConfirmNewMain(false);
-    }
-  }
-
-  const patchIntentState = React.useCallback((intentId: string, state?: string) => {
-    const patch = (rows: TaskNode[]) =>
-      state
-        ? rows.map((row) => (row.id === intentId ? { ...row, state } : row))
-        : rows.filter((row) => row.id !== intentId);
-    setIntents(patch);
-    setOlderIntents(patch);
-  }, []);
-
-  const controlWorker = React.useCallback(
-    async (session: Session, action: "pause" | "resume" | "cancel", reason?: string, mode?: "soft" | "hard") => {
-      if (!session.intent_id || session.inherited || controllingIntent) return;
-      if (action === "cancel" && !reason?.trim()) {
-        toast.error(t("toast.reasonRequired"));
-        return;
-      }
-      setControllingIntent(session.intent_id);
-      try {
-        const res = await api.controlIntent(taskId, session.intent_id, action, reason, mode);
-        if (action === "pause") {
-          patchIntentState(session.intent_id, "paused");
-          toast.success(t("toast.workerPaused", { id: session.intent_id }));
-        } else if (action === "resume") {
-          patchIntentState(session.intent_id, "open");
-          toast.success(t("toast.workerResumed", { id: session.intent_id }));
-        } else if (mode === "hard") {
-          // 真删除:意图及独占下游已物理移除,从列表剔除该行。
-          patchIntentState(session.intent_id);
-          const d = res.deleted;
-          const extra = d
-            ? t("toast.hardDeleteExtra", { intents: d.intents, facts: d.facts, findings: d.findings })
-            : "";
-          toast.success(t("toast.workerHardDeleted", { id: session.intent_id, extra }));
-          setCancelReason("");
-        } else {
-          // 假删除:意图置 deleted、记录删除原因,保留节点与产出。
-          patchIntentState(session.intent_id, "deleted");
-          toast.success(t("toast.workerSoftDeleted", { id: session.intent_id }));
-          setCancelReason("");
-        }
-      } catch (error) {
-        toast.error(t("toast.workerActionFailed", { msg: (error as Error).message }));
-      } finally {
-        setControllingIntent(null);
-        setCancelIntent(null);
-      }
-    },
-    [controllingIntent, patchIntentState, taskId, t],
-  );
 
   // SSE connection state — surfaced so a dropped realtime link is visible, never
   // silently shown as "no messages".
@@ -836,7 +658,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   const fallbackMaxRef = React.useRef<Record<string, number>>({});
   const atBottomRef = React.useRef(true); // transcript pinned to bottom?
   const llmToastSeqRef = React.useRef<Set<number>>(new Set());
-  const chatStatusRequestRef = React.useRef(0);
   const firstIntentsRef = React.useRef<TaskNode[]>([]);
   // Per-key request token: a stale response for a key is ignored (guards fast
   // latest/older interleaving). Writes are ALWAYS keyed, so a late response can only
@@ -976,20 +797,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
       setSessionTokens(Object.fromEntries(r.sessions.map((item) => [item.session, item])));
     },
     { intervalMs: 5000, enabled: Boolean(taskId) },
-  );
-
-  React.useEffect(() => {
-    setMainChatRunning(null);
-  }, []);
-  // chatStatus 是「主 Agent 是否在跑」的唯一权威来源：2s 间隔保持不变，
-  // 由 usePolling 负责在途去重（原实现用 chatStatusRequestRef 手工挡重复响应，
-  // 现在不需要了，因为同一时刻只有一轮在跑）。
-  usePolling(
-    async () => {
-      const { running } = await api.chatStatus(taskId);
-      setMainChatRunning(running);
-    },
-    { intervalMs: 2000, enabled: Boolean(taskId) },
   );
 
   React.useEffect(() => {
@@ -1379,7 +1186,9 @@ export function SessionsTab({ taskId }: { taskId: string }) {
         .then((rows) => {
           if (alive) setReviewerVerdicts(rows);
         })
-        .catch(() => {});
+        .catch(() => {
+          // 回顾者判决是增强信息，读不到就不显示，不影响主流程。
+        });
     };
     pull();
     const timer = window.setInterval(pull, 15000);
@@ -1418,13 +1227,14 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   }, [allIntents]);
 
   // Returns true if any pending intercept belongs to this session.
-  // Worker agent_name format: "work#N / #intentID". Main/planner match by role key.
+  // Worker agent_name format: "work#N / #intentID". Main/goal-breakdown match by role key.
   const hasPendingForSession = React.useCallback(
     (s: Session): boolean => {
       if (s.inherited) return false;
       if (!pendingIntercepts.length) return false;
       if (s.role === "mainagent") return pendingIntercepts.some((r) => r.agent_name === "mainagent");
-      if (s.role === "planner") return pendingIntercepts.some((r) => r.agent_name === "planner");
+      if (s.role === "goals")
+        return pendingIntercepts.some((r) => r.agent_name === "goals" || r.agent_name === "planner");
       // Worker: 意图 ID 在 agent_name 末尾，现行格式 "work#1 (#42)"。
       // 历史拦截记录仍是旧格式 "work#1 · #42"，两种都要认，否则老任务的红点会静默消失。
       return pendingIntercepts.some((r) => {
@@ -1447,29 +1257,20 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   );
   const currentMainKey = mainSessionKey(currentSeg);
 
-  // Which main segment is streaming RIGHT NOW. A main turn is serialized per task, so at
-  // most one segment is live. Gate on the real running flag (sending / mainChatRunning)
-  // rather than "recent activity", and drop it the moment the turn's terminal record
-  // (kind='result', or an error) lands — otherwise the badge lingers for STREAM_WINDOW_MS
-  // after the agent already finished. null = nothing running.
+  // 只读化（H1）：不再有「本地刚发送」这个信号，正在输出的分段完全由已落库活动/实时帧推断。
   const liveMainSeg = React.useMemo<number | null>(() => {
-    if (!(sending || mainChatRunning)) return null;
-    // the streaming segment is the one with the freshest activity (incl. the just-sent turn)
-    let seg = currentSeg;
+    let seg: number | null = null;
     let bestTs = -1;
     for (const m of mainSegs) {
       const raw = store[mainSessionKey(m.seq)]?.lastTs;
       const ts = raw ? Date.parse(raw) : -1;
-      if (ts > bestTs) {
+      if (ts > bestTs && recentLive(mainSessionKey(m.seq))) {
         bestTs = ts;
         seg = m.seq;
       }
     }
-    const items = store[mainSessionKey(seg)]?.items ?? [];
-    const last = items[items.length - 1];
-    if (last && (last.kind === "result" || (last.kind === "text" && last.is_error))) return null;
     return seg;
-  }, [sending, mainChatRunning, mainSegs, store, currentSeg]);
+  }, [mainSegs, store, recentLive]);
 
   // Every main-agent segment is an independent, interactive session (like the top-level
   // chat conversations) — you can talk in any of them, newest-first.
@@ -1488,11 +1289,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   );
 
   const sessions = React.useMemo(() => {
-    const items = [
-      ...mainSessions,
-      ...workerSessions,
-      { ...SYSTEM_SESSION, title: t("title.system") },
-    ];
+    const items = [...mainSessions, ...workerSessions, { ...SYSTEM_SESSION, title: t("title.system") }];
     const located = focusSession ?? retainedSession;
     if (located && !items.some((s) => s.id === located.id)) items.push(located);
     return items;
@@ -1513,12 +1310,10 @@ export function SessionsTab({ taskId }: { taskId: string }) {
         : null,
   );
   const isMain = active.role === "mainagent";
-  const isPlanner = active.role === "planner";
+  const isGoalBreakdown = active.role === "goals";
   const isSystem = active.role === "system";
-  const isReviewer = active.role === "reviewer";
-  const activeVerdict = isReviewer
-    ? (reviewerVerdicts.find((v) => `s-reviewer-${v.id}` === active.id) ?? null)
-    : null;
+  const isReviewer = (active.role as string) === "reviewer";
+  const activeVerdict = isReviewer ? (reviewerVerdicts.find((v) => `s-reviewer-${v.id}` === active.id) ?? null) : null;
   const activeKey = keyForSession(active);
   // 只把属于当前会话的增量交给 Transcript：
   //   - worker 会话按 intent_id 对（后端 number / Session string，统一转字符串比）；
@@ -1541,7 +1336,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   const activeLast = activeItems[activeItems.length - 1];
   const activeSettled =
     !!activeLast && (activeLast.kind === "result" || (activeLast.kind === "text" && activeLast.is_error));
-  const mainBusy = isMain && (sending || (!activeSettled && (mainChatRunning ?? recentLive(activeKey))));
   // 统一状态机（与对话页同一份 deriveAgentPhase）：实时帧优先于已落库活动，
   // 避免“推理 → 正文 → 又回到推理”的来回跳（Memo 01）。
   const livePhase = deriveAgentPhase({
@@ -1565,7 +1359,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   React.useEffect(() => {
     activeKeyRef.current = activeKey;
     const st = store[activeKey];
-    if (active.role === "reviewer") {
+    if ((active.role as string) === "reviewer") {
       // 回顾者的判定过程也是活动行（worker=reviewer，按 run 隔离），走与规划者
       // 同一条加载路径；没有 run_id 的历史判决没有过程可拉，只显示结论。
       if (active.run_id && (!st || (!st.loaded && !st.loading))) loadSession(activeKey);
@@ -1613,7 +1407,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
     // optimistic echo, hence no fabricated seq that could collide with real DB ids.
     if (isMain) return items;
     // 回顾者与规划者同构：按 id 顺序展示自己的判定步骤，结论是最后一条 result。
-    if (isPlanner || isSystem || isReviewer) return items;
+    if (isGoalBreakdown || isSystem || isReviewer) return items;
     // Worker session: the intent leads the transcript as a right-aligned "user"-style
     // message (the task handed to this worker), followed by its execution steps.
     const intentTitle = sessionMeta.get(active.id)?.title ?? active.title;
@@ -1629,7 +1423,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
     return [intentMsg, ...items];
   }, [
     isMain,
-    isPlanner,
+    isGoalBreakdown,
     isSystem,
     isReviewer,
     activeState,
@@ -1640,15 +1434,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
     active.inherited,
     sessionMeta,
   ]);
-
-  // seq of this session's most-recent TodoWrite call — for the Todo popover.
-  const latestTodoSeq = React.useMemo(() => {
-    for (let i = activity.length - 1; i >= 0; i--) {
-      const a = activity[i];
-      if (a.kind === "tool_use" && a.tool === "TodoWrite") return a.seq;
-    }
-    return null;
-  }, [activity]);
 
   // Persisted result totals come from the backend's full activity history. Only
   // the latest unfinished usage frame is added client-side, so partial history
@@ -1677,42 +1462,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
     },
     [sessionTokens, store],
   );
-
-  // 上下文环只认「最近一条」的口径：input + cache 写入的累计值，不会算爆窗口。
-  // 窗口优先取后端写入的 usage metadata（capture 时按模型窗口写入）；老会话的 usage
-  // 行还没有 metadata（当时该角色未挂 WithContextWindow），回退到该角色解析到的 profile
-  // 的 context_window_k（与 agent/provider.go CompactionWindow 同口径：K → token，
-  // 缺省 200K，夹在 32K–1M）。两者都是后端配置值，前端不估算；都拿不到就不渲染环。
-  const fallbackContextWindow = React.useMemo(() => {
-    const resolved =
-      active.role === "worker"
-        ? llmResolutions?.worker
-        : active.role === "planner"
-          ? llmResolutions?.planner
-          : active.role === "mainagent"
-            ? llmResolutions?.mainagent
-            : undefined;
-    const profileId = resolved?.profile_id;
-    const profile =
-      profileId != null ? profiles.find((item) => Number(item.id) === Number(profileId)) : undefined;
-    const k = profile?.context_window_k ?? 0;
-    if (k <= 0) return 0;
-    return Math.min(Math.max(k, 32), 1000) * 1000;
-  }, [active.role, llmResolutions, profiles]);
-
-  const contextUsage = React.useMemo(() => {
-    const items = store[activeKey]?.items ?? [];
-    for (let index = items.length - 1; index >= 0; index -= 1) {
-      const item = items[index];
-      if (item.kind !== "usage") continue;
-      const size = item.metadata?.context_window ?? fallbackContextWindow;
-      if (!size) return null;
-      // input_tokens 已含 cache（后端按 prompt_tokens 口径归一），不能再加 cache 字段。
-      const used = item.metadata?.context_used ?? (item.input_tokens ?? 0);
-      return { size, used };
-    }
-    return null;
-  }, [store, activeKey, fallbackContextWindow]);
 
   const activeTokens = tokenForSession(activeKey);
   const tokenTotal = {
@@ -1774,128 +1523,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   // 的 ResizeObserver 兜住：它观察的就是 contentRef 这个容器，于是打开会话、加载详情、
   // 实时流长高走的是同一条贴底路径，不再有第二个观察者跟它抢滚动位置。
 
-  function stop() {
-    if (stopping) return;
-    setStopping(true);
-    chatStatusRequestRef.current++;
-    void api
-      .stopChat(taskId)
-      .then(() => {
-        chatStatusRequestRef.current++;
-        setMainChatRunning(false);
-      })
-      .finally(() => setStopping(false));
-  }
-
-  function send() {
-    const text = input.trim();
-    const atts = attachments;
-    if (side.handleCommand(text, () => setInput(""))) return;
-    if ((!text && atts.length === 0) || sending || mainBusy) return;
-    // No optimistic echo: the backend persists+broadcasts the human turn before it
-    // returns, so it streams back over SSE (worker="mainagent") with its real DB
-    // seq — the transcript renders it from server data like every other step. Clear
-    // the composer eagerly for responsiveness; restore it if the send fails.
-    setInput("");
-    setAttachments([]);
-    setSending(true);
-    chatStatusRequestRef.current++;
-    api
-      .chat(text, taskId, atts.length > 0 ? atts : undefined, active.seg ?? 0)
-      .then(({ mode }) => {
-        chatStatusRequestRef.current++;
-        setMainChatRunning(mode === "llm");
-      })
-      .catch((e) => {
-        setInput(text); // restore so the user doesn't lose their text / attachments
-        setAttachments(atts);
-        toast.error(t("toast.sendFailed", { msg: (e as Error).message || t("toast.retryLater") }));
-      })
-      .finally(() => setSending(false));
-  }
-
-  // confirmMessageRollback 执行消息级回滚（总 AGENT 气泡箭头）：后端只回退这段
-  // 对话到该消息之前（隐藏主 Agent 步骤；任务进度、意图状态与 Worker/规划器记录
-  // 都不动），这里把消息原文连同附件回填输入框，丢弃会话缓存并按当前会话重载，
-  // 被回滚的对话内容从列表消失。
-  async function confirmMessageRollback() {
-    const step = rollbackTarget;
-    if (!step || rollbackBusy) return;
-    setRollbackBusy(true);
-    try {
-      const detail = (await api.activityDetail(step.seq, taskId)).detail ?? "";
-      const body = parseUserBody(detail || step.summary);
-      const result = await api.rollbackTaskMessage(taskId, step.seq);
-      setInput(body.text);
-      setAttachments(body.attachments.map((a) => ({ name: a.name, path: a.path, size: a.size })));
-      setRollbackTarget(null);
-      // 缓存里含被隐藏步骤，merge 无法移除——整店清空，当前会话立即重载，其它会话
-      // 在打开时惰性重载。MOCK 演示没有后端可重载（loadSession 空转），清店只会
-      // 卡在「加载活动流…」，因此演示态保留原列表。
-      if (!MOCK) setStore({});
-      loadSession(activeKey);
-      toast.success(tc("msgRollback.doneTask", { hidden: result.hidden }));
-    } catch (e) {
-      toast.error(tc("msgRollback.failed", { msg: (e as Error).message }));
-    } finally {
-      setRollbackBusy(false);
-    }
-  }
-
-  function sendWorkerChat() {
-    const intentId = active.intent_id;
-    const message = workerMessage.trim();
-    if (side.handleCommand(message, () => setWorkerMessage(""))) return;
-    if (!intentId || active.inherited || active.status !== "paused" || workerMessageSending || !message) return;
-    if (workerMessageCharCount(message) > MAX_WORKER_MESSAGE_CHARS) {
-      toast.error(t("toast.messageTooLong", { max: MAX_WORKER_MESSAGE_CHARS }));
-      return;
-    }
-    const requestId = workerMessageRequestId || newWorkerMessageRequestID();
-    if (!workerMessageRequestId) setWorkerMessageRequestId(requestId);
-    setWorkerMessageSending(true);
-    api
-      .sendWorkerMessage(taskId, intentId, message, requestId)
-      .then((result) => {
-        // The server records the user turn and streams the run over SSE, so there is
-        // no optimistic insert: the message and the continuation arrive live.
-        patchIntentState(intentId, result.state);
-        setWorkerMessage("");
-        setWorkerMessageRequestId("");
-        toast.success(t("toast.workerMessageSent", { id: intentId }));
-      })
-      .catch((error) => {
-        toast.error(t("toast.sendFailed", { msg: (error as Error).message || t("toast.retryLater") }));
-      })
-      .finally(() => setWorkerMessageSending(false));
-  }
-
-  // 引导运行中的 Worker：走 /intents/{id}/steer，不改变意图状态。成功只是"已递达
-  // 到引擎队列"——若 Worker 恰在收尾或尚未注册内存 work，后端会回 409 原样透出。
-  async function sendSteer() {
-    const intentId = steerTarget?.intent_id;
-    const text = steerText.trim();
-    if (!intentId || !text || steerSending) return;
-    if (workerMessageCharCount(text) > MAX_WORKER_MESSAGE_CHARS) {
-      toast.error(t("toast.messageTooLong", { max: MAX_WORKER_MESSAGE_CHARS }));
-      return;
-    }
-    setSteerSending(true);
-    try {
-      await api.steerIntent(taskId, intentId, text);
-      toast.success(t("toast.steerSent"));
-      setSteerTarget(null);
-      setSteerText("");
-    } catch (error) {
-      toast.error(t("toast.steerFailed", { msg: (error as Error).message || t("toast.retryLater") }));
-    } finally {
-      setSteerSending(false);
-    }
-  }
-
   const mainLoaded = !!store[currentMainKey]?.loaded;
-  // 发送键位由系统设置决定（localStorage），默认 Enter 发送。
-  const sendMode = useChatSendMode();
   // What the transcript pane should show for the active session.
   // 回顾者的过程行是按需加载的：只有正在拉、且还没拉到过时才显示加载态。
   // 没有 run_id 的历史判决根本不发请求，不能让它停在「加载活动流…」。
@@ -1905,10 +1533,11 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   const resolutionForSession = (session: Session): TaskLLMResolution | undefined => {
     if (!llmResolutions || session.inherited || session.role === "system") return undefined;
     if (session.role === "mainagent") return llmResolutions.mainagent;
-    if (session.role === "planner") return llmResolutions.planner;
-    // 后台的 llm/resolution 只回 mainagent / planner / worker 三类。回顾者跑的是它
-    // 自己的 agent 配置，拿 worker 的模型顶上等于给用户一个错标签，宁可不显示。
-    if (session.role === "reviewer") return undefined;
+    if (session.role === "goals") return llmResolutions.goals;
+    // 后台的 llm/resolution 只回 mainagent / goals / worker 三类。已下线的回顾者
+    // （历史会话）跑的是它自己的 agent 配置，拿 worker 的模型顶上等于给用户一个
+    // 错标签，宁可不显示——所以这里按字符串比较兜住历史数据。
+    if ((session.role as string) === "reviewer") return undefined;
     return llmResolutions.worker;
   };
   const activeResolution = resolutionForSession(active);
@@ -2014,7 +1643,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
               {(["mainagent", "worker", "system"] as const).map((role) => {
                 const rawItems = grouped[role];
                 if (!rawItems.length) return null;
-                let items =
+                const items =
                   role === "worker" && workerFilter !== "all"
                     ? rawItems.filter((s) => s.id === activeId || s.status === workerFilter)
                     : rawItems;
@@ -2031,12 +1660,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                         title={t("list.toggleAria", { role: t(`role.${role}`) })}
                         className="-ml-1 flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
                       >
-                        <ChevronDownIcon
-                          className={cn(
-                            "size-3 transition-transform",
-                            collapsed && "-rotate-90",
-                          )}
-                        />
+                        <ChevronDownIcon className={cn("size-3 transition-transform", collapsed && "-rotate-90")} />
                       </button>
                       <Meta.icon className="size-3.5 text-primary/80" />
                       <span>{t(`role.${role}`)}</span>
@@ -2045,91 +1669,70 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                           {rawItems.length}
                         </span>
                       )}
-                      {role === "mainagent" && (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmNewMain(true)}
-                          disabled={creatingMain}
-                          title={t("newMain.title")}
-                          aria-label={t("newMain.aria")}
-                          className="ml-auto flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground disabled:opacity-50"
-                        >
-                          {creatingMain ? (
-                            <Loader2Icon className="size-3.5 animate-spin" />
-                          ) : (
-                            <PlusIcon className="size-3.5" />
-                          )}
-                          {t("newMain.label")}
-                        </button>
-                      )}
                     </div>
                     {!collapsed && (
                       <>
-                    {role === "worker" && rawItems.length > 3 && (
-                      <div className="mb-1 flex flex-wrap items-center gap-1 px-2">
-                        {(["all", "running", "paused", "blocked"] as const).map((fKey) => {
-                          const count =
-                            fKey === "all" ? rawItems.length : rawItems.filter((item) => item.status === fKey).length;
-                          if (fKey !== "all" && count === 0 && workerFilter !== fKey) return null;
+                        {role === "worker" && rawItems.length > 3 && (
+                          <div className="mb-1 flex flex-wrap items-center gap-1 px-2">
+                            {(["all", "running", "paused", "blocked"] as const).map((fKey) => {
+                              const count =
+                                fKey === "all"
+                                  ? rawItems.length
+                                  : rawItems.filter((item) => item.status === fKey).length;
+                              if (fKey !== "all" && count === 0 && workerFilter !== fKey) return null;
+                              return (
+                                <button
+                                  key={fKey}
+                                  type="button"
+                                  onClick={() => setWorkerFilter(fKey)}
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-xs transition-colors",
+                                    workerFilter === fKey
+                                      ? "border-primary/40 bg-primary/15 font-semibold text-primary"
+                                      : "border-border/60 bg-muted/40 text-muted-foreground hover:bg-accent",
+                                  )}
+                                >
+                                  <span>{fKey === "all" ? "ALL" : fKey.toUpperCase()}</span>
+                                  <span className="tabular-nums opacity-80">{count}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {items.map((s) => {
+                          const meta = s.role === "worker" ? sessionMeta.get(s.id) : undefined;
                           return (
-                            <button
-                              key={fKey}
-                              type="button"
-                              onClick={() => setWorkerFilter(fKey)}
-                              className={cn(
-                                "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-xs transition-colors",
-                                workerFilter === fKey
-                                  ? "border-primary/40 bg-primary/15 font-semibold text-primary"
-                                  : "border-border/60 bg-muted/40 text-muted-foreground hover:bg-accent",
-                              )}
-                            >
-                              <span>{fKey === "all" ? "ALL" : fKey.toUpperCase()}</span>
-                              <span className="tabular-nums opacity-80">{count}</span>
-                            </button>
+                            <SessionItem
+                              key={s.id}
+                              s={s}
+                              active={s.id === activeId}
+                              displayTitle={meta?.title ?? s.title}
+                              hasPending={hasPendingForSession(s)}
+                              unread={store[keyForSession(s)]?.unread}
+                              onClick={() => {
+                                approvalFocus.close();
+                                setActiveId(s.id);
+                                setListOpen(false); // 手机端选完即收起，把高度还给会话记录
+                              }}
+                              deleted={meta?.deleted}
+                            />
                           );
                         })}
-                      </div>
-                    )}
-                    {items.map((s) => {
-                      const meta = s.role === "worker" ? sessionMeta.get(s.id) : undefined;
-                      return (
-                        <SessionItem
-                          key={s.id}
-                          s={s}
-                          active={s.id === activeId}
-                          displayTitle={meta?.title ?? s.title}
-                          hasPending={hasPendingForSession(s)}
-                          unread={store[keyForSession(s)]?.unread}
-                          onClick={() => {
-                            approvalFocus.close();
-                            setActiveId(s.id);
-                            setListOpen(false); // 手机端选完即收起，把高度还给会话记录
-                            setWorkerMessage("");
-                            setWorkerMessageRequestId("");
-                          }}
-                          controlling={controllingIntent === s.intent_id}
-                          deleted={meta?.deleted}
-                          onCancel={() => {
-                            setCancelIntent(s);
-                          }}
-                        />
-                      );
-                    })}
-                    {role === "worker" && intentsHasMore && (
-                      <button
-                        type="button"
-                        onClick={loadOlderIntents}
-                        disabled={loadingOlderIntents}
-                        className="mt-0.5 flex items-center justify-center gap-1 rounded-md px-2 py-1 text-muted-foreground text-xs hover:bg-accent/50"
-                      >
-                        {loadingOlderIntents ? (
-                          <Loader2Icon className="size-3.5 animate-spin" />
-                        ) : (
-                          <RotateCwIcon className="size-3.5" />
+                        {role === "worker" && intentsHasMore && (
+                          <button
+                            type="button"
+                            onClick={loadOlderIntents}
+                            disabled={loadingOlderIntents}
+                            className="mt-0.5 flex items-center justify-center gap-1 rounded-md px-2 py-1 text-muted-foreground text-xs hover:bg-accent/50"
+                          >
+                            {loadingOlderIntents ? (
+                              <Loader2Icon className="size-3.5 animate-spin" />
+                            ) : (
+                              <RotateCwIcon className="size-3.5" />
+                            )}
+                            {t("worker.loadOlder")}
+                          </button>
                         )}
-                        {t("worker.loadOlder")}
-                      </button>
-                    )}
                       </>
                     )}
                   </div>
@@ -2140,7 +1743,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
               )}
             </div>
           </ScrollArea>
-          <ApiBar methods={["mainSessions", "intentsPage", "newMainSession", "llmProfiles", "tokenStats", "activityHistory"]} />
+          <ApiBar methods={["mainSessions", "intentsPage", "llmProfiles", "tokenStats", "activityHistory"]} />
         </div>
 
         {/* Right: transcript */}
@@ -2169,7 +1772,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                   titleEl
                 );
               })()}
-              <SideQuestionButton side={side} />
               {activeResolution && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -2315,9 +1917,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                   // → 模型兜底），最后才是结论卡。过程为空（本次改动之前落库的历史
                   // 判决）时只显示结论。
                   <div className="flex flex-col gap-3">
-                    {activity.length > 0 && (
-                      <Transcript activity={activity} taskId={taskId} chat={false} />
-                    )}
+                    {activity.length > 0 && <Transcript activity={activity} taskId={taskId} chat={false} />}
                     {activeVerdict ? (
                       <ReviewerVerdictPanel v={activeVerdict} />
                     ) : (
@@ -2331,14 +1931,6 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                     taskId={taskId}
                     chat={isMain}
                     focusedSeq={focusHistory.ready ? approvalFocus.state?.source?.seq : undefined}
-                    rollback={
-                      isMain
-                        ? {
-                            disabledReason: mainBusy ? tc("msgRollback.busyMain") : undefined,
-                            onRollback: setRollbackTarget,
-                          }
-                        : undefined
-                    }
                   />
                 ) : (
                   <EmptyState
@@ -2349,379 +1941,31 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                 )}
               </div>
             </ScrollArea>
-            {isMain ? (
-              <div className="border-t px-3 py-2.5 md:px-6">
-                <div className="mx-auto w-full max-w-5xl">
-                  {attachments.length > 0 && (
-                    <div className="mb-2 flex flex-wrap gap-1.5">
-                      {attachments.map((a) => (
-                        <div
-                          key={a.path}
-                          className="flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1 text-xs"
-                          title={a.path}
-                        >
-                          <PaperclipIcon className="size-3 shrink-0 text-primary" />
-                          <span className="max-w-[160px] truncate">{a.name}</span>
-                          <span className="text-muted-foreground">{fmtBytes(a.size)}</span>
-                          <button
-                            type="button"
-                            className="ml-0.5 text-muted-foreground hover:text-foreground"
-                            onClick={() => setAttachments((p) => p.filter((x) => x.path !== a.path))}
-                            title={t("composer.attachmentRemove")}
-                          >
-                            <XIcon className="size-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => void pickFiles(e.target.files)}
-                  />
-                  <InputGroup className="min-h-9 has-disabled:opacity-100">
-                    <MentionTextarea
-                      inputGroup
-                      rows={1}
-                      aria-label={t("composer.mainAria")}
-                      placeholder={mainBusy ? t("composer.mainBusyPlaceholder") : t("composer.mainPlaceholder")}
-                      value={input}
-                      disabled={sending}
-                      onValueChange={setInput}
-                      onKeyDown={(e) => {
-                        if (!shouldSubmitOnKey(e, sendMode)) return;
-                        e.preventDefault();
-                        send();
-                      }}
-                      className="max-h-36 min-h-9 overflow-y-auto"
-                    />
-                    <InputGroupAddon align="block-end">
-                      <InputGroupButton
-                        size="icon-xs"
-                        variant="ghost"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={mainBusy || uploading}
-                        title={t("composer.uploadTitle")}
-                        aria-label={t("composer.uploadTitle")}
-                      >
-                        {uploading ? <Loader2Icon className="animate-spin" /> : <PaperclipIcon />}
-                      </InputGroupButton>
-                      {mainBusy && isBtwCommand(input) && (
-                        <InputGroupButton size="icon-xs" onClick={send} aria-label={t("composer.sideQuestion")}>
-                          <ArrowUpIcon />
-                        </InputGroupButton>
-                      )}
-                      {contextUsage && (
-                        <ContextUsageRing
-                          className="ml-auto"
-                          size={contextUsage.size}
-                          used={contextUsage.used}
-                        />
-                      )}
-                      {mainBusy ? (
-                        <InputGroupButton
-                          size="icon-xs"
-                          variant="destructive"
-                          onClick={stop}
-                          disabled={stopping}
-                          title={t("composer.stopTitle")}
-                          aria-label={t("composer.stopTitle")}
-                        >
-                          {stopping ? <Loader2Icon className="animate-spin" /> : <SquareIcon />}
-                        </InputGroupButton>
-                      ) : (
-                        <InputGroupButton
-                          size="icon-xs"
-                          variant="default"
-                          onClick={send}
-                          disabled={(!input.trim() && attachments.length === 0) || sending}
-                          title={t("composer.sendTitle")}
-                          aria-label={t("composer.sendTitle")}
-                        >
-                          {sending ? <Loader2Icon className="animate-spin" /> : <ArrowUpIcon />}
-                        </InputGroupButton>
-                      )}
-                    </InputGroupAddon>
-                  </InputGroup>
-                </div>
-              </div>
-            ) : active.role === "worker" &&
-              !active.inherited &&
-              (active.status === "running" || active.status === "paused") ? (
-              <div className="border-t p-3">
-                <InputGroup className="min-h-9 has-disabled:opacity-100">
-                  <MentionTextarea
-                    inputGroup
-                    rows={1}
-                    aria-label={t("composer.workerAria", { id: active.intent_id ?? "" })}
-                    placeholder={t("composer.workerPlaceholder", { id: active.intent_id ?? "" })}
-                    value={workerMessage}
-                    onValueChange={(value) => {
-                      setWorkerMessage(value);
-                      setWorkerMessageRequestId("");
-                    }}
-                    onKeyDown={(event) => {
-                      if (!shouldSubmitOnKey(event, sendMode)) return;
-                      event.preventDefault();
-                      sendWorkerChat();
-                    }}
-                    disabled={workerMessageSending}
-                    aria-invalid={workerMessageCharCount(workerMessage) > MAX_WORKER_MESSAGE_CHARS}
-                    className="max-h-36 min-h-9 overflow-y-auto"
-                  />
-                  <InputGroupAddon align="block-end">
-                    <span
-                      className={cn(
-                        "px-1 text-xs text-muted-foreground tabular-nums",
-                        workerMessageCharCount(workerMessage) > MAX_WORKER_MESSAGE_CHARS && "text-destructive",
-                      )}
-                    >
-                      {workerMessageCharCount(workerMessage)}/{MAX_WORKER_MESSAGE_CHARS}
-                    </span>
-                    {active.status === "running" && isBtwCommand(workerMessage) && (
-                      <InputGroupButton size="icon-xs" onClick={sendWorkerChat} aria-label={t("composer.sideQuestion")}>
-                        <ArrowUpIcon />
-                      </InputGroupButton>
-                    )}
-                    {active.status === "running" ? (
-                      <>
-                        <InputGroupButton
-                          className="ml-auto"
-                          size="xs"
-                          variant="outline"
-                          onClick={() => {
-                            setSteerTarget(active);
-                            setSteerText("");
-                          }}
-                          disabled={controllingIntent === active.intent_id || steerSending}
-                          title={t("steer.buttonTitle")}
-                          aria-label={t("steer.buttonAria", { id: active.intent_id ?? "" })}
-                        >
-                          <NavigationIcon data-icon="inline-start" />
-                          {t("steer.button")}
-                        </InputGroupButton>
-                        <InputGroupButton
-                          size="icon-xs"
-                          variant="destructive"
-                          onClick={() => void controlWorker(active, "pause")}
-                          disabled={controllingIntent === active.intent_id}
-                          title={t("composer.pauseTitle")}
-                          aria-label={t("composer.pauseTitle")}
-                        >
-                          {controllingIntent === active.intent_id ? (
-                            <Loader2Icon className="animate-spin" />
-                          ) : (
-                            <SquareIcon />
-                          )}
-                        </InputGroupButton>
-                      </>
-                    ) : (
-                      <>
-                        <InputGroupButton
-                          className="ml-auto"
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => void controlWorker(active, "resume")}
-                          disabled={controllingIntent === active.intent_id || workerMessageSending}
-                          title={t("composer.resumeTitle")}
-                          aria-label={t("composer.resumeAria")}
-                        >
-                          {controllingIntent === active.intent_id ? (
-                            <Loader2Icon className="animate-spin" />
-                          ) : (
-                            t("composer.resumeLabel")
-                          )}
-                        </InputGroupButton>
-                        <InputGroupButton
-                          size="icon-xs"
-                          variant="default"
-                          onClick={sendWorkerChat}
-                          disabled={
-                            workerMessageSending ||
-                            !workerMessage.trim() ||
-                            workerMessageCharCount(workerMessage) > MAX_WORKER_MESSAGE_CHARS
-                          }
-                          title={t("composer.sendTitle")}
-                          aria-label={t("composer.sendTitle")}
-                        >
-                          {workerMessageSending ? <Spinner /> : <ArrowUpIcon />}
-                        </InputGroupButton>
-                      </>
-                    )}
-                  </InputGroupAddon>
-                </InputGroup>
-              </div>
-            ) : (
-              <div className="flex items-center border-t px-4 py-2">
-                <TodoPopover
-                  seq={latestTodoSeq}
-                  fetchDetail={(seq) => api.activityDetail(seq, taskId).then((r) => r.detail ?? "")}
-                />
-              </div>
-            )}
-            <ApiBar methods={["activity", "activityHistory", "chat", "chatStatus", "chatUpload", "stopChat", "sendWorkerMessage", "steerIntent", "rollbackTaskMessage", "activityDetail", "controlIntent", "interceptTask", "taskIntentAssets", "taskLLMResolution", "taskReviewerVerdicts"]} />
-          </div>
-        </SideQuestionWorkspace>
-        {/* 引导（steer）对话框：只对运行中的 Worker 开放。 */}
-        <Dialog
-          open={steerTarget !== null}
-          onOpenChange={(open) => {
-            if (!open && !steerSending) {
-              setSteerTarget(null);
-              setSteerText("");
-            }
-          }}
-        >
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{t("steer.title", { id: steerTarget?.intent_id ?? "" })}</DialogTitle>
-              <DialogDescription className="whitespace-normal break-words">{t("steer.desc")}</DialogDescription>
-            </DialogHeader>
-            <Textarea
-              value={steerText}
-              onChange={(event) => setSteerText(event.target.value)}
-              placeholder={t("steer.placeholder")}
-              rows={3}
-              autoFocus
-              disabled={steerSending}
-              aria-invalid={workerMessageCharCount(steerText) > MAX_WORKER_MESSAGE_CHARS}
-            />
-            <div className="flex items-center justify-between gap-2 text-muted-foreground text-xs">
-              <span>{t("steer.hint")}</span>
-              <span
-                className={cn(
-                  "shrink-0 tabular-nums",
-                  workerMessageCharCount(steerText) > MAX_WORKER_MESSAGE_CHARS && "text-destructive",
-                )}
-              >
-                {workerMessageCharCount(steerText)}/{MAX_WORKER_MESSAGE_CHARS}
+            {/* 只读化（H1）：原主 Agent / Worker 两个 composer（发送、停止、上传、侧问、
+                暂停/恢复、steer、回滚）已整体移除。要发消息、纠偏、回滚，请到对话页
+                选择对应线程。这里只留一条静态说明，避免用户以为页面坏了。 */}
+            <div className="flex items-center gap-2 border-t px-3 py-2.5 text-muted-foreground text-xs md:px-6">
+              <LockIcon className="size-3.5 shrink-0" />
+              <span className="min-w-0">
+                {t("readonly.hint")}
+                {active.intent_id ? ` · Worker #${active.intent_id}` : ""}
               </span>
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                disabled={steerSending}
-                onClick={() => {
-                  setSteerTarget(null);
-                  setSteerText("");
-                }}
-              >
-                {t("steer.cancel")}
-              </Button>
-              <Button
-                onClick={() => void sendSteer()}
-                disabled={
-                  steerSending || !steerText.trim() || workerMessageCharCount(steerText) > MAX_WORKER_MESSAGE_CHARS
-                }
-              >
-                {steerSending && <Spinner data-icon="inline-start" />}
-                {t("steer.submit")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
-        <AlertDialog
-          open={cancelIntent !== null}
-          onOpenChange={(open) => {
-            if (!open) {
-              setCancelIntent(null);
-              setCancelReason("");
-              setDeleteMode("soft");
-            }
-          }}
-        >
-          <AlertDialogContent className="max-w-[min(32rem,calc(100vw-2rem))]">
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("deleteDialog.title", { id: cancelIntent?.intent_id ?? "" })}</AlertDialogTitle>
-              <AlertDialogDescription className="whitespace-normal break-words">
-                {deleteMode === "hard"
-                  ? t.rich("deleteDialog.hardDesc", { s: (c) => <strong>{c}</strong> })
-                  : t.rich("deleteDialog.softDesc", { s: (c) => <strong>{c}</strong> })}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="grid gap-3 py-1">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDeleteMode("soft")}
-                  className={cn(
-                    "rounded-md border px-3 py-2 text-left text-sm transition-colors",
-                    deleteMode === "soft" ? "border-primary bg-primary/5" : "hover:bg-accent",
-                  )}
-                >
-                  <div className="font-medium">{t("deleteDialog.softLabel")}</div>
-                  <div className="text-muted-foreground text-xs">{t("deleteDialog.softHint")}</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeleteMode("hard")}
-                  className={cn(
-                    "rounded-md border px-3 py-2 text-left text-sm transition-colors",
-                    deleteMode === "hard" ? "border-destructive bg-destructive/5" : "hover:bg-accent",
-                  )}
-                >
-                  <div className="font-medium">{t("deleteDialog.hardLabel")}</div>
-                  <div className="text-muted-foreground text-xs">{t("deleteDialog.hardHint")}</div>
-                </button>
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="cancel-reason" className="font-medium text-sm">
-                  {t("deleteDialog.reasonLabel")}
-                </label>
-                <Textarea
-                  id="cancel-reason"
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder={t("deleteDialog.reasonPlaceholder")}
-                  rows={3}
-                  autoFocus
-                />
-              </div>
-            </div>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("deleteDialog.back")}</AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                disabled={!cancelIntent || controllingIntent !== null || !cancelReason.trim()}
-                onClick={() => cancelIntent && void controlWorker(cancelIntent, "cancel", cancelReason, deleteMode)}
-              >
-                {controllingIntent ? <Loader2Icon className="animate-spin" /> : <Trash2Icon />}
-                {deleteMode === "hard" ? t("deleteDialog.confirmHard") : t("deleteDialog.confirmSoft")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog open={confirmNewMain} onOpenChange={(open) => !open && setConfirmNewMain(false)}>
-          <AlertDialogContent className="max-w-[min(32rem,calc(100vw-2rem))]">
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("newSession.title")}</AlertDialogTitle>
-              <AlertDialogDescription className="whitespace-normal break-words">
-                {t("newSession.desc")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={creatingMain}>{t("newSession.cancel")}</AlertDialogCancel>
-              <AlertDialogAction disabled={creatingMain} onClick={() => void createMainSession()}>
-                {creatingMain ? t("newSession.starting") : t("newSession.start")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <MessageRollbackDialog
-          task
-          open={rollbackTarget !== null}
-          busy={rollbackBusy}
-          onOpenChange={(open) => {
-            if (!open) setRollbackTarget(null);
-          }}
-          onConfirm={() => void confirmMessageRollback()}
-        />
+            <ApiBar
+              methods={[
+                "activity",
+                "activityHistory",
+                "chatStatus",
+                "activityDetail",
+                "interceptTask",
+                "taskIntentAssets",
+                "taskLLMResolution",
+                "taskReviewerVerdicts",
+              ]}
+            />
+          </div>
+        </SideQuestionWorkspace>
       </div>
     </TooltipProvider>
   );

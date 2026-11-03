@@ -213,7 +213,12 @@ function CreateAgentDialog({ onCreated }: { onCreated: (key: string) => void }) 
 
 export default function AgentsPage() {
   const t = useTranslations("agentsPage");
+  // 两份数据源：
+  //   agents        —— 会话 Agent（/agents 已过滤掉运行时模板）
+  //   orchestration —— 任务运行时模板（根 agent / 子代理模板 / 共用运行配置 / 目标拆解）
+  // 编辑抽屉两份共用，key 是唯一标识。
   const [agents, setAgents] = React.useState<Agent[]>([]);
+  const [orchestration, setOrchestration] = React.useState<Agent[]>([]);
   const [editKey, setEditKey] = React.useState<string | null>(null);
 
   const reload = React.useCallback(() => {
@@ -221,12 +226,16 @@ export default function AgentsPage() {
       .agents()
       .then(setAgents)
       .catch(() => setAgents([]));
+    api
+      .orchestration()
+      .then(setOrchestration)
+      .catch(() => setOrchestration([]));
   }, []);
   React.useEffect(() => {
     reload();
   }, [reload]);
 
-  const editing = agents.find((a) => a.key === editKey) ?? null;
+  const editing = [...orchestration, ...agents].find((a) => a.key === editKey) ?? null;
 
   // 卡片进场:首批数据就绪后的 1.2s 窗口内 50ms 递增(封顶 450ms),之后新增/刷新保持静态。
   const listIntro = useStaggerOnce(agents.length > 0);
@@ -244,8 +253,29 @@ export default function AgentsPage() {
       </div>
 
       <PaperSheet api={["agents", "createAgent", "deleteAgent"]}>
-        <SheetHead index="01" title={t("listTitle")} count={agents.length} />
-        <div className="px-4 py-3">
+        <SheetHead index="01" title={t("groupOrchestration")} count={orchestration.length} />
+        <div className="flex flex-col gap-3 px-4 py-3">
+          <p className="text-muted-foreground text-sm">{t("groupOrchestrationDesc")}</p>
+          {orchestration.length > 0 && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {orchestration.map((a, index) => (
+                <AgentGridCard
+                  key={a.key}
+                  agent={a}
+                  delay={listIntro ? Math.min(index * 50, 450) : undefined}
+                  onOpen={() => setEditKey(a.key)}
+                  onDeleted={reload}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </PaperSheet>
+
+      <PaperSheet api={["agents", "createAgent", "deleteAgent"]}>
+        <SheetHead index="02" title={t("groupSessions")} count={agents.length} />
+        <div className="flex flex-col gap-3 px-4 py-3">
+          <p className="text-muted-foreground text-sm">{t("groupSessionsDesc")}</p>
           {agents.length === 0 ? (
             <EmptyState illustration="nodes" title={t("empty")} />
           ) : (

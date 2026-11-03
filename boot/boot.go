@@ -91,7 +91,7 @@ func Prepare(ctx context.Context, opts Options) (*App, error) {
 	// 同时执行 CPU 密集型命令（穷举、爆破、高并发 fuzz）会把 CPU 打满，平台服务与
 	// SQLite 写入都会跟着变慢——只提示，不擅自改用户设置。
 	if w := mgr.Workers(); w > runtime.NumCPU() {
-		log.Printf("[config] workers=%d 超过本机逻辑 CPU 数 %d：并行 worker 同时跑 CPU 密集型脚本会打满 CPU，"+
+		log.Printf("[config] agent_slots=%d 超过本机逻辑 CPU 数 %d：并发的子代理同时跑 CPU 密集型脚本会打满 CPU，"+
 			"平台与数据库会一起变慢；建议设为不超过 %d", w, runtime.NumCPU(), runtime.NumCPU())
 	}
 
@@ -112,7 +112,7 @@ func Prepare(ctx context.Context, opts Options) (*App, error) {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	go func() {
-		log.Printf("ARTEX-HYDRA %s backend listening on %s (data=%s, workers=%d)",
+		log.Printf("ARTEX-HYDRA %s backend listening on %s (data=%s, agent_slots=%d)",
 			opts.Version, opts.ListenAddr, opts.DataDir, mgr.Workers())
 		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			if isAddrInUse(err) {

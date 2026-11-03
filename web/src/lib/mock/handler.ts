@@ -2464,7 +2464,10 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
     return { deleted: Number(seg[2]) };
 
   // ── agents ──
-  if (path === "/agents" && m === "GET") return { agents: D.agents };
+  // 清单只列会话 Agent；运行时模板走 /orchestration（与后端 pgListAgents 的过滤同口径）。
+  if (path === "/agents" && m === "GET") return { agents: D.agents.filter((a) => !ORCHESTRATION_KEYS.has(a.key)) };
+  if (path === "/orchestration" && m === "GET")
+    return { agents: D.agents.filter((a) => ORCHESTRATION_KEYS.has(a.key)) };
   if (path === "/agents" && m === "POST")
     return {
       id: "9",
@@ -2857,3 +2860,7 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
     ? []
     : {};
 }
+
+// ORCHESTRATION_KEYS 与后端 server/orchestration_api.go 的 orchestrationAgentKeys 同口径：
+// 这些是「运行时模板」，不是可选角色，因此不出现在 /agents 清单里。
+const ORCHESTRATION_KEYS = new Set(["coord_root", "coord_child", "worker", "goals"]);

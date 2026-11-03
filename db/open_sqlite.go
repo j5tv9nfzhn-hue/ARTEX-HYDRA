@@ -212,6 +212,13 @@ var sqliteColumnAdds = []struct {
 		`ALTER TABLE tool_usage ADD COLUMN error_class TEXT NOT NULL DEFAULT ''`,
 	},
 	{
+		// 线程 <-> 任务绑定。空串 = 通用对话；老库补列后一律为空串（历史线程没有
+		// 绑定关系的证据，不能按时间或标题猜一个任务挂上去）。
+		"conversations",
+		"task_id",
+		`ALTER TABLE conversations ADD COLUMN task_id TEXT NOT NULL DEFAULT ''`,
+	},
+	{
 		// 供应商标识(模型挂在供应商下)。可空列才能带 REFERENCES(SQLite 的 ADD
 		// COLUMN 限制);回填由 backfillLLMProviders 紧跟其后完成,所以运行期恒非空。
 		"llm_profiles",
@@ -233,6 +240,9 @@ var sqliteColumnAdds = []struct {
 // 以后凡是引用「补出来的列」的索引/视图/触发器，一律加到这里，不要加回 schema 文件。
 var sqlitePostColumnDDL = []string{
 	`CREATE INDEX IF NOT EXISTS idx_llm_profiles_provider ON llm_profiles(provider_id)`,
+	// 引用补列 conversations.task_id：老库的 schema 重放发生在补列之前，
+	// 索引写进 schema 文件会让升级当场失败（no such column: task_id）。
+	`CREATE INDEX IF NOT EXISTS idx_conversations_task ON conversations(task_id) WHERE task_id <> ''`,
 }
 
 // applySQLiteColumnAdds 逐条补齐上表缺失的列。pragma_table_info 是表值函数,表名

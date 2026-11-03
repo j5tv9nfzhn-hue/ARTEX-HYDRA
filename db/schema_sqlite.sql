@@ -1063,6 +1063,10 @@ CREATE TABLE IF NOT EXISTS conversations (
     agent_key      TEXT NOT NULL,
     title          TEXT NOT NULL DEFAULT '',
     llm_profile_id BIGINT REFERENCES llm_profiles(id) ON DELETE SET NULL,
+    -- 线程 <-> 任务的绑定。空串 = 没绑定（通用对话）；有值 = 这条线程在讲哪个任务，
+    -- 对话页的任务带靠它决定默认显示范围。不建外键：任务可被归档/删除而线程要保留
+    -- 历史发言，悬空绑定读出来只是一个查不到的任务，不会破坏对话。
+    task_id        TEXT NOT NULL DEFAULT '',  -- 索引见 open_sqlite.go 的 sqlitePostColumnDDL（老库补列后才建）
     pinned_at      TIMESTAMP,
     created_at     TIMESTAMP NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f+00:00','now')),
     updated_at     TIMESTAMP NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f+00:00','now'))

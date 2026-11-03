@@ -1,3 +1,13 @@
+// 新版（v2.5.0.6 之后）侧边栏去冗余版：只删折叠层，不换设计。
+//
+// 改动边界：
+// - 删除「运行 / 发现 / 拦截」三个纯触发器父项，其子项全部提升为一级条目。
+//   这三个父项的 url 与首个子项完全相同（结构补丁），点击只展开不跳转，
+//   是用户反馈「点不开、找不到入口」的直接来源。
+// - 「设置」保留为可折叠父项，但改为可选收纳，不再承载导航层级，
+//   折叠状态由 sidebar-prefs 的 collapsedGroups 控制。
+// - 路由、页面、样式、渲染组件一律不动。
+
 import {
   Activity,
   Ban,
@@ -58,10 +68,11 @@ export interface NavMainParentItem extends NavItemBase {
   /**
    * 父项自身的落地页。**当前渲染方把父项当作纯触发器**：NavCollapsibleItem 的
    * CollapsibleTrigger 是 button 不是 Link，点击只展开/收起，不跳转。
-   * 因此每个域的主页面必须同时挂一个同名子项，否则该页面在侧边栏不可达 ——
-   * 五个域下面第一个子项就是为此存在，不是冗余。
+   * 因此这里只在「设置」上保留，且其第一个子项与父项 url 一致，保证页面可达。
    */
   url?: string;
+  /** 首次挂载时是否展开子项；不填则只在路由命中该父项时展开。 */
+  defaultOpen?: boolean;
   subItems: NavSubItem[];
 }
 
@@ -83,28 +94,16 @@ export function navGroupMessageKey(groupId: number): string {
 }
 
 /**
- * 侧边栏导航：总览 + 5 个一等域，25 个原始条目一个不少，全部下沉为二级。
+ * 侧边栏导航：两个分组（功能 / 系统），一级条目直达，只有「设置」可折叠收纳。
  *
- * 形态由后端接口面推导，不是照抄 STRIX（后端 120 个 /api 端点的一级分组）：
- *   tasks×25 · protocol×12 · intercept×12 · exploration×9 · skills×6 ·
- *   notify×6 · companies×5 · auth×5 · conversations×4 · agents×4 ……
- * 由此得到五个域：
- *   总览  /stats + /exploration/* 的聚合视图，单独占一个入口
- *   运行  tasks 是绝对主体（25 个端点）；/api/tasks/{id}/chat 证明「对话」
- *         从属于任务，/api/workspace/* 是任务工作区
- *   发现  findings / assets / 工具执行 / LLM 录制在后端上都是「任务的观察面」，
- *         不是独立资源
- *   拦截  /api/intercept/* 占 12 个端点，是 ARTEX 相对 STRIX 的差异化能力；
- *         「流量」的后端就是 /api/intercept/history，本就属于拦截
- *   设置  llm / agents / mcp / skills / tools / notify 各自只有 2–6 个端点，
- *         是配置面而非作战面，不占一等导航
+ * 与 v2.5.0.6 之后那版（分组 → 域 → 条目 三层）的差别只有一处：
+ * 删掉「运行 / 发现 / 拦截」三个父层。理由见文件头。
  *
- * 所以这是「重组」而非「删减」：功能一个没少，只是层级深了一层。
+ * 分组依据不变：功能 = 作战面 + 观察面，系统 = 配置面 + 维护面。
+ * 系统组里被提升到一级的四个条目（LLM / Agent / Skill / 通知推送）是日常高频项，
+ * 留在「设置」的折叠层里会让它们变成二级，与「设置」本身的可达性不对等。
  *
- * 顶层仍保留 功能 / 系统 两个分组（id 1 / 2，沿用 nav.group.function 与
- * nav.group.system 两个既有消息键，不新增键）：作战面（总览/运行/发现/拦截）
- * 与配置面（设置）分开，用户在旧版建立的心智模型不丢。层级因此是
- * 分组 → 域 → 条目 三层，但每一层的条目数都从 10~15 降到 1~5。
+ * 层级因此是：分组 → 条目（2 层），设置内部多一层可选收纳。
  */
 export const sidebarItems: NavGroup[] = [
   {
@@ -112,62 +111,39 @@ export const sidebarItems: NavGroup[] = [
     label: "功能",
     items: [
       { id: "dashboard", title: "总览", url: "/dashboard", icon: LayoutDashboard },
-      {
-        id: "runs-domain",
-        title: "运行",
-        url: "/function/tasks",
-        icon: Target,
-        subItems: [
-          { id: "tasks", title: "任务", url: "/function/tasks", icon: Target },
-          { id: "chat", title: "对话", url: "/chat", icon: MessageSquare },
-          { id: "workspace", title: "工作空间", url: "/function/workspace", icon: FolderOpen },
-        ],
-      },
-      {
-        id: "findings-domain",
-        title: "发现",
-        url: "/function/findings",
-        icon: Bug,
-        subItems: [
-          { id: "findings", title: "发现", url: "/function/findings", icon: Bug },
-          { id: "assets", title: "资产", url: "/function/assets", icon: Network },
-          { id: "sync", title: "资产同步", url: "/function/sync", icon: FolderSync },
-          { id: "commands", title: "工具执行", url: "/function/commands", icon: Terminal },
-          { id: "llm-records", title: "LLM 录制", url: "/function/llm-records", icon: Radio },
-        ],
-      },
-      {
-        id: "intercept-domain",
-        title: "拦截",
-        url: "/system/intercept",
-        icon: ShieldAlert,
-        subItems: [
-          { id: "intercept", title: "拦截规则", url: "/system/intercept", icon: ShieldAlert },
-          { id: "asset-intercept", title: "资产拦截", url: "/system/intercept/assets", icon: Ban },
-          { id: "approvals", title: "审批记录", url: "/system/intercept/approvals", icon: ClipboardList },
-          { id: "traffic", title: "流量", url: "/function/traffic", icon: Activity },
-        ],
-      },
+      { id: "tasks", title: "任务", url: "/function/tasks", icon: Target },
+      { id: "chat", title: "HARNESS", url: "/chat", icon: MessageSquare },
+      { id: "workspace", title: "工作空间", url: "/function/workspace", icon: FolderOpen },
+      { id: "findings", title: "发现", url: "/function/findings", icon: Bug },
+      { id: "assets", title: "资产", url: "/function/assets", icon: Network },
+      { id: "sync", title: "资产同步", url: "/function/sync", icon: FolderSync },
+      { id: "commands", title: "工具执行", url: "/function/commands", icon: Terminal },
+      { id: "llm-records", title: "LLM 录制", url: "/function/llm-records", icon: Radio },
+      { id: "traffic", title: "流量", url: "/function/traffic", icon: Activity },
+      { id: "intercept", title: "拦截规则", url: "/system/intercept", icon: ShieldAlert },
+      { id: "asset-intercept", title: "资产拦截", url: "/system/intercept/assets", icon: Ban },
+      { id: "approvals", title: "审批记录", url: "/system/intercept/approvals", icon: ClipboardList },
     ],
   },
   {
     id: 2,
     label: "系统",
     items: [
+      { id: "llm", title: "LLM", url: "/system/llm", icon: Brain },
+      { id: "agents", title: "Agent", url: "/system/agents", icon: Bot },
+      { id: "skills", title: "Skill", url: "/system/skills", icon: Sparkles },
+      { id: "notify", title: "通知推送", url: "/system/notify", icon: BellRing },
       {
-        id: "settings-domain",
+        id: "settings",
         title: "设置",
         url: "/system/settings",
         icon: Settings2,
+        defaultOpen: true,
         subItems: [
           { id: "settings", title: "系统配置", url: "/system/settings", icon: Settings2 },
-          { id: "llm", title: "LLM", url: "/system/llm", icon: Brain },
-          { id: "agents", title: "Agent", url: "/system/agents", icon: Bot },
           { id: "mcp", title: "MCP", url: "/system/mcp", icon: Plug },
           { id: "external", title: "外部接入", url: "/system/external", icon: Globe },
-          { id: "skills", title: "Skill", url: "/system/skills", icon: Sparkles },
           { id: "tools", title: "工具", url: "/system/tools", icon: Wrench },
-          { id: "notify", title: "通知推送", url: "/system/notify", icon: BellRing },
           { id: "logs", title: "日志", url: "/system/logs", icon: ScrollText },
           { id: "retention", title: "数据保留", url: "/system/retention", icon: Database },
           { id: "storage", title: "存储与清理", url: "/system/storage", icon: HardDrive },

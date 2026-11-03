@@ -38,8 +38,8 @@ const MOCK_LOGS: LogLine[] = [
     seq: 3,
     ts: "2026-07-26T03:56:10Z",
     level: "info",
-    tag: "planner",
-    text: "task t-acme-web：第 3 轮规划，创建意图 i-4",
+    tag: "coord",
+    text: "task t-acme-web：根 agent 派发子代理 sub:sqli-1（路线：登录态 SQL 注入）",
   },
   {
     seq: 4,

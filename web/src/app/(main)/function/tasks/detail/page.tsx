@@ -1,6 +1,5 @@
 "use client";
 
-import { ApiBar, KpiRow } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -55,13 +54,13 @@ import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api";
 import type { LLMProfile, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ApiBar, KpiRow } from "@/ui/container";
 
 import { AssetsTab } from "./_tabs/assets-tab";
 import { BroadcastTab } from "./_tabs/broadcast-tab";
 import { CoverageGraphTab } from "./_tabs/coverage-graph-tab";
 import { FindingsTab } from "./_tabs/findings-tab";
 import { GraphTab } from "./_tabs/graph-tab";
-import { InterceptTab } from "./_tabs/intercept-tab";
 import { OverviewTab } from "./_tabs/overview-tab";
 import { ReportTab } from "./_tabs/report-tab";
 import { RetestsTab } from "./_tabs/retests-tab";
@@ -71,21 +70,14 @@ import { TimelineTab } from "./_tabs/timeline-tab";
 
 // 页签顺序沿用原来的分簇顺序，只是不再画簇与簇之间的竖线：
 // 纸本主题里，页签是书页上的下划线索引，不是一排按钮。
-const SOFTWARE_RE_TABS = ["software", "sessions", "overview", "graph", "report", "intercept", "timeline"] as const;
+const SOFTWARE_RE_TABS = ["software", "sessions", "overview", "graph", "report", "timeline"] as const;
 
-const WEB_TABS = [
-  "sessions",
-  "overview",
-  "graph",
-  "findings",
-  "retests",
-  "report",
-  "assets",
-  "coverage",
-  "broadcast",
-  "intercept",
-  "timeline",
-] as const;
+// H1：11 → 8。移出本页的：
+//   • 拦截审批 → 独立一级页 /system/intercept/approvals?task=<id>（安全阀不属于任务详情）
+// 并入其他页签的：
+//   • 资产覆盖图 → 总览页签底部的「覆盖度」分区
+//   • 播报板     → 时间线页签顶部的「播报」分区
+const WEB_TABS = ["sessions", "overview", "graph", "findings", "retests", "report", "assets", "timeline"] as const;
 
 function taskProfileIDs(task: Task): string[] {
   if (task.llm_profile_ids && task.llm_profile_ids.length > 0) {
@@ -432,7 +424,10 @@ function TaskDetailInner() {
           <div className="min-w-0 flex-1" />
           <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
           <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 rounded-lg px-2.5 text-xs">
-            <Link href={`/function/tasks/session?id=${encodeURIComponent(id)}`}>
+            {/* 主 Agent 对话 = 对话 Harness（整屏舞台），带上任务 id 让线程与任务绑定：
+                对话页的任务带据此只显示这一个任务，不再让用户自己去找。
+                ?c= 缺省 → 落在新建线程的草稿页，首次发送时后端就写入 conversations.task_id。 */}
+            <Link href={`/chat?task=${encodeURIComponent(id)}`}>
               <MessagesSquareIcon className="size-3.5" data-icon="inline-start" />
               <span className="hidden sm:inline">主 Agent 对话</span>
             </Link>
@@ -441,7 +436,7 @@ function TaskDetailInner() {
 
           {interceptPendingCount > 0 && (
             <Link
-              href="/system/intercept/approvals"
+              href={`/system/intercept/approvals?task=${encodeURIComponent(id)}`}
               className="shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               title={t("header.pendingApprovalsTitle", { n: interceptPendingCount })}
             >
@@ -507,7 +502,7 @@ function TaskDetailInner() {
 
         {/* 书眉：编号 / 分类 / 状态 / 标题 / 目标 */}
         <div className="flex flex-col gap-1 px-4 pt-3 pb-2 lg:px-6">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular-nums">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground text-xs tabular-nums">
             <span data-editorial="secnum">01</span>
             <code className="rounded-[2px] border border-border/60 px-1 py-px font-mono text-xs">#{task.id}</code>
             <span>{t(task.analysis_domain === "software_re" ? "analysisDomain.software" : "analysisDomain.web")}</span>
@@ -521,11 +516,14 @@ function TaskDetailInner() {
             {task.created_at && <span className="h-2 w-px bg-border" />}
             {task.created_at && <span>{task.created_at}</span>}
           </div>
-          <h1 className="font-display text-[26px] leading-tight font-semibold tracking-[-0.02em]" title={task.name || task.description}>
+          <h1
+            className="font-display font-semibold text-[26px] leading-tight tracking-[-0.02em]"
+            title={task.name || task.description}
+          >
             {task.name || task.description}
           </h1>
           {task.goal && (
-            <p className="flex items-start gap-1.5 text-[13px] leading-relaxed text-muted-foreground">
+            <p className="flex items-start gap-1.5 text-[13px] text-muted-foreground leading-relaxed">
               <CrosshairIcon className="mt-[3px] size-3.5 shrink-0 text-primary" />
               <span className="line-clamp-2">{task.goal}</span>
             </p>
@@ -539,8 +537,8 @@ function TaskDetailInner() {
             onClick={() => setTab("overview")}
             className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
           >
-            <span className="text-xs tracking-[0.08em] text-muted-foreground">目标达成</span>
-            <span className="font-semibold text-[22px] leading-none tabular-nums">
+            <span className="text-muted-foreground text-xs tracking-[0.08em]">目标达成</span>
+            <span className="font-semibold text-[22px] tabular-nums leading-none">
               {goalsMet}
               <span className="ml-0.5 font-normal text-[12px] text-muted-foreground">/ {goalsTotal}</span>
             </span>
@@ -550,32 +548,31 @@ function TaskDetailInner() {
             onClick={() => setTab("graph")}
             className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
           >
-            <span className="text-xs tracking-[0.08em] text-muted-foreground">在途 Worker</span>
-            <span className="font-semibold text-[22px] leading-none tabular-nums">{inFlightCount}</span>
+            <span className="text-muted-foreground text-xs tracking-[0.08em]">在途 Worker</span>
+            <span className="font-semibold text-[22px] tabular-nums leading-none">{inFlightCount}</span>
           </button>
           <button
             type="button"
             onClick={() => setTab("findings")}
             className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
           >
-            <span className="text-xs tracking-[0.08em] text-muted-foreground">已确认发现</span>
-            <span className="font-semibold text-[22px] leading-none tabular-nums">{totalFindings}</span>
+            <span className="text-muted-foreground text-xs tracking-[0.08em]">已确认发现</span>
+            <span className="font-semibold text-[22px] tabular-nums leading-none">{totalFindings}</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setTab("intercept")}
+          <Link
+            href={`/system/intercept/approvals?task=${encodeURIComponent(id)}`}
             className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
           >
-            <span className="text-xs tracking-[0.08em] text-muted-foreground">待审批</span>
-            <span className="font-semibold text-[22px] leading-none tabular-nums">{interceptPendingCount}</span>
-          </button>
+            <span className="text-muted-foreground text-xs tracking-[0.08em]">待审批</span>
+            <span className="font-semibold text-[22px] tabular-nums leading-none">{interceptPendingCount}</span>
+          </Link>
           <button
             type="button"
             onClick={() => setTab("timeline")}
             className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
           >
-            <span className="text-xs tracking-[0.08em] text-muted-foreground">未收口分支</span>
-            <span className="font-semibold text-[22px] leading-none tabular-nums">{openBranches}</span>
+            <span className="text-muted-foreground text-xs tracking-[0.08em]">未收口分支</span>
+            <span className="font-semibold text-[22px] tabular-nums leading-none">{openBranches}</span>
           </button>
         </KpiRow>
 
@@ -586,20 +583,27 @@ function TaskDetailInner() {
               <TabsTrigger key={value} value={value} className="h-8 px-0 text-xs">
                 {t(`tabs.${value}`)}
                 {value === "findings" && totalFindings > 0 && (
-                  <span className="ml-1 text-xs font-semibold text-rose-600 tabular-nums dark:text-rose-400">
+                  <span className="ml-1 font-semibold text-rose-600 text-xs tabular-nums dark:text-rose-400">
                     {totalFindings > 99 ? "99+" : totalFindings}
-                  </span>
-                )}
-                {value === "intercept" && interceptPendingCount > 0 && (
-                  <span className="ml-1 text-xs font-semibold text-amber-600 tabular-nums dark:text-amber-400">
-                    {interceptPendingCount > 99 ? "99+" : interceptPendingCount}
                   </span>
                 )}
               </TabsTrigger>
             ))}
           </TabsList>
         </div>
-        <ApiBar methods={["task", "stats", "taskBranches", "interceptTask", "llmProfiles", "updateTaskLLMProfiles", "controlTask", "archiveTask", "distillTaskSkill"]} />
+        <ApiBar
+          methods={[
+            "task",
+            "stats",
+            "taskBranches",
+            "interceptTask",
+            "llmProfiles",
+            "updateTaskLLMProfiles",
+            "controlTask",
+            "archiveTask",
+            "distillTaskSkill",
+          ]}
+        />
       </header>
 
       {/* Tab content */}
@@ -614,12 +618,14 @@ function TaskDetailInner() {
         </TabsContent>
         <TabsContent value="overview" className="mt-0">
           <OverviewTab taskId={id} />
+          {/* 覆盖度：原本是独立页签，本质是总览里那条「测试范围覆盖到了多少」的可视化 */}
+          <section className="mt-6 border-border/60 border-t pt-4">
+            <h2 className="mb-2 font-medium text-muted-foreground text-xs tracking-[0.08em]">覆盖度</h2>
+            <CoverageGraphTab taskId={id} coverageEnabled={task?.coverage_enabled !== false} />
+          </section>
         </TabsContent>
         <TabsContent value="graph" className="mt-0">
           <GraphTab taskId={id} />
-        </TabsContent>
-        <TabsContent value="broadcast" className="mt-0">
-          <BroadcastTab taskId={id} />
         </TabsContent>
         <TabsContent value="findings" className="mt-0">
           <FindingsTab taskId={id} />
@@ -630,13 +636,12 @@ function TaskDetailInner() {
         <TabsContent value="assets" className="mt-0">
           <AssetsTab taskId={id} />
         </TabsContent>
-        <TabsContent value="coverage" className="mt-0">
-          <CoverageGraphTab taskId={id} coverageEnabled={task?.coverage_enabled !== false} />
-        </TabsContent>
-        <TabsContent value="intercept" className="mt-0">
-          <InterceptTab taskId={id} />
-        </TabsContent>
         <TabsContent value="timeline" className="mt-0">
+          {/* 播报板：原本是独立页签，本质是时间线的一个视图，合并到顶部 */}
+          <section className="mb-6">
+            <h2 className="mb-2 font-medium text-muted-foreground text-xs tracking-[0.08em]">播报</h2>
+            <BroadcastTab taskId={id} />
+          </section>
           <TimelineTab taskId={id} onReverted={loadTask} />
         </TabsContent>
         <TabsContent value="report" className="mt-0">

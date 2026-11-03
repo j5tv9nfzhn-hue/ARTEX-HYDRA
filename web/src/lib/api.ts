@@ -1241,6 +1241,9 @@ export const api = {
 
   // ---- agents ----
   agents: () => get<{ agents: Agent[] }>("/agents").then((r) => arr(r.agents)),
+  // orchestration 是任务运行时模板：根 agent / 子代理模板 / 共用运行配置 / 一次性目标拆解。
+  // 它们不在 /agents 清单里（那份清单只列会话 Agent），编辑仍走 /agents/{key} 系列。
+  orchestration: () => get<{ agents: Agent[] }>("/orchestration").then((r) => arr(r.agents)),
   getAgent: (key: string) => get<AgentDetail>(`/agents/${key}`),
   createAgent: (key: string, name: string, description = "") => post<Agent>("/agents", { key, name, description }),
   updateAgent: (key: string, name: string, description = "") =>
@@ -1248,10 +1251,19 @@ export const api = {
   deleteAgent: (key: string) => del<{ deleted: string }>(`/agents/${key}`),
 
   // ---- conversations (chat page) ----
-  conversations: () => get<{ conversations: Conversation[] }>("/conversations").then((r) => arr(r.conversations)),
-  createConversation: (agent_key: string, title = "", llm_profile_id?: number | null) =>
-    post<Conversation>("/conversations", { agent_key, title, llm_profile_id: llm_profile_id ?? null }),
-  updateConversation: (id: number, input: { title?: string; pinned?: boolean }) =>
+  // task 可选：只取绑在该任务上的线程（对话页任务带之外的按任务过滤场景）。
+  conversations: (task?: string) =>
+    get<{ conversations: Conversation[] }>(`/conversations${task ? `?task=${encodeURIComponent(task)}` : ""}`).then((r) =>
+      arr(r.conversations),
+    ),
+  createConversation: (agent_key: string, title = "", llm_profile_id?: number | null, task_id?: string | null) =>
+    post<Conversation>("/conversations", {
+      agent_key,
+      title,
+      llm_profile_id: llm_profile_id ?? null,
+      ...(task_id ? { task_id } : {}),
+    }),
+  updateConversation: (id: number, input: { title?: string; pinned?: boolean; task_id?: string | null }) =>
     patch<Conversation>(`/conversations/${id}`, input),
   renameConversation: (id: number, title: string) => patch<Conversation>(`/conversations/${id}`, { title }),
   pinConversation: (id: number, pinned: boolean) => patch<Conversation>(`/conversations/${id}`, { pinned }),

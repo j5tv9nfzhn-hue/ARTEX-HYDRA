@@ -1,16 +1,17 @@
 "use client";
 
-import { ApiBar } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
   ArrowDownIcon,
-  ArrowUpIcon,
+  ArrowLeftIcon,
   Bot,
   ChevronDownIcon,
   ChevronRightIcon,
+  LinkIcon,
   ListChecksIcon,
   Loader2Icon,
   MoreHorizontalIcon,
@@ -19,7 +20,6 @@ import {
   PinIcon,
   PinOffIcon,
   PlusIcon,
-  Square,
   Trash2Icon,
   XIcon,
   ZapIcon,
@@ -31,7 +31,8 @@ import { AgentPhaseBadge } from "@/components/agent-phase-badge";
 import { ApprovalExecutionFocus, useApprovalFocus, useApprovalHistory } from "@/components/approval-execution-focus";
 import { CheckpointTimelineButton } from "@/components/checkpoint-timeline";
 import { EmptyState } from "@/components/empty-state";
-import { MentionTextarea } from "@/components/mention-textarea";
+import { HarnessComposer, type HarnessRecipient, useWorkerRecipients } from "@/components/harness/harness-composer";
+import { DockSwitcher, HarnessDock, type HarnessDockPanel, readDockPanel } from "@/components/harness/harness-dock";
 import { MessageRollbackDialog } from "@/components/message-rollback-dialog";
 import { SideQuestionButton, SideQuestionWorkspace } from "@/components/side-question-workspace";
 import { TodoPopover } from "@/components/todo-popover";
@@ -66,14 +67,13 @@ import { useSideQuestions } from "@/hooks/use-side-questions";
 import { mergeActivities } from "@/lib/activity-merge";
 import { deriveAgentPhase } from "@/lib/agent-phase";
 import { api } from "@/lib/api";
-import { shouldSubmitOnKey, useChatSendMode } from "@/lib/chat-send-mode";
 import { useLiveKind } from "@/lib/live-stream";
 import { createLiveStream, type LiveStream, liveSettledBy } from "@/lib/live-stream-store";
 import { getLocalStorageValue, setLocalStorageValue } from "@/lib/local-storage.client";
-import { isBtwCommand } from "@/lib/side-questions";
 import type { Activity, Agent, ChatAttachment, Conversation, LLMProfile } from "@/lib/types";
 import { useStickToBottom } from "@/lib/use-stick-to-bottom";
 import { cn } from "@/lib/utils";
+import { ApiBar } from "@/ui/container";
 
 // fmtBytes renders a human file size for attachment chips (mirrors transcript.tsx).
 function fmtBytes(n: number): string {
@@ -149,7 +149,7 @@ function groupByAgent(conversations: Conversation[], agentByKey: Map<string, Age
 // 浏览器给的名字通常是 image.png：同一轮连贴两张会依赖后端 -1/-2 去重，
 // 时间线里也看不出是哪次粘贴留下的。扩展名必须与真实 MIME 一致——
 // 后端按扩展名判输入模态（db/attachmentModality），错了会被闸门拦下。
-function pastedImageFile(f: File): File {
+function _pastedImageFile(f: File): File {
   const fromType = (f.type || "").split("/")[1] || "png";
   const ext = fromType === "jpeg" ? "jpg" : fromType;
   const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
@@ -164,184 +164,6 @@ function pastedImageFile(f: File): File {
 
 // Composer is the shared Two-Deck Composer Dock (Deck 1: 100%-width adaptive textarea;
 // Deck 2: Agent selector pill, attachment button, inline LLM profile selector, Todo popover, and Send/Stop action).
-function Composer({
-  value,
-  onChange,
-  onSend,
-  disabled,
-  placeholder,
-  leftSlot,
-  bottomSlot,
-  running,
-  onStop,
-  stopDisabled,
-  attachments,
-  onPickFiles,
-  onRemoveAttachment,
-  uploading,
-  allowBtw,
-  contextUsage,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  onSend: () => void;
-  disabled: boolean;
-  placeholder: string;
-  leftSlot?: React.ReactNode;
-  bottomSlot?: React.ReactNode;
-  running?: boolean;
-  onStop?: () => void;
-  stopDisabled?: boolean;
-  // 文件上传方式一：提供 onPickFiles 才显示附件按钮和附件 chip 预览。
-  attachments?: ChatAttachment[];
-  onPickFiles?: (files: File[]) => void;
-  onRemoveAttachment?: (path: string) => void;
-  uploading?: boolean;
-  allowBtw?: boolean;
-  // 上下文环：窗口与已用都取后端数据，缺失时不渲染。
-  contextUsage?: { used: number; size: number } | null;
-}) {
-  const t = useTranslations("chat");
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const atts = attachments ?? [];
-  // 粘贴图片：截图/网页复制的图片直接进候选附件，不必先存成文件再点回形针。
-  // 只接管「file 且是 image/*」的粘贴；纯文本粘贴一行都不碰（不 preventDefault）。
-  function onPaste(e: React.ClipboardEvent<HTMLDivElement>) {
-    if (!onPickFiles || uploading) return;
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    const files: File[] = [];
-    for (const item of Array.from(items)) {
-      if (item.kind !== "file") continue;
-      const f = item.getAsFile();
-      if (f && f.type.startsWith("image/")) files.push(pastedImageFile(f));
-    }
-    if (files.length === 0) return;
-    e.preventDefault();
-    onPickFiles(files);
-  }
-  // 发送按键由系统设置 localStorage 决定，默认 Enter 发送。
-  const sendMode = useChatSendMode();
-  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (!shouldSubmitOnKey(e, sendMode)) return;
-    e.preventDefault();
-    onSend();
-  }
-  return (
-    <div className="px-3 pt-1.5 pb-3 md:px-6">
-      <div className="mx-auto flex w-full max-w-4xl flex-col rounded-2xl border border-border/85 bg-background/75 p-2.5 shadow-xs transition-all focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20">
-        {atts.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-1.5 px-1">
-            {atts.map((a) => (
-              <div
-                key={a.path}
-                className="flex items-center gap-1.5 rounded-lg border bg-muted/60 px-2.5 py-1 text-xs"
-                title={a.path}
-              >
-                <PaperclipIcon className="size-3 shrink-0 text-primary" />
-                <span className="max-w-[180px] truncate font-medium">{a.name}</span>
-                <span className="text-muted-foreground">{fmtBytes(a.size)}</span>
-                {onRemoveAttachment && (
-                  <button
-                    type="button"
-                    className="ml-0.5 text-muted-foreground hover:text-foreground"
-                    onClick={() => onRemoveAttachment(a.path)}
-                    title={t("composer.removeAttachment")}
-                  >
-                    <XIcon className="size-3" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        {/* Deck 1: Full-width adaptive textarea so placeholder is never truncated */}
-        {/* onPaste 挂在容器上：MentionTextarea 不必改 API，事件会从 textarea 冒泡上来。 */}
-        <div className="flex min-w-0 flex-1" onPaste={onPaste}>
-          <MentionTextarea
-            className="max-h-40 min-h-11 w-full min-w-0 flex-1 resize-none border-0 bg-transparent px-1.5 py-1 text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
-            rows={1}
-            placeholder={placeholder}
-            value={value}
-            disabled={disabled && !(running && allowBtw)}
-            onValueChange={onChange}
-            onKeyDown={onKeyDown}
-          />
-        </div>
-        {/* Deck 2: Integrated control bar (Agent pill, paperclip, LLM profile popover, Todo, Send/Stop) */}
-        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 border-border/50 border-t pt-2">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-            {leftSlot ? <div className="shrink-0">{leftSlot}</div> : null}
-            {onPickFiles && (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    const picked = Array.from(e.target.files ?? []);
-                    e.target.value = "";
-                    if (picked.length > 0) onPickFiles(picked);
-                  }}
-                />
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  className="shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={disabled || uploading}
-                  title={`${t("composer.uploadFile")} / ${t("composer.pasteHint")}`}
-                >
-                  {uploading ? <Loader2Icon className="size-4 animate-spin" /> : <PaperclipIcon className="size-4" />}
-                </Button>
-              </>
-            )}
-            {bottomSlot}
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {contextUsage && <ContextUsageRing size={contextUsage.size} used={contextUsage.used} />}
-            {running && allowBtw && isBtwCommand(value) && (
-              <Button
-                size="icon-sm"
-                className="rounded-xl"
-                onClick={onSend}
-                aria-label={t("composer.sendSideQuestion")}
-                title={t("composer.sendSideQuestion")}
-              >
-                <ArrowUpIcon />
-              </Button>
-            )}
-            {running ? (
-              <Button
-                size="icon-sm"
-                variant="destructive"
-                className="rounded-xl"
-                onClick={onStop}
-                disabled={stopDisabled}
-                title={t("composer.stopRun")}
-              >
-                <Square className="size-3.5 fill-current" />
-              </Button>
-            ) : (
-              <Button
-                size="icon-sm"
-                className="rounded-xl"
-                onClick={onSend}
-                disabled={disabled || (!value.trim() && atts.length === 0)}
-                title={t("composer.sendMessage")}
-                aria-label={t("composer.sendMessage")}
-              >
-                <ArrowUpIcon />
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // LLMProfileRow renders as a sleek inline capsule inside the Composer toolbar deck.
 function LLMProfileRow({
   profiles,
@@ -381,7 +203,7 @@ function LLMProfileRow({
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-64 p-1">
-          <p className="px-2 py-1 font-medium text-xs text-muted-foreground">{t("llmProfile.select")}</p>
+          <p className="px-2 py-1 font-medium text-muted-foreground text-xs">{t("llmProfile.select")}</p>
           {/* default option */}
           <button
             type="button"
@@ -396,7 +218,7 @@ function LLMProfileRow({
           >
             <span className="text-sm">{defaultLabel}</span>
             {activeDefault && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {activeDefault.format} / {activeDefault.model}
               </span>
             )}
@@ -415,7 +237,7 @@ function LLMProfileRow({
               )}
             >
               <span className="text-sm">{p.name}</span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {p.format} / {p.model}
               </span>
             </button>
@@ -434,8 +256,11 @@ function LLMProfileRow({
 function DraftChat({
   agents,
   profiles,
+  taskId,
   onStarted,
 }: {
+  /** 新建线程时一并写入的 conversations.task_id（空串=通用对话）。 */
+  taskId: string;
   agents: Agent[];
   profiles: LLMProfile[];
   onStarted: (c: Conversation, pending?: { input?: string; attachments?: ChatAttachment[] }) => void;
@@ -446,6 +271,7 @@ function DraftChat({
   const [input, setInput] = React.useState("");
   const [sending, setSending] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // default the agent to Auto once agents load.
   React.useEffect(() => {
@@ -453,20 +279,6 @@ function DraftChat({
   }, [agentKey, agents]);
 
   const agent = agents.find((a) => a.key === agentKey);
-
-  async function send() {
-    const msg = input.trim();
-    if (!msg || !agentKey || sending) return;
-    setSending(true);
-    try {
-      const c = await api.createConversation(agentKey, "", llmProfileId);
-      await api.sendConversationMessage(c.id, msg);
-      onStarted(c);
-    } catch (e) {
-      toast.error(t("toast.sendFailed", { msg: (e as Error).message }));
-      setSending(false);
-    }
-  }
 
   // Attachments need a conversation to own the uploads dir (sessions/conv-<id>/),
   // and a draft has none yet — so picking a file CREATES the conversation, uploads
@@ -477,7 +289,9 @@ function DraftChat({
     if (files.length === 0 || !agentKey || uploading || sending) return;
     setUploading(true);
     try {
-      const c = await api.createConversation(agentKey, "", llmProfileId);
+      // 附件路径也会建线程：同样把任务绑定一并写进去，否则「先拖附件再发消息」
+      // 这条最常见的路径会悄悄丢绑定。
+      const c = await api.createConversation(agentKey, "", llmProfileId, taskId || undefined);
       const r = await api.chatUpload("session", `conv-${c.id}`, files);
       onStarted(c, { input, attachments: r.attachments });
     } catch (e) {
@@ -486,40 +300,14 @@ function DraftChat({
     }
   }
 
-  const agentPicker = (
-    <Select value={agentKey} onValueChange={setAgentKey}>
-      <SelectTrigger
-        size="sm"
-        className="h-7 w-auto min-w-28 gap-1.5 rounded-lg border-border/70 bg-muted/50 px-2.5 text-xs"
-      >
-        <SelectValue placeholder={t("agentPicker.placeholder")} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          {agents.map((a) => (
-            <SelectItem key={a.key} value={a.key}>
-              <span className="flex items-center gap-2">
-                <Bot className="size-3.5" />
-                {a.name}
-                {!a.builtin && (
-                  <Badge variant="outline" className="px-1 py-0 text-xs">
-                    {t("custom")}
-                  </Badge>
-                )}
-              </span>
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
-  );
-
   return (
     <>
-      {/* 空态 / 落地页:插画 + 引导语 + 可点击建议 chips(点一下把句子填入输入框),让空态自己"教书" */}
+      {/* 空态 / 落地页:插画 + 引导语 + 可点击建议 chips(点一下把句子填入输入框),让空态自己"教书"。
+          整屏之后这里是一整块高 600px+ 的空白，所以把插画/文案/建议整体压进一个居中窄列，
+          否则它会漂在屏幕正中、上下各留一大片空。 */}
       <EmptyState
         illustration="chat"
-        className="min-h-0 flex-1"
+        className="mx-auto min-h-0 w-full max-w-xl flex-1 justify-center"
         title={t("emptyStart", { agent: agent?.name ?? "Agent" })}
         description={agent?.description || t("emptyStartHint")}
         suggestions={[
@@ -536,24 +324,72 @@ function DraftChat({
         }
       />
 
-      <Composer
-        value={input}
-        onChange={setInput}
-        onSend={send}
+      <HarnessComposer
+        running={false}
         disabled={sending || uploading || !agentKey}
+        stopping={false}
+        recipient={{ kind: "agent" }}
+        workers={[]}
+        onRecipientChange={() => {
+          /* 草稿态还没有会话，收件人只能是主 Agent。 */
+        }}
+        onSend={async (text) => {
+          if (!agentKey) return false;
+          setSending(true);
+          try {
+            const c = await api.createConversation(agentKey, "", llmProfileId, taskId || undefined);
+            await api.sendConversationMessage(c.id, text);
+            onStarted(c);
+            return true;
+          } catch (e) {
+            toast.error(t("toast.sendFailed", { msg: (e as Error).message }));
+            setSending(false);
+            return false;
+          }
+        }}
+        onStop={() => {
+          /* 草稿态没有在跑的一轮。 */
+        }}
         placeholder={t("composer.placeholder")}
-        leftSlot={agentPicker}
-        bottomSlot={
-          <LLMProfileRow
-            profiles={profiles}
-            selected={llmProfileId}
-            onChange={setLlmProfileId}
-            disabled={sending || uploading}
-          />
+        topSlot={
+          taskId ? (
+            // 草稿态还没有线程，但绑定意图已经确定：先把它摆在 composer 上方，
+            // 用户一眼能看到这条对话属于哪个任务（发送时随建线程写入 task_id）。
+            <div className="mb-2 flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/50 px-2.5 py-1 text-xs">
+              <span className="text-muted-foreground">{t("harness.bindHint")}</span>
+              <span className="font-mono">#{taskId}</span>
+            </div>
+          ) : null
         }
-        onPickFiles={pickFiles}
-        uploading={uploading}
-      />
+      >
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          className="shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={sending || uploading || !agentKey}
+          title={t("composer.uploadFile")}
+        >
+          {uploading ? <Loader2Icon className="size-4 animate-spin" /> : <PaperclipIcon className="size-4" />}
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            const picked = Array.from(e.target.files ?? []);
+            e.target.value = "";
+            if (picked.length > 0) void pickFiles(picked);
+          }}
+        />
+        <LLMProfileRow
+          profiles={profiles}
+          selected={llmProfileId}
+          onChange={setLlmProfileId}
+          disabled={sending || uploading}
+        />
+      </HarnessComposer>
     </>
   );
 }
@@ -591,8 +427,10 @@ function ChatViewImpl({
   agents,
   profiles,
   initial,
+  workerRecipients,
   onTitleMaybeChanged,
   onConvUpdated,
+  onOpenTask,
 }: {
   conv: Conversation;
   agents: Agent[];
@@ -600,8 +438,12 @@ function ChatViewImpl({
   // pending text + already-uploaded attachments handed off from a draft that
   // created this conversation via the paperclip (consumed once, on mount).
   initial?: { input?: string; attachments?: ChatAttachment[] };
+  /** 运行中的 Worker：composer 可以切过去直接 steer（harness 的唯一写入口）。 */
+  workerRecipients: HarnessRecipient[];
   onTitleMaybeChanged: () => void;
   onConvUpdated: () => void;
+  /** 任务带里点「打开任务」：整窗舞台下没有别的入口，由页面层接管跳转。 */
+  onOpenTask?: (taskId: string) => void;
 }) {
   const t = useTranslations("chat");
   const tc = useTranslations("checkpoints");
@@ -614,12 +456,20 @@ function ChatViewImpl({
   const liveStreamRef = React.useRef<LiveStream | null>(null);
   if (!liveStreamRef.current) liveStreamRef.current = createLiveStream();
   const liveStream = liveStreamRef.current;
-  const [input, setInput] = React.useState(initial?.input ?? "");
+  // HarnessComposer 自持输入文本；这里只保留一份镜像给「附件上传后带文本发送」与
+  // 草稿页转交来的初稿用（Composer 每次提交后回调同步）。
+  // initial.input 是草稿页转交过来的初稿；HarnessComposer 自持输入，这里只保留
+  // 一个「待回填」标记，挂载后由 composer 的 initialText 消费。
+  const [initialText] = React.useState(initial?.input ?? "");
+  // 右坞：null = 收起。默认收起——对话是主语，面板是「按需展开的旁证」。
+  // 记忆上一次选择，避免每次进线程都要重新点开（与 Zed 的 dock 持久化同思路）。
+  const [dockPanel, setDockPanel] = React.useState<HarnessDockPanel | null>(() => readDockPanel());
   const [sending, setSending] = React.useState(false);
   const [stopping, setStopping] = React.useState(false);
   // 文件上传方式一：已上传文件位于 sessions/conv-<id>/uploads，随下一条消息发送。
   const [attachments, setAttachments] = React.useState<ChatAttachment[]>(initial?.attachments ?? []);
   const [uploading, setUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const cursorRef = React.useRef(0); // newest loaded id — incremental-tail anchor
   const earliestRef = React.useRef(0); // earliest loaded id — reverse-pagination anchor
   const hasMoreRef = React.useRef(false); // older history remains above the loaded window
@@ -631,6 +481,8 @@ function ChatViewImpl({
   // 消息级回滚（气泡箭头）：待确认的用户消息 + 提交中标记；确认后消息原文回填输入框。
   const [rollbackTarget, setRollbackTarget] = React.useState<Activity | null>(null);
   const [rollbackBusy, setRollbackBusy] = React.useState(false);
+  // 收件人：主 Agent（默认）/ 某个运行中的 Worker（steer）。
+  const [recipient, setRecipient] = React.useState<HarnessRecipient>({ kind: "agent" });
   const agent = agents.find((a) => a.key === conv.agent_key);
   const currentProfileId = conv.llm_profile_id ?? null;
   const side = useSideQuestions(`/api/conversations/${conv.id}`);
@@ -913,7 +765,7 @@ function ChatViewImpl({
       if (item.kind !== "usage") continue;
       const size = item.metadata?.context_window ?? configuredWindow;
       if (!size) return null;
-      const used = item.metadata?.context_used ?? (item.input_tokens ?? 0);
+      const used = item.metadata?.context_used ?? item.input_tokens ?? 0;
       return { size, used };
     }
     return null;
@@ -955,23 +807,29 @@ function ChatViewImpl({
     }
   }
 
-  async function send() {
-    const msg = input.trim();
+  async function send(text: string) {
+    const msg = text.trim();
     const atts = attachments;
-    if (side.handleCommand(msg, () => setInput(""))) return;
-    if ((!msg && atts.length === 0) || sending || running) return;
+    // /btw 侧问：文本由 composer 自持，这里不需要回填输入框。
+    if (
+      side.handleCommand(msg, () => {
+        /* 侧问发出后不需要回填输入框：文本由 composer 自持。 */
+      })
+    )
+      return false;
+    if ((!msg && atts.length === 0) || sending || running) return false;
     setSending(true);
-    setInput("");
     setAttachments([]);
     try {
       await api.sendConversationMessage(conv.id, msg, atts.length ? atts : undefined);
       // The live loop pulls the persisted human turn immediately. Sharing that
       // fetch avoids racing a separate post-send request against the poller.
       setRunning(true);
+      return true;
     } catch (e) {
       toast.error(t("toast.sendFailed", { msg: (e as Error).message }));
-      setInput(msg); // restore so the user doesn't lose their text
       setAttachments(atts); // and their attachments
+      return false;
     } finally {
       setSending(false);
     }
@@ -1002,7 +860,6 @@ function ChatViewImpl({
     try {
       const body = parseUserBody((await api.conversationMsgDetail(conv.id, step.seq)) || step.summary);
       const result = await api.rollbackConversationMessage(conv.id, step.seq);
-      setInput(body.text);
       setAttachments(body.attachments.map((a) => ({ name: a.name, path: a.path, size: a.size })));
       setRollbackTarget(null);
       setReloadToken((n) => n + 1);
@@ -1016,172 +873,252 @@ function ChatViewImpl({
 
   return (
     <SideQuestionWorkspace side={side} label={agent?.name ?? conv.agent_key} composerLayout="inline">
-      {/* header: unified agent workbench bar + live + token meta */}
-      <div className="flex min-w-0 flex-wrap items-center gap-2 border-b bg-background/35 px-4 py-2.5 backdrop-blur-xs">
-        <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/12 text-primary">
-          <Bot className="size-3.5" />
-        </div>
-        <span className="min-w-0 max-w-48 truncate font-semibold text-sm">{agent?.name ?? conv.agent_key}</span>
-        <span className="hidden shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground sm:inline">
-          {conv.agent_key}
-        </span>
-        {agent && !agent.builtin && (
-          <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-xs">
-            {t("custom")}
-          </Badge>
-        )}
-        {agent?.description && (
-          <span className="min-w-0 truncate text-muted-foreground text-xs">{agent.description}</span>
-        )}
-        <ChatPhaseBadge
-          lastIsError={!!lastStep?.is_error}
-          lastKind={lastStep?.kind}
-          running={running}
-          stream={liveStream}
-          waitingApproval={lastStep?.kind === "intercept_request"}
-        />
-        <SideQuestionButton side={side} />
-        <CheckpointTimelineButton
-          scope="conversation"
-          id={String(conv.id)}
-          onReverted={() => setReloadToken((token) => token + 1)}
-        />
-        <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-x-2 gap-y-1 text-muted-foreground text-xs max-sm:w-full max-sm:flex-wrap">
-          {tokenTotal.turns > 0 && (
+      {/* 两列：主列（头部 + 转写 + composer）+ 右坞（任务/子代理/审批…）。
+          右坞是工作区里的一个并排面板（Zed right dock 形态），不是新窗口、也不是全屏。 */}
+      <div className="flex min-h-0 min-w-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {/* header: unified agent workbench bar + live + token meta */}
+          <div className="flex min-w-0 flex-wrap items-center gap-2 border-b bg-background/35 px-4 py-2.5 backdrop-blur-xs">
+            <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/12 text-primary">
+              <Bot className="size-3.5" />
+            </div>
+            <span className="min-w-0 max-w-48 truncate font-semibold text-sm">{agent?.name ?? conv.agent_key}</span>
+            {/* 线程状态：整屏之后左栏列表可能被滚走，当前线程在跑还是在等必须在这里也能看到。 */}
             <span
-              title={t("turnsTooltip")}
-              className="rounded-md border bg-muted/60 px-2 py-0.5 text-xs tabular-nums"
-            >
-              {t("turnsCount", { turns: tokenTotal.turns })}
-            </span>
-          )}
-          {tokenTotal.any && (
-            <span
-              title={t("tokensTooltip")}
-              className="min-w-0 truncate rounded-md border bg-muted/60 px-2 py-0.5 text-xs tabular-nums"
-            >
-              {t("tokensLine", {
-                input: fmtTokens(tokenTotal.i),
-                cache: fmtTokens(tokenTotal.cr),
-                output: fmtTokens(tokenTotal.o),
-              })}
-            </span>
-          )}
-          {budget &&
-            budget.limit > 0 &&
-            (() => {
-              const used = tokenTotal.i + tokenTotal.o;
-              // mode!=enforce 时只做统计展示：不能让「预算 400K」看起来像已经拦了。
-              const enforced = budget.mode === "enforce";
-              const tier = !enforced
-                ? "ok"
-                : used >= budget.limit
-                  ? "exhausted"
-                  : used * 100 >= budget.limit * 85
-                    ? "tight"
-                    : used * 100 >= budget.limit * 70
-                      ? "watch"
-                      : "ok";
-              const cls =
-                tier === "exhausted"
-                  ? "border-red-500/60 text-red-600 dark:text-red-400"
-                  : tier === "tight"
-                    ? "border-amber-500/60 text-amber-600 dark:text-amber-400"
-                    : "text-muted-foreground";
-              return (
-                <span
-                  title={
-                    enforced
-                      ? t("budgetTitleEnforced", { used: fmtTokens(used), limit: fmtTokens(budget.limit) })
-                      : t("budgetTitleStats", { used: fmtTokens(used), limit: fmtTokens(budget.limit) })
-                  }
-                  className={`rounded-md border bg-muted/60 px-2 py-0.5 text-xs tabular-nums ${cls}`}
-                >
-                  {t(tier === "exhausted" ? "budgetExhausted" : enforced ? "budgetLabel" : "usageLabel")} {fmtTokens(used)}/
-                  {fmtTokens(budget.limit)}
-                </span>
-              );
-            })()}
-        </div>
-      </div>
-
-      <ApprovalExecutionFocus focus={approvalFocus} history={focusHistory} />
-
-      {/* messages: centered comfortable reading column */}
-      <ScrollArea type="auto" className="[&_[data-slot=scroll-area-viewport]>div]:block! min-h-0 min-w-0 flex-1">
-        <div className="mx-auto min-w-0 max-w-4xl px-4 py-4 md:px-6" ref={contentRef}>
-          {messages.length === 0 && !running ? (
-            <EmptyState illustration="chat" title={t("emptyStart", { agent: agent?.name ?? conv.agent_key })} />
-          ) : (
-            <>
-              {hasMore && (
-                <div className="pb-2 text-center text-xs text-muted-foreground/70">{t("loadEarlierHint")}</div>
+              className={cn(
+                "shrink-0 rounded border px-1.5 py-0 font-mono text-xs",
+                running
+                  ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  : "border-border/70 bg-muted/60 text-muted-foreground",
               )}
-              <Transcript
-                activity={messages}
-                chat
-                fetchDetail={fetchDetail}
-                focusedSeq={focusHistory.ready ? approvalFocus.state?.source?.seq : undefined}
-                liveStream={liveStream}
-                rollback={rollback}
-              />
-            </>
-          )}
-        </div>
-      </ScrollArea>
-
-      {/* 上翻阅读时贴底已被冻结（hook 内负责），这里给一键回底（ENG-11）。
-          h-0 是定位锚点：不占布局高度、不挤占消息区，浮钮只压在消息区下沿。 */}
-      <div className="relative h-0">
-        {!stickPinned ? (
-          <div className="pointer-events-none absolute inset-x-0 -top-12 z-20 flex justify-center">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="pointer-events-auto gap-1.5 rounded-full border-border/80 shadow-sm"
-              onClick={() => resetToBottom()}
+              title={running ? t("harness.threadStatus.running") : t("harness.threadStatus.idle")}
             >
-              <ArrowDownIcon className="size-3.5" />
-              {t("backToLatest")}
-            </Button>
+              #{conv.id}
+            </span>
+            {conv.task_id ? (
+              <Link
+                href={`/function/tasks/detail?id=${encodeURIComponent(conv.task_id)}`}
+                className="inline-flex shrink-0 items-center gap-1 rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-primary text-xs hover:bg-primary/20"
+                title={t("harness.boundTaskTitle")}
+              >
+                <LinkIcon className="size-3" />
+                {t("harness.boundTask", { id: conv.task_id })}
+              </Link>
+            ) : null}
+            {agent && !agent.builtin && (
+              <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-xs">
+                {t("custom")}
+              </Badge>
+            )}
+            <ChatPhaseBadge
+              lastIsError={!!lastStep?.is_error}
+              lastKind={lastStep?.kind}
+              running={running}
+              stream={liveStream}
+              waitingApproval={lastStep?.kind === "intercept_request"}
+            />
+            <SideQuestionButton side={side} />
+            <CheckpointTimelineButton
+              scope="conversation"
+              id={String(conv.id)}
+              onReverted={() => setReloadToken((token) => token + 1)}
+            />
+            <DockSwitcher value={dockPanel} onChange={setDockPanel} />
+            <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-x-2 gap-y-1 text-muted-foreground text-xs max-sm:w-full max-sm:flex-wrap">
+              {tokenTotal.turns > 0 && (
+                <span
+                  title={t("turnsTooltip")}
+                  className="rounded-md border bg-muted/60 px-2 py-0.5 text-xs tabular-nums"
+                >
+                  {t("turnsCount", { turns: tokenTotal.turns })}
+                </span>
+              )}
+              {tokenTotal.any && (
+                <span
+                  title={t("tokensTooltip")}
+                  className="min-w-0 truncate rounded-md border bg-muted/60 px-2 py-0.5 text-xs tabular-nums"
+                >
+                  {t("tokensLine", {
+                    input: fmtTokens(tokenTotal.i),
+                    cache: fmtTokens(tokenTotal.cr),
+                    output: fmtTokens(tokenTotal.o),
+                  })}
+                </span>
+              )}
+              {budget &&
+                budget.limit > 0 &&
+                (() => {
+                  const used = tokenTotal.i + tokenTotal.o;
+                  // mode!=enforce 时只做统计展示：不能让「预算 400K」看起来像已经拦了。
+                  const enforced = budget.mode === "enforce";
+                  const tier = !enforced
+                    ? "ok"
+                    : used >= budget.limit
+                      ? "exhausted"
+                      : used * 100 >= budget.limit * 85
+                        ? "tight"
+                        : used * 100 >= budget.limit * 70
+                          ? "watch"
+                          : "ok";
+                  const cls =
+                    tier === "exhausted"
+                      ? "border-red-500/60 text-red-600 dark:text-red-400"
+                      : tier === "tight"
+                        ? "border-amber-500/60 text-amber-600 dark:text-amber-400"
+                        : "text-muted-foreground";
+                  return (
+                    <span
+                      title={
+                        enforced
+                          ? t("budgetTitleEnforced", { used: fmtTokens(used), limit: fmtTokens(budget.limit) })
+                          : t("budgetTitleStats", { used: fmtTokens(used), limit: fmtTokens(budget.limit) })
+                      }
+                      className={`rounded-md border bg-muted/60 px-2 py-0.5 text-xs tabular-nums ${cls}`}
+                    >
+                      {t(tier === "exhausted" ? "budgetExhausted" : enforced ? "budgetLabel" : "usageLabel")}{" "}
+                      {fmtTokens(used)}/{fmtTokens(budget.limit)}
+                    </span>
+                  );
+                })()}
+            </div>
           </div>
-        ) : null}
-      </div>
 
-      <Composer
-        value={input}
-        onChange={setInput}
-        onSend={send}
-        disabled={running || sending}
-        allowBtw
-        placeholder={running ? t("composer.placeholderRunning") : t("composer.placeholder")}
-        running={running}
-        onStop={stop}
-        stopDisabled={stopping}
-        attachments={attachments}
-        onPickFiles={pickFiles}
-        onRemoveAttachment={(path) => setAttachments((p) => p.filter((x) => x.path !== path))}
-        uploading={uploading}
-        contextUsage={contextUsage}
-        bottomSlot={
-          <LLMProfileRow
-            profiles={profiles}
-            selected={currentProfileId}
-            onChange={changeProfile}
-            disabled={running || sending}
-            rightSlot={<TodoPopover seq={latestTodoSeq} fetchDetail={fetchDetail} />}
+          <ApprovalExecutionFocus focus={approvalFocus} history={focusHistory} />
+
+          {/* messages: centered comfortable reading column */}
+          <ScrollArea type="auto" className="[&_[data-slot=scroll-area-viewport]>div]:block! min-h-0 min-w-0 flex-1">
+            <div className="mx-auto min-w-0 max-w-4xl px-4 py-4 md:px-6" ref={contentRef}>
+              {messages.length === 0 && !running ? (
+                <EmptyState illustration="chat" title={t("emptyStart", { agent: agent?.name ?? conv.agent_key })} />
+              ) : (
+                <>
+                  {hasMore && (
+                    <div className="pb-2 text-center text-muted-foreground/70 text-xs">{t("loadEarlierHint")}</div>
+                  )}
+                  <Transcript
+                    activity={messages}
+                    chat
+                    fetchDetail={fetchDetail}
+                    focusedSeq={focusHistory.ready ? approvalFocus.state?.source?.seq : undefined}
+                    liveStream={liveStream}
+                    rollback={rollback}
+                  />
+                </>
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* 上翻阅读时贴底已被冻结（hook 内负责），这里给一键回底（ENG-11）。
+          h-0 是定位锚点：不占布局高度、不挤占消息区，浮钮只压在消息区下沿。 */}
+          <div className="relative h-0">
+            {!stickPinned ? (
+              <div className="pointer-events-none absolute inset-x-0 -top-12 z-20 flex justify-center">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="pointer-events-auto gap-1.5 rounded-full border-border/80 shadow-sm"
+                  onClick={() => resetToBottom()}
+                >
+                  <ArrowDownIcon className="size-3.5" />
+                  {t("backToLatest")}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+
+          <HarnessComposer
+            running={running}
+            initialText={initialText}
+            disabled={sending}
+            stopping={stopping}
+            recipient={recipient}
+            workers={workerRecipients}
+            onRecipientChange={setRecipient}
+            onSend={send}
+            onStop={() => void stop()}
+            placeholder={running ? t("composer.placeholderRunning") : t("composer.placeholder")}
+            todoSlot={<TodoPopover seq={latestTodoSeq} fetchDetail={fetchDetail} />}
+            topSlot={
+              attachments.length > 0 ? (
+                <div className="mb-2 flex flex-wrap gap-1.5 px-1">
+                  {attachments.map((a) => (
+                    <div
+                      key={a.path}
+                      className="flex items-center gap-1.5 rounded-lg border bg-muted/60 px-2.5 py-1 text-xs"
+                      title={a.path}
+                    >
+                      <PaperclipIcon className="size-3 shrink-0 text-primary" />
+                      <span className="max-w-[180px] truncate font-medium">{a.name}</span>
+                      <span className="text-muted-foreground">{fmtBytes(a.size)}</span>
+                      <button
+                        type="button"
+                        className="ml-0.5 text-muted-foreground hover:text-foreground"
+                        onClick={() => setAttachments((p) => p.filter((x) => x.path !== a.path))}
+                        title={t("composer.removeAttachment")}
+                      >
+                        <XIcon className="size-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null
+            }
+          >
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              className="shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              title={t("composer.uploadFile")}
+            >
+              {uploading ? <Loader2Icon className="size-4 animate-spin" /> : <PaperclipIcon className="size-4" />}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const picked = Array.from(e.target.files ?? []);
+                e.target.value = "";
+                if (picked.length > 0) void pickFiles(picked);
+              }}
+            />
+            {contextUsage && <ContextUsageRing size={contextUsage.size} used={contextUsage.used} />}
+            <LLMProfileRow
+              profiles={profiles}
+              selected={currentProfileId}
+              onChange={changeProfile}
+              disabled={running || sending}
+            />
+          </HarnessComposer>
+          <MessageRollbackDialog
+            open={rollbackTarget !== null}
+            busy={rollbackBusy}
+            onOpenChange={(open) => {
+              if (!open) setRollbackTarget(null);
+            }}
+            onConfirm={() => void confirmRollback()}
           />
-        }
-      />
-      <MessageRollbackDialog
-        open={rollbackTarget !== null}
-        busy={rollbackBusy}
-        onOpenChange={(open) => {
-          if (!open) setRollbackTarget(null);
-        }}
-        onConfirm={() => void confirmRollback()}
-      />
+        </div>
+        {/* 右坞：不常驻、按需展开；宽度可拖。主列始终占满剩余宽度，
+            不存在「打开面板就把转写挤没」的情况。 */}
+        {dockPanel !== null && (
+          <HarnessDock
+            panel={dockPanel}
+            onPanelChange={setDockPanel}
+            onClose={() => setDockPanel(null)}
+            context={{
+              conv,
+              running,
+              workerRecipients,
+              onOpenTask,
+            }}
+          />
+        )}
+      </div>
     </SideQuestionWorkspace>
   );
 }
@@ -1246,6 +1183,15 @@ const ConversationItem = React.memo(function ConversationItem({
           : "border-l-transparent hover:bg-accent/45",
       )}
     >
+      {/* 线程状态点：一眼看出这条线程在跑还是在等。 */}
+      <span
+        aria-hidden="true"
+        title={conv.running ? t("harness.threadStatus.running") : t("harness.threadStatus.idle")}
+        className={cn(
+          "ml-1 size-1.5 shrink-0 rounded-full",
+          conv.running ? "animate-pulse bg-emerald-500" : "bg-muted-foreground/40",
+        )}
+      />
       {selectionMode && (
         <Checkbox
           checked={selectedForDelete}
@@ -1283,19 +1229,12 @@ const ConversationItem = React.memo(function ConversationItem({
           <div className="flex min-w-0 items-center gap-1.5">
             {pinned && <PinIcon className="size-3 shrink-0 text-primary" aria-label={t("item.pinnedAria")} />}
             <div className="truncate text-sm">{conv.title || t("untitledConversation")}</div>
-            {conv.running ? (
-              <Badge variant="secondary" className="shrink-0 gap-1" title={t("item.runningTooltip")}>
-                <Spinner className="size-3" aria-hidden="true" />
-                {t("running")}
-              </Badge>
-            ) : null}
           </div>
-          <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex min-w-0 items-center gap-1 text-muted-foreground text-xs">
             {showAgent && (
               <>
                 <Bot className="size-3 shrink-0" />
                 <span className="min-w-0 truncate">{agent?.name ?? conv.agent_key}</span>
-
               </>
             )}
             <span className="shrink-0">
@@ -1405,11 +1344,24 @@ const ChatView = React.memo(ChatViewImpl);
 export default function ChatPage() {
   const locale = useLocale();
   const t = useTranslations("chat");
+  const router = useRouter();
+  // 任务详情页是独立全幅页面（?id=<task>）；从任务带跳过去时不带 SPA 状态，
+  // 返回由详情页自己的面包屑负责。
+  const openTask = React.useCallback(
+    (taskId: string) => router.push(`/function/tasks/detail?id=${encodeURIComponent(taskId)}`),
+    [router],
+  );
   const [agents, setAgents] = React.useState<Agent[]>([]);
   const [profiles, setProfiles] = React.useState<LLMProfile[]>([]);
   const [convs, setConvs] = React.useState<Conversation[]>([]);
   const [agentFilter, setAgentFilter] = React.useState<string | null>(null);
+  // 线程筛选（harness 左栏）：全部 / 运行中 / 已固定。
+  const [threadFilter, setThreadFilter] = React.useState<"all" | "running" | "pinned">("all");
+  // 运行中的 Worker 作为 composer 的可选收件人（数据来自 intents 列表，无需后端改动）。
+  const { workers: workerRecipients } = useWorkerRecipients();
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
+  // 新建线程要绑定的任务（来自 ?task=，或用户在草稿页手选）。空串 = 通用对话。
+  const [taskBind, setTaskBind] = React.useState("");
   const [sourceRequested, setSourceRequested] = React.useState(false);
   const [convsLoaded, setConvsLoaded] = React.useState(false);
   const selectConversation = React.useCallback(
@@ -1533,6 +1485,10 @@ export default function ChatPage() {
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setSourceRequested(params.has("approval"));
+    // ?task=<id>：从任务详情页「主 Agent 对话」跳进来时，新线程一建立就绑到这个任务。
+    // 已有线程（?c=）不再改绑：绑定关系属于线程，不该被一次跳转默默改写。
+    const taskParam = (params.get("task") ?? "").trim();
+    if (taskParam) setTaskBind(taskParam);
     const c = params.get("c");
     const id = c ? Number(c) : NaN;
     if (Number.isFinite(id)) setSelectedId(id);
@@ -1550,10 +1506,13 @@ export default function ChatPage() {
 
   const selected = React.useMemo(() => convs.find((c) => c.id === selectedId) ?? null, [convs, selectedId]);
   const agentByKey = React.useMemo(() => new Map(agents.map((agent) => [agent.key, agent])), [agents]);
-  const filteredConversations = React.useMemo(
-    () => (agentFilter === null ? convs : convs.filter((conversation) => conversation.agent_key === agentFilter)),
-    [convs, agentFilter],
-  );
+  const filteredConversations = React.useMemo(() => {
+    let rows = convs;
+    if (agentFilter !== null) rows = rows.filter((conversation) => conversation.agent_key === agentFilter);
+    if (threadFilter === "running") rows = rows.filter((conversation) => conversation.running);
+    if (threadFilter === "pinned") rows = rows.filter(conversationIsPinned);
+    return rows;
+  }, [convs, agentFilter, threadFilter]);
   const visibleConversations = React.useMemo(
     () => filteredConversations.slice(0, visibleConversationCount),
     [filteredConversations, visibleConversationCount],
@@ -1561,16 +1520,16 @@ export default function ChatPage() {
   // Pinned rows stay a flat block above the groups (server order = pinned_at DESC);
   // everything else is bucketed per agent, most-recently-active agent first.
   const pinnedConversations = React.useMemo(
-    () => visibleConversations.filter(conversationIsPinned),
-    [visibleConversations],
+    () => (threadFilter === "pinned" ? [] : visibleConversations.filter(conversationIsPinned)),
+    [visibleConversations, threadFilter],
   );
   const agentGroups = React.useMemo(
     () =>
       groupByAgent(
-        visibleConversations.filter((c) => !conversationIsPinned(c)),
+        threadFilter === "pinned" ? visibleConversations : visibleConversations.filter((c) => !conversationIsPinned(c)),
         agentByKey,
       ),
-    [visibleConversations, agentByKey],
+    [visibleConversations, agentByKey, threadFilter],
   );
   // 聊天 Agent 包含自定义 Agent 与 role=assistant 的对话型内置 Agent，如 Auto、渗透测试。
   // goals、planner、mainagent、worker 是任务专用编排角色，不显示于聊天页。
@@ -1725,16 +1684,54 @@ export default function ChatPage() {
   return (
     <div
       data-content-padding="false"
-      className="flex h-[calc(100svh-3rem)] min-w-0 flex-col overflow-hidden p-2 sm:p-3 md:h-[calc(100svh-3.5rem)] md:p-4"
+      // 整屏舞台：MainContent 对 /chat 走 full-bleed（无全局 header、无 padding），
+      // 这里自己撑满整个视口高度，外面只留 p-2 呼吸位。
+      // 高度封顶：100svh 减去全局 header（h-12 = 3rem）与 MainContent 的上下内边距
+      // （p-4 = 2rem / md:p-6 = 3rem）。
+      // 之前用纯 flex-1，父级没有确定高度，卡片就跟着浏览器窗口一路变长；这里给它
+      // 一个明确的上限，超出的内容只会落在内部滚动区里，页面本身不再长。
+      className="flex h-[calc(100svh-3rem-2rem)] min-h-0 min-w-0 flex-col overflow-hidden md:h-[calc(100svh-3rem-3rem)]"
     >
-      <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(10rem,14rem)_minmax(0,1fr)] overflow-hidden rounded-xl border border-border/80 bg-card shadow-xs md:grid-cols-[17.5rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]">
+      {/* 左栏收窄到 15rem（原 17.5rem）：整个工作区多出 40px 给转写与右坞。
+          卡片继续贴满 MainContent，不做全屏——全屏意味着要看别的窗口就得再开一个浏览器实例。 */}
+      <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(9rem,12rem)_minmax(0,1fr)] overflow-hidden rounded-xl border border-border/80 bg-card shadow-xs md:ml-1 md:grid-cols-[14rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]">
         {/* left: conversation fleet rail */}
         <div className="flex flex-col overflow-hidden border-border/75 bg-sidebar/40 max-md:border-b md:border-r">
           <div className="flex flex-col gap-2 border-b p-2.5">
-            <span data-editorial="secnum">01</span>
+            <div className="flex items-center gap-1.5">
+              {/* 不再自己挂 SidebarTrigger：全局 header 回来了（对话页不再是 full-bleed），
+                  触发器在那儿。这里只留「回任务列表」——左栏是线程，上一级是任务。 */}
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                className="shrink-0 text-muted-foreground"
+                onClick={() => router.push("/function/tasks")}
+                title={t("harness.back")}
+                aria-label={t("harness.back")}
+              >
+                <ArrowLeftIcon className="size-4" />
+              </Button>
+              <span className="min-w-0 flex-1 truncate font-semibold text-sm">{t("harness.conversations")}</span>
+              <span data-editorial="secnum">01</span>
+            </div>
             <Button size="sm" className="w-full" onClick={() => selectConversation(null)}>
               <PlusIcon /> {t("newConversation")}
             </Button>
+            <div className="flex items-center gap-1" role="tablist" aria-label={t("harness.filterAria")}>
+              {(["all", "running", "pinned"] as const).map((key) => (
+                <Button
+                  key={key}
+                  size="sm"
+                  variant={threadFilter === key ? "secondary" : "ghost"}
+                  className="h-7 flex-1 px-2 text-xs"
+                  onClick={() => setThreadFilter(key)}
+                  role="tab"
+                  aria-selected={threadFilter === key}
+                >
+                  {t(`harness.filter.${key}`)}
+                </Button>
+              ))}
+            </div>
             <Select
               value={agentFilter === null ? "all" : `agent:${agentFilter}`}
               onValueChange={(value) => changeAgentFilter(value === "all" ? null : value.slice(6))}
@@ -1884,7 +1881,16 @@ export default function ChatPage() {
               )}
             </div>
           </ScrollArea>
-          <ApiBar methods={["conversations", "agents", "deleteConversation", "deleteConversations", "pinConversation", "renameConversation"]} />
+          <ApiBar
+            methods={[
+              "conversations",
+              "agents",
+              "deleteConversation",
+              "deleteConversations",
+              "pinConversation",
+              "renameConversation",
+            ]}
+          />
         </div>
 
         {/* right: chat view */}
@@ -1897,8 +1903,10 @@ export default function ChatPage() {
               agents={agents}
               profiles={profiles}
               initial={pendingByConv[selected.id]}
+              workerRecipients={workerRecipients}
               onTitleMaybeChanged={reloadConvs}
               onConvUpdated={reloadConvs}
+              onOpenTask={openTask}
             />
           ) : sourceRequested ? (
             <div role="status" className="p-6 text-muted-foreground text-sm">
@@ -1908,6 +1916,7 @@ export default function ChatPage() {
             <DraftChat
               agents={chatAgents}
               profiles={profiles}
+              taskId={taskBind}
               onStarted={(c, pending) => {
                 if (agentFilter !== null && agentFilter !== c.agent_key) changeAgentFilter(null);
                 // Insert the new conversation immediately so `selected` resolves to
@@ -1925,7 +1934,21 @@ export default function ChatPage() {
               }}
             />
           )}
-          <ApiBar methods={["conversationMessages", "conversationHistory", "sendConversationMessage", "createConversation", "chatUpload", "conversationMsgDetail", "conversationBudget", "rollbackConversationMessage", "stopConversation", "updateConversationProfile", "llmProfiles"]} />
+          <ApiBar
+            methods={[
+              "conversationMessages",
+              "conversationHistory",
+              "sendConversationMessage",
+              "createConversation",
+              "chatUpload",
+              "conversationMsgDetail",
+              "conversationBudget",
+              "rollbackConversationMessage",
+              "stopConversation",
+              "updateConversationProfile",
+              "llmProfiles",
+            ]}
+          />
         </div>
       </div>
       <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>

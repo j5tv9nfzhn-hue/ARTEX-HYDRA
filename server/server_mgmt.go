@@ -324,6 +324,22 @@ func (s *Server) waitTaskQuiescent(ctx context.Context, taskID string) error {
 
 // ---------- agents ----------
 
+// orchestrationAgentKeys 是「任务运行时模板」的 agent key：它们不是可选的专家，
+// 而是新调度层（一个根 agent + 运行时按需派发的子代理）读取的提示词模板与运行配置。
+//
+//	coord_root / coord_child —— 根与子代理的系统提示词模板（可编辑、可恢复默认）
+//	worker                  —— 根与子代理共用的运行配置载体（LLM 档位/轮次/工具绑定）
+//	goals                   —— 建任务时那一次 LLM 目标拆解（不是常驻角色）
+//
+// 对齐 STRIX：子代理没有清单，派几个、派什么由根在该任务里自行决定。
+// 这几个 key 因此**不出现在 Agent 清单里**，改由 GET /api/orchestration 单独返回。
+var orchestrationAgentKeys = map[string]bool{
+	"coord_root":  true,
+	"coord_child": true,
+	"worker":      true,
+	"goals":       true,
+}
+
 func (s *Server) pgListAgents(w http.ResponseWriter, r *http.Request) {
 	pg := s.pg(w)
 	if pg == nil {
@@ -334,6 +350,16 @@ func (s *Server) pgListAgents(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err.Error())
 		return
 	}
+	// 清单只列「会话 Agent」：运行时模板走 /api/orchestration，
+	// 复测（retester）等机制型行从漏洞详情页发起，不在这里出现。
+	kept := make([]*db.Agent, 0, len(ags))
+	for _, a := range ags {
+		if hiddenFromList(a.Key) {
+			continue
+		}
+		kept = append(kept, a)
+	}
+	ags = kept
 	dtos := agentDTOs(ags)
 	// overlay per-agent binding counts (mcp/skill by id, tools by key) — best-effort.
 	if mcp, skill, tools, err := pg.AgentBindingCounts(); err == nil {

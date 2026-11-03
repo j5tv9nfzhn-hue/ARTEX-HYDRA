@@ -51,7 +51,9 @@ const PRE_SLACK_PX = 24;
 
 export function ThinkingRow({
   text,
-  label,
+  // label 仍接收但不再渲染：codex 的推理行只有一个省略号预览 + 箭头，
+  // 没有「正在思考」字样。留着参数是为了不动所有调用点。
+  label: _label,
   live = false,
   detail,
   fetchDetail,
@@ -111,7 +113,9 @@ export function ThinkingRow({
         .then((d) => {
           if (d) setFull(d);
         })
-        .catch(() => {})
+        .catch(() => {
+          /* 详情是增强项：拿不到就继续显示预览尾巴。 */
+        })
         .finally(() => setLoading(false));
     }
   }
@@ -122,10 +126,10 @@ export function ThinkingRow({
         type="button"
         onClick={toggle}
         aria-expanded={open}
+        // 无行首圆点、无「正在思考」字样：codex 的推理行就是「一行浅色预览 + 尾部箭头」。
+        // 语汇交给排版（浅色 + 单行截断）承担，不再用一个会 pulse 的紫点抢注意力。
         className="flex w-full min-w-0 items-center gap-1.5 text-left text-muted-foreground text-xs hover:text-foreground"
       >
-        <span className={cn("size-1.5 shrink-0 rounded-full bg-violet-500", live && "animate-pulse")} />
-        <span className="shrink-0 font-medium">{label}</span>
         {!open && (
           // 定高 + 绝对定位：文字每帧变化只重绘这一块，不参与外层 flex 重排。
           // 右侧对齐 + 左侧渐隐，保证「最新的一行」始终可见。

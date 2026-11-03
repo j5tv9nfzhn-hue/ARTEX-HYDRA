@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -50,28 +51,32 @@ GROUP BY c.id`)
 // Conversation is one ChatGPT-style chat thread bound to an agent key. It lives
 // independent of the pentest exploration graph — see schema_sqlite.sql §I.
 type Conversation struct {
-	ID           int64      `json:"id"`
-	AgentKey     string     `json:"agent_key"`
-	Title        string     `json:"title"`
-	LLMProfileID *int64     `json:"llm_profile_id,omitempty"`
-	Pinned       bool       `json:"pinned"`
-	PinnedAt     *time.Time `json:"pinned_at,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	ID           int64  `json:"id"`
+	AgentKey     string `json:"agent_key"`
+	Title        string `json:"title"`
+	LLMProfileID *int64 `json:"llm_profile_id,omitempty"`
+	// TaskID 是线程与任务的绑定（空串 = 通用对话）。可被显式解绑，所以用
+	// *string 传递 patch；读出来恒为字符串，省掉前端到处判空。
+	TaskID    string     `json:"task_id"`
+	Pinned    bool       `json:"pinned"`
+	PinnedAt  *time.Time `json:"pinned_at,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
 }
 
 // ConversationPatch updates only the fields whose pointers are non-nil.
 type ConversationPatch struct {
 	Title  *string
 	Pinned *bool
+	TaskID *string
 }
 
-const convCols = `id, agent_key, title, llm_profile_id, pinned_at, created_at, updated_at`
+const convCols = `id, agent_key, title, llm_profile_id, task_id, pinned_at, created_at, updated_at`
 
 func scanConv(row interface{ Scan(...any) error }) (Conversation, error) {
 	var c Conversation
 	var pinnedAt sql.NullTime
-	err := row.Scan(&c.ID, &c.AgentKey, &c.Title, &c.LLMProfileID, &pinnedAt, &c.CreatedAt, &c.UpdatedAt)
+	err := row.Scan(&c.ID, &c.AgentKey, &c.Title, &c.LLMProfileID, &c.TaskID, &pinnedAt, &c.CreatedAt, &c.UpdatedAt)
 	if pinnedAt.Valid {
 		c.Pinned = true
 		c.PinnedAt = &pinnedAt.Time
@@ -82,6 +87,13 @@ func scanConv(row interface{ Scan(...any) error }) (Conversation, error) {
 // CreateConversation opens a new chat thread for agentKey with an initial title.
 // llmProfileID may be nil to use the globally active profile.
 func (d *DB) CreateConversation(agentKey, title string, llmProfileID *int64) (*Conversation, error) {
+	return d.CreateConversationForTask(agentKey, title, llmProfileID, "")
+}
+
+// CreateConversationForTask opens a thread already bound to taskID (empty string =
+// unbound). 绑定在建线程这一刻定下来，而不是先建再补一次 PATCH：否则对话页会先渲染
+// 一条没有任务的线程，任务带闪一下才收窄，看起来像状态跳变。
+func (d *DB) CreateConversationForTask(agentKey, title string, llmProfileID *int64, taskID string) (*Conversation, error) {
 	tx, err := d.Begin()
 	if err != nil {
 		return nil, err
@@ -92,8 +104,8 @@ func (d *DB) CreateConversation(agentKey, title string, llmProfileID *int64) (*C
 	// by this transaction before it takes a profile lock, matching DeleteProfile's
 	// child-row -> profile-row protocol.
 	c, err := scanConv(tx.QueryRow(`
-INSERT INTO conversations(agent_key, title, llm_profile_id) VALUES ($1, $2, NULL)
-RETURNING `+convCols, agentKey, title))
+INSERT INTO conversations(agent_key, title, llm_profile_id, task_id) VALUES ($1, $2, NULL, $3)
+RETURNING `+convCols, agentKey, title, strings.TrimSpace(taskID)))
 	if err != nil {
 		return nil, err
 	}
@@ -177,13 +189,14 @@ func (d *DB) GetConversation(id int64) (*Conversation, error) {
 func (d *DB) UpdateConversation(id int64, patch ConversationPatch) (*Conversation, error) {
 	c, err := scanConv(d.QueryRow(`UPDATE conversations SET
 	title = CASE WHEN $2 THEN $3 ELSE title END,
+	task_id = CASE WHEN $5 THEN $6 ELSE task_id END,
 	pinned_at = CASE
 		WHEN $4 IS NULL THEN pinned_at
 		WHEN $4 THEN COALESCE(pinned_at, now())
 		ELSE NULL
 	END
 WHERE id=$1
-RETURNING `+convCols, id, patch.Title != nil, patch.Title, patch.Pinned))
+RETURNING `+convCols, id, patch.Title != nil, patch.Title, patch.Pinned, patch.TaskID != nil, patch.TaskID))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

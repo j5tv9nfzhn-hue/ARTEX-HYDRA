@@ -11,14 +11,8 @@ import (
 
 // 总览「约束管理」的人工 CRUD 接口 + 注入范围开关的解析。操作约束(allow/deny)与 agent 侧的
 // set_constraints 工具写同一张 task_constraints 表;这里是人类在 UI 上直接增删改。约束仅是
-// 提示上下文——增删改后【不】通知 planner,下一轮规划自然读库生效(按产品决策)。每个变更 handler
+// 提示上下文——增删改后【不】通知根 agent,下一轮规划自然读库生效(按产品决策)。每个变更 handler
 // 都走 beginTaskOperation/decInflight,避免与任务删除竞态(与目标/意图 CRUD 一致)。
-
-// 注入范围开关的 settings key,默认都开(GetBool 第二参数 = true)。
-const (
-	settingConstraintsInjectPlanner = "constraints_inject_planner"
-	settingConstraintsInjectWorker  = "constraints_inject_worker"
-)
 
 // 约束 CRUD 的中文错误通过 writeErr 展示。
 // 约束、任务、添加、修改、删除与 goals_api.go 统一术语，kind 枚举验证保留协议值。
@@ -29,16 +23,6 @@ const (
 	errConstraintTextEmpty          = "约束内容不能为空"
 	errConstraintKindInvalid        = "kind 的值必须是 allow 或 deny 之一"
 )
-
-// constraintInjectPlanner / constraintInjectWorker 报告是否把操作约束注入对应 agent 的
-// 系统提示(默认开)。作为 resolver 传给 planner/worker,每轮读 → 改开关即时生效。
-func (s *Server) constraintInjectPlanner() bool {
-	return s.m.pg.GetBool(settingConstraintsInjectPlanner, true)
-}
-
-func (s *Server) constraintInjectWorker() bool {
-	return s.m.pg.GetBool(settingConstraintsInjectWorker, true)
-}
 
 // listConstraints 返回本任务的全部操作约束(allow 在前、deny 在后)。
 func (s *Server) listConstraints(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +39,7 @@ func (s *Server) listConstraints(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"constraints": constraintDTOs(rows)})
 }
 
-// addConstraint 人工新增一条操作约束(kind=allow|deny)。不通知 planner。
+// addConstraint 人工新增一条操作约束(kind=allow|deny)。不通知根 agent。
 func (s *Server) addConstraint(w http.ResponseWriter, r *http.Request) {
 	t, ok := s.m.Task(r.PathValue("id"))
 	if !ok {
@@ -94,7 +78,7 @@ func (s *Server) addConstraint(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, ConstraintDTO{ID: strconv.FormatInt(id, 10), Kind: kind, Text: text, Origin: "human"})
 }
 
-// editConstraint 人工修改一条约束(kind + text)。不通知 planner。
+// editConstraint 人工修改一条约束(kind + text)。不通知根 agent。
 func (s *Server) editConstraint(w http.ResponseWriter, r *http.Request) {
 	t, ok := s.m.Task(r.PathValue("id"))
 	if !ok {
@@ -137,7 +121,7 @@ func (s *Server) editConstraint(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, ConstraintDTO{ID: strconv.FormatInt(cid, 10), Kind: kind, Text: text})
 }
 
-// deleteConstraint 人工删除一条约束。不通知 planner。
+// deleteConstraint 人工删除一条约束。不通知根 agent。
 func (s *Server) deleteConstraint(w http.ResponseWriter, r *http.Request) {
 	t, ok := s.m.Task(r.PathValue("id"))
 	if !ok {

@@ -462,7 +462,7 @@ export default function DashboardPage() {
   }
 
   function workerBg(w: string): string {
-    if (w === "planner") return "bg-violet-500/10 text-violet-400 border-violet-500/20";
+    if (w === "goals" || w === "planner") return "bg-violet-500/10 text-violet-400 border-violet-500/20";
     if (w === "mainagent") return "bg-cyan-500/10 text-cyan-400 border-cyan-500/20";
     return "bg-blue-500/10 text-blue-400 border-blue-500/20";
   }

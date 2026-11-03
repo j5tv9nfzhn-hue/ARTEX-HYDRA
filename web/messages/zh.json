@@ -219,7 +219,7 @@
     "cancel": "取消",
     "countTotal": "共 {count} 个",
     "create": "创建",
-    "createDesc": "创建一个会话型助手。key 用于内部标识，创建后不可更改；名称与描述用于识别。",
+    "createDesc": "创建一个会话型助手。key 用于内部标识，创建后不可更改；名称与描述用于识别。任务里的子代理不需要预先创建。",
     "createFailed": "创建失败：{msg}",
     "createTitle": "新建自定义 Agent",
     "created": "已创建 Agent「{name}」",
@@ -240,7 +240,11 @@
     "namePlaceholder": "如 研究助手",
     "new": "新建 Agent",
     "noDescription": "（无描述）",
-    "subtitle": "内置 Agent 的提示词/配置，以及自定义会话 Agent 的创建与管理",
+    "subtitle": "一个根 Agent 编排整个任务，子代理按需临时派发；这里维护提示词模板与运行配置",
+    "groupOrchestration": "任务运行时",
+    "groupOrchestrationDesc": "根 Agent 与它派发的子代理共用这些系统提示词模板与运行配置。子代理没有固定清单——派几个、派什么，由根在当前任务里自行决定。",
+    "groupSessions": "会话 Agent",
+    "groupSessionsDesc": "在对话里可选的助手。与任务运行时无关，不会被任务派发。",
     "title": "Agent",
     "toolLabel": "工具"
   },
@@ -874,7 +878,77 @@
     "budgetLabel": "预算",
     "budgetTitleEnforced": "本条会话累计 token 预算：已用 {used} / 上限 {limit}。达到上限后本轮自动收尾（可在系统配置调整 default_conversation_token_budget）。",
     "budgetTitleStats": "仅统计，不拦截：已用 {used}（参考上限 {limit}）。在系统配置填写 default_conversation_token_budget 后才启用收尾。",
-    "usageLabel": "用量"
+    "usageLabel": "用量",
+    "harness": {
+      "filterAria": "线程筛选",
+      "filter": {
+        "all": "全部",
+        "running": "运行中",
+        "pinned": "已固定"
+      },
+      "threadStatus": {
+        "running": "这条线程正在跑",
+        "idle": "空闲"
+      },
+      "recipient": {
+        "title": "这条消息发给谁",
+        "agent": "主 Agent",
+        "workers": "运行中的 Worker（{count}）",
+        "noWorkers": "当前没有运行中的 Worker"
+      },
+      "steerNotice": "正在对 Worker #{id} 说话：点击发送 = 立即 steer，不暂停、不重跑。",
+      "backToAgent": "切回主 Agent",
+      "hint": {
+        "send": "Enter 发送",
+        "queue": "Enter 排队（跨重启保留）· Ctrl+Enter 立刻发送",
+        "steer": "Enter = 立刻 steer 给这个 Worker"
+      },
+      "runtimeBadge": {
+        "queued": "运行中 · 新消息排队"
+      },
+      "send": "发送",
+      "steerNow": "立刻 steer",
+      "stop": "停止本轮",
+      "footerHint": "Enter 发送 · Ctrl/Cmd + Enter 立刻发送 · @ 引用资产/漏洞/Worker",
+      "slash": {
+        "stop": "立即停止本轮（保留已产出的活动）",
+        "stopHint": "没有在跑的一轮",
+        "btw": "侧问（不进主线程上下文）",
+        "btwHint": "发送",
+        "compact": "压缩上下文",
+        "fork": "从这条消息分叉出新线程",
+        "unavailable": "后端未提供，暂不可用"
+      },
+      "title": "HARNESS",
+      "back": "返回任务列表",
+      "dock": {
+        "panel": {
+          "tasks": "TASKS",
+          "approvals": "APPROVALS",
+          "checkpoints": "CHECKPOINTS",
+          "files": "FILES"
+        },
+        "asideAria": "工作区右侧面板",
+        "collapse": "收起面板",
+        "close": "关闭面板",
+        "resize": "拖动调整面板宽度",
+        "openTask": "打开任务",
+        "moreWorkers": "还有 {count} 个",
+        "decideInApprovals": "去审批页处理",
+        "checkpoint": "CHECKPOINT #{id}",
+        "filesHint": "这里将列出当前会话的工作区文件。后端还没有只读文件树端点，暂不展示自造目录。",
+        "empty": {
+          "tasks": "当前没有在跑或待审批的任务",
+          "todo": "这条线程还没有 Todo 进度记录",
+          "approvals": "没有待审批的拦截",
+          "checkpoints": "这条会话还没有检查点"
+        }
+      },
+      "bindHint": "这条会话将绑定到任务",
+      "boundTask": "TASK #{id}",
+      "boundTaskTitle": "这条线程绑定的任务，点开查看任务详情",
+      "conversations": "CONVERSATIONS"
+    }
   },
   "chatSendMode": {
     "option": {
@@ -2632,7 +2706,7 @@
       "approvals": "审批记录",
       "asset-intercept": "资产拦截",
       "assets": "资产",
-      "chat": "对话",
+      "chat": "HARNESS",
       "commands": "工具执行",
       "dashboard": "总览",
       "external": "外部接入",
@@ -3239,7 +3313,7 @@
     "taskTotal": "任务总计",
     "title": {
       "main": "主 Agent，会话 #{n}",
-      "planner": "规划 Planner，态势研判",
+      "goalBreakdown": "任务目标拆解",
       "system": "系统事件，LLM 故障转移",
       "reviewer": "回顾者，意图 #{id}"
     },
@@ -3311,6 +3385,9 @@
         "unknown": "其他判定"
       },
       "noneYet": "本任务还没有判决：Worker 跑完一轮并写下交接单后，回顾者才会介入。"
+    },
+    "readonly": {
+      "hint": "本页为只读记录。要发消息、纠偏或回滚，请到「对话」页选择对应线程。"
     }
   },
   "settingsPage": {
@@ -3391,22 +3468,6 @@
       "title": "默认 Token 预算"
     },
     "configured": "已配置",
-    "constraints": {
-      "desc": "开启后，把每个任务的<b>操作约束</b>（在任务总览「操作约束」里维护的 allow/deny 条目）拼进对应 Agent 的系统提示，用来框定探索边界（如「仅测当前端口」「禁止爆破」）。<br></br>可分别控制注入到 <b>规划者（planner）</b>与 <b>执行者（worker）</b> ；默认都开。切换即时生效（下一轮读取），无需重建 Agent。关闭后该 Agent 不再看到约束。",
-      "injectPlanner": "注入规划者（planner）",
-      "injectWorker": "注入执行者（worker）",
-      "title": "操作约束注入"
-    },
-    "experimental": {
-      "desc": "尚在验证中的机制，默认关闭。可能改变 Agent 行为或影响稳定性，请在了解影响后启用。<br></br><b>完成闸门</b>：控制「没跑完的分支」能不能让任务判定为完成，详见下方说明。",
-      "branchGateEnforce": "强制拦截",
-      "branchGateHint": "意图因步数/时长耗尽、执行出错或被终止而没跑完时，这条分支就是「未收口」。影子模式只在活动流留痕（不拦）；强制模式下任务不会被判定为完成，未收口的分支会被自动放回队列重跑（每意图最多 3 次），到上限后停下来等人处理。",
-      "branchGateLabel": "完成闸门（未收口分支不许判完成）",
-      "branchGateOff": "关闭",
-      "branchGateSaved": "完成闸门已切换",
-      "branchGateShadow": "影子（只记录）",
-      "title": "实验功能"
-    },
     "skillEvolution": {
       "autoApply": "跳过审阅直接写入技能目录",
       "autoApplyGateOff": "审阅门控已关闭：所有技能写入（含 Agent 提议）都会直接落盘，此开关不再单独生效。",
@@ -3510,9 +3571,7 @@
       "testUnknownError": "未知错误",
       "verifyGateInvalid": "抽查比例必须是 0–100 的整数",
       "verifyGateSaved": "已保存自动复核闸门（对之后入库的发现生效）",
-      "webSearchSaved": "已保存网络搜索配置",
-      "workersInvalid": "并发数必须是大于 0 的整数",
-      "workersSaved": "已保存并发工作 agent 数（对之后启动的任务生效）"
+      "webSearchSaved": "已保存网络搜索配置"
     },
     "trafficCapture": {
       "desc": "开启后，所有 Agent 的 HTTP 流量经记录代理全量落库，并向 Agent 注入 traffic_search / traffic_get 工具与代理配置（提示词含代理说明）。<br></br>关闭（默认）时不记录任何流量：Agent<b>不会</b>拿到代理配置与流量工具，提示词也<b>不含</b>代理相关内容。切换后会即时重建 Agent 生效。",
@@ -3651,10 +3710,6 @@
       "testHint": "用当前配置（来源 + 代理 + Key）实际搜索一次「test」，验证是否可用。",
       "testRunning": "测试中…",
       "title": "网络搜索"
-    },
-    "workers": {
-      "desc": "每个任务并发运行的工作 agent 数量（默认 3）。数值越大并发探测越多、消耗也越高。修改后<b>对之后启动的任务生效</b>，正在运行的任务不受影响。",
-      "title": "工作并发，Work Agent 数"
     },
     "shell": {
       "title": "工具执行器",
@@ -4920,7 +4975,9 @@
       "runningWorker": "运行中 Worker",
       "selectAllAria": "选择本页全部任务",
       "status": "状态",
-      "target": "目标"
+      "target": "目标",
+      "source": "来源",
+      "sourceTitle": "任务从哪来：派生自其他任务 / 由外部接入（MCP）触发 / 对话页内部派发"
     },
     "taskRef": "任务 #{id}",
     "toast": {
@@ -4941,6 +4998,17 @@
       "failed": "上传失败：{msg}",
       "hint": "worker 可用 Read/Bash 按路径打开：",
       "marker": "【上传文件（绝对路径）】"
+    },
+    "readonly": {
+      "badge": "只读 · 任务的发起来自对话页"
+    },
+    "source": {
+      "fromTasks": "派生自 #{id}",
+      "fromTasksTitle": "来源任务：{ids}",
+      "external": "外部接入",
+      "externalTitle": "该任务产生过需要人工放行的动作，说明来自 MCP / 外部接入",
+      "internal": "对话页派发",
+      "internalTitle": "由对话页或任务台内部创建"
     }
   },
   "todoPopover": {
@@ -4949,7 +5017,8 @@
     "none": "本会话暂无 Todo",
     "parseError": "解析 Todo 失败",
     "recent": "最近 Todo",
-    "view": "查看最近 Todo"
+    "view": "查看最近 Todo",
+    "trigger": "TODO"
   },
   "toolsPage": {
     "badgeCustom": "自定义",

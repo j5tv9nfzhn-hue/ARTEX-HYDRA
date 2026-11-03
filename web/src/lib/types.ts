@@ -793,7 +793,10 @@ export interface TaskLLMResolution {
 
 export interface TaskLLMResolutions {
   mainagent: TaskLLMResolution;
-  planner: TaskLLMResolution;
+  // goals = 一次性目标拆解（worker 标 "goals" 的那批活动行）。
+  goals?: TaskLLMResolution;
+  // planner 已下线，仅历史后端版本还会回这个键。
+  planner?: TaskLLMResolution;
   worker: TaskLLMResolution;
 }
 
@@ -871,6 +874,9 @@ export interface Conversation {
   running?: boolean; // live server state, returned with the conversation list
   agent_key: string;
   title: string;
+  // 线程绑定的任务（后端 conversations.task_id）。空串 = 通用对话；
+  // 对话页的任务带用它决定默认显示范围，任务页「来源」列也读它。
+  task_id?: string;
   llm_profile_id?: number;
   pinned?: boolean;
   pinned_at?: string | null;
@@ -929,7 +935,9 @@ export interface LogLine {
   text: string;
 }
 
-export type SessionRole = "mainagent" | "planner" | "worker" | "system" | "reviewer";
+export type SessionRole = "mainagent" | "goals" | "worker" | "system";
+// "planner" 与 "reviewer" 已下线：旧任务的活动行/拦截记录里仍是这两个值，
+// 读取侧照旧认（见 sessions-tab 的 sessionKeyOf），但不再出现在类型里。
 export type SessionStatus = "running" | "paused" | "done" | "blocked" | "exhausted" | "pending" | "stopped" | "deleted";
 
 // Daily token aggregate bucket (GET /api/tokens/daily).
@@ -1163,7 +1171,7 @@ export interface Settings {
   shell_mode?: string;
   // 显式覆盖可执行文件路径；空=按模式自动解析。填了就优先用它，跑不起来直接报错。
   shell_bin?: string;
-  workers?: number; // 并发工作 agent 数(默认3)；对之后启动的任务生效
+  workers?: number; // 子代理并发上限(默认4)：根 agent 同时最多派几个；对之后启动的任务生效
   // 新建任务的默认 token 预算(input+output,0=不限)；仅在创建任务未显式给预算时取它。
   // 预算闸在每次 run 收尾按 llm_usage 累计 input+output 检查，用尽自动暂停任务。
   default_task_token_budget?: number;
@@ -1179,9 +1187,6 @@ export interface Settings {
   llm_pool_enabled?: boolean; // 默认 false
   // 绑定了指定配置的 agent/任务失败时是否也回落到轮询链。默认 false = 绑定即独占。
   llm_pool_bind_fallback?: boolean;
-  // 操作约束注入范围(默认都开):把任务的 allow/deny 约束拼进对应 agent 的系统提示。
-  constraints_inject_planner?: boolean;
-  constraints_inject_worker?: boolean;
   // 实验功能:完成闸门（未收口分支不许判完成）。off=关 / shadow=只记录不拦 / enforce=真拦并回炉。
   // 切换即时生效（每次完成判定读一次），无需重启。
   branch_gate_mode?: "off" | "shadow" | "enforce" | string;

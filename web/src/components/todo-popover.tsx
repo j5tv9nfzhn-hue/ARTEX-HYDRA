@@ -8,11 +8,17 @@ import { useTranslations } from "next-intl";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-// TodoPopover shows the latest TodoWrite state of a session (chat conversation or
-// task worker/planner replay). The full todo list isn't in the activity list
-// (detail is lazy), so on open it fetches the detail of the most-recent TodoWrite
-// call — by seq — and parses its {todos:[…]} JSON. Purely client-side; the caller
-// supplies the seq + a detail fetcher (conversation or exploration endpoint).
+// TodoPopover 是会话此刻的 TodoWrite 状态——**气泡形态**，不是右侧面板。
+//
+// 为什么回到气泡（第十一轮）：右侧坞里再放一个 TODO 面板，等于把「输入框旁边
+// 随手看一眼」的轻量信息搬到需要先开坞、再选面板的两步操作里；坞还会挤占正文宽度。
+// 旧版这个 Popover 就挂在 composer 的操作行上，点开即看、点走即走，宽度不侵占正文。
+//
+// 数据来源没变：完整 todo 列表不在活动列表里（detail 是懒加载的），所以打开时按
+// seq 拉最近一次 TodoWrite 的 detail，再解析它的 {todos:[…]} JSON。纯客户端。
+//
+// 打开期间按 5s 轮询一次：一轮 run 里 TodoWrite 会被反复调用，旧版只在打开时拉一次，
+// 用户盯着气泡看进度时列表是不动的。
 export function TodoPopover({
   seq,
   fetchDetail,
@@ -43,13 +49,20 @@ export function TodoPopover({
     }
   }, [seq, fetchDetail, tr]);
 
-  // refetch on each open — todos change as the run progresses.
+  // 每次打开拉一次；停留期间每 5s 跟进一次。
   React.useEffect(() => {
-    if (open) void load();
+    if (!open) return;
+    void load();
+    const id = window.setInterval(() => void load(), 5000);
+    return () => window.clearInterval(id);
   }, [open, load]);
 
   const disabled = seq == null;
-  const MARK: Record<string, string> = { pending: "☐", in_progress: "▶", completed: "✔" };
+  const done = (todos ?? []).filter((t) => t.status === "completed").length;
+  const total = todos?.length ?? 0;
+
+  // 进度只在有列表时出现：0/0 比不显示更吵。
+  const progress = total > 0 ? `${done}/${total}` : null;
   return (
     <Popover open={open} onOpenChange={disabled ? undefined : setOpen}>
       <PopoverTrigger asChild>
@@ -57,33 +70,57 @@ export function TodoPopover({
           type="button"
           disabled={disabled}
           title={disabled ? tr("none") : tr("view")}
-          className="text-muted-foreground/70 hover:text-primary flex items-center gap-0.5 text-xs disabled:pointer-events-none disabled:opacity-40"
+          aria-label={disabled ? tr("none") : tr("view")}
+          className={cn(
+            "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-border/70 bg-muted/50 px-2 text-muted-foreground",
+            "text-xs transition-colors hover:bg-accent hover:text-foreground",
+            "disabled:pointer-events-none disabled:opacity-40",
+            open && "bg-accent text-foreground",
+          )}
         >
-          <ListTodo className="size-3" />
-          Todo
+          <ListTodo className="size-3.5" />
+          <span className="max-sm:hidden">{tr("trigger")}</span>
+          {progress ? <span className="font-mono text-ui-2xs tabular-nums opacity-70">{progress}</span> : null}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="max-h-80 w-80 overflow-auto p-2">
-        <p className="text-muted-foreground px-1 pb-1 text-xs font-medium">
-          {tr("recent")}
-          {loading ? tr("loadingSuffix") : ""}
-        </p>
-        {err && <p className="text-destructive px-1 text-xs">{err}</p>}
-        {todos && todos.length === 0 && !loading && <p className="text-muted-foreground px-1 text-xs">{tr("empty")}</p>}
-        <ul className="space-y-0.5">
-          {(todos ?? []).map((t, i) => (
-            <li
-              key={`${i}:${t.content}`}
-              className={cn(
-                "flex gap-1.5 px-1 text-xs",
-                t.status === "completed" && "text-muted-foreground line-through",
-              )}
-            >
-              <span className="shrink-0">{MARK[t.status] ?? "☐"}</span>
-              <span className="break-words">{t.content}</span>
-            </li>
-          ))}
-        </ul>
+      <PopoverContent align="start" side="top" sideOffset={8} className="w-80 max-w-[calc(100vw-2rem)] p-0">
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+          <span className="font-medium text-xs">{tr("recent")}</span>
+          <span className="font-mono text-muted-foreground text-ui-2xs tabular-nums">
+            {loading && !todos ? tr("loadingSuffix") : (progress ?? "")}
+          </span>
+        </div>
+        <div className="max-h-72 overflow-auto p-1.5">
+          {err ? <p className="px-1.5 py-1 text-destructive text-xs">{err}</p> : null}
+          {todos && todos.length === 0 && !loading ? (
+            <p className="px-1.5 py-1 text-muted-foreground text-xs">{tr("empty")}</p>
+          ) : null}
+          <ul className="space-y-0.5">
+            {(todos ?? []).map((t) => (
+              <li
+                key={`${t.status}:${t.content}`}
+                className={cn(
+                  "flex items-start gap-2 rounded-md px-1.5 py-1 text-xs",
+                  t.status === "completed" && "text-muted-foreground",
+                )}
+              >
+                {/* 状态用形状 + 颜色双编码：只靠颜色在深色主题下几乎看不出区别。 */}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "mt-[3px] size-1.5 shrink-0 rounded-full",
+                    t.status === "completed" && "bg-muted-foreground/40",
+                    t.status === "in_progress" && "bg-primary",
+                    t.status !== "completed" && t.status !== "in_progress" && "border border-muted-foreground/50",
+                  )}
+                />
+                <span className={cn("min-w-0 break-words", t.status === "completed" && "line-through")}>
+                  {t.content}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </PopoverContent>
     </Popover>
   );

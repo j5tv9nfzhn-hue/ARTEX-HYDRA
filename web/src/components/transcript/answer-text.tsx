@@ -130,12 +130,18 @@ export function AnswerText({
     [streaming, split.stable],
   );
   return (
+    // 正文不再套圆角描边气泡（第十一轮，对齐 codex 伪代码）。
+    //
+    // 旧外壳 `rounded-xl border px-4 py-3` 有两个代价：
+    //   1. 框随内容一起长高，流式每定稿一段就多一圈边框重绘，眼睛看到的是整个
+    //      方框在「上下晃」——真正在动的只有最后一行；
+    //   2. 框把正文挤成一条窄带（左右各 16px padding + 边框），长段落换行更碎。
+    // 现在正文直接落在 thread 的文本基线上，只有错误态保留底色（错误需要一块
+    // 明确的可视边界，且它不会流式增长）。
     <div
       className={cn(
-        "min-w-0 flex-1 break-words rounded-xl border px-4 py-3 shadow-2xs",
-        isError
-          ? "border-red-500/35 bg-red-500/8 text-red-600 text-sm dark:text-red-400"
-          : "border-border/80 border-l-2 border-l-primary bg-muted/45",
+        "min-w-0 flex-1 break-words text-sm leading-relaxed",
+        isError ? "rounded-lg border border-red-500/35 bg-red-500/8 px-3 py-2 text-red-600 dark:text-red-400" : "",
         className,
       )}
     >
@@ -147,14 +153,13 @@ export function AnswerText({
       ) : (
         <>
           {stable ? <MemoMarkdown text={stable} /> : null}
-          {split.tail ? <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">{split.tail}</div> : null}
+          {split.tail ? (
+            <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">{split.tail}</div>
+          ) : null}
         </>
       )}
       {streaming && (
-        <span
-          aria-hidden
-          className="ml-0.5 inline-block h-3 w-1 animate-pulse rounded-xs bg-primary align-middle"
-        />
+        <span aria-hidden className="ml-0.5 inline-block h-3 w-1 animate-pulse rounded-xs bg-primary align-middle" />
       )}
     </div>
   );

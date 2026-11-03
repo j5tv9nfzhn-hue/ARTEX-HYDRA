@@ -6,7 +6,6 @@ import {
   CheckIcon,
   ChevronDown,
   ChevronRight,
-  CopyIcon,
   CrosshairIcon,
   Flag,
   MessageSquare,
@@ -14,7 +13,6 @@ import {
   ShieldAlertIcon,
   Undo2Icon,
   UserIcon,
-  WrapTextIcon,
   XIcon,
   ZapIcon,
 } from "lucide-react";
@@ -41,10 +39,12 @@ import { resolveToolStatus, TOOL_STATUS_LABEL_KEY, type ToolStatus } from "@/lib
 import type { Activity, InterceptPending } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-// ---- per-agent lane color (planner + work#1/#2/#3 …) ---------------------------
+// ---- per-agent lane color (goals + work#1/#2/#3 …) -----------------------------
 const workerColors = ["bg-sky-600", "bg-violet-600", "bg-teal-600", "bg-pink-600", "bg-orange-600"];
 function workerColor(name: string): string {
-  if (name === "planner") return "bg-amber-600"; // the intent generator, distinct
+  // goals = 一次性目标拆解行（历史任务里标的是已下线的 planner）；给一个独立的
+  // 琥珀色，让它在按 agent 分栏时不与子代理撞色。
+  if (name === "goals" || name === "planner") return "bg-amber-600";
   if (name === "mainagent") return "bg-primary";
   const m = /#(\d+)/.exec(name);
   const i = m ? (Number.parseInt(m[1], 10) - 1) % workerColors.length : 0;
@@ -199,7 +199,7 @@ function ActivityTime({ ts }: { ts: string }) {
     <time
       dateTime={date.toISOString()}
       title={date.toLocaleString("zh-CN")}
-      className="text-ui-2xs text-muted-foreground tabular-nums"
+      className="text-muted-foreground text-ui-2xs tabular-nums"
       suppressHydrationWarning
     >
       {date.toLocaleString("zh-CN", {
@@ -619,7 +619,7 @@ function ToolBlock({
       {expanded && (
         <div className="mt-1.5 mb-2 ml-2 overflow-hidden rounded-lg border border-border/80 bg-secondary/30 shadow-2xs">
           {!sections ? (
-            <div className="p-3 font-mono text-ui-xs text-muted-foreground">{t("loading")}</div>
+            <div className="p-3 font-mono text-muted-foreground text-ui-xs">{t("loading")}</div>
           ) : (
             <ToolBody
               onToggleWrap={() => setWrapLines((w) => !w)}
@@ -641,10 +641,13 @@ function MessageBlock({
   group,
   getDetail,
   showWorker,
+  chat = false,
 }: {
   group: Extract<Group, { type: "msg" }>;
   getDetail: (seq: number) => Promise<string>;
   showWorker?: boolean;
+  /** 会话（对话页 / 任务详情的主 Agent·Worker）走整段排版；活动回放走单行折叠。 */
+  chat?: boolean;
 }) {
   const t = useTranslations("transcript");
   const [open, setOpen] = React.useState(false);
@@ -655,16 +658,28 @@ function MessageBlock({
   const hasThinking = thinkingSteps.length > 0;
   const onlyThinking = speak.length === 0 && hasThinking;
   // 历史推理与实时推理共用 ThinkingRow：折叠时用摘要预览，展开时再取全文。
-  const thinkingText = thinkingSteps.map((s) => s.summary).filter(Boolean).join("\n\n");
+  const thinkingText = thinkingSteps
+    .map((s) => s.summary)
+    .filter(Boolean)
+    .join("\n\n");
   const loadThinking = React.useCallback(
     () =>
       Promise.all(
-        thinkingSteps.map((s) => getDetail(s.seq).then((d) => d || s.summary).catch(() => s.summary)),
+        thinkingSteps.map((s) =>
+          getDetail(s.seq)
+            .then((d) => d || s.summary)
+            .catch(() => s.summary),
+        ),
       ).then((parts) => parts.join("\n\n")),
     [thinkingSteps, getDetail],
   );
   const isError = group.steps.some((s) => s.is_error);
   const body = (speak.length ? speak : group.steps).map((s) => s.summary).join("  ") || "…";
+  // 会话类用原文整段（summary 只是摘要，回放要看的是全文）。
+  const bodyText = (speak.length ? speak : group.steps)
+    .map((s) => s.summary)
+    .filter(Boolean)
+    .join("\n\n");
   let Icon = MessageSquare;
   if (isError) {
     Icon = Flag;
@@ -703,25 +718,27 @@ function MessageBlock({
   }, [open, detailKey, group.steps, getDetail, t]);
 
   if (onlyThinking && thinkingText) {
+    return <ThinkingRow className="-ml-3" fetchDetail={loadThinking} label={t("kind.thinking")} text={thinkingText} />;
+  }
+
+  // 会话行（对话页 / 任务详情的主 Agent·Worker）：正文按对话页同一套排版整段铺开，
+  // 多段、列表、代码块都按 Markdown 走，而不是压成一条可折叠的单行——回放要读得懂。
+  // 纯思考、没有正文的情形由上面的 early return 交给 ThinkingRow。
+  if (chat) {
     return (
-      <ThinkingRow
-        className="-ml-3"
-        fetchDetail={loadThinking}
-        label={t("kind.thinking")}
-        text={thinkingText}
-      />
+      <div className="flex min-w-0 flex-col gap-1 py-0.5">
+        {hasThinking && thinkingText && (
+          <ThinkingRow fetchDetail={loadThinking} label={t("kind.thinking")} text={thinkingText} />
+        )}
+        {bodyText ? <AnswerText className="mt-0.5 mb-1" isError={isError} text={bodyText} /> : null}
+      </div>
     );
   }
 
   return (
     <div className="relative pl-3 text-xs before:absolute before:top-0 before:bottom-0 before:left-1 before:w-px before:bg-border/70">
       {hasThinking && thinkingText && (
-        <ThinkingRow
-          className="-ml-3 mb-1"
-          fetchDetail={loadThinking}
-          label={t("kind.thinking")}
-          text={thinkingText}
-        />
+        <ThinkingRow className="mb-1 -ml-3" fetchDetail={loadThinking} label={t("kind.thinking")} text={thinkingText} />
       )}
       <button
         type="button"
@@ -734,20 +751,14 @@ function MessageBlock({
         <span className="shrink-0 text-muted-foreground">
           {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
         </span>
-        <Icon
-          className={cn(
-            "size-3.5 shrink-0",
-            isError && "text-red-500",
-            !isError && "text-primary/80",
-          )}
-        />
+        <Icon className={cn("size-3.5 shrink-0", isError && "text-red-500", !isError && "text-primary/80")} />
         {showWorker && <span className={chip(group.worker)}>{group.worker}</span>}
         <span className={cn("min-w-0 flex-1 truncate", tone)}>{body}</span>
       </button>
       {open && (
         <div className="mt-1.5 mb-2 ml-2 overflow-hidden rounded-lg border border-border/80 bg-secondary/30 shadow-2xs">
           {!stepDetails ? (
-            <div className="p-3 font-mono text-ui-xs text-muted-foreground">{t("loading")}</div>
+            <div className="p-3 font-mono text-muted-foreground text-ui-xs">{t("loading")}</div>
           ) : (
             <div className="divide-y divide-border/70">
               {stepDetails.map((item, idx) => (
@@ -757,7 +768,7 @@ function MessageBlock({
                     <span className="font-semibold text-muted-foreground uppercase">{item.kind}</span>
                     <CopyTextButton text={item.text} />
                   </div>
-                  <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words p-2.5 font-mono text-ui-xs text-foreground/90 leading-relaxed">
+                  <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words p-2.5 font-mono text-foreground/90 text-ui-xs leading-relaxed">
                     {item.text}
                   </pre>
                 </div>
@@ -949,7 +960,7 @@ function ExecViewImpl({
           return (
             <div
               key={`r${g.key}`}
-              className="my-3 flex items-center gap-2.5 font-semibold text-ui-2xs text-muted-foreground uppercase tracking-wider"
+              className="my-3 flex items-center gap-2.5 font-semibold text-muted-foreground text-ui-2xs uppercase tracking-wider"
             >
               <span className="h-px flex-1 bg-border/80" />
               <span className="inline-flex items-center gap-1 rounded-full border bg-muted/60 px-2.5 py-0.5">
@@ -982,7 +993,7 @@ function ExecViewImpl({
         if (g.type === "intercept") {
           return <InterceptCard key={`ic${g.key}`} step={g.step} getDetail={getDetail} />;
         }
-        return <MessageBlock key={`m${g.key}`} group={g} getDetail={getDetail} showWorker={showWorker} />;
+        return <MessageBlock key={`m${g.key}`} chat={chat} group={g} getDetail={getDetail} showWorker={showWorker} />;
       })}
     </div>
   );
@@ -1009,7 +1020,7 @@ function LiveBlocks({ frame }: { frame?: { kind: string; text?: string; tool?: s
   }
   if (frame.kind === "progress" && frame.text) {
     return (
-      <div className="flex items-start gap-1.5 pl-3 text-ui-xs text-muted-foreground">
+      <div className="flex items-start gap-1.5 pl-3 text-muted-foreground text-ui-xs">
         <span className="mt-0.5 shrink-0">
           <StatusRing status="running" />
         </span>

@@ -8,13 +8,10 @@ import Link from "next/link";
 import {
   CircleDollarSignIcon,
   CoinsIcon,
-  CpuIcon,
-  FlaskConicalIcon,
   KeyboardIcon,
   LanguagesIcon,
   RadioTowerIcon,
   SearchIcon,
-  ShieldAlertIcon,
   ShieldCheckIcon,
   SparklesIcon,
   TerminalIcon,
@@ -70,19 +67,12 @@ export default function SystemSettingsPage() {
   const [shellMode, setShellMode] = React.useState("powershell");
   const [shellBin, setShellBin] = React.useState("");
   const [savingShell, setSavingShell] = React.useState(false);
-  const [workers, setWorkers] = React.useState("3");
-  const [savingWorkers, setSavingWorkers] = React.useState(false);
   // 新建任务的默认 token 预算；输入单位=千 token(k)，存库为原始 token 数。
   const [tokenBudgetK, setTokenBudgetK] = React.useState("0");
   const [savingTokenBudget, setSavingTokenBudget] = React.useState(false);
   // 模型价目 JSON(USD/百万 token)；读取接口按它读时现算费用，空=不算钱。
   const [priceTable, setPriceTable] = React.useState("");
   const [savingPriceTable, setSavingPriceTable] = React.useState(false);
-  // 操作约束注入范围(默认都开)。
-  const [injectPlanner, setInjectPlanner] = React.useState(true);
-  const [injectWorker, setInjectWorker] = React.useState(true);
-  // 实验功能:完成闸门(未收口分支不许判完成)。off=关 / shadow=只记录 / enforce=真拦，切换即时生效。
-  const [branchGateMode, setBranchGateMode] = React.useState("shadow");
   // 复核成本闸门：等级达到阈值自动复核，低于阈值按比例抽查（见 server/verify_policy.go）。
   const [verifyThreshold, setVerifyThreshold] = React.useState("high");
   const [verifySamplePercent, setVerifySamplePercent] = React.useState("25");
@@ -111,13 +101,9 @@ export default function SystemSettingsPage() {
     setProxyInput(s.web_search_proxy ?? "");
     setGlobalProxyInput(s.global_proxy ?? "");
     setPyInterp(s.python_interpreter ?? "");
-    setWorkers(String(s.workers ?? 3));
     // 原始 token 数 → 千 token;非整千的外部改动四舍五入到 k。
     setTokenBudgetK(String(Math.round((s.default_task_token_budget ?? 0) / 1000)));
     setPriceTable(s.price_table ?? "");
-    setInjectPlanner(s.constraints_inject_planner !== false);
-    setInjectWorker(s.constraints_inject_worker !== false);
-    setBranchGateMode(s.branch_gate_mode || "shadow");
     setSkillReviewGate(s.skill_review_gate !== false);
     setSkillAutoDistill(s.skill_auto_distill !== false);
     setSkillAutoDistillApply(!!s.skill_auto_distill_apply);
@@ -127,23 +113,6 @@ export default function SystemSettingsPage() {
     setDedupeProfileId(String(s.dedupe_profile_id ?? 0));
     setDedupeTimeoutSecs(String(s.dedupe_timeout_seconds ?? 60));
   }, []);
-
-  const saveWorkers = () => {
-    const n = Number(workers);
-    if (!Number.isInteger(n) || n <= 0) {
-      toast.error(t("toast.workersInvalid"));
-      return;
-    }
-    setSavingWorkers(true);
-    api
-      .setSettings({ workers: n })
-      .then((s) => {
-        apply(s);
-        toast.success(t("toast.workersSaved"));
-      })
-      .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
-      .finally(() => setSavingWorkers(false));
-  };
 
   const saveTokenBudget = () => {
     // 单位=千 token；0=不限。必须为非负整数，避免出现 0.5k 这类模糊语义。
@@ -294,14 +263,6 @@ export default function SystemSettingsPage() {
       .finally(() => setSaving(false));
   };
 
-  const toggleInjectPlanner = (v: boolean) => {
-    setInjectPlanner(v); // optimistic
-    api
-      .setSettings({ constraints_inject_planner: v })
-      .then(apply)
-      .catch(() => setInjectPlanner(!v)); // revert on failure
-  };
-
   const toggleAgentTrafficBinding = (v: boolean) => {
     setAgentTrafficBinding(v);
     setSaving(true);
@@ -316,29 +277,6 @@ export default function SystemSettingsPage() {
         toast.error(t("toast.saveFailed", { error: (e as Error).message }));
       })
       .finally(() => setSaving(false));
-  };
-
-  const toggleInjectWorker = (v: boolean) => {
-    setInjectWorker(v); // optimistic
-    api
-      .setSettings({ constraints_inject_worker: v })
-      .then(apply)
-      .catch(() => setInjectWorker(!v)); // revert on failure
-  };
-
-  const changeBranchGateMode = (v: string) => {
-    const prev = branchGateMode;
-    setBranchGateMode(v); // optimistic
-    api
-      .setSettings({ branch_gate_mode: v })
-      .then((s) => {
-        apply(s);
-        toast.success(t("experimental.branchGateSaved"));
-      })
-      .catch((e) => {
-        setBranchGateMode(prev); // revert on failure
-        toast.error(t("toast.saveFailed", { error: (e as Error).message }));
-      });
   };
 
   const toggleSkillReviewGate = (v: boolean) => {
@@ -664,61 +602,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="06" icon={ShieldAlertIcon} title={t("constraints.title")} />
-          <div className="flex flex-col gap-4 px-4 py-3">
-            <p className="text-muted-foreground text-sm">{t.rich("constraints.desc", richTags)}</p>
-            <div className="flex items-center justify-between gap-4">
-              <Label htmlFor="inject-planner" className="text-sm font-normal text-muted-foreground">
-                {t("constraints.injectPlanner")}
-                {injectPlanner ? t("onSuffix") : t("offSuffix")}
-              </Label>
-              <Switch
-                id="inject-planner"
-                checked={injectPlanner}
-                disabled={!loaded}
-                onCheckedChange={toggleInjectPlanner}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <Label htmlFor="inject-worker" className="text-sm font-normal text-muted-foreground">
-                {t("constraints.injectWorker")}
-                {injectWorker ? t("onSuffix") : t("offSuffix")}
-              </Label>
-              <Switch
-                id="inject-worker"
-                checked={injectWorker}
-                disabled={!loaded}
-                onCheckedChange={toggleInjectWorker}
-              />
-            </div>
-          </div>
-        </Sheet>
-
-        <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="07" icon={FlaskConicalIcon} title={t("experimental.title")} />
-          <div className="flex flex-col gap-4 px-4 py-3">
-            <p className="text-muted-foreground text-sm">{t.rich("experimental.desc", richTags)}</p>
-            <div className="flex items-center justify-between gap-4">
-              <Label htmlFor="branch-gate" className="text-sm font-normal text-muted-foreground">
-                {t("experimental.branchGateLabel")}
-              </Label>
-              <Select value={branchGateMode} onValueChange={changeBranchGateMode} disabled={!loaded}>
-                <SelectTrigger id="branch-gate" className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="off">{t("experimental.branchGateOff")}</SelectItem>
-                  <SelectItem value="shadow">{t("experimental.branchGateShadow")}</SelectItem>
-                  <SelectItem value="enforce">{t("experimental.branchGateEnforce")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <p className="text-xs text-muted-foreground">{t("experimental.branchGateHint")}</p>
-          </div>
-        </Sheet>
-
-        <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="08" icon={SparklesIcon} title={t("skillEvolution.title")} />
+          <SheetHead index="06" icon={SparklesIcon} title={t("skillEvolution.title")} />
           <div className="flex flex-col gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("skillEvolution.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
@@ -774,7 +658,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings", "testWebSearch"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="09" icon={SearchIcon} title={t("webSearch.title")} />
+          <SheetHead index="07" icon={SearchIcon} title={t("webSearch.title")} />
           <div className="flex flex-col gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("webSearch.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
@@ -933,7 +817,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings", "detectPython"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="10" icon={RadioTowerIcon} title={t("python.title")} />
+          <SheetHead index="08" icon={RadioTowerIcon} title={t("python.title")} />
           <div className="flex flex-col gap-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("python.desc", richTags)}</p>
             <div className="flex items-center gap-2">
@@ -955,7 +839,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["shellSettings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="11" icon={TerminalIcon} title={t("shell.title")} />
+          <SheetHead index="09" icon={TerminalIcon} title={t("shell.title")} />
           <div className="flex flex-col gap-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("shell.desc")}</p>
             <div className="flex flex-col gap-1.5">
@@ -1021,28 +905,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="12" icon={CpuIcon} title={t("workers.title")} />
-          <div className="flex flex-col gap-3 px-4 py-3">
-            <p className="text-muted-foreground text-sm">{t.rich("workers.desc", richTags)}</p>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min={1}
-                className="w-32 font-mono text-sm"
-                placeholder="3"
-                value={workers}
-                disabled={!loaded || savingWorkers}
-                onChange={(e) => setWorkers(e.target.value)}
-              />
-              <Button onClick={saveWorkers} disabled={!loaded || savingWorkers}>
-                {t("save")}
-              </Button>
-            </div>
-          </div>
-        </Sheet>
-
-        <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="13" icon={CoinsIcon} title={t("budget.title")} />
+          <SheetHead index="10" icon={CoinsIcon} title={t("budget.title")} />
           <div className="flex flex-col gap-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("budget.desc", richTags)}</p>
             <div className="flex items-center gap-2">
@@ -1065,7 +928,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="14" icon={CircleDollarSignIcon} title={t("pricing.title")} />
+          <SheetHead index="11" icon={CircleDollarSignIcon} title={t("pricing.title")} />
           <div className="flex flex-col gap-3 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("pricing.desc", richTags)}</p>
             {/* 等宽多行文本框；示例 JSON 用 t.raw 取原文，避免 ICU 把大括号当占位符解析。 */}
@@ -1086,7 +949,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="15" icon={LanguagesIcon} title={t("language.title")} />
+          <SheetHead index="12" icon={LanguagesIcon} title={t("language.title")} />
           <div className="flex flex-col gap-2 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("language.desc")}</p>
             <p className="text-sm text-muted-foreground">{LOCALE_LABELS.zh}</p>
@@ -1094,7 +957,7 @@ export default function SystemSettingsPage() {
         </Sheet>
 
         <Sheet className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="16" icon={KeyboardIcon} title={t("sendKey.title")} />
+          <SheetHead index="13" icon={KeyboardIcon} title={t("sendKey.title")} />
           <div className="flex items-center justify-between gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("sendKey.desc", richTags)}</p>
             <Label htmlFor="chat-send-mode" className="text-sm font-normal text-muted-foreground">

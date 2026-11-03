@@ -1,13 +1,14 @@
 "use client";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
 import * as React from "react";
 
+import { ChevronDown, ChevronRight } from "lucide-react";
+
 import { DiffStat } from "@/components/transcript/diff-view";
-import { StatusRing } from "@/components/transcript/status-ring";
+import { StatusMark } from "@/components/transcript/status-mark";
 import { useShellCapability } from "@/hooks/use-shell-capability";
-import { execToolLabel } from "@/lib/shell-label";
 import { countLines, type PartialEntry, parsePartialJson, pickField, scanToolInput } from "@/lib/partial-json";
+import { execToolLabel } from "@/lib/shell-label";
 
 const EDIT_TOOLS = new Set(["Edit", "MultiEdit", "Write", "apply_patch", "NotebookEdit"]);
 const PATH_FIELDS = ["file_path", "path", "file", "target_file"];
@@ -91,13 +92,11 @@ export function LiveToolRow({ tool, args }: { tool: string; args: string }) {
         onClick={() => setOpen((v) => !v)}
         type="button"
       >
-        <StatusRing status="running" />
+        <StatusMark status="running" />
         <span className="shrink-0 text-muted-foreground">
           {open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
         </span>
-        <span className="shrink-0 font-medium text-muted-foreground text-shimmer">
-          {execToolLabel(tool, shell)}
-        </span>
+        <span className="shrink-0 font-medium text-muted-foreground text-shimmer">{execToolLabel(tool, shell)}</span>
         {target.text ? (
           <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">{target.text}</span>
         ) : (

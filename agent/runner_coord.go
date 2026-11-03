@@ -401,6 +401,9 @@ func (r *SessionRunner) sysBodyFor(spec AgentSpec, coord *Coordinator, agentID s
 		Scope:    scopeOf(spec),
 		DataDir:  r.WorkDir, // 与 cwd 同源：提示词里说的目录必须是它真正落地的目录
 		MaxTurns: spec.EffectiveMaxTurns(r.MaxTurns),
+		// 对齐 strix 的 create_agent(name, task, skills)：技能是派活时就指定的，
+		// 子代理一睁眼就知道该先加载哪几个包，而不是自己去猜。
+		Skills: strings.Join(spec.Skills, "、"),
 	}
 	if isRoot {
 		vars.ChildSlots = r.childSlots()
@@ -447,8 +450,10 @@ func scopeOf(spec AgentSpec) string {
 	return "仅限资产 " + strings.Join(parts, ", ")
 }
 
-// maxChildSlots 是写进根提示词的并行上限。与 Spawner.MaxConcurrent 同源：
-// 二者不一致会让模型按"还能派"的错觉去派，然后撞到并发额度报错。
+// maxChildSlots 是「子代理并发上限」的兜底值（RunnerConfig.MaxConcurrency=0 时用）。
+// 与 Spawner.MaxConcurrent 必须同源：二者不一致会让模型按"还能派"的错觉去派，
+// 然后撞到并发额度报错。宿主实际取值来自设置里的 settings.workers
+// （见 server/engine_coord_wire.go 的 coordAgentSlots）。
 const maxChildSlots = 4
 
 // ---------- 与宿主既有配置的桥 ----------

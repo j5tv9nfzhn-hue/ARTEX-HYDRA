@@ -1,6 +1,5 @@
 "use client";
 
-import { Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import {
@@ -25,8 +24,9 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/empty-state";
-import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -35,14 +35,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api";
-import { HandoffDialog } from "./handoff-dialog";
 import type {
   AssetInterceptKind,
   AssetInterceptRule,
@@ -50,13 +48,16 @@ import type {
   ModelTokenStat,
   Stats,
   Task,
-  TaskConstraint,
   TaskBlocker,
+  TaskConstraint,
   TaskGoal,
   TaskNode,
   TaskScopeRow,
   WorkerTokenStat,
 } from "@/lib/types";
+import { Sheet, SheetHead } from "@/ui/container";
+
+import { HandoffDialog } from "./handoff-dialog";
 
 // 紧凑 token 数量：12345 → 12.3k，2000000 → 2M。
 function fmtTokens(n: number): string {
@@ -155,39 +156,16 @@ export function OverviewTab({ taskId }: { taskId: string }) {
   const [forceBusy, setForceBusy] = React.useState(false);
   // 被人工收口（abandon）的分支数：审计可见，防止「把不顺利的都放弃掉」被忽略。
   const [abandonedBranches, setAbandonedBranches] = React.useState(0);
-  // 测试范围列表与添加表单状态。
+  // 测试范围列表（只读展示）。
   const [scope, setScope] = React.useState<TaskScopeRow[]>([]);
-  const [scopeKind, setScopeKind] = React.useState<TaskScopeRow["kind"]>("root_domain");
-  const [scopeValueInput, setScopeValueInput] = React.useState("");
-  const [scopeBusy, setScopeBusy] = React.useState(false);
-  const [scopeErr, setScopeErr] = React.useState("");
   // 按模型统计 token，数据来自始终开启的 llm_usage 计量账本，每次调用均准确记录。
   const [modelTokens, setModelTokens] = React.useState<ModelTokenStat[]>([]);
   // 按角色(agent 泳道)统计 token,与按模型同源:角色可以被单独绑定模型,这一维回答
   // 「哪个角色烧的 token」(llmrec 从 session 前缀解析:worker/planner/main/goals/…)。
   const [workerTokens, setWorkerTokens] = React.useState<WorkerTokenStat[]>([]);
-  // 任务级 Token 预算的行内编辑(0=不限)；预算用尽后调高预算再恢复任务即可继续。
-  const [budgetEditing, setBudgetEditing] = React.useState(false);
-  const [budgetInput, setBudgetInput] = React.useState("");
-  const [budgetSaving, setBudgetSaving] = React.useState(false);
-  // 目标管理：列表、添加表单、行内编辑状态。
+  // 目标 / 约束（只读展示；增删改已移除，见 H1）。
   const [goals, setGoals] = React.useState<TaskGoal[]>([]);
-  const [goalText, setGoalText] = React.useState("");
-  const [goalVuln, setGoalVuln] = React.useState("");
-  const [goalBusy, setGoalBusy] = React.useState(false);
-  const [goalErr, setGoalErr] = React.useState("");
-  const [editingGoalId, setEditingGoalId] = React.useState<string | null>(null);
-  const [editText, setEditText] = React.useState("");
-  const [editVuln, setEditVuln] = React.useState("");
-  // 约束管理：列表、添加表单、行内编辑状态。
   const [constraints, setConstraints] = React.useState<TaskConstraint[]>([]);
-  const [conText, setConText] = React.useState("");
-  const [conKind, setConKind] = React.useState<TaskConstraint["kind"]>("deny");
-  const [conBusy, setConBusy] = React.useState(false);
-  const [conErr, setConErr] = React.useState("");
-  const [editingConId, setEditingConId] = React.useState<string | null>(null);
-  const [editConText, setEditConText] = React.useState("");
-  const [editConKind, setEditConKind] = React.useState<TaskConstraint["kind"]>("deny");
 
   const loadTokens = React.useCallback(async () => {
     try {
@@ -218,60 +196,6 @@ export function OverviewTab({ taskId }: { taskId: string }) {
     }
   }, [taskId]);
 
-  const addGoal = async () => {
-    const text = goalText.trim();
-    if (!text) return;
-    setGoalBusy(true);
-    setGoalErr("");
-    try {
-      await api.addGoal(taskId, text, goalVuln.trim() || undefined);
-      setGoalText("");
-      setGoalVuln("");
-      await loadGoals();
-    } catch (e) {
-      setGoalErr(e instanceof Error ? e.message : t("addFailed"));
-    } finally {
-      setGoalBusy(false);
-    }
-  };
-
-  const startEditGoal = (g: TaskGoal) => {
-    setEditingGoalId(g.id);
-    setEditText(g.text);
-    setEditVuln(g.vulnclass ?? "");
-  };
-
-  const cancelEditGoal = () => {
-    setEditingGoalId(null);
-    setEditText("");
-    setEditVuln("");
-  };
-
-  const saveEditGoal = async (g: TaskGoal) => {
-    const text = editText.trim();
-    if (!text) return;
-    setGoalBusy(true);
-    setGoalErr("");
-    try {
-      await api.updateGoal(taskId, g.id, text, editVuln.trim() || undefined);
-      cancelEditGoal();
-      await loadGoals();
-    } catch (e) {
-      setGoalErr(e instanceof Error ? e.message : t("saveFailed"));
-    } finally {
-      setGoalBusy(false);
-    }
-  };
-
-  const removeGoal = async (g: TaskGoal) => {
-    setGoals((prev) => prev.filter((x) => x.id !== g.id));
-    try {
-      await api.deleteGoal(taskId, g.id);
-    } catch {
-      await loadGoals(); // 删除失败，重新查询恢复状态。
-    }
-  };
-
   const loadConstraints = React.useCallback(async () => {
     try {
       const resp = await api.taskConstraints(taskId);
@@ -280,84 +204,6 @@ export function OverviewTab({ taskId }: { taskId: string }) {
       // 忽略短暂错误，下次轮询重试。
     }
   }, [taskId]);
-
-  const addConstraint = async () => {
-    const text = conText.trim();
-    if (!text) return;
-    setConBusy(true);
-    setConErr("");
-    try {
-      await api.addConstraint(taskId, text, conKind);
-      setConText("");
-      await loadConstraints();
-    } catch (e) {
-      setConErr(e instanceof Error ? e.message : t("addFailed"));
-    } finally {
-      setConBusy(false);
-    }
-  };
-
-  const startEditConstraint = (c: TaskConstraint) => {
-    setEditingConId(c.id);
-    setEditConText(c.text);
-    setEditConKind(c.kind);
-  };
-
-  const cancelEditConstraint = () => {
-    setEditingConId(null);
-    setEditConText("");
-    setEditConKind("deny");
-  };
-
-  const saveEditConstraint = async (c: TaskConstraint) => {
-    const text = editConText.trim();
-    if (!text) return;
-    setConBusy(true);
-    setConErr("");
-    try {
-      await api.updateConstraint(taskId, c.id, text, editConKind);
-      cancelEditConstraint();
-      await loadConstraints();
-    } catch (e) {
-      setConErr(e instanceof Error ? e.message : t("saveFailed"));
-    } finally {
-      setConBusy(false);
-    }
-  };
-
-  const removeConstraint = async (c: TaskConstraint) => {
-    setConstraints((prev) => prev.filter((x) => x.id !== c.id));
-    try {
-      await api.deleteConstraint(taskId, c.id);
-    } catch {
-      await loadConstraints(); // 删除失败，重新查询恢复状态。
-    }
-  };
-
-  const addScope = async () => {
-    const value = scopeValueInput.trim();
-    if (!value) return;
-    setScopeBusy(true);
-    setScopeErr("");
-    try {
-      await api.addTaskScope(taskId, scopeKind, value);
-      setScopeValueInput("");
-      await loadScope();
-    } catch (e) {
-      setScopeErr(e instanceof Error ? e.message : t("addFailed"));
-    } finally {
-      setScopeBusy(false);
-    }
-  };
-
-  const removeScope = async (row: TaskScopeRow) => {
-    setScope((prev) => prev.filter((s) => s.id !== row.id));
-    try {
-      await api.deleteTaskScope(taskId, row.id);
-    } catch {
-      await loadScope(); // 删除失败，重新查询恢复状态。
-    }
-  };
 
   const markRerun = (key: string, on: boolean) =>
     setRerunning((prev) => {
@@ -434,30 +280,6 @@ export function OverviewTab({ taskId }: { taskId: string }) {
   };
 
   // ---- Token 预算行内编辑 ----
-  const startBudgetEdit = () => {
-    setBudgetInput(String(Math.round((task?.token_budget ?? 0) / 1000)));
-    setBudgetEditing(true);
-  };
-
-  const saveBudget = async () => {
-    // 单位千 token(k)；0=不限。必须为非负整数,避免 0.5k 这类模糊语义。
-    const k = Number(budgetInput);
-    if (!Number.isInteger(k) || k < 0) {
-      toast.error(t("tokens.budgetInvalid"));
-      return;
-    }
-    setBudgetSaving(true);
-    try {
-      const updated = await api.updateTask(taskId, { token_budget: k * 1000 });
-      setTask((prev) => (prev ? { ...prev, token_budget: updated.token_budget } : updated));
-      setBudgetEditing(false);
-      toast.success(t("tokens.budgetSaved"));
-    } catch (e) {
-      toast.error(t("tokens.budgetSaveFailed", { error: (e as Error).message }));
-    } finally {
-      setBudgetSaving(false);
-    }
-  };
 
   const loadBranches = React.useCallback(async () => {
     try {
@@ -556,7 +378,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
        */}
       {blocked.length > 0 && (
         <Sheet api={["intents", "rerunIntent", "rerunBlocked"]} className="border-red-500/30">
-          <SheetHead index="01"
+          <SheetHead
+            index="01"
             icon={AlertTriangleIcon}
             iconClassName="size-4 text-red-500"
             title={
@@ -569,9 +392,9 @@ export function OverviewTab({ taskId }: { taskId: string }) {
             }
             actions={
               <Button size="sm" variant="outline" disabled={rerunning.has("__all__")} onClick={() => void rerunAll()}>
-                            <RefreshCwIcon className={`size-3.5 ${rerunning.has("__all__") ? "animate-spin" : ""}`} />
-                            {t("blocked.rerunAll")}
-                            </Button>
+                <RefreshCwIcon className={`size-3.5 ${rerunning.has("__all__") ? "animate-spin" : ""}`} />
+                {t("blocked.rerunAll")}
+              </Button>
             }
           />
           <div className="flex flex-col gap-2 px-4 py-3">
@@ -600,7 +423,8 @@ export function OverviewTab({ taskId }: { taskId: string }) {
       {/* 未收口分支：跑崩/耗尽/被停但没人收口。P2 会自动回炉，到上限转人工。 */}
       {branches.length > 0 && (
         <Sheet api={["taskBranches", "forceDone", "closeIntent"]} className="border-amber-500/30">
-          <SheetHead index="02"
+          <SheetHead
+            index="02"
             icon={ShieldAlertIcon}
             iconClassName="size-4 text-amber-500"
             title={
@@ -617,7 +441,12 @@ export function OverviewTab({ taskId }: { taskId: string }) {
               </span>
             }
             actions={
-              <Button size="sm" variant="outline" className="h-7 shrink-0 px-2 text-xs" onClick={() => setForceOpen(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 shrink-0 px-2 text-xs"
+                onClick={() => setForceOpen(true)}
+              >
                 <ShieldAlertIcon className="size-3.5" /> {t("branches.forceDone")}
               </Button>
             }
@@ -667,19 +496,12 @@ export function OverviewTab({ taskId }: { taskId: string }) {
               </div>
             ))}
             {branches.length > 20 && (
-              <p className="text-muted-foreground text-xs">
-                {t("branches.truncated", { rest: branches.length - 20 })}
-              </p>
+              <p className="text-muted-foreground text-xs">{t("branches.truncated", { rest: branches.length - 20 })}</p>
             )}
           </div>
         </Sheet>
       )}
-      <HandoffDialog
-        taskId={taskId}
-        intentId={handoffFor}
-        open={handoffOpen}
-        onOpenChange={setHandoffOpen}
-      />
+      <HandoffDialog taskId={taskId} intentId={handoffFor} open={handoffOpen} onOpenChange={setHandoffOpen} />
       <Dialog open={forceOpen} onOpenChange={setForceOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -826,7 +648,13 @@ export function OverviewTab({ taskId }: { taskId: string }) {
       </div>
       {coverage?.enabled && coverage.scope_rows > 0 && (
         <Sheet api={["taskCoverage"]}>
-          <SheetHead index="07" icon={TargetIcon} iconClassName="text-emerald-500" title={t("coverage.title")} hint={t("coverage.rough")} />
+          <SheetHead
+            index="07"
+            icon={TargetIcon}
+            iconClassName="text-emerald-500"
+            title={t("coverage.title")}
+            hint={t("coverage.rough")}
+          />
           <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
             <div className="flex items-baseline gap-3">
               <span className="font-semibold text-2xl tabular-nums">
@@ -872,119 +700,29 @@ export function OverviewTab({ taskId }: { taskId: string }) {
            * 目标管理支持查询、添加、修改、删除。添加、修改通知 Planner 并恢复任务；
            * 删除只通知 Planner，不恢复。目标是最终可验证成果，而非执行步骤或侦察动作。
            */}
-          <Sheet api={["taskGoals", "addGoal", "updateGoal", "deleteGoal"]}>
-            <SheetHead index="09" icon={ListChecksIcon} iconClassName="text-primary" title={t("goals.title")} hint={t("goals.hint", { count: goals.length })} />
-            <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
-              {/* 添加表单。 */}
-              <div className="flex flex-wrap items-center gap-2">
-                <Input
-                  className="h-7 min-w-56 flex-1 text-sm"
-                  placeholder={t("goals.addPlaceholder")}
-                  value={goalText}
-                  onChange={(e) => setGoalText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void addGoal();
-                  }}
-                  disabled={goalBusy}
-                />
-                <Input
-                  className="h-7 w-32 text-sm"
-                  placeholder={t("goals.vulnPlaceholder")}
-                  value={goalVuln}
-                  onChange={(e) => setGoalVuln(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void addGoal();
-                  }}
-                  disabled={goalBusy}
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={goalBusy || !goalText.trim()}
-                  onClick={() => void addGoal()}
-                >
-                  <PlusIcon className="size-3.5" /> {t("add")}
-                </Button>
-                {goalErr && <span className="text-red-500 text-xs">{goalErr}</span>}
-              </div>
-              {/* 目标列表。 */}
+          {/* 只读化（H1）：目标曾支持增/改/删并通知 Planner。
+              现在这里只展示「当前生效的目标」，改目标请回对话页让主 Agent 处理。 */}
+          <Sheet api={["taskGoals"]}>
+            <SheetHead
+              index="09"
+              icon={ListChecksIcon}
+              iconClassName="text-primary"
+              title={t("goals.title")}
+              hint={t("goals.hint", { count: goals.length })}
+            />
+            <div data-editorial="body" className="flex flex-col gap-1.5 px-4 pt-2 pb-4">
               {goals.length > 0 ? (
-                <div className="flex flex-col gap-1.5">
-                  {goals.map((g) =>
-                    editingGoalId === g.id ? (
-                      <div key={g.id} className="flex flex-wrap items-center gap-2 rounded-md border px-2.5 py-1.5">
-                        <Input
-                          className="h-7 min-w-56 flex-1 text-sm"
-                          value={editText}
-                          onChange={(e) => setEditText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") void saveEditGoal(g);
-                            if (e.key === "Escape") cancelEditGoal();
-                          }}
-                          disabled={goalBusy}
-                          autoFocus
-                        />
-                        <Input
-                          className="h-7 w-32 text-sm"
-                          placeholder={t("goals.vulnPlaceholder")}
-                          value={editVuln}
-                          onChange={(e) => setEditVuln(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") void saveEditGoal(g);
-                            if (e.key === "Escape") cancelEditGoal();
-                          }}
-                          disabled={goalBusy}
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 shrink-0 px-1.5"
-                          disabled={goalBusy || !editText.trim()}
-                          onClick={() => void saveEditGoal(g)}
-                        >
-                          <CheckIcon className="size-3.5 text-emerald-500" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 shrink-0 px-1.5"
-                          disabled={goalBusy}
-                          onClick={cancelEditGoal}
-                        >
-                          <XIcon className="size-3.5" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div key={g.id} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm">
-                        <StatusBadge domain="goal" value={g.state} />
-                        <span className="min-w-0 flex-1 break-words">{g.text}</span>
-                        {g.vulnclass && (
-                          <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-muted-foreground text-xs">
-                            {g.vulnclass}
-                          </span>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 shrink-0 px-1.5"
-                          disabled={goalBusy}
-                          onClick={() => startEditGoal(g)}
-                        >
-                          <PencilIcon className="size-3.5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 shrink-0 px-1.5"
-                          disabled={goalBusy}
-                          onClick={() => void removeGoal(g)}
-                        >
-                          <Trash2Icon className="size-3.5 text-red-500" />
-                        </Button>
-                      </div>
-                    ),
-                  )}
-                </div>
+                goals.map((g) => (
+                  <div key={g.id} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm">
+                    <StatusBadge domain="goal" value={g.state} />
+                    <span className="min-w-0 flex-1 break-words">{g.text}</span>
+                    {g.vulnclass && (
+                      <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-muted-foreground text-xs">
+                        {g.vulnclass}
+                      </span>
+                    )}
+                  </div>
+                ))
               ) : (
                 <p className="text-muted-foreground text-sm">{t("goals.empty")}</p>
               )}
@@ -996,200 +734,63 @@ export function OverviewTab({ taskId }: { taskId: string }) {
            * 行为约束：allow=允许、deny=禁止。下一轮将约束注入 Planner、Worker 系统提示，
            * 各角色是否注入由系统设置控制。修改不会立即中断运行，下一轮自然读取。
            */}
-          <Sheet api={["taskConstraints", "addConstraint", "updateConstraint", "deleteConstraint"]}>
-            <SheetHead index="10" icon={ShieldAlertIcon} iconClassName="text-amber-500" title={t("constraints.title")} hint={t("constraints.hint", { count: constraints.length })} />
-            <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
-              {/* 添加表单。 */}
-              <div className="flex flex-wrap items-center gap-2">
-                <NativeSelect
-                  size="sm"
-                  value={conKind}
-                  onChange={(e) => setConKind(e.target.value as TaskConstraint["kind"])}
-                >
-                  <NativeSelectOption value="deny">{t("constraints.deny")}</NativeSelectOption>
-                  <NativeSelectOption value="allow">{t("constraints.allow")}</NativeSelectOption>
-                </NativeSelect>
-                <Input
-                  className="h-7 min-w-56 flex-1 text-sm"
-                  placeholder={t("constraints.addPlaceholder")}
-                  value={conText}
-                  onChange={(e) => setConText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void addConstraint();
-                  }}
-                  disabled={conBusy}
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={conBusy || !conText.trim()}
-                  onClick={() => void addConstraint()}
-                >
-                  <PlusIcon className="size-3.5" /> {t("add")}
-                </Button>
-                {conErr && <span className="text-red-500 text-xs">{conErr}</span>}
-              </div>
-              {/* 约束列表。 */}
+          {/* 只读化（H1）：约束的增删改已移除，只显示当前生效的 allow/deny 条目。 */}
+          <Sheet api={["taskConstraints"]}>
+            <SheetHead
+              index="10"
+              icon={ShieldAlertIcon}
+              iconClassName="text-amber-500"
+              title={t("constraints.title")}
+              hint={t("constraints.hint", { count: constraints.length })}
+            />
+            <div data-editorial="body" className="flex flex-col gap-1.5 px-4 pt-2 pb-4">
               {constraints.length > 0 ? (
-                <div className="flex flex-col gap-1.5">
-                  {constraints.map((c) =>
-                    editingConId === c.id ? (
-                      <div key={c.id} className="flex flex-wrap items-center gap-2 rounded-md border px-2.5 py-1.5">
-                        <NativeSelect
-                          size="sm"
-                          value={editConKind}
-                          onChange={(e) => setEditConKind(e.target.value as TaskConstraint["kind"])}
-                        >
-                          <NativeSelectOption value="deny">{t("constraints.deny")}</NativeSelectOption>
-                          <NativeSelectOption value="allow">{t("constraints.allow")}</NativeSelectOption>
-                        </NativeSelect>
-                        <Input
-                          className="h-7 min-w-56 flex-1 text-sm"
-                          value={editConText}
-                          onChange={(e) => setEditConText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") void saveEditConstraint(c);
-                            if (e.key === "Escape") cancelEditConstraint();
-                          }}
-                          disabled={conBusy}
-                          autoFocus
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 shrink-0 px-1.5"
-                          disabled={conBusy || !editConText.trim()}
-                          onClick={() => void saveEditConstraint(c)}
-                        >
-                          <CheckIcon className="size-3.5 text-emerald-500" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 shrink-0 px-1.5"
-                          disabled={conBusy}
-                          onClick={cancelEditConstraint}
-                        >
-                          <XIcon className="size-3.5" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div key={c.id} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm">
-                        <span
-                          className={`shrink-0 rounded px-1.5 py-0.5 text-xs ${
-                            c.kind === "allow"
-                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                              : "bg-red-500/15 text-red-600 dark:text-red-400"
-                          }`}
-                        >
-                          {c.kind === "allow" ? t("constraints.allow") : t("constraints.deny")}
-                        </span>
-                        <span className="min-w-0 flex-1 break-words">{c.text}</span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 shrink-0 px-1.5"
-                          disabled={conBusy}
-                          onClick={() => startEditConstraint(c)}
-                        >
-                          <PencilIcon className="size-3.5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 shrink-0 px-1.5"
-                          disabled={conBusy}
-                          onClick={() => void removeConstraint(c)}
-                        >
-                          <Trash2Icon className="size-3.5 text-red-500" />
-                        </Button>
-                      </div>
-                    ),
-                  )}
-                </div>
+                constraints.map((c) => (
+                  <div key={c.id} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm">
+                    <span
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-xs ${
+                        c.kind === "allow"
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                          : "bg-red-500/15 text-red-600 dark:text-red-400"
+                      }`}
+                    >
+                      {c.kind === "allow" ? t("constraints.allow") : t("constraints.deny")}
+                    </span>
+                    <span className="min-w-0 flex-1 break-words">{c.text}</span>
+                  </div>
+                ))
               ) : (
                 <p className="text-muted-foreground text-sm">{t("constraints.empty")}</p>
               )}
             </div>
           </Sheet>
           {/* 测试范围既是覆盖率分母，也是授权边界，可手工添加、删除。 */}
-          <Sheet api={["taskScope", "addTaskScope", "deleteTaskScope"]}>
-            <SheetHead index="11" icon={ShieldCheckIcon} iconClassName="text-emerald-500" title={t("scope.title")} hint={t("scope.hint", { count: scope.length })} />
-            <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
-              {/* 添加表单。 */}
-              <div className="flex flex-wrap items-center gap-2">
-                <NativeSelect
-                  size="sm"
-                  value={scopeKind}
-                  onChange={(e) => setScopeKind(e.target.value as TaskScopeRow["kind"])}
-                >
-                  <NativeSelectOption value="root_domain">{t("scope.kind.root_domain")}</NativeSelectOption>
-                  <NativeSelectOption value="subdomain">{t("scope.kind.subdomain")}</NativeSelectOption>
-                  <NativeSelectOption value="ip">{t("scope.kind.ip")}</NativeSelectOption>
-                  <NativeSelectOption value="cidr">{t("scope.kind.cidr")}</NativeSelectOption>
-                  <NativeSelectOption value="icp">{t("scope.kind.icp")}</NativeSelectOption>
-                  <NativeSelectOption value="keyword">{t("scope.kind.keyword")}</NativeSelectOption>
-                  <NativeSelectOption value="company">{t("scope.kind.company")}</NativeSelectOption>
-                </NativeSelect>
-                <Input
-                  className="h-7 w-56 text-sm"
-                  placeholder={t(
-                    (
-                      {
-                        company: "scope.placeholder.company",
-                        ip: "scope.placeholder.ipCidr",
-                        cidr: "scope.placeholder.ipCidr",
-                        icp: "scope.placeholder.icp",
-                        keyword: "scope.placeholder.keyword",
-                        root_domain: "scope.placeholder.domain",
-                        subdomain: "scope.placeholder.domain",
-                      } as const
-                    )[scopeKind],
-                  )}
-                  value={scopeValueInput}
-                  onChange={(e) => setScopeValueInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void addScope();
-                  }}
-                  disabled={scopeBusy}
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={scopeBusy || !scopeValueInput.trim()}
-                  onClick={() => void addScope()}
-                >
-                  <PlusIcon className="size-3.5" /> {t("add")}
-                </Button>
-                {scopeErr && <span className="text-red-500 text-xs">{scopeErr}</span>}
-              </div>
-              {/* 范围列表。 */}
+          {/* 只读化（H1）：测试范围是授权边界，展示现状即可；增删走对话页。
+              覆盖率的分母就是这份清单，所以和覆盖度页同在总览里。 */}
+          <Sheet api={["taskScope"]}>
+            <SheetHead
+              index="11"
+              icon={ShieldCheckIcon}
+              iconClassName="text-emerald-500"
+              title={t("scope.title")}
+              hint={t("scope.hint", { count: scope.length })}
+            />
+            <div data-editorial="body" className="flex flex-col gap-1.5 px-4 pt-2 pb-4">
               {scope.length > 0 ? (
-                <div className="flex flex-col gap-1.5">
-                  {scope.map((row) => (
-                    <div key={row.id} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm">
-                      <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-muted-foreground text-xs">
-                        {t(`scope.kind.${row.kind}`)}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate font-mono text-xs">
-                        {scopeValue(row, (id) => t("scope.companyFallback", { id }))}
-                      </span>
-                      <span className="shrink-0 text-muted-foreground text-xs">{t(`scope.source.${row.source}`)}</span>
-                      {row.task_id.toString() === taskId ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 shrink-0 px-1.5"
-                          onClick={() => void removeScope(row)}
-                        >
-                          <Trash2Icon className="size-3.5 text-red-500" />
-                        </Button>
-                      ) : (
-                        <span className="shrink-0 text-muted-foreground text-xs">{t("scope.inherited")}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                scope.map((row) => (
+                  <div key={row.id} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm">
+                    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-muted-foreground text-xs">
+                      {t(`scope.kind.${row.kind}`)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-mono text-xs">
+                      {scopeValue(row, (id) => t("scope.companyFallback", { id }))}
+                    </span>
+                    <span className="shrink-0 text-muted-foreground text-xs">{t(`scope.source.${row.source}`)}</span>
+                    {row.task_id.toString() !== taskId && (
+                      <span className="shrink-0 text-muted-foreground text-xs">{t("scope.inherited")}</span>
+                    )}
+                  </div>
+                ))
               ) : (
                 <p className="text-muted-foreground text-sm">{t("scope.empty")}</p>
               )}
@@ -1204,68 +805,33 @@ export function OverviewTab({ taskId }: { taskId: string }) {
         <div className="flex flex-col gap-4 xl:col-span-7">
           {/* LLM token 用量按模型分组，来自 llm_usage 计量账本，不依赖是否开启 LLM 录制。 */}
           <Sheet api={["tokensByModel", "tokensByWorker", "updateTask"]}>
-            <SheetHead index="12" icon={CoinsIcon} iconClassName="text-amber-500" title={t("tokens.title")} hint={t("tokens.hint", { calls: tokenTotals.calls })} />
+            <SheetHead
+              index="12"
+              icon={CoinsIcon}
+              iconClassName="text-amber-500"
+              title={t("tokens.title")}
+              hint={t("tokens.hint", { calls: tokenTotals.calls })}
+            />
             <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
               {/* 任务级 Token 预算:按 llm_usage 累计 input+output 计量,与后端预算闸同口径;
               达到预算时后端自动暂停任务。这里的编辑是「调高预算后恢复」的回环入口,0=不限。 */}
+              {/* 只读化（H1）：预算调整已移除（调预算 = 写操作）。只显示当前预算与用量，
+                  预算耗尽导致暂停时，去对话页让主 Agent 处理。 */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border bg-muted/40 px-3 py-2">
                 <span className="text-muted-foreground text-sm">{t("tokens.budgetLabel")}</span>
-                {budgetEditing ? (
-                  <>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={1}
-                      autoFocus
-                      className="h-7 w-28 text-sm"
-                      value={budgetInput}
-                      disabled={budgetSaving}
-                      onChange={(e) => setBudgetInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") void saveBudget();
-                        if (e.key === "Escape") setBudgetEditing(false);
-                      }}
-                    />
-                    <span className="text-muted-foreground text-xs">k</span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7"
-                      disabled={budgetSaving}
-                      onClick={() => void saveBudget()}
-                    >
-                      <CheckIcon className="size-3.5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7"
-                      disabled={budgetSaving}
-                      onClick={() => setBudgetEditing(false)}
-                    >
-                      <XIcon className="size-3.5" />
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <span className="font-semibold text-sm tabular-nums">
-                      {budget > 0 ? fmtTokens(budget) : t("tokens.budgetUnlimited")}
-                    </span>
-                    {budget > 0 && (
-                      <span
-                        className={
-                          budgetPct >= 100
-                            ? "text-destructive text-xs tabular-nums"
-                            : "text-muted-foreground text-xs tabular-nums"
-                        }
-                      >
-                        {t("tokens.budgetUsage", { used: fmtTokens(budgetUsed), pct: budgetPct })}
-                      </span>
-                    )}
-                    <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs" onClick={startBudgetEdit}>
-                      <PencilIcon className="size-3.5" /> {t("tokens.budgetEdit")}
-                    </Button>
-                  </>
+                <span className="font-semibold text-sm tabular-nums">
+                  {budget > 0 ? fmtTokens(budget) : t("tokens.budgetUnlimited")}
+                </span>
+                {budget > 0 && (
+                  <span
+                    className={
+                      budgetPct >= 100
+                        ? "text-destructive text-xs tabular-nums"
+                        : "text-muted-foreground text-xs tabular-nums"
+                    }
+                  >
+                    {t("tokens.budgetUsage", { used: fmtTokens(budgetUsed), pct: budgetPct })}
+                  </span>
                 )}
               </div>
               {modelTokens.length > 0 || workerTokens.length > 0 ? (
@@ -1393,32 +959,11 @@ export function OverviewTab({ taskId }: { taskId: string }) {
   );
 }
 
-const TASK_RULE_KIND_OPTIONS: { value: AssetInterceptKind; placeholder: string }[] = [
-  { value: "exact_domain", placeholder: "example.gov.cn" },
-  { value: "exact_ip", placeholder: "203.0.113.10" },
-  { value: "exact_url", placeholder: "https://example.com/login" },
-  { value: "fuzzy_domain", placeholder: ".gov.cn" },
-  { value: "fuzzy_ip", placeholder: "203.0.113." },
-  { value: "fuzzy_url", placeholder: "/admin" },
-  { value: "cidr", placeholder: "192.168.0.0/16" },
-];
-
-// TaskInterceptRulesCard 管理任务详情中的任务级资产拦截、允许规则：
-// 列表、添加、行内编辑、删除和启用开关。仅影响当前任务，不进入全局规则表。
+// TaskInterceptRulesCard 只读展示任务级资产拦截 / 允许规则。
+// 只读化（H1）：原来这里的增/改/删/启停是写入口，已全部移除——规则怎么改属于安全阀，
+// 走「拦截审批」页或对话页，不在任务详情里就地改。
 function TaskInterceptRulesCard({ taskId }: { taskId: string }) {
-  const t = useTranslations("taskDetail.overviewTab");
   const [rules, setRules] = React.useState<AssetInterceptRule[]>([]);
-  const [busy, setBusy] = React.useState(false);
-  const [err, setErr] = React.useState("");
-  const [newAction, setNewAction] = React.useState<"block" | "allow">("block");
-  const [newKind, setNewKind] = React.useState<AssetInterceptKind>("fuzzy_domain");
-  const [newPattern, setNewPattern] = React.useState("");
-  const [newNote, setNewNote] = React.useState("");
-  const [editId, setEditId] = React.useState<number | null>(null);
-  const [editAction, setEditAction] = React.useState<"block" | "allow">("block");
-  const [editKind, setEditKind] = React.useState<AssetInterceptKind>("fuzzy_domain");
-  const [editPattern, setEditPattern] = React.useState("");
-  const [editNote, setEditNote] = React.useState("");
 
   const load = React.useCallback(async () => {
     try {
@@ -1430,224 +975,33 @@ function TaskInterceptRulesCard({ taskId }: { taskId: string }) {
 
   React.useEffect(() => {
     void load();
+    const timer = window.setInterval(() => void load(), 10000);
+    return () => window.clearInterval(timer);
   }, [load]);
 
-  async function add() {
-    if (!newPattern.trim()) return;
-    setBusy(true);
-    setErr("");
-    try {
-      await api.createTaskInterceptRule(taskId, {
-        action: newAction,
-        kind: newKind,
-        pattern: newPattern.trim(),
-        note: newNote.trim(),
-        enabled: true,
-      });
-      setNewPattern("");
-      setNewNote("");
-      await load();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function startEdit(r: AssetInterceptRule) {
-    setEditId(r.id);
-    setEditAction(r.action ?? "block");
-    setEditKind(r.kind);
-    setEditPattern(r.pattern);
-    setEditNote(r.note);
-    setErr("");
-  }
-
-  async function saveEdit(r: AssetInterceptRule) {
-    if (!editPattern.trim()) return;
-    setBusy(true);
-    setErr("");
-    try {
-      await api.updateTaskInterceptRule(taskId, r.id, {
-        action: editAction,
-        kind: editKind,
-        pattern: editPattern.trim(),
-        note: editNote.trim(),
-        enabled: r.enabled,
-      });
-      setEditId(null);
-      await load();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove(r: AssetInterceptRule) {
-    setRules((prev) => prev.filter((x) => x.id !== r.id));
-    try {
-      await api.deleteTaskInterceptRule(taskId, r.id);
-    } catch {
-      await load();
-    }
-  }
-
-  async function toggle(r: AssetInterceptRule) {
-    setRules((prev) => prev.map((x) => (x.id === r.id ? { ...x, enabled: !x.enabled } : x)));
-    try {
-      await api.toggleTaskInterceptRule(taskId, r.id, !r.enabled);
-    } catch {
-      await load();
-    }
-  }
-
-  const placeholder = TASK_RULE_KIND_OPTIONS.find((o) => o.value === newKind)?.placeholder ?? "";
-
   return (
-    <Sheet api={["taskInterceptRules", "createTaskInterceptRule", "updateTaskInterceptRule", "deleteTaskInterceptRule", "toggleTaskInterceptRule"]}>
-      <SheetHead index="13" icon={ShieldCheckIcon} iconClassName="text-sky-500" title={t("rule.title")} hint={t("rule.hint", { count: rules.length })} />
-      <div data-editorial="body" className="flex flex-col gap-3 px-4 pt-2 pb-4">
-        {/* 添加表单。 */}
-        <div className="flex flex-wrap items-center gap-2">
-          <NativeSelect size="sm" value={newAction} onChange={(e) => setNewAction(e.target.value as "block" | "allow")}>
-            <NativeSelectOption value="block">{t("rule.block")}</NativeSelectOption>
-            <NativeSelectOption value="allow">{t("rule.allow")}</NativeSelectOption>
-          </NativeSelect>
-          <NativeSelect size="sm" value={newKind} onChange={(e) => setNewKind(e.target.value as AssetInterceptKind)}>
-            {TASK_RULE_KIND_OPTIONS.map((o) => (
-              <NativeSelectOption key={o.value} value={o.value}>
-                {t(`rule.kind.${o.value}`)}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-          <Input
-            className="h-7 min-w-56 flex-1 text-sm"
-            placeholder={placeholder}
-            value={newPattern}
-            onChange={(e) => setNewPattern(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void add();
-            }}
-            disabled={busy}
-          />
-          <Input
-            className="h-7 w-36 text-sm"
-            placeholder={t("rule.notePlaceholder")}
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-            disabled={busy}
-          />
-          <Button size="sm" variant="outline" disabled={busy || !newPattern.trim()} onClick={() => void add()}>
-            <PlusIcon className="size-3.5" /> {t("add")}
-          </Button>
-          {err && <span className="text-red-500 text-xs">{err}</span>}
-        </div>
-        {/* 规则列表。 */}
-        {rules.length > 0 ? (
-          <div className="flex flex-col gap-1.5">
-            {rules.map((r) =>
-              editId === r.id ? (
-                <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-md border px-2.5 py-1.5">
-                  <NativeSelect
-                    size="sm"
-                    value={editAction}
-                    onChange={(e) => setEditAction(e.target.value as "block" | "allow")}
-                  >
-                    <NativeSelectOption value="block">{t("rule.block")}</NativeSelectOption>
-                    <NativeSelectOption value="allow">{t("rule.allow")}</NativeSelectOption>
-                  </NativeSelect>
-                  <NativeSelect
-                    size="sm"
-                    value={editKind}
-                    onChange={(e) => setEditKind(e.target.value as AssetInterceptKind)}
-                  >
-                    {TASK_RULE_KIND_OPTIONS.map((o) => (
-                      <NativeSelectOption key={o.value} value={o.value}>
-                        {t(`rule.kind.${o.value}`)}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
-                  <Input
-                    className="h-7 min-w-56 flex-1 text-sm"
-                    value={editPattern}
-                    onChange={(e) => setEditPattern(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") void saveEdit(r);
-                      if (e.key === "Escape") setEditId(null);
-                    }}
-                    disabled={busy}
-                    autoFocus
-                  />
-                  <Input
-                    className="h-7 w-36 text-sm"
-                    placeholder={t("rule.notePlaceholder")}
-                    value={editNote}
-                    onChange={(e) => setEditNote(e.target.value)}
-                    disabled={busy}
-                  />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 shrink-0 px-1.5"
-                    disabled={busy || !editPattern.trim()}
-                    onClick={() => void saveEdit(r)}
-                  >
-                    <CheckIcon className="size-3.5 text-emerald-500" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 shrink-0 px-1.5"
-                    disabled={busy}
-                    onClick={() => setEditId(null)}
-                  >
-                    <XIcon className="size-3.5" />
-                  </Button>
-                </div>
-              ) : (
-                <div key={r.id} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm">
-                  <span
-                    className={`shrink-0 rounded px-1.5 py-0.5 text-xs ${
-                      r.action === "allow"
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                        : "bg-red-500/15 text-red-600 dark:text-red-400"
-                    }`}
-                  >
-                    {r.action === "allow" ? t("rule.allow") : t("rule.block")}
-                  </span>
-                  <span className="shrink-0 text-muted-foreground text-xs">{t(`rule.kind.${r.kind}`)}</span>
-                  <code className="min-w-0 flex-1 truncate rounded bg-muted px-1.5 py-0.5 text-xs">{r.pattern}</code>
-                  {r.note && (
-                    <span className="max-w-[120px] shrink-0 truncate text-muted-foreground text-xs">{r.note}</span>
-                  )}
-                  <Switch checked={r.enabled} onCheckedChange={() => void toggle(r)} />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 shrink-0 px-1.5"
-                    disabled={busy}
-                    onClick={() => startEdit(r)}
-                  >
-                    <PencilIcon className="size-3.5" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 shrink-0 px-1.5"
-                    disabled={busy}
-                    onClick={() => void remove(r)}
-                  >
-                    <Trash2Icon className="size-3.5 text-red-500" />
-                  </Button>
-                </div>
-              ),
-            )}
+    <div className="flex flex-col gap-2 rounded-md border px-3 py-2.5">
+      <div className="font-medium text-sm">任务级资产规则</div>
+      {rules.length > 0 ? (
+        rules.map((r) => (
+          <div key={r.id} className="flex items-center gap-2 text-sm">
+            <span
+              className={`shrink-0 rounded px-1.5 py-0.5 text-xs ${
+                r.action === "allow"
+                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  : "bg-red-500/15 text-red-600 dark:text-red-400"
+              }`}
+            >
+              {r.action === "allow" ? "允许" : "拦截"}
+            </span>
+            <span className="min-w-0 flex-1 truncate font-mono text-xs">{r.pattern}</span>
+            {!r.enabled && <span className="shrink-0 text-muted-foreground text-xs">已停用</span>}
           </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">{t("rule.empty")}</p>
-        )}
-      </div>
-    </Sheet>
+        ))
+      ) : (
+        <p className="text-muted-foreground text-sm">该任务没有单独的任务级规则（沿用全局规则）。</p>
+      )}
+      <p className="text-muted-foreground text-xs">要调整规则请到「拦截审批」页或对话页，本页不再提供编辑。</p>
+    </div>
   );
 }

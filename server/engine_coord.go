@@ -238,7 +238,11 @@ func (e *Engine) RunCoordTask(ctx context.Context, t *Task, opts CoordTaskOption
 	}
 
 	taskID := t.ID
-	run, err := agent.StartTask(ctx, taskID, runner, spec, coordMaxConcurrent)
+	slots := opts.MaxConcurrency
+	if slots <= 0 {
+		slots = e.coordAgentSlots()
+	}
+	run, err := agent.StartTask(ctx, taskID, runner, spec, slots)
 	if err != nil {
 		return fmt.Errorf("coord: start root agent: %w", err)
 	}
@@ -345,10 +349,20 @@ func trimForUI(s string, n int) string {
 	return string(out)
 }
 
-// coordMaxConcurrent 是新链路的并行子 agent 上限。与旧架构的 worker 池
-// （N 个固定 goroutine 抢 frontier）不同，这里是"按派发动态起停"，
-// 上限只受资源约束，不再受"池大小"约束。
-const coordMaxConcurrent = 4
+// coordFallbackAgentSlots 是「子代理并发上限」读不到设置时的兜底值。
+// 与旧架构的 worker 池（N 个固定 goroutine 抢 frontier）不同，这里是"按派发
+// 动态起停"：上限只约束同时在跑的子代理数，不预设任何 agent 角色。
+const coordFallbackAgentSlots = 4
+
+// coordAgentSlots 读设置里的子代理并发上限（settings.workers）。0 或未接线时兜底 4。
+func (e *Engine) coordAgentSlots() int {
+	if cfg := coordCfg(); cfg != nil {
+		if n := cfg.AgentSlots(); n > 0 {
+			return n
+		}
+	}
+	return coordFallbackAgentSlots
+}
 
 // coordTaskWallClock 是任务级墙钟上限。
 //

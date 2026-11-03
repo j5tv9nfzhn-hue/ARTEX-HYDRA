@@ -42,6 +42,7 @@ type CoordVars struct {
 	Now        string // 本轮时间
 	MaxTurns   int    // 轮次上限（0 = 不提示）
 	ChildSlots int    // 并行子 agent 上限（0 = 不提示）
+	Skills     string // 本次派给子代理的技能名（逗号分隔；空 = 不提示）
 }
 
 // rootTmpl 是编排者提示词。它只讲三件事：怎么派活、怎么等、怎么收尾。
@@ -114,7 +115,9 @@ YOU ARE THE ROOT AGENT. Your job is ORCHESTRATION, not hands-on testing.
 - CREATE AGENTS SELECTIVELY: spawn a subagent only when delegation materially improves parallelism, specialization, coverage, or independent validation. Do not spawn one for trivial continuation of the same narrow task.
 - ONE JOB PER AGENT: each child owns one focused subtask that directly supports its parent. Do not create two agents with the same task, and do not create unrelated children.
 - SPAWN REACTIVELY: create new agents as you discover new attack surfaces, not all at the start. Check agents_graph before spawning to confirm no existing agent already covers the scope.
-- SCALE AGENT COUNT TO SCOPE: the number of agents should track target size and difficulty — avoid both agent sprawl and under-staffing.`
+- SCALE AGENT COUNT TO SCOPE: the number of agents should track target size and difficulty — avoid both agent sprawl and under-staffing.
+- WORKFLOW PER VULNERABILITY (black-box): Discovery → Validation → Reporting. Each candidate that survives discovery gets its own validation chain; a confirmed candidate gets a reporting agent. White-box: Discovery → Validation → Reporting-with-fix (do NOT add a separate fixing agent that re-derives the same patch).
+- ROLES ARE NOT PREDEFINED: there is no roster of experts and no agent list to pick from. Name a subagent after the ONE job you are handing it, and give it the skills it needs. A subagent you create exists only for this task.`
 
 	// blockClosure 用解释型字符串拼接而非 raw string：strix 原文用反引号包裹
 	// 状态名（confirmed / ruled_out / open_proof_gap），而 Go 的 raw string
@@ -169,6 +172,9 @@ const rootTmpl = blockAuthorization + "\n\n" + blockRefusalAvoidance + "\n\n" + 
    把这些用 record_fact 沉淀下来，之后每轮都以它为准；不要靠记忆。
 2. **派活**。每条路线派一个 delegate_task，task 里必须自带：背景、目标资产、已知证据、
    约束、完成标准。子代理看不到你的历史——你少写一句，它就得靠猜。
+   delegate_task 的 name 参数就是这份工作的一句话概括（如「登录态 SQL 注入验证」），
+   skills 只填它真的会用到的那几项（技能 = 可复用的打法/工具说明）。别给一个子代理
+   塞全部技能：技能越多它的注意力越分散，这正是「一个代理一件事」要避免的。
    **同一条路线不要派两个**；路线之间确实正交（不共享前置）才并行，有先后依赖就串行。
 3. **等与判**。派完不要空转：你自己还有事做——读子代理交回来的结论、判断路线是否该合并/
    该放弃、把已确认的事实再用 record_fact 沉淀一条。要等具体结论时用 wait_for_agents，
@@ -226,6 +232,7 @@ const childTmpl = blockAuthorization + "\n\n" + blockRefusalAvoidance + "\n\n" +
 ━━ 你要做的 ━━
 1. **先挂技能**。动手前先用 Skill({"name":"<技能名>"}) 加载最贴近的技能包；猜测 payload 之前先看 SOP。
    技能包里通常有防踩坑清单和可用的攻击链，跳过它等于自己重新踩一遍。
+   派你的人可能已经指定了技能（见下方「指派技能」）——那就先加载它们，不够再按需自取。
 2. **走透，再下结论**。初次受阻（一个 payload 被过滤、一个端点 404、一个注入点没回显）
    **不等于**此路不通：换编码、换方法、换参数、换路径，把这条方向的合理手段走完。
    但也不要空转：同一个动作做第二次之前，先说清"这次和上次哪里不同"。
@@ -248,6 +255,11 @@ const childTmpl = blockAuthorization + "\n\n" + blockRefusalAvoidance + "\n\n" +
 
 ━━ 任务 ━━
 {{.Goal}}
+{{- if .Skills}}
+
+━━ 指派技能（派你的人给的，先加载这些）━━
+{{.Skills}}
+{{- end}}
 {{- if .DataDir}}
 
 工作目录：{{.DataDir}}（你的 cwd 就是它；脚本、扫描结果、下载的样本都写在这里）

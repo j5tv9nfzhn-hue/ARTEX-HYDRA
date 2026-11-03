@@ -1100,7 +1100,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/conversations/{id}/events", s.streamConversation)                                // 实时:会话活动 SSE(harness 时间线)
 	mux.HandleFunc("GET /api/conversations/{id}/budget", s.convBudgetInfo)                                    // 成本:会话 token 预算与已用量
 
-	mux.HandleFunc("GET /api/agents", s.pgListAgents)
+	mux.HandleFunc("GET /api/agents", s.pgListAgents) // 只列会话 Agent(运行时模板见下)
+	mux.HandleFunc("GET /api/orchestration", s.pgListOrchestration) // 根/子代理的系统提示词模板 + 共用运行配置
 	mux.HandleFunc("POST /api/agents", s.pgCreateAgent)
 	mux.HandleFunc("GET /api/agents/{key}", s.pgGetAgent)
 	mux.HandleFunc("PATCH /api/agents/{key}", s.pgUpdateAgent)
@@ -3715,7 +3716,7 @@ func (s *Server) settingsPayload() map[string]any {
 		"web_search_proxy":          proxy,                        // 独立出口代理(http/https/socks5)，空=直连
 		"global_proxy":              s.m.GlobalProxy(),            // 全局出口代理(http/https/socks5)，所有目标流量走它，空=直连
 		"python_interpreter":        strings.TrimSpace(pyStored),  // 用户/自动设的值(空=用运行时检测)
-		"workers":                   s.m.Workers(),                // 并发工作 agent 数(默认3)；对之后启动的任务生效
+		"workers":                   s.m.Workers(),                // 子代理并发上限(默认4)：根 agent 同时最多派几个；对之后启动的任务生效
 		"default_task_token_budget": s.m.DefaultTaskTokenBudget(), // 新建任务的默认 token 预算(input+output,0=不限)；创建时未显式给值才取它
 		// 模型价目 JSON(USD/百万 token)；读取接口用它现算费用，空=不算钱。
 		"price_table":              s.m.PriceTable(),
@@ -3725,9 +3726,6 @@ func (s *Server) settingsPayload() map[string]any {
 		// 自动切到下一个配置。bind_fallback 仅在轮询开启时有意义(默认关)。
 		"llm_pool_enabled":       s.m.LLMPoolEnabled(),
 		"llm_pool_bind_fallback": s.m.LLMPoolBindFallback(),
-		// 操作约束注入范围(默认都开):把本任务的 allow/deny 约束拼进对应 agent 的系统提示。
-		"constraints_inject_planner": s.constraintInjectPlanner(),
-		"constraints_inject_worker":  s.constraintInjectWorker(),
 		// 实验功能:完成闸门(未收口分支不许判完成)。off=关 / shadow=只记录 / enforce=真拦并回炉。
 		// 每次完成判定读一次，切换即时生效。
 		"branch_gate_mode": s.m.BranchGateMode(),
@@ -3810,7 +3808,7 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		WebSearchProxy   *string `json:"web_search_proxy"`   // 独立出口代理(http/https/socks5)；null=不改，""=清空
 		GlobalProxy      *string `json:"global_proxy"`       // 全局出口代理(http/https/socks5)；null=不改，""=清空(直连)
 		PythonInterp     *string `json:"python_interpreter"` // 自定义脚本工具的 python 解释器路径
-		Workers          *int    `json:"workers"`            // 并发工作 agent 数(>0)；对之后启动的任务生效
+		Workers          *int    `json:"workers"`            // 子代理并发上限(>0)；对之后启动的任务生效
 		// 新建任务的默认 token 预算(0=不限)；负值钳 0。只影响之后创建且未显式给预算的任务，
 		// 已建任务的预算走 PATCH /api/tasks/{id} 的 token_budget。
 		DefaultTaskTokenBudget *int `json:"default_task_token_budget"`
@@ -3824,9 +3822,6 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		// 重建 provider 链才生效，走下面的 changed → applyLLM 路径。
 		LLMPoolEnabled      *bool `json:"llm_pool_enabled"`
 		LLMPoolBindFallback *bool `json:"llm_pool_bind_fallback"`
-		// 操作约束注入范围开关(默认都开);即时生效(planner/worker 每轮读),无需重建 agent。
-		ConstraintsInjectPlanner *bool `json:"constraints_inject_planner"`
-		ConstraintsInjectWorker  *bool `json:"constraints_inject_worker"`
 		// 实验功能:完成闸门模式(off/shadow/enforce);每次完成判定读,切换即时生效。
 		BranchGateMode *string `json:"branch_gate_mode"`
 		// 漏洞 IM 推送的全局项。三者都由投递引擎每轮读一次，改完即时生效，
@@ -3883,18 +3878,6 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		if *req.UpdateAutoApply {
 			go s.updateTick()
-		}
-	}
-	if req.ConstraintsInjectPlanner != nil {
-		if err := s.m.pg.SetBool(settingConstraintsInjectPlanner, *req.ConstraintsInjectPlanner); err != nil {
-			writeErr(w, 500, err.Error())
-			return
-		}
-	}
-	if req.ConstraintsInjectWorker != nil {
-		if err := s.m.pg.SetBool(settingConstraintsInjectWorker, *req.ConstraintsInjectWorker); err != nil {
-			writeErr(w, 500, err.Error())
-			return
 		}
 	}
 	if req.BranchGateMode != nil {

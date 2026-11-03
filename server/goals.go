@@ -26,12 +26,12 @@ type goalSpec struct {
 }
 
 // launchTask 为 HTTP createTask 与编排 spawn_task 共用创建后流程：
-// 1. 建立根资产并驱动事件循环；2. 可选种子意图让 Worker 不等待首轮 Planner；
-// 3. 后台执行初始目标分解轮次，生成目标后才启动 engine.Run，避免 Planner 抢先运行。
+// 1. 建立根资产并驱动事件循环；2. 可选种子意图让子代理不必等首轮拆解；
+// 3. 后台执行一次 LLM 目标拆解，落出目标节点后才启动 engine.Run。
 // goroutine 使调用方立即返回，两条入口行为一致。
 // 初始分解与并发排队摘要均无 node_id，只用于展示，不进入模型回读，%d 保留。[[G132]]
 const (
-	goalBreakdownRound0Summary       = "第 0 轮目标拆解"
+	goalBreakdownRound0Summary       = "拆解任务目标"
 	queuedConcurrencyLimitSummaryFmt = "已加入队列：达到并发上限 %d，出现空位后自动启动"
 	queuedNoLLMSummary               = "已加入队列：当前没有可用的 LLM 配置，配置恢复后自动启动"
 	queuedFIFOSummary                = "已加入队列：已有任务等待，按 FIFO 顺序自动启动"
@@ -56,7 +56,9 @@ func (s *Server) startTaskEngine(t *Task) {
 	if ctx.Err() != nil || s.engine.IsDeleting(t.ID) {
 		return
 	}
-	s.engine.emitActivity(t, db.Activity{Worker: "planner", Kind: "round",
+	// Worker 标 "goals"：这是一次性的 LLM 目标拆解（agent/goals.go 的 DecomposeGoals），
+	// 不是常驻角色。旧值 "planner" 指向的规划者已下线，UI 里不该再出现它。
+	s.engine.emitActivity(t, db.Activity{Worker: "goals", Kind: "round",
 		Summary: goalBreakdownRound0Summary})
 	goals := s.createGoals(ctx, t, func(r db.Activity) {
 		s.engine.emitActivity(t, r)
@@ -69,7 +71,7 @@ func (s *Server) startTaskEngine(t *Task) {
 		if g.VulnClass != "" {
 			summary = fmt.Sprintf("[%s] %s", g.VulnClass, g.Text)
 		}
-		s.engine.emitActivity(t, db.Activity{Worker: "planner", Kind: "text", Summary: summary})
+		s.engine.emitActivity(t, db.Activity{Worker: "goals", Kind: "text", Summary: summary})
 	}
 	if ctx.Err() != nil || s.engine.IsDeleting(t.ID) {
 		return

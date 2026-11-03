@@ -302,8 +302,9 @@ const (
 	// deepSeekWebSearchBackend borrows the active LLM profile instead of its own
 	// key, so it only works on an anthropic-format profile pointed at DeepSeek.
 	deepSeekWebSearchBackend = "deepseek"
-	// defaultWorkers is the concurrent work-agent count when the setting is unset.
-	defaultWorkers = 3
+	// defaultWorkers 是「子代理并发上限」的默认值：根 agent 同时最多派多少个
+	// 在跑的子代理。对齐 STRIX：派几个由模型按范围自决，这个数只是资源兜底。
+	defaultWorkers = 4
 	// defaultConcurrencyLimit is the simultaneous-running-task cap when the feature
 	// is enabled but no explicit limit was saved.
 	defaultConcurrencyLimit = 5
@@ -365,8 +366,8 @@ func (m *Manager) PriceTable() string {
 	return strings.TrimSpace(v)
 }
 
-// Workers returns the configured concurrent work-agent count (default 3). Read
-// per-task at engine.Run, so a change applies to tasks started afterwards.
+// Workers 返回子代理并发上限（默认 4，与 agent.defaultMaxConcurrent 同值）。
+// 每个任务在起根 agent 时读一次，对之后启动的任务生效。
 func (m *Manager) Workers() int {
 	v, ok, err := m.pg.GetSetting(settingWorkers)
 	if err != nil || !ok {
@@ -381,10 +382,9 @@ func (m *Manager) Workers() int {
 
 // SetWorkers 在 settingWorkers 小于 1 时返回 errWorkersPositive，
 // 设置 PUT 处理器通过 writeErr(400) 展示，无 Agent 工具回读路径。
-// 术语与 zh.json 的 settings.workers 对齐。
-const errWorkersPositive = "Worker 数量必须至少为 1"
+const errWorkersPositive = "子代理并发上限必须至少为 1"
 
-// SetWorkers persists the concurrent work-agent count. Values <=0 are rejected.
+// SetWorkers 持久化子代理并发上限。<=0 拒绝。
 func (m *Manager) SetWorkers(n int) error {
 	if n <= 0 {
 		return errors.New(errWorkersPositive)

@@ -38,6 +38,9 @@ import (
 type CoordAgents interface {
 	AgentMaxTurns(key string) int
 	AgentRunSeconds(key string) int
+	// AgentSlots 是「子代理并发上限」：根 agent 同时最多派几个在跑的 agent。
+	// 对齐 STRIX——派几个由模型按范围自决，这个数只是资源兜底。
+	AgentSlots() int
 	// AgentsForTask 取任务的 agent 装配包（provider / 运行时 / 工具面来源），
 	// 与旧 planner/worker 完全同源 —— 多档切换、配额轮转、上下文窗口这些
 	// 既有能力因此对新链路自动生效，不需要在别处再实现一遍。
@@ -154,7 +157,7 @@ func (e *Engine) coordOptionsFor(t *Task) CoordTaskOptions {
 		WorkDir:         e.dataDir(),
 		MaxTurns:        e.agentMaxTurnsCoord(),
 		MaxDuration:     e.agentRunSecondsCoord(),
-		MaxConcurrency:  coordMaxConcurrent,
+		MaxConcurrency:  e.coordAgentSlots(),
 		ToolOutputDir:   e.coordToolOutputDir(),
 		SessionIDPrefix: fmt.Sprintf("t%s", t.ID),
 		// 权限模式必须与旧 worker 一致：ModeBypass。
@@ -426,8 +429,8 @@ func (e *Engine) CoordSelfCheck() {
 	if e.m == nil || e.m.dir == "" {
 		log.Printf("[coord] 警告：数据目录为空，工具输出将不会落盘（超长输出会被丢弃而非溢出到文件）")
 	}
-	if coordMaxConcurrent <= 0 {
-		log.Printf("[coord] 警告：并发上限非法，将退化为串行派发")
+	if e.coordAgentSlots() <= 0 {
+		log.Printf("[coord] 警告：子代理并发上限非法，将退化为串行派发")
 	}
 }
 

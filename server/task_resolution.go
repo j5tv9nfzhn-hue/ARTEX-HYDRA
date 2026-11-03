@@ -119,8 +119,11 @@ func (s *Server) taskLLMResolutionHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 	roles := map[string]taskLLMResolution{}
+	// goals 是一次性的 LLM 目标拆解（活动行的 worker 标 "goals"）；planner 已下线，
+	// 保留这个响应键只是为了老版本前端读到它时不会拿到 undefined。
 	for responseKey, agentKey := range map[string]string{
 		"mainagent": "mainagent",
+		"goals":     "goals",
 		"planner":   "planner",
 		"worker":    "worker",
 	} {

@@ -5,10 +5,10 @@ import * as React from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { StatusRing } from "@/components/transcript/status-ring";
+import { StatusMark } from "@/components/transcript/status-mark";
+import type { ToolKindMeta } from "@/components/transcript/tool-kind";
 import { useShellCapability } from "@/hooks/use-shell-capability";
 import { execToolLabel } from "@/lib/shell-label";
-import type { ToolKindMeta } from "@/components/transcript/tool-kind";
 import { formatElapsed, type ToolStatus } from "@/lib/tool-status";
 import { cn } from "@/lib/utils";
 
@@ -37,8 +37,8 @@ function useElapsed(startedAt?: string, endedAt?: string): string {
   return formatElapsed(end - start);
 }
 
-// ToolSummaryRow 是工具调用行的第一层（折叠态）：状态圈 + 类别 + 工具名 + 目标 + 耗时 + 状态文案。
-// 展开/收起的箭头只在 hover 或已展开时出现，让静止的行保持安静 —— 层级由状态圈和文案承担，
+// ToolSummaryRow 是工具调用行的第一层（折叠态）：终态记号 + 类别 + 工具名 + 目标 + 耗时 + 状态文案。
+// 展开/收起的箭头只在 hover 或已展开时出现，让静止的行保持安静 —— 层级由记号和文案承担，
 // 不靠常驻的装饰性控件。
 export function ToolSummaryRow({
   kind,
@@ -84,21 +84,19 @@ export function ToolSummaryRow({
       onClick={onToggle}
       type="button"
     >
-      <StatusRing status={status} />
-      <span className={cn("shrink-0 font-medium text-ui-2xs text-muted-foreground", running && "text-shimmer")}>
+      <StatusMark status={status} />
+      <span className={cn("shrink-0 font-medium text-muted-foreground text-ui-2xs", running && "text-shimmer")}>
         {t(kind.labelKey)}
       </span>
       {worker ? <span className={workerChipClass}>{worker}</span> : null}
-      <span className="shrink-0 font-mono font-medium text-ui-xs text-foreground">
-        {execToolLabel(tool, shell)}
-      </span>
+      <span className="shrink-0 font-medium font-mono text-foreground text-ui-xs">{execToolLabel(tool, shell)}</span>
       {target ? (
-        <span className="min-w-0 flex-1 truncate font-mono text-ui-xs text-muted-foreground">{target}</span>
+        <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground text-ui-xs">{target}</span>
       ) : (
         <span className="flex-1" />
       )}
       {elapsed ? (
-        <span className="shrink-0 font-mono text-ui-2xs text-muted-foreground tabular-nums" suppressHydrationWarning>
+        <span className="shrink-0 font-mono text-muted-foreground text-ui-2xs tabular-nums" suppressHydrationWarning>
           {elapsed}
         </span>
       ) : null}
