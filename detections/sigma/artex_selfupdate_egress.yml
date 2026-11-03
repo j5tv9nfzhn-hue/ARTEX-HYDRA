@@ -8,9 +8,8 @@ description: |
     service suggests an ARTEX binary is installed on that host. This is primarily an operator and
     forensic indicator on a (possibly compromised relay) host, not a target-side signal.
 references:
-    - https://github.com/j5tv9nfzhn-hue/ARTEX-HYDRA/blob/main/docs/04-防御与检测.md
-    - https://github.com/jiwoochris/artex-ko
-author: ARTEX defense guide
+    - https://github.com/j5tv9nfzhn-hue/ARTEX-HYDRA/blob/main/README.md#防御与检测
+author: ARTEX-HYDRA
 date: 2026-10-05
 tags:
     - attack.command-and-control

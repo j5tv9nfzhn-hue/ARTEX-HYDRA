@@ -9,7 +9,7 @@ import (
 )
 
 // TestLooksLikeTransportFailure 固定「哪些失败算环境」的口径。
-// 样本取自线上 artex.db 的真实报错文本（见 docs/诊断-2026-10-22）。
+// 样本取自线上 artex.db 的真实报错文本。
 func TestLooksLikeTransportFailure(t *testing.T) {
 	transport := []string{
 		`Get "https://api.example.com/v1/x": EOF`,

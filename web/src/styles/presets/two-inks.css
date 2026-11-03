@@ -25,7 +25,7 @@ value: two-inks
    且 --color-red-600/10 这类透明度变体走 color-mix 也会自动跟随。
    其它 6 套预设不受影响：所有改动都锁在 [data-theme-preset="two-inks"] 下。
 
-   安装见 docs/two-inks.md。生成脚本：scripts/generate-two-inks.mjs
+   生成方式：web/ 下执行 npm run generate:presets。
    ============================================================================= */
 
 /* ============================ §1 令牌 ============================ */

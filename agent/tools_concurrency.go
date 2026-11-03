@@ -57,7 +57,7 @@ import (
 // 子代理退化成串行，且一次卡死会连带挡住 record_fact / http_request / Read
 // 等全部工具。
 //
-// 与 SDK 侧的对应关系见 docs/工具并发与多文件补丁-落地说明.md。
+// 与 SDK 侧的对应关系见 sdk/ 适配层。
 
 // keyGlobal 是「全局独占」这个特殊键：拿到它的写锁就等于回到改造前的不安全工具。
 const keyGlobal = ""

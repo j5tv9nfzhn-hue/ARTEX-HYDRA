@@ -1,4 +1,4 @@
-// Package llmtest 实现「测试连接」的独立轻量探测（docs/开发总清单.md 批次 2）。
+// Package llmtest 实现「测试连接」的独立轻量探测。
 //
 // 它只做一件事：按 LLM profile 的 format / base_url / api_key / model 发出一次
 // 最小、单发、无状态、非流式的补全请求，验证端点、密钥与模型是否真的可用，

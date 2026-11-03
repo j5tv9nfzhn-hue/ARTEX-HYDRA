@@ -4,15 +4,14 @@
 # 任意断言失败即返回非零，阻止提交。
 # 开发者无需等到 push 后才发现损坏的引用或规则。
 #
-# 1) detections：规则、指标来源或防御内联 Sigma 模板变化时执行。
-# docs/defense-{ko,en}.md 的主体模板也属于检查范围。
-# run-all.sh 执行八类规则测试与三个其他门禁。
+# 1) detections：规则或指标来源变化时执行。
+# run-all.sh 执行八类规则测试与两个其他门禁。
 # 来源范围与 .github/workflows/detections.yml 一致。
-# 规则改动必须同步样本、测试与层；文档模板改动必须同步已测承诺。
+# 规则改动必须同步样本、测试与层。
 # 规则检查需要 Docker，各测试在容器内隔离执行。
 # runner 本身不安装额外测试工具。
 # 2) docs：检查已跟踪 Markdown 的内部文件、图片与标题锚点。
-# 使用 check-doc-links.py，与 docs.yml 相同。
+# 使用 check-doc-links.py，与 release.yml 的文档门禁相同。
 # always_run 不缩小文件范围，防止忽略非 Markdown 的目标变化。
 # 删除或移动被引用的图片、LICENSE 等也可能破坏链接。
 # 仅使用 Python 标准库，不访问网络。
@@ -38,7 +37,7 @@ repos:
         entry: detections/tests/run-all.sh
         language: script
         pass_filenames: false
-        files: '^(detections/|enrich/enrich\.go|selfupdate/(github|stage)\.go|guard/guard\.go|db/db\.go|db/schema_sqlite\.sql|cmd/artex/main\.go|traffic/traffic\.go|docs/defense-(ko|en)\.md)'
+        files: '^(detections/|enrich/enrich\.go|selfupdate/(github|stage)\.go|guard/guard\.go|db/db\.go|db/schema_sqlite\.sql|cmd/artex/main\.go|traffic/traffic\.go)'
       - id: docs
         name: 文档内部链接、图片与标题锚点检查
         entry: python3 -I scripts/check-doc-links.py

@@ -28,6 +28,13 @@ skills/authentication-jwt/SKILL.md
 按目录名选择，取 `name` 可让两者指向同一个技能。上游的类别信息不再体现在目录结构上，
 完整的类别归属见下节。
 
+### 链接例外
+
+`skills/agent_browser/SKILL.md` 正文里有 4 处指向 `references/*.md` 的 Markdown 链接，
+已改为行内代码并标注「the upstream skill's」。上游技能包每个技能只有一个 `.md` 文件，
+不含 `references/` 目录，这些链接在上游即指向不存在的文件；原样保留会让本仓库的
+文档链接门禁（`scripts/check-doc-links.py`）失败。除这 4 处外，全部技能正文逐字节保留。
+
 ## 类别归属
 
 | 上游类别 | 技能数 | 内容 |

@@ -18,8 +18,8 @@ validators:
   # sigmahq_github_link wants every `references:` URL to be a commit permalink
   # rather than a branch link. That check exists so rules citing external,
   # third-party write-ups keep pointing at the exact revision they were written
-  # against. Our references point at *our own* living defense docs
-  # (docs/defense-ko.md, docs/defense-en.md) on `main`: we want them to track the
+  # against. Our references point at *our own* living defense section
+  # (README.md#防御与检测) on `main`: we want them to track the
   # current guide, not freeze to a snapshot that goes stale as the guide improves.
   - -sigmahq_github_link
 

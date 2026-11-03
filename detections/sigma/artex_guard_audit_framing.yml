@@ -8,9 +8,8 @@ description: |
     host's application or audit logs strongly supports that ARTEX ran on that host. This is a
     host and forensic indicator, not a target-side signal.
 references:
-    - https://github.com/j5tv9nfzhn-hue/ARTEX-HYDRA/blob/main/docs/04-防御与检测.md
-    - https://github.com/jiwoochris/artex-ko
-author: ARTEX defense guide
+    - https://github.com/j5tv9nfzhn-hue/ARTEX-HYDRA/blob/main/README.md#防御与检测
+author: ARTEX-HYDRA
 date: 2026-10-05
 tags:
     - attack.execution
@@ -22,5 +21,5 @@ detection:
         - '【ARTEX 平台管控·非目标防御】'
     condition: keywords
 falsepositives:
-    - Logs that quote this defense guide or the ARTEX source code for documentation purposes.
+    - Logs that quote the ARTEX-HYDRA documentation or source code for documentation purposes.
 level: high

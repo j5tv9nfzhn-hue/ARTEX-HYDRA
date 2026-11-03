@@ -82,7 +82,7 @@ function ChartContainer({
 }
 
 // sanitizeStyleToken 把拼进 <style> 的片段限制为安全字符，
-// 防止不受信任的 id / 变量名 / 颜色值破坏 CSS 甚至注入 HTML（XSS 审计见 docs/xss-audit.md）。
+// 防止不受信任的 id / 变量名 / 颜色值破坏 CSS 甚至注入 HTML（XSS 审计）。
 const sanitizeStyleToken = (value: string) =>
   value.replace(/[^A-Za-z0-9#%(),.\s_-]/g, "")
 

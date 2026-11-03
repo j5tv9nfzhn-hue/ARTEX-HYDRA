@@ -9,11 +9,10 @@ description: |
     concurrency of 4 and ships no built-in rate limit (enrich/enrich.go), so an active run emits
     many enrichment requests in quick succession rather than one. An operator can change the
     User-Agent, so a quiet result is inconclusive, not proof of safety; see the behaviour-based
-    detection in the defense guide, section 4. Tune the count and window to your own baseline.
+    detection in the defense section of the repository README. Tune the count and window to your own baseline.
 references:
-    - https://github.com/j5tv9nfzhn-hue/ARTEX-HYDRA/blob/main/docs/04-防御与检测.md
-    - https://github.com/jiwoochris/artex-ko
-author: ARTEX defense guide
+    - https://github.com/j5tv9nfzhn-hue/ARTEX-HYDRA/blob/main/README.md#防御与检测
+author: ARTEX-HYDRA
 date: 2026-10-05
 tags:
     - attack.reconnaissance

@@ -439,7 +439,7 @@ CREATE TABLE IF NOT EXISTS llm_profiles (
     reasoning_effort TEXT NOT NULL DEFAULT '',
     thinking_type    TEXT NOT NULL DEFAULT '',
     is_default       BOOLEAN NOT NULL DEFAULT false,
-    -- 轮询(故障转移)参数，见 docs/LLM轮询设计.md：
+    -- 轮询(故障转移)参数：
     --   priority     顺位，越大越先被选中；激活配置(is_default)永远排链首，与本值无关。
     --   pool_exclude true=不作为故障转移目标(仍可被 agent/任务显式绑定使用)。
     priority         INTEGER NOT NULL DEFAULT 0,
@@ -499,7 +499,7 @@ END;
 -- 旧配置行为完全不变。
 -- 同 format：先删再建，保证每次启动幂等。
 -- 自定义会话头名；补旧库。默认 '' = 不发送，旧配置行为不变。
--- 单配置的重试覆盖（见 docs/LLM重试设计.md）。三组各自一对「次数 + 固定间隔」，
+-- 单配置的重试覆盖。三组各自一对「次数 + 固定间隔」，
 -- 语义统一：次数 0=沿用全局默认、-1=关闭该层重试、>0=用该值；间隔 0=沿用该层的
 -- 默认指数退避、>0=改用这个固定毫秒数。全部默认 0，所以旧库/旧配置行为不变。
 --   connect = 建连重试（SDK doStream：连接重置/超时/429/5xx，流开始前）
@@ -589,7 +589,7 @@ BEGIN
   UPDATE tasks SET updated_at = (strftime('%Y-%m-%d %H:%M:%f+00:00','now')) WHERE rowid = NEW.rowid;
 END;
 
--- planner 心跳触发间隔(秒);补旧库。默认 300s(5min)。见 docs/planner-trigger-impl-plan.md
+-- planner 心跳触发间隔(秒);补旧库。默认 300s(5min)。
 -- 任务级 token 预算(硬上限);补旧库。0(默认)=不限。预算闸在 worker run 结束/planner
 -- 每轮结束时核对 llm_usage 账本(input+output)累计,达到上限即按用户暂停语义自动暂停
 -- 任务并留痕;调高预算后恢复。见 server/engine.go 的 checkTokenBudget。
