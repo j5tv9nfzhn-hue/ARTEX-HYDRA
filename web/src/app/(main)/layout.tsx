@@ -3,6 +3,9 @@
 import type { ReactNode } from "react";
 import * as React from "react";
 
+import { AppSidebar } from "@/app/(main)/_components/sidebar/app-sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { UINotifier } from "@/components/ui-notifier";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { getClientCookie } from "@/lib/cookie.client";
@@ -13,8 +16,9 @@ import {
   type SidebarVariant,
 } from "@/lib/preferences/layout";
 import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
-import { UIShell } from "@/ui/shell";
+import { cn } from "@/lib/utils";
 
+import { MainContent } from "./_components/main-content";
 
 // Reads a layout-critical preference from the browser cookie (falls back to the
 // default during static-export prerender where document is unavailable). Kept
@@ -69,8 +73,31 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
   if (!authed) return null;
 
   return (
-    <UIShell variant={variant} collapsible={collapsible} defaultOpen={defaultOpen}>
-      {children}
-    </UIShell>
+    <SidebarProvider
+      defaultOpen={defaultOpen}
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 62)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant={variant} collapsible={collapsible} />
+      <SidebarInset
+        className={cn(
+          "[html[data-content-layout=centered]_&>*]:mx-auto",
+          "[html[data-content-layout=centered]_&>*]:w-full",
+          "[html[data-content-layout=centered]_&>*]:max-w-screen-2xl",
+          "peer-data-[variant=inset]:border",
+          "[--dashboard-header-height:--spacing(12)]",
+          "min-w-0 overflow-x-hidden",
+        )}
+      >
+        <MainContent>{children}</MainContent>
+      </SidebarInset>
+      {/* 全局应用内通知：挂在 SidebarProvider 内、MainContent 外。
+          MainContent 对任务详情页是 full-bleed 直接返回 children，只有挂在这一层
+          才能保证「任何页面（含子页面）都收得到」。 */}
+      <UINotifier />
+    </SidebarProvider>
   );
 }

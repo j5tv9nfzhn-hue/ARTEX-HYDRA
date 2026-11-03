@@ -21,7 +21,6 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const {
-    skin,
     theme_mode,
     theme_preset,
     content_layout,
@@ -35,7 +34,6 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html
       lang={locale}
       data-theme-mode={theme_mode}
-      data-skin={skin}
       data-theme-preset={theme_preset}
       data-content-layout={content_layout}
       data-navbar-style={navbar_style}
@@ -52,7 +50,6 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <IntlRuntimeProvider>
           <TooltipProvider>
             <PreferencesStoreProvider
-              skin={skin}
               themeMode={theme_mode}
               themePreset={theme_preset}
               contentLayout={content_layout}

@@ -869,8 +869,7 @@
     "totalCount": "共 {count} 个",
     "turnsCount": "{turns} 轮",
     "turnsTooltip": "agent 循环轮次（模型调用次数）",
-    "untitledConversation": "新对话"
-  ,
+    "untitledConversation": "新对话",
     "budgetExhausted": "预算用尽",
     "budgetLabel": "预算",
     "budgetTitleEnforced": "本条会话累计 token 预算：已用 {used} / 上限 {limit}。达到上限后本轮自动收尾（可在系统配置调整 default_conversation_token_budget）。",
@@ -1095,7 +1094,6 @@
     "hint": "新版骨架整合导航与页面结构，经典骨架保持原样，两者可随时来回切换"
   },
   "explorationGraph": {
-
     "detail": {
       "attributes": "属性",
       "copied": "已复制",
@@ -2567,7 +2565,6 @@
     "showingMore": "已显示 {count} 条，向下滚动加载更多"
   },
   "layoutControls": {
-    "appearance": "外观",
     "collapse": "侧边栏折叠模式",
     "collapseIcon": "仅图标",
     "collapseIconAria": "切换为仅图标",
@@ -2595,8 +2592,6 @@
     "presetPlaceholder": "预设",
     "restore": "恢复默认",
     "sidebarVariant": "侧边栏样式",
-    "skinClassicHint": "经典：沿用下方主题预设的原始观感。",
-    "skinPaperHint": "纸本：书刊排版、发丝线、等宽数字；配色固定为纸本预设。",
     "themeMode": "主题模式",
     "themePreset": "主题预设",
     "title": "偏好设置",
@@ -2639,10 +2634,13 @@
       "assets": "资产",
       "chat": "对话",
       "commands": "工具执行",
-      "dashboard": "仪表盘",
+      "dashboard": "总览",
+      "external": "外部接入",
       "findings": "发现",
+      "findings-domain": "发现",
       "harness": "Harness 工作台",
       "intercept": "拦截规则",
+      "intercept-domain": "拦截",
       "lan": "局域网连接",
       "llm": "LLM",
       "llm-records": "LLM 录制",
@@ -2650,7 +2648,9 @@
       "mcp": "MCP",
       "notify": "通知推送",
       "retention": "数据保留",
+      "runs-domain": "运行",
       "settings": "系统配置",
+      "settings-domain": "设置",
       "skills": "Skill",
       "storage": "存储与清理",
       "sync": "资产同步",
@@ -3030,10 +3030,6 @@
     "currentTheme": "当前主题：{theme}，点击切换",
     "dark": "深色",
     "light": "浅色",
-    "skinAriaClassic": "当前为老主题，点击切到新主题（纸本）",
-    "skinAriaPaper": "当前为新主题（纸本），点击切回老主题",
-    "skinTitleClassic": "老主题",
-    "skinTitlePaper": "新主题 / 纸本",
     "system": "跟随系统"
   },
   "verify": {
@@ -3121,8 +3117,7 @@
       "jump": "跳转",
       "results": "搜索"
     },
-    "placeholder": "搜索命令、页面与设置…"
-  ,
+    "placeholder": "搜索命令、页面与设置…",
     "themeModeItem": "主题：{label}",
     "themePresetItem": "主题预设：{label}"
   },
@@ -3583,7 +3578,6 @@
       "autoDownloadTitle": "自动下载新版本",
       "autoDownloadDescAuto": "检测到新版本会自动下载并校验；装好后进程自己重启生效，不必守着控制台。",
       "autoDownloadDescManual": "当前环境不能自动重启（例如容器内），自动下载后无法自动生效。",
-
       "check": "检查更新",
       "confirm": {
         "docker": "注意：容器内更新只替换程序本身，不会更新镜像里的 playwright / nmap 等工具链；若新版本依赖新工具，请改用 docker compose pull。",

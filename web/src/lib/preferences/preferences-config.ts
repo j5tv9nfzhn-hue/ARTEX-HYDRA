@@ -14,15 +14,17 @@
 import type { FontKey } from "@/lib/fonts/registry";
 
 import type { ContentLayout, NavbarStyle, SidebarCollapsible, SidebarVariant } from "./layout";
-import type { Skin, ThemeMode, ThemePreset } from "./theme";
+import type { ThemeMode, ThemePreset } from "./theme";
 
 export type PreferencePersistence = "none" | "client-cookie" | "server-cookie" | "localStorage";
 
 /**
  * All available preference keys and their value types.
+ *
+ * 「外观（skin）」这一项已随纸本 / 编年主题一并移除。它残留在老用户的 cookie 里
+ * 无人读取即可，不需要专门清理：cookie 多一个没人认的键不影响渲染。
  */
 export type PreferenceValueMap = {
-  skin: Skin;
   theme_mode: ThemeMode;
   theme_preset: ThemePreset;
   font: FontKey;
@@ -65,10 +67,11 @@ type PreferencePersistenceConfig = {
 
 /**
  * Default preference values on first load.
+ *
+ * theme_preset 取 command（深空指挥室）：纸本主题移除后，
+ * 「科技风控制台」就是这个产品唯一的外形基调。
  */
 export const PREFERENCE_DEFAULTS: PreferenceValueMap = {
-  // 默认给老主题：升级后第一眼仍是原来那套界面，新主题要自己打开。
-  skin: "classic",
   theme_mode: "dark",
   theme_preset: "command",
   font: "geist",
@@ -83,7 +86,6 @@ export const PREFERENCE_DEFAULTS: PreferenceValueMap = {
  * You can change these per-key.
  */
 export const PREFERENCE_PERSISTENCE: PreferencePersistenceConfig = {
-  skin: "client-cookie",
   theme_mode: "client-cookie",
   theme_preset: "client-cookie",
   font: "client-cookie",

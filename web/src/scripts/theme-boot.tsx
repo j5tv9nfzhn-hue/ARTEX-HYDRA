@@ -8,14 +8,19 @@
  */
 import { fontRegistry } from "@/lib/fonts/registry";
 import { PREFERENCE_DEFAULTS, PREFERENCE_PERSISTENCE } from "@/lib/preferences/preferences-config";
+import { THEME_PRESET_VALUES } from "@/lib/preferences/theme";
 
 export function ThemeBootScript() {
   // 字体键白名单:旧 cookie 可能残留已下线的字体键(如 inter/lora),
   // 启动时拦截并回退到默认字体,避免 data-font 指向不存在的字体导致选择器状态失效。
   const fontKeys = JSON.stringify(Object.keys(fontRegistry));
 
+  // 预设白名单:与字体同一套规矩。「纸本 / 编年」主题下线后 paper 已无对应样式表,
+  // 老 cookie 里仍可能写着 theme_preset=paper。不拦的话 data-theme-preset 会指向
+  // 一套不存在的令牌,整页回落到无样式默认值(白底黑字)。
+  const presetKeys = JSON.stringify(THEME_PRESET_VALUES);
+
   const persistence = JSON.stringify({
-    skin: PREFERENCE_PERSISTENCE.skin,
     theme_mode: PREFERENCE_PERSISTENCE.theme_mode,
     theme_preset: PREFERENCE_PERSISTENCE.theme_preset,
     font: PREFERENCE_PERSISTENCE.font,
@@ -26,7 +31,6 @@ export function ThemeBootScript() {
   });
 
   const defaults = JSON.stringify({
-    skin: PREFERENCE_DEFAULTS.skin,
     theme_mode: PREFERENCE_DEFAULTS.theme_mode,
     theme_preset: PREFERENCE_DEFAULTS.theme_preset,
     font: PREFERENCE_DEFAULTS.font,
@@ -43,6 +47,7 @@ export function ThemeBootScript() {
         var PERSISTENCE = ${persistence};
         var DEFAULTS = ${defaults};
         var FONT_KEYS = ${fontKeys};
+        var PRESET_KEYS = ${presetKeys};
 
         function readCookie(name) {
           var match = document.cookie.split("; ").find(function(c) {
@@ -80,7 +85,6 @@ export function ThemeBootScript() {
 
         var rawMode = readPreference("theme_mode", DEFAULTS.theme_mode);
         var rawPreset = readPreference("theme_preset", DEFAULTS.theme_preset);
-        var rawSkin = readPreference("skin", DEFAULTS.skin);
         var rawFont = readPreference("font", DEFAULTS.font);
         var rawContentLayout = readPreference("content_layout", DEFAULTS.content_layout);
         var rawNavbarStyle = readPreference("navbar_style", DEFAULTS.navbar_style);
@@ -93,9 +97,9 @@ export function ThemeBootScript() {
           mode === "system" && window.matchMedia
             ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
             : mode;
-        var skin = rawSkin === "editorial" || rawSkin === "classic" ? rawSkin : DEFAULTS.skin;
-        // 新主题的令牌固定取纸本：先定 skin，再按 skin 决定 preset。
-        var preset = skin === "editorial" ? "paper" : rawPreset || DEFAULTS.theme_preset;
+        // rawPreset 可能是已下线预设(如 paper)遗留的 cookie 值,不在白名单内时
+        // 回退到默认预设,避免 data-theme-preset 指向不存在的样式表。
+        var preset = PRESET_KEYS.indexOf(rawPreset) !== -1 ? rawPreset : DEFAULTS.theme_preset;
         // rawFont 可能来自旧 cookie,不在白名单内时回退到默认字体
         var font = FONT_KEYS.indexOf(rawFont) !== -1 ? rawFont : DEFAULTS.font;
         var contentLayout = rawContentLayout || DEFAULTS.content_layout;
@@ -105,7 +109,6 @@ export function ThemeBootScript() {
 
         root.classList.toggle("dark", resolvedMode === "dark");
         root.setAttribute("data-theme-mode", mode);
-        root.setAttribute("data-skin", skin);
         root.setAttribute("data-theme-preset", preset);
         root.setAttribute("data-font", font);
         root.setAttribute("data-content-layout", contentLayout);

@@ -7,22 +7,15 @@
 @import "../styles/presets/brutalist.css";
 @import "../styles/presets/command.css";
 @import "../styles/presets/matrix.css";
-@import "../styles/presets/paper.css";
 @import "../styles/presets/soft-pop.css";
 @import "../styles/presets/tangerine.css";
 @import "../styles/presets/two-inks.css";
 
-/* 编辑排版层：只在 data-theme-preset="paper" 下生效，其余预设零影响 */
+/* 结构锚点的默认样式（secnum / apibar 隐藏 + 报头元数据排布）。
+   「纸本 / 编年」主题与 data-skin="editorial" 皮肤层已整体移除，
+   这里只剩版块原语（Masthead / Sheet / Panel）的锚点兜底，
+   删掉会让编号与「后端接口 xxx()」以裸文本漏在页面上。见该文件头部说明。 */
 @import "../styles/editorial.css";
-
-/* 双主题的「新主题」：只在 data-skin="editorial" 下生效（老主题零影响）。
-   令牌取 presets/paper.css，版式（卡片/表格/页签/侧栏/浮层）在这里翻译。 */
-@import "../styles/skin-editorial.css";
-
-/* 新版骨架（v2）独立主题包：只在 data-ui="v2" 下生效，v1 零影响。
-   与 skin-editorial.css 的分工：前者是「旧骨架的换肤」，这里是「新骨架自带主题」。 */
-@import "../styles/ui-v2.css";
-
 
 @custom-variant dark (&:is(.dark *));
 

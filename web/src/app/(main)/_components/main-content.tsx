@@ -16,8 +16,7 @@ import { AccountSwitcher } from "./sidebar/account-switcher";
 import { NotificationCenter } from "./notification-center";
 import { LayoutControls } from "./sidebar/layout-controls";
 import { SearchDialog } from "./sidebar/search-dialog";
-import { SkinSwitcher, ThemeSwitcher } from "./sidebar/theme-switcher";
-import { UIVersionSwitcher } from "@/ui/version-switcher";
+import { ThemeSwitcher } from "./sidebar/theme-switcher";
 import { UpdateBadge } from "./update-badge";
 
 // 任务详情页保持原样：它自带头部/Tabs 与内边距，这里不再叠加全局头部和 padding。
@@ -78,8 +77,6 @@ export function MainContent({ children }: { children: ReactNode }) {
             <UpdateBadge />
             <NotificationCenter />
             <LayoutControls />
-            <SkinSwitcher />
-            <UIVersionSwitcher />
             <ThemeSwitcher />
             <AccountSwitcher users={[currentUser]} />
           </div>

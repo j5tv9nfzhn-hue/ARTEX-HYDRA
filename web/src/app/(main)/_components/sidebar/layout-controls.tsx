@@ -20,14 +20,12 @@ import {
 } from "@/lib/preferences/layout-utils";
 import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
 import { persistPreference } from "@/lib/preferences/preferences-storage";
-import { SKIN_OPTIONS, THEME_PRESET_OPTIONS, type Skin, type ThemeMode, type ThemePreset } from "@/lib/preferences/theme";
-import { applySkin, applyThemePreset } from "@/lib/preferences/theme-utils";
+import { THEME_PRESET_OPTIONS, type ThemeMode, type ThemePreset } from "@/lib/preferences/theme";
+import { applyThemePreset } from "@/lib/preferences/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 export function LayoutControls() {
   const t = useTranslations("layoutControls");
-  const skin = usePreferencesStore((s) => s.skin);
-  const setSkin = usePreferencesStore((s) => s.setSkin);
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const resolvedThemeMode = usePreferencesStore((s) => s.resolvedThemeMode);
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
@@ -43,13 +41,6 @@ export function LayoutControls() {
   const setSidebarCollapsible = usePreferencesStore((s) => s.setSidebarCollapsible);
   const font = usePreferencesStore((s) => s.font);
   const setFont = usePreferencesStore((s) => s.setFont);
-
-  const onSkinChange = (value: Skin | "") => {
-    if (!value || value === skin) return;
-    setSkin(value);
-    applySkin(value, themePreset);
-    void persistPreference("skin", value);
-  };
 
   const onThemePresetChange = (preset: ThemePreset) => {
     applyThemePreset(preset);
@@ -99,7 +90,6 @@ export function LayoutControls() {
   };
 
   const handleRestore = () => {
-    onSkinChange(PREFERENCE_DEFAULTS.skin);
     onThemePresetChange(PREFERENCE_DEFAULTS.theme_preset);
     onThemeModeChange(PREFERENCE_DEFAULTS.theme_mode);
     onContentLayoutChange(PREFERENCE_DEFAULTS.content_layout);
@@ -123,26 +113,9 @@ export function LayoutControls() {
             <p className="text-muted-foreground text-xs">{t("desc")}</p>
           </div>
           <div className="space-y-3 **:data-[slot=toggle-group]:w-full **:data-[slot=toggle-group-item]:flex-1 **:data-[slot=toggle-group-item]:text-xs">
-            {/* 双主题：老主题（九套预设）/ 新主题（纸本）。放在最上面，因为它是总开关。 */}
-            <div className="space-y-1">
-              <Label className="font-medium text-xs">{t("appearance")}</Label>
-              <ToggleGroup type="single" value={skin} onValueChange={onSkinChange} variant="outline" size="sm">
-                {SKIN_OPTIONS.map((option) => (
-                  <ToggleGroupItem key={option.value} value={option.value} title={option.hint}>
-                    {option.label}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-              <p className="text-muted-foreground text-xs leading-snug">
-                {skin === "editorial"
-                  ? t("skinPaperHint")
-                  : t("skinClassicHint")}
-              </p>
-            </div>
-
             <div className="space-y-1">
               <Label className="font-medium text-xs">{t("themePreset")}</Label>
-              <Select value={skin === "editorial" ? "paper" : themePreset} onValueChange={onThemePresetChange} disabled={skin === "editorial"}>
+              <Select value={themePreset} onValueChange={onThemePresetChange}>
                 <SelectTrigger size="sm" className="w-full text-xs disabled:opacity-50">
                   <SelectValue placeholder={t("presetPlaceholder")} />
                 </SelectTrigger>

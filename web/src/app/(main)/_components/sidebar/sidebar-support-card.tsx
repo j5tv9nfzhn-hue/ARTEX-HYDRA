@@ -1,5 +1,3 @@
-"use client";
-
 import { Sheet, SheetHead } from "@/ui/container";
 import { useTranslations } from "next-intl";
 import Link from "next/link";

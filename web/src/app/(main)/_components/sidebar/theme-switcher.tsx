@@ -1,46 +1,24 @@
 "use client";
 
-import { Monitor, Moon, Sun, Type } from "lucide-react";
+import { Monitor, Moon, Sun } from "lucide-react";
 
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { persistPreference } from "@/lib/preferences/preferences-storage";
-import { applySkin } from "@/lib/preferences/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 const THEME_CYCLE = ["light", "dark", "system"] as const;
 
 // 主题名只进 aria-label，让屏幕阅读器听到「当前主题：深色」而不是
-// light/dark/system；文案走 themeSwitcher 命名空间，键名就是枚举值。
 
 /**
- * 外观一键切换：老主题（九套预设）↔ 新主题（纸本）。
- * 与偏好浮层里的「外观」是同一个偏好，这里只是给一个不用开浮层的入口。
+ * 明暗三态循环：浅色 → 深色 → 跟随系统。
+ *
+ * 这里原本还有一个 SkinSwitcher（老主题 ↔ 纸本外观的一键切换入口）。
+ * 纸本 / 编年主题连同 data-skin 这一维度已整体移除，控制台只剩科技风预设，
+ * 那个按钮点下去只会原地打转，所以连组件带偏好一起删掉了。
  */
-export function SkinSwitcher() {
-  const t = useTranslations("themeSwitcher");
-  const skin = usePreferencesStore((s) => s.skin);
-  const themePreset = usePreferencesStore((s) => s.themePreset);
-  const setSkin = usePreferencesStore((s) => s.setSkin);
-
-  const next = skin === "editorial" ? "classic" : "editorial";
-  return (
-    <Button
-      size="icon"
-      onClick={() => {
-        setSkin(next);
-        applySkin(next, themePreset);
-        void persistPreference("skin", next);
-      }}
-      aria-label={t(skin === "editorial" ? "skinAriaPaper" : "skinAriaClassic")}
-      title={t(skin === "editorial" ? "skinTitlePaper" : "skinTitleClassic")}
-      data-skin-state={skin}
-    >
-      <Type className="size-4" />
-    </Button>
-  );
-}
 
 export function ThemeSwitcher() {
   const t = useTranslations("themeSwitcher");

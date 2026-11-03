@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import { type StoreApi, useStore } from "zustand";
 
-import { getClientCookie } from "@/lib/cookie.client";
 import { type FontKey, fontRegistry } from "@/lib/fonts/registry";
 import {
   CONTENT_LAYOUT_VALUES,
@@ -12,8 +11,8 @@ import {
   SIDEBAR_COLLAPSIBLE_VALUES,
   SIDEBAR_VARIANT_VALUES,
 } from "@/lib/preferences/layout";
-import { SKIN_VALUES, THEME_MODE_VALUES, THEME_PRESET_VALUES } from "@/lib/preferences/theme";
-import { applySkin, applyThemeMode, subscribeToSystemTheme } from "@/lib/preferences/theme-utils";
+import { THEME_MODE_VALUES, THEME_PRESET_VALUES } from "@/lib/preferences/theme";
+import { applyThemeMode, subscribeToSystemTheme } from "@/lib/preferences/theme-utils";
 
 import { createPreferencesStore, type PreferencesState } from "./preferences-store";
 
@@ -32,21 +31,12 @@ function readDomState(): Partial<PreferencesState> {
   const themeModeAttr = getSafeValue(root.getAttribute("data-theme-mode"), THEME_MODE_VALUES);
   const resolvedMode = root.classList.contains("dark") ? "dark" : "light";
 
-  const skinAttr = getSafeValue(root.getAttribute("data-skin"), SKIN_VALUES);
-
-  // 新主题下 DOM 上的预设被钉死为纸本，不能拿它当用户的真实选择 ——
-  // 否则「切过去看一眼再切回老主题」会把手选的那套预设丢掉。
-  // 这种情况下去 cookie 里读原始值（boot 脚本也会按同一个 cookie 恢复）。
-  const presetRaw =
-    skinAttr === "editorial"
-      ? getSafeValue(getClientCookie("theme_preset"), THEME_PRESET_VALUES)
-      : getSafeValue(root.getAttribute("data-theme-preset"), THEME_PRESET_VALUES);
-
   return {
-    skin: skinAttr,
     themeMode: themeModeAttr ?? resolvedMode,
     resolvedThemeMode: resolvedMode,
-    themePreset: presetRaw,
+    // 预设走白名单：历史 cookie / DOM 上可能还写着已下线的 "paper"，
+    // 命中不了白名单时返回 undefined，由下面的 definedOnly 跳过、保留默认预设。
+    themePreset: getSafeValue(root.getAttribute("data-theme-preset"), THEME_PRESET_VALUES),
     font: getSafeValue(root.getAttribute("data-font"), FONT_VALUES),
     contentLayout: getSafeValue(root.getAttribute("data-content-layout"), CONTENT_LAYOUT_VALUES),
     navbarStyle: getSafeValue(root.getAttribute("data-navbar-style"), NAVBAR_STYLE_VALUES),
@@ -55,9 +45,22 @@ function readDomState(): Partial<PreferencesState> {
   };
 }
 
+/**
+ * 只把「确实读到了合法值」的字段并入 store。
+ *
+ * 不能直接 `{ ...prev, ...domState }`：白名单挡下非法值时返回的是 undefined，
+ * 展开会把 store 里本来正确的值改成 undefined（表现为预设下拉变成空选中态）。
+ */
+function definedOnly<T extends object>(partial: T): Partial<T> {
+  const out: Partial<T> = {};
+  for (const [k, v] of Object.entries(partial)) {
+    if (v !== undefined) (out as Record<string, unknown>)[k] = v;
+  }
+  return out;
+}
+
 export const PreferencesStoreProvider = ({
   children,
-  skin,
   themeMode,
   themePreset,
   font,
@@ -65,7 +68,6 @@ export const PreferencesStoreProvider = ({
   navbarStyle,
 }: {
   children: React.ReactNode;
-  skin: PreferencesState["skin"];
   themeMode: PreferencesState["themeMode"];
   themePreset: PreferencesState["themePreset"];
   font: PreferencesState["font"];
@@ -74,7 +76,6 @@ export const PreferencesStoreProvider = ({
 }) => {
   const [store] = useState<StoreApi<PreferencesState>>(() =>
     createPreferencesStore({
-      skin,
       themeMode,
       themePreset,
       font,
@@ -91,7 +92,7 @@ export const PreferencesStoreProvider = ({
 
     store.setState((prev) => ({
       ...prev,
-      ...domState,
+      ...definedOnly(domState),
       isSynced: true,
     }));
   }, [store]);
@@ -119,15 +120,9 @@ export const PreferencesStoreProvider = ({
       if (s.themeMode !== p.themeMode) applyFromMode(s.themeMode);
     });
 
-    // 外观变化：切到新主题时把预设钉到纸本，切回老主题时恢复原先那套。
-    const unsubscribeSkin = store.subscribe((s, p) => {
-      if (s.skin !== p.skin) applySkin(s.skin, s.themePreset);
-    });
-
     return () => {
       unsubscribeMedia?.();
       unsubscribeStore();
-      unsubscribeSkin();
     };
   }, [store]);
 

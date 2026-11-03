@@ -1,5 +1,3 @@
-"use client";
-
 import { Masthead } from "@/ui/container";
 import { useTranslations } from "next-intl";
 

@@ -3,13 +3,14 @@ import type * as React from "react";
 import { ApiBar } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 
-// ── 版块原语（纸本页面语言）────────────────────────────────────────────────
+// ── 版块原语（SheetHead / Panel / Sheet 等）─────────────────────────────────
 //
 // 这一组只负责「结构 → 排版」的锚点，和 editorial.tsx 的分工一样：
 //
-//   · 默认外观是**现在的卡片**（圆角 + 描边 + 卡底），所以老主题一个像素都不变；
-//   · 纸本外观（data-skin="editorial"）由 styles/skin-editorial.css 把卡片压平成
-//     「上沿一条发丝线 + 标题行 + 记录行 + 落款」，不需要页面自己写样式。
+//   · 外观就是**现在的卡片**（圆角 + 描边 + 卡底），现存所有主题预设通用；
+//   · 曾由 styles/skin-editorial.css（data-skin="editorial" 皮肤层）把卡片压平成
+//     报纸形态，该皮肤层已随「纸本 / 编年」主题整体移除；锚点（secnum / apibar）
+//     现由 styles/editorial.css 统一隐藏，页面自己不需要写样式。
 //
 // 一次只做一个取值的硬约束：
 //   结构锚点写成 data-editorial="sheet|sheet-head|sheet-foot|group-head|record"，
@@ -189,7 +190,10 @@ export function RecordRow({
 export function RecordSub({ items }: { items: React.ReactNode[] }) {
   const nodes = items.filter((x) => x !== null && x !== undefined && x !== "");
   return (
-    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+    <div
+      data-editorial="rec-sub"
+      className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground"
+    >
       {nodes.map((node, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: 以位置定身份，内容可能重复
         <span key={i} className="inline-flex items-center gap-2">

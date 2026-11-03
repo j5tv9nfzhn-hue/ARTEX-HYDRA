@@ -2,23 +2,24 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-// ── 编辑排版原语（方案 A · 纸张 · 编年）──────────────────────────────────────
+// ── 版块原语（报头 / 章节 / 指标带 / 面板）─────────────────────────────────
 //
-// 硬约束：这些组件的**默认外观必须与改造前逐像素一致**。
+// 硬约束：这些组件的**默认外观在各主题预设下完全一致**。
 //
-// 报纸形态（报头双线、衬线大标题、章节号 01/02、数据栏竖线、发丝线）
-// 全部由 web/src/styles/editorial.css 里 `[data-theme-preset="paper"]` 的规则开启，
-// 组件本身只负责输出稳定的结构锚点（data-editorial）。因此切到其余任何预设时，
-// 页面回落到改造前的观感 —— 现有主题零影响。
+// 组件本身只负责输出稳定的结构锚点（data-editorial），不含任何主题分支。
+// 曾经由 `[data-theme-preset="paper"]` + `data-skin="editorial"` 两层规则把
+// 这些锚点翻译成报纸形态（报头双线、衬线大标题、章节号、数据栏竖线、发丝线），
+// 该主题与皮肤层已整体移除；现在 web/src/styles/editorial.css 只把 secnum /
+// apibar 默认隐藏起来，避免锚点内容以裸文本漏出。
 //
 // 刻意不引入 useTheme / 不读 dataset：渲染结果与主题无关，避免水合不一致，
 // 也让这套原语在 server component 里可用。
 
 /**
- * 报头。非纸本主题下等价于「h1 + 副标题」的普通页头。
+ * 报头。在任何主题预设下都等价于「h1 + 副标题」的普通页头。
  *
  * titleClassName / subtitleClassName 用来承接各页原本的字号，避免为了统一页头
- * 而把其他主题的标题悄悄改小 —— 纸本主题下这两者都会被 clamp 后的衬线字号覆盖。
+ * 而把其他主题的标题悄悄改小 —— 这两处的字号始终由各页自己通过 className 决定。
  */
 export function Masthead({
   title,
@@ -43,7 +44,7 @@ export function Masthead({
 }
 
 /**
- * 章节标题。`index` 是纸本主题下的章节号（01/02…），其余主题下不渲染可见内容。
+ * 章节标题。`index` 是章节号（01/02…），当前所有预设下都不渲染可见内容。
  */
 export function SectionHead({
   index,
@@ -68,7 +69,7 @@ export function SectionHead({
   );
 }
 
-/** 指标带外层。纸本主题下把「主 KPI + 次级矩阵」压平成报纸的数据栏。 */
+/** 指标带外层（主 KPI + 次级矩阵）。 */
 export function KpiBand({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
     <div data-editorial="kpi-band" className={className}>
@@ -79,7 +80,7 @@ export function KpiBand({ className, children }: { className?: string; children:
 
 /**
  * 次级指标行。等价于 FadeIn（同样的 .animate-fade-up + 内联 animation-delay），
- * 只是多挂一个结构锚点，供纸本主题改成四栏竖线分栏。
+ * 只是多挂一个结构锚点，历史上供纸本主题改成四栏竖线分栏。
  */
 export function KpiRow({
   className,
@@ -105,11 +106,11 @@ export function KpiRow({
 //
 // Panel 是 03 设计的统一容器：编号头（01 / 02…）+ 正文 + 后端接口锚点条。
 //
-// 与既有原语同一硬约束：默认外观【必须与改造前逐像素一致】。这里只输出结构
-// 锚点（data-editorial）与中性 Tailwind；报纸形态——发丝线、衬线标题、章节号、
-// 等宽接口条——全部交给 styles/skin-editorial.css 里的
-// :root[data-skin="editorial"] 规则。data-skin="classic" 时本组件退化成一个
-// 普通圆角卡片，老主题零影响。
+// 与既有原语同一硬约束：这里只输出结构锚点（data-editorial）与中性 Tailwind。
+// 曾经由 styles/skin-editorial.css（data-skin="editorial" 皮肤层）把这些锚点
+// 翻译成报纸形态，该皮肤层已随「纸本 / 编年」主题整体移除；现在锚点由
+// styles/editorial.css 统一隐藏（secnum / apibar 默认 display:none），
+// 所以本组件在现存任何预设下都是一个普通圆角卡片，外观零差异。
 //
 // api 参数是「不违背后端、杜绝空匹配」的落点：它把该面板实际依赖的
 // web/src/lib/api.ts 方法名显式渲染出来，让面板上每个控件都能追溯到真实接口。
@@ -154,7 +155,7 @@ export function Panel({
   bodyClassName,
   children,
 }: {
-  /** 纸本主题下渲染为章节号（01 / 02…），其余主题下不显形。 */
+  /** 章节号（01 / 02…）。当前所有预设下都由 editorial.css 隐藏，仅作结构标记。 */
   index?: string;
   title?: React.ReactNode;
   icon?: React.ElementType;
@@ -197,7 +198,7 @@ export function Panel({
   );
 }
 
-/** 面板栅格。默认单列，纸本主题下由 CSS 改成报纸分栏。 */
+/** 面板栅格。默认单列。 */
 export function PanelGrid({
   cols,
   className,

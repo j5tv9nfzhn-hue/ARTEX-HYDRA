@@ -997,7 +997,10 @@ export default function SystemSettingsPage() {
                 onChange={(e) => setShellBin(e.target.value)}
               />
             </div>
-            {shellInfo && (
+            {/* shellInfo.runtime 在接口未返回/后端未起时是 undefined，此前直接
+                .resolved 会整页崩（Runtime TypeError 白屏）。契约上 runtime 可能缺席，
+                守卫收在块级：整块 runtime 明细只在 runtime 到位时渲染。 */}
+            {shellInfo?.runtime && (
               <div className="text-muted-foreground flex flex-col gap-1 border-t pt-3 text-xs">
                 <span>
                   {t("shell.current")}：
