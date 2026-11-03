@@ -1100,7 +1100,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/conversations/{id}/events", s.streamConversation)                                // 实时:会话活动 SSE(harness 时间线)
 	mux.HandleFunc("GET /api/conversations/{id}/budget", s.convBudgetInfo)                                    // 成本:会话 token 预算与已用量
 
-	mux.HandleFunc("GET /api/agents", s.pgListAgents) // 只列会话 Agent(运行时模板见下)
+	mux.HandleFunc("GET /api/agents", s.pgListAgents)               // 只列会话 Agent(运行时模板见下)
 	mux.HandleFunc("GET /api/orchestration", s.pgListOrchestration) // 根/子代理的系统提示词模板 + 共用运行配置
 	mux.HandleFunc("POST /api/agents", s.pgCreateAgent)
 	mux.HandleFunc("GET /api/agents/{key}", s.pgGetAgent)
@@ -3848,9 +3848,9 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		VerifySamplePercent *int    `json:"verify_sample_percent"`
 		// 判重（移植自 Strix，见 server/dedupe.go）：开关、专用模型配置 id
 		//（0 = 用当前启用的配置）、单次判重超时秒数。与复核闸门一样在入库时读取。
-		DedupeEnabled    *bool   `json:"dedupe_enabled"`
-		DedupeProfileID  *int64  `json:"dedupe_profile_id"`
-		DedupeTimeoutSec *int    `json:"dedupe_timeout_seconds"`
+		DedupeEnabled    *bool  `json:"dedupe_enabled"`
+		DedupeProfileID  *int64 `json:"dedupe_profile_id"`
+		DedupeTimeoutSec *int   `json:"dedupe_timeout_seconds"`
 		// 工具执行器：PowerShell / CMD / Git Bash（无 auto）。shell_bin 是显式路径覆盖。
 		// 两者都先真跑探测，跑不起来直接 400 且不写库（见 server/shell_settings.go）。
 		ShellMode *string `json:"shell_mode"`

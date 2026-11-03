@@ -44,12 +44,12 @@ type DBFinding struct {
 	SeverityChangeConditions string
 	// CVSS v3.1(移植自 Strix reporting 工具的 cvss_breakdown / _calculate_cvss)。
 	// 空串 = 上报时没有评分;与「评过分且是 0.0 分」(CVSS 为 "0.0")在数据上分得开。
-	CVSS          string
-	CVSSBreakdown string
-	CVSSVector    string
-	Report                   string // 详细报告(Markdown);仅 GetFinding 填充,列表查询不带
-	CreatedAt                time.Time
-	TaskDescription          string // populated via LEFT JOIN on tasks
+	CVSS            string
+	CVSSBreakdown   string
+	CVSSVector      string
+	Report          string // 详细报告(Markdown);仅 GetFinding 填充,列表查询不带
+	CreatedAt       time.Time
+	TaskDescription string // populated via LEFT JOIN on tasks
 }
 
 // Finding triage states (findings.status).

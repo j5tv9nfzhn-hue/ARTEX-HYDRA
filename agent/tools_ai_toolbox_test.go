@@ -16,6 +16,18 @@ import (
 	"testing"
 )
 
+// clearProxyEnv 让指向 httptest 本地服务的请求直连。
+//
+// resolveHTTPSettings 在没有显式代理时会回落到 HTTP(S)_PROXY/ALL_PROXY，而
+// getPooledTransport 对显式代理用的是 http.ProxyURL，不认 NO_PROXY：开着代理的
+// 开发机或沙箱里，连 127.0.0.1 的请求也会被送进代理，本地测试服务根本收不到。
+func clearProxyEnv(t *testing.T) {
+	t.Helper()
+	for _, k := range []string{"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"} {
+		t.Setenv(k, "")
+	}
+}
+
 func docxParts(t *testing.T, data []byte) map[string]string {
 	t.Helper()
 	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
@@ -147,6 +159,7 @@ func TestDocInjectPDFInvisible(t *testing.T) {
 // TestDocInjectUploadsMultipart：投递要真的走 multipart，并且把服务端响应带回给
 // worker（它需要判断解析是否发生）。
 func TestDocInjectUploadsMultipart(t *testing.T) {
+	clearProxyEnv(t)
 	var gotName, gotContent string
 	var gotField string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -203,6 +216,7 @@ func TestDocInjectUploadsMultipart(t *testing.T) {
 // TestAIChatProbeEscalatesAndExtracts：第一轮被拒后必须**换角度**继续，而不是
 // 重发同一句话；命中后要抽到结构化证据（端点/配置键）。
 func TestAIChatProbeEscalatesAndExtracts(t *testing.T) {
+	clearProxyEnv(t)
 	var seen []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {

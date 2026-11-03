@@ -327,7 +327,9 @@ func (m *Manager) ConcurrencyLimit() (enabled bool, limit int) {
 }
 
 // SetDedupeProvider 注入判重模型的解析函数（见 Manager.dedupeProvider）。
-func (m *Manager) SetDedupeProvider(fn func(profileID int64) (llm.Provider, bool)) { m.dedupeProvider = fn }
+func (m *Manager) SetDedupeProvider(fn func(profileID int64) (llm.Provider, bool)) {
+	m.dedupeProvider = fn
+}
 
 // SetConcurrency persists the running-task concurrency cap. limit<1 is clamped to 1.
 func (m *Manager) SetConcurrency(enabled bool, limit int) error {

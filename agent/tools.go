@@ -59,14 +59,14 @@ type ToolSet struct {
 	findingRecorder   FindingRecorder
 	// findingDedupe 由宿主注入：判断候选发现是不是已有发现的重复（nil = 不判重）。
 	findingDedupe FindingDedupe
-	as                *db.AssetStore   // asset store (optional; nil = asset tools not available)
-	cs                *db.CompanyStore // company store (optional)
-	ts                *db.ExplorationStore
-	worker            string
-	taskID            int64  // tasks.id; 0 when unknown (tests / orchestrator cross-task reads)
-	proxyAddr         string // recording MITM or egress proxy URL for built-in HTTP tools
-	proxyCACert       string // recording MITM CA cert path for built-in HTTP tools
-	workDir           string // per-run working directory for built-in file/wordlist tools
+	as            *db.AssetStore   // asset store (optional; nil = asset tools not available)
+	cs            *db.CompanyStore // company store (optional)
+	ts            *db.ExplorationStore
+	worker        string
+	taskID        int64  // tasks.id; 0 when unknown (tests / orchestrator cross-task reads)
+	proxyAddr     string // recording MITM or egress proxy URL for built-in HTTP tools
+	proxyCACert   string // recording MITM CA cert path for built-in HTTP tools
+	workDir       string // per-run working directory for built-in file/wordlist tools
 	// steer 记录本 run 内的工具选择分布，让通用工具在决策点把活转给专用工具，
 	// 见 agent/tool_steering.go（实测 http_request 占 49.2%、http_sequence 仅 1.0%；
 	// 第二版按连击形态分级：软提示 3、强指令 6、有预算的硬拦截 10）。
@@ -1560,14 +1560,14 @@ func (t *ToolSet) addFinding() actool.CoreTool {
 		// 让它改到一致为止，别让库里留下「严重度与分数打架」的行。
 		cvssErrs := cvss.Validate(a.CVSSBreakdown)
 		if len(cvssErrs) > 0 {
-			return actool.Errorf("漏洞未登记，CVSS 校验未通过：\n- "+strings.Join(cvssErrs, "\n- ")+
-				"\n- cvss_breakdown 必须给出全部八项 CVSS v3.1 基础指标：attack_vector / attack_complexity /"+
+			return actool.Errorf("漏洞未登记，CVSS 校验未通过：\n- " + strings.Join(cvssErrs, "\n- ") +
+				"\n- cvss_breakdown 必须给出全部八项 CVSS v3.1 基础指标：attack_vector / attack_complexity /" +
 				" privileges_required / user_interaction / scope / confidentiality / integrity / availability。"), nil
 		}
 		cvssBreakdown := cvss.Parse(a.CVSSBreakdown)
 		cvssScore, _, cvssVector, cvssErr := cvss.Calculate(cvssBreakdown)
 		if cvssErr != nil {
-			return actool.Errorf("漏洞未登记，CVSS 计算失败："+cvssErr.Error()), nil
+			return actool.Errorf("漏洞未登记，CVSS 计算失败：" + cvssErr.Error()), nil
 		}
 		cvssScoreText := strconv.FormatFloat(cvssScore, 'f', 1, 64)
 		cvssBreakdownJSON := cvssBreakdown.CanonicalJSON()

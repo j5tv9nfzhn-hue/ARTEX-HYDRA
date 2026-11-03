@@ -100,8 +100,8 @@ type RetryConfig struct {
 	// EmptyAttempts/EmptyInterval:SDK 空响应重试(完成但无 content block,仅 openai
 	// 格式),映射为 llm.Config.EmptyResponseRetries / EmptyResponseInterval。
 	// 默认 2 次、同一条指数梯度。
-	EmptyAttempts  int
-	EmptyInterval  time.Duration
+	EmptyAttempts int
+	EmptyInterval time.Duration
 	// StreamAttempts/StreamInterval:同 provider 安全窗口重试——本项目在 SDK 之上补的
 	// 一层,只在「还没向调用方交付任何输出」时重放断流/过载/流内 429。SDK 看不到它,
 	// 由 server/task_llm.go 消费。默认 2 次、0.5s 起指数(封顶 4s)。

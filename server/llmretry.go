@@ -53,7 +53,7 @@ func resolveRetry(o db.RetryOverride, pol db.LLMRetryPolicy) agent.RetryConfig {
 		ConnectMultiplier: float64(multiplier),
 		ConnectMax:        time.Duration(maxMS) * time.Millisecond,
 		EmptyAttempts:     empty.Attempts, EmptyInterval: empty.Interval(),
-		StreamAttempts:    stream.Attempts, StreamInterval: stream.Interval(),
+		StreamAttempts: stream.Attempts, StreamInterval: stream.Interval(),
 	}
 }
 

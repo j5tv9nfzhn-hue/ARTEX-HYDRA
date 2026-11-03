@@ -26,6 +26,7 @@ func (failingFindingRecorder) Record(context.Context, db.RecordFindingInput, []d
 const analysisJSON = `,"counterevidence":"该路径未见输入校验、WAF 或鉴权检查；已分别以已登录/未登录测过"` +
 	`,"confidence":"medium","confidence_rationale":"仅有静态链路，没能起服务复现"` +
 	`,"severity_change_conditions":"确认该路由暴露在未认证公网流量下则升为 critical"`
+
 // cvssLowJSON 是「CVSS 校准」的合格样本：AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:L/A:N 算得 3.0 分，
 // 落在 low 档，与这些用例里的 severity=low 一致。
 //

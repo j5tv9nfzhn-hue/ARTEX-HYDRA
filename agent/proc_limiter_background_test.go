@@ -140,8 +140,16 @@ func TestRunOwnBackgroundReleasesSlotOnExit(t *testing.T) {
 		}
 		t.Fatalf("应当正好占掉 %d 个名额，实得 %d", quota, len(held))
 	}
-	for _, r := range held[:quota-1] {
-		r()
+	// quota 为 1（2~3 核机器）时没法「占一个、留一个」：先把测试占的名额全还回去，
+	// 让后台进程拿到唯一名额；进程退出后仍可用「能否重新拿满」判定是否归还。
+	if quota == 1 {
+		for _, r := range held {
+			r()
+		}
+	} else {
+		for _, r := range held[:quota-1] {
+			r()
+		}
 	}
 	defer func() {
 		for _, r := range held {

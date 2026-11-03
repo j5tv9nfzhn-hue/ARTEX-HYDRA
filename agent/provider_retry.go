@@ -27,6 +27,7 @@ import (
 	"github.com/Autumn-27/artex/llmclass"
 	"github.com/Autumn-27/norma/llm"
 )
+
 // Strix DEFAULT_MODEL_RETRY 的梯度：2s 起、每次翻倍、封顶 90s。次数见
 // defaultConnectAttempts（5）。与 Strix 唯一的形式差别是抖动：那边 jitter=False，
 // 这里也不加抖动，好让两边每一次的等待完全相同。
@@ -72,6 +73,7 @@ func ladderDelay(attempt int, initial time.Duration, multiplier float64, max tim
 	}
 	return time.Duration(d)
 }
+
 // 重试、server 的安全窗口重试都按同一个约定读它，各自再写一份正则迟早会漂移。
 func modelErrorStatus(err error) int {
 	return llmclass.StatusOf(err)
