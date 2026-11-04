@@ -165,17 +165,6 @@ An attacker-controlled feed is not automatically native code execution if indepe
 - An update feed is mutable but every artifact and version transition is independently authenticated.
 - A secret-looking value is scoped to synthetic/test data or cannot authorize any downstream action.
 
-## Remediation
-
-- Load local application UI and isolate remote content in an unprivileged `WebContentsView` or external browser.
-- Keep Node integration disabled, context isolation enabled, and renderer sandboxing enabled.
-- Expose narrow preload APIs with fixed operations and strict schemas.
-- Validate every IPC sender frame, application identity, authorization context, and argument in the main process.
-- Parse and allowlist navigation destinations consistently across every navigation path.
-- Restrict permissions per session and requesting origin.
-- Keep credentials and encryption keys outside renderer reach.
-- Authenticate update metadata and artifacts, enforce rollback policy, and pin publishers.
-
 ## Summary
 
 Electron security depends on which document and frame can reach which native capability. Map navigation, preload exports, IPC sender checks, permissions, storage, protocols, and updates as one authority graph, then validate the entire path to the privileged operation.

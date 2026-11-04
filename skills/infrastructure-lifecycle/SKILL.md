@@ -198,7 +198,7 @@ Include:
 8. highest claimability level and confidence in live-consumer/prevalence evidence
 9. sensor/data-handling authorization when acquisition could receive existing traffic
 10. separate impact analysis for each mail, identity, update, telemetry, code, or control consumer
-11. remediation across both the endpoint and every retained consumer
+11. impact reach across both the endpoint and every retained consumer
 
 ## Common False Positives
 
@@ -210,16 +210,6 @@ Include:
 - A package name is unregistered but the consumer is pinned to a private registry with no public fallback, the scope is routed by `.npmrc`, or the command is already satisfied by a locally installed binary.
 - The name is unregistered but registry policy, reservation, dispute, or unpublish state prevents the contested registration.
 - Inbound sensor traffic cannot be attributed to an in-scope consumer/version.
-
-## Remediation
-
-- Remove or replace references in every supported and still-deployed version.
-- Retain defensive ownership of externally embedded domains/resource names for the consumer's realistic lifetime.
-- Sign update/config/package content with independently managed, rotatable keys and enforce rollback/version policy.
-- Eliminate implicit public fallback; pin registries, publishers, hashes, and plugin identities.
-- Inventory domain/MX/provider/package dependencies in decommission workflows and continuous monitoring.
-- Revoke old credentials/tokens, rotate trust, and provide a migration/kill-switch path for stranded clients.
-- Monitor DNS, CT, registrar, provider binding, package namespace, and live outbound traffic for ownership drift.
 
 ## Summary
 

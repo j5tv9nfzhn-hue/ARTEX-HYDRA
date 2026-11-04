@@ -43,7 +43,7 @@ Security testing for Next.js applications. Focus on authorization drift across r
 
 ## Reconnaissance
 
-At each assessment, establish the deployed build from package metadata, lockfiles, or runtime evidence. Verify release/support status and applicable fixes through current official docs, advisories, or upstream source; linked advisories are starting points, not a complete or permanently current list. Recheck when the target build or proposed remediation changes, and mark status unverified if evidence is unavailable.
+At each assessment, establish the deployed build from package metadata, lockfiles, or runtime evidence. Verify release/support status and applicable fixes through current official docs, advisories, or upstream source; linked advisories are starting points, not a complete or permanently current list. Recheck when the target build or the affected component changes, and mark status unverified if evidence is unavailable.
 
 **Route Discovery**
 

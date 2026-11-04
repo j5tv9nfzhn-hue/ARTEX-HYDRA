@@ -141,7 +141,6 @@ When initial attempts fail:
 - Document every confirmed vulnerability with full details
 - Include all severity levels—low findings may enable chains
 - Complete reproduction steps and working PoC
-- Remediation recommendations with specific guidance
 - Note areas requiring additional review beyond current scope
 
 ## Agent Strategy

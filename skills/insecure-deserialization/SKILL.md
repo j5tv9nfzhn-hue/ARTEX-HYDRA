@@ -153,7 +153,7 @@ When `TypeNameHandling` != `None`.
 2. Show impact: RCE (bounded command), auth bypass object, or privilege field manipulation
 3. Provide encoded payload and exact injection point (cookie name, parameter, header)
 4. Confirm on fixed version or alternate instance that identical payload fails safely
-5. Document library/version and gadget chain class names for remediation
+5. Document library/version and gadget chain class names for accurate attribution
 
 ## False Positives
 

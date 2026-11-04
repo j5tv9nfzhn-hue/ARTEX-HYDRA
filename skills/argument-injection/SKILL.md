@@ -142,16 +142,6 @@ For black-box testing, compare an ordinary operand with option-prefixed, delimit
 - A Unicode character is accepted but no narrow/Best-Fit conversion occurs.
 - The injected option exists on another release or platform but not the deployed target.
 
-## Remediation
-
-- Use argument-array process APIs and avoid shell/string construction.
-- Insert `--` before untrusted operands where every relevant parser supports it.
-- Validate operands against the target CLI's grammar, not a generic shell blacklist.
-- Fix security-sensitive option names and configuration paths in trusted code.
-- Generate configuration/auth files with a format-aware serializer that rejects control characters and ambiguous duplicates.
-- On Windows, keep data in wide-character APIs and verify child-runtime parsing rules.
-- Enforce authorization again at the privileged operation selected by the CLI.
-
 ## Summary
 
 Argument injection is control of a trusted program's behavior through its argv or a parser reached from argv. Preserve parser boundaries in the model: list-form execution, command-string tokenization, Windows runtime conversion, option parsing, and response/config-file parsing are distinct stages with distinct exploit conditions.

@@ -227,7 +227,7 @@ For each finding, include:
 4. exact Azure/Graph action and target resource
 5. effective permission or cross-plane path demonstrated
 6. policy, deny, network, licensing, or configuration prerequisites
-7. audit/sign-in/activity evidence and remediation at the correct control plane
+7. audit/sign-in/activity evidence at the correct control plane
 
 ## Common False Positives
 

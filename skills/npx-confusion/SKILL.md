@@ -201,7 +201,7 @@ Do not file documentation/comment-only references, locally satisfied commands, u
 
 Derive CVSS from the demonstrated path rather than a fixed severity label. Account for required developer/user action, registry and configuration prerequisites, runner permissions, credential availability, and the confidentiality, integrity, and availability actually exposed. A CI, release, container-build, or agent context can be severe, but the context name alone does not establish High or Critical impact.
 
-Deduplicate by root cause, affected asset/workflow, and remediation. Combine call sites when the same configuration mistake and fix apply; keep separate findings when the same candidate name affects different products, tenants, runner semantics, authority, or fixes.
+Deduplicate by root cause, affected asset/workflow, and affected execution path. Combine call sites that share the same configuration mistake and resolution order; keep separate findings when the same candidate name affects different products, tenants, runner semantics, or authority.
 
 ## False Positives
 
@@ -216,17 +216,6 @@ Deduplicate by root cause, affected asset/workflow, and remediation. Combine cal
 - The command resolves to the deliberately selected ecosystem tool and expected publisher.
 - The already-registered name belongs to the target's own organization.
 - An explicit `dlx` or `npm:` package spec is treated as missing-local fallback without evidence of a package/publisher mismatch.
-
-## Remediation
-
-- Install the intended package and invoke its local executable through an npm script.
-- For npm, bind and pin the provider: `npx --package @org/tool@<version> org-tool`; use `--no` when a missing dependency must fail.
-- For Bun, use `bunx --package @org/tool@<version> org-tool` and `--no-install` when remote installation is not intended.
-- Replace `yarn dlx`/`pnpm dlx` in repeatable or privileged workflows with a declared, locked dependency plus the runner's local `exec` command. When ephemeral execution is required, bind and pin the provider package explicitly.
-- For Deno, pin the `npm:` package and binary subpath, retain a reviewed lockfile, use cache-only operation where appropriate, and grant only the permissions the command requires.
-- Route private scopes to the intended registry and prevent public fallback.
-- Pin package versions and lockfiles in privileged workflows.
-- Replace bare `npx -y <name>` agent launchers with reviewed, publisher-qualified, version-pinned package specs.
 
 ## Summary
 

@@ -58,7 +58,6 @@ Structure agents by function:
 
 **Reporting**
 - Finding documentation
-- Remediation recommendations
 
 ## Coordination Principles
 

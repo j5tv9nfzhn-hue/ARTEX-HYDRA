@@ -83,7 +83,6 @@ Test each attack surface methodically. Spawn focused subagents for different are
 
 - Document all confirmed vulnerabilities with reproduction steps
 - Severity based on exploitability and business impact
-- Remediation recommendations
 - Note areas requiring further investigation
 
 ## Chaining

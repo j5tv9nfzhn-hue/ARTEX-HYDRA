@@ -249,7 +249,7 @@ Validate with the sink-specific skill (`xss`, `sql_injection`, `nosql_injection`
 - Preserve application/model/prompt/tool/corpus versions and all generation parameters available to the application.
 - Compare baseline and adversarial trials, record attempt and success counts, and distinguish deterministic application behavior from stochastic model behavior.
 - Validate authorization, data origin, downstream effects, persistence, or measured consumption outside the model transcript.
-- Split reports when weaknesses have independent reproductions, trust boundaries, owners, or remediations. Otherwise report one technical root cause and mention additional OWASP mappings as chain context.
+- Split reports when weaknesses have independent reproductions, trust boundaries, owners, or attack paths. Otherwise report one technical root cause and mention additional OWASP mappings as chain context.
 - Use `create_dependency_report` only for verified advisory-matched dependency CVEs. Use `create_vulnerability_report` for dynamically verified application, model, RAG, agent, or supply-chain findings.
 
 ## Summary
