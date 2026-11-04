@@ -164,14 +164,25 @@ func TestClassifyWithDisabledDefaultKeyword(t *testing.T) {
 
 func TestSetRulesAffectsClassify(t *testing.T) {
 	// 进程级热更新：设置页保存后立即对所有判定路径生效。
+	//
+	// 探针的两个约束，缺一个测试就失去意义：
+	//
+	//  1. 必须带状态码（这里用 500 → 默认判 retry）。没有状态码时，清空词表后它会
+	//     落到「无状态码、非传输层 → switch」的默认分支（该分支的存在与用途见
+	//     TestClassifyWithDisabledDefaultKeyword 的注释），于是「清空后不再命中」
+	//     与「清空后落到默认分支」在断言上无法区分——写得再严也测不出热更新。
+	//  2. 措辞本身不能命中任何内置词表（也不能是「额度耗尽」这类额度信号），
+	//     否则清空人工词表后它仍会因内置口径判 switch，同样无法区分。
+	//
+	// 满足这两点后，清空前后的判据分别是 switch 与 retry，热更新才真正可验证。
 	defer SetRules(Rules{})
-	SetRules(Rules{SwitchKeywords: []string{"vendor-y 额度耗尽"}})
-	if got := Classify(errors.New("openai: vendor-y 额度耗尽")); got != VerdictSwitch {
-		t.Fatalf("进程级词表应立即生效，实得 %s", got)
+	SetRules(Rules{SwitchKeywords: []string{"vendor-y 账户受限"}})
+	if got := Classify(statusErr(500, "vendor-y 账户受限")); got != VerdictSwitch {
+		t.Fatalf("进程级词表应立即生效（语义先于状态码），实得 %s", got)
 	}
 	SetRules(Rules{})
-	if got := Classify(errors.New("openai: vendor-y 额度耗尽")); got == VerdictSwitch {
-		t.Fatal("清空词表后不应再命中该词")
+	if got := Classify(statusErr(500, "vendor-y 账户受限")); got == VerdictSwitch {
+		t.Fatalf("清空词表后不应再命中该词，实得 %s", got)
 	}
 }
 

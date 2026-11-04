@@ -233,7 +233,7 @@ func IsQuotaExhausted(message string) bool {
 		"exceeded your current quota", "billing_hard_limit_reached",
 		"billing hard limit", "billing_not_active", "credit balance", "insufficient credit",
 		"insufficient balance", "balance is too low", "payment required", "status 402",
-		"余额不足", "额度不足", "额度已用尽", "欠费",
+		"余额不足", "额度不足", "额度已用尽", "额度耗尽", "额度已耗尽", "欠费",
 	}
 	for _, marker := range markers {
 		if strings.Contains(message, marker) {
@@ -321,7 +321,13 @@ func ClassifyWith(err error, rules Rules) Verdict {
 		return VerdictFail
 	case containsAny(msg, switchKW):
 		return VerdictSwitch
-	case containsAny(msg, retryKW):
+	// quotaTransientLimit 必须在这里接住：IsQuotaExhausted 用它把「其实是速率限制
+	// 的 quota 措辞」排除在「额度耗尽」之外，但排除之后若没人认领，这类文案会一路
+	// 掉到下面的状态码分支——而它们往往没有状态码（供应商直接把限流写进错误文案），
+	// 于是被 code==0 的默认分支判成 Switch，正好把「本该留在当前端点重试」的故障
+	// 变成「把用户踢到另一家供应商」。与 IsQuotaExhausted 共用同一条正则，是为了
+	// 让「不算额度耗尽」和「算速率限制」永远是同一个口径，不会各改一处而漂移。
+	case containsAny(msg, retryKW), quotaTransientLimit.MatchString(msg):
 		return VerdictRetry
 	}
 
