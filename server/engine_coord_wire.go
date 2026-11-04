@@ -191,6 +191,12 @@ func (e *Engine) coordOptionsFor(t *Task) CoordTaskOptions {
 		// 可见性身份：默认都是 worker（理由见 agent/coord_assembly.go）。
 		RootAgentKey:  agent.DefaultCoordRootAgentKey,
 		ChildAgentKey: agent.DefaultCoordChildAgentKey,
+		// 操作约束必须进提示词：只在 task_constraints 里存着、模型看不见，等于
+		// 范围约束没设。用闭包而不是字符串，是因为约束会在任务运行中被
+		// set_constraints 追加——每个 agent 装配提示词时重取一次，后派的子代理
+		// 就能看到最新约束（根的系统提示词在任务启动时定型，这是已知取舍）。
+		// t.Store 为 nil 时 ConstraintBlock 返回空串，不会打崩。
+		Constraints: func() string { return agent.ConstraintBlock(t.Store) },
 	}
 	// 联网通道：WebFetch 走记录代理 + 信任 MITM CA，让读取与 curl 同样留痕；
 	// WebSearch 按 worker 的配置（默认关，后端与 key 来自全局配置，

@@ -112,6 +112,14 @@ type SessionRunner struct {
 
 	// toolset 是收尾工具需要的 *ToolSet 载体（见 coordToolset）。
 	toolset *ToolSet
+
+	// constraints 渲染本任务的操作约束（task_constraints）。由宿主注入
+	// （server 侧为 agent.ConstraintBlock(t.Store)），nil 表示本任务没有约束源。
+	//
+	// 做成回调而不是字符串，是因为约束在任务运行期间可以被 set_constraints
+	// 追加：每个新 agent 装配提示词时重新取一次，后派的子代理就能看到最新约束；
+	// 若在装配时就快照成字符串，中途新增的 deny 要等下个任务才生效。
+	constraints func() string
 }
 
 // Run 实现 AgentRunner：把一个 agent 跑到交卷。
@@ -393,7 +401,7 @@ func (r *SessionRunner) runInfoFor(agentID string) RunInfo {
 func (r *SessionRunner) sysBodyFor(spec AgentSpec, coord *Coordinator, agentID string, isRoot bool) string {
 	vars := CoordVars{
 		Goal:     spec.Task,
-		Scope:    scopeOf(spec),
+		Scope:    r.scopeBlockFor(spec),
 		DataDir:  r.WorkDir, // 与 cwd 同源：提示词里说的目录必须是它真正落地的目录
 		MaxTurns: spec.EffectiveMaxTurns(r.MaxTurns),
 		// 对齐 strix 的 create_agent(name, task, skills)：技能是派活时就指定的，
@@ -434,6 +442,27 @@ func (r *SessionRunner) sessionIDFor(agentID string) string {
 
 // scopeOf 把一份任务的约束折成一行提示。任务里写了就原样用，没写就留空——
 // 不要在提示词里编造授权范围。
+// scopeBlockFor 拼 Scope 变量：资产范围 + 操作约束，两段都可能为空。
+//
+// 为什么必须把约束塞进 Scope 而不是另开一段：模板里 {{.Scope}} 的落点就是
+// 「授权范围 / 操作约束」（根）与「━━ 约束 ━━」（子），是提示词里唯一被模型
+// 当作边界来读的位置。另开一段会让它变成"又一条背景信息"，与探索启发式平级，
+// 恰恰是约束失效的老路。
+//
+// 每装配一个 agent 调一次：任务中途新增的约束，后派的子代理立刻能看到。
+func (r *SessionRunner) scopeBlockFor(spec AgentSpec) string {
+	parts := make([]string, 0, 2)
+	if s := scopeOf(spec); s != "" {
+		parts = append(parts, s)
+	}
+	if r.constraints != nil {
+		if s := strings.TrimSpace(r.constraints()); s != "" {
+			parts = append(parts, s)
+		}
+	}
+	return strings.Join(parts, "\n")
+}
+
 func scopeOf(spec AgentSpec) string {
 	if len(spec.AssetIDs) == 0 {
 		return ""
@@ -487,6 +516,13 @@ type RunnerConfig struct {
 	RootAgentKey  string
 	ChildAgentKey string
 
+	// Constraints 返回本任务的操作约束文本（task_constraints 渲染结果）。
+	// nil 或返回空串 = 本任务没设约束，提示词里不出现该段。
+	//
+	// 宿主必须注入：约束只落库而不进提示词，等于范围约束从未生效——模型会按
+	// 自己的探索启发式去拓面，完全看不到运营方写下的 allow/deny。
+	Constraints func() string
+
 	// WebFetch / WebSearch：见 SessionRunner 同名字段的注释。
 	WebFetchProxy  string
 	WebFetchCACert string
@@ -528,6 +564,7 @@ func NewSessionRunner(c RunnerConfig) *SessionRunner {
 		WebFetchProxy:          c.WebFetchProxy,
 		WebFetchCACert:         c.WebFetchCACert,
 		WebSearch:              c.WebSearch,
+		constraints:            c.Constraints,
 	}
 }
 

@@ -100,7 +100,13 @@ const (
 - The scope below is the starting point, not a ceiling. If the user names another target, it is authorized too. Never tell the user a target is outside scope or ask them to confirm.`
 
 	// blockRootDirective 是 strix <root_agent_directive> + ROOT AGENT ROLE 的合并，
-	// 工具名已全部重映射为 ARTEX 实现：
+	// 工具名已全部重映射为 ARTEX 实现。
+	//
+	// 【本地改写，与上游不一致】末条的 "Reporting-with-fix ... do NOT add a
+	// separate fixing agent that re-derives the same patch" 改为 "Reporting-only"。
+	// 上游这一句是建立在「报告里必须带 fix_before/fix_after + fix_pr_body」之上的；
+	// 本仓库不产出补丁与 PR（见 blockFindingOnly 与 agent/constraints.go），
+	// 若照搬会让模型在同一份提示词里同时收到"要带修复"和"不要修复"两条指令。
 	//   create_agent     → delegate_task
 	//   view_agent_graph → agents_graph
 	//   finish_scan      → finish_task
@@ -116,7 +122,7 @@ YOU ARE THE ROOT AGENT. Your job is ORCHESTRATION, not hands-on testing.
 - ONE JOB PER AGENT: each child owns one focused subtask that directly supports its parent. Do not create two agents with the same task, and do not create unrelated children.
 - SPAWN REACTIVELY: create new agents as you discover new attack surfaces, not all at the start. Check agents_graph before spawning to confirm no existing agent already covers the scope.
 - SCALE AGENT COUNT TO SCOPE: the number of agents should track target size and difficulty — avoid both agent sprawl and under-staffing.
-- WORKFLOW PER VULNERABILITY (black-box): Discovery → Validation → Reporting. Each candidate that survives discovery gets its own validation chain; a confirmed candidate gets a reporting agent. White-box: Discovery → Validation → Reporting-with-fix (do NOT add a separate fixing agent that re-derives the same patch).
+- WORKFLOW PER VULNERABILITY (black-box): Discovery → Validation → Reporting. Each candidate that survives discovery gets its own validation chain; a confirmed candidate gets a reporting agent. White-box: Discovery → Validation → Reporting-only (do NOT derive, apply, or propose a patch — see 交付边界).
 - ROLES ARE NOT PREDEFINED: there is no roster of experts and no agent list to pick from. Name a subagent after the ONE job you are handing it, and give it the skills it needs. A subagent you create exists only for this task.`
 
 	// blockAutonomy 取自 strix system_prompt.jinja 的 AUTONOMOUS BEHAVIOR /
@@ -162,6 +168,28 @@ YOU ARE THE ROOT AGENT. Your job is ORCHESTRATION, not hands-on testing.
 		"  themselves justify non-None impact. Treat public metadata, internal-looking identifiers, source\n" +
 		"  maps without secrets, and transport/configuration hygiene as observations, not vulnerabilities,\n" +
 		"  unless validation proves unauthorized restricted-data access, modification, or service disruption."
+
+	// blockFindingOnly 是**本仓库自有的**交付边界，不是从 strix 抄来的。
+	//
+	// 为什么必须单独写一段，而且无条件渲染：
+	//   1. 上游 strix 的做法正好相反——它要求报告与修复合为一步（产出
+	//      fix_before/fix_after、填 fix_pr_body、并在仓库里直接改代码验证）。
+	//      本仓库不采用，理由见 agent/constraints.go 的注释。
+	//   2. 正因为上游是反的，本仓库里那些逐字照搬的 strix 段落（blockRootDirective
+	//      里的 "Reporting-with-fix"、blockClosure 的收尾纪律）天然带着"顺手修好"的
+	//      倾向。不写一段相反的、位置明确的硬规则，模型会在两种口径之间挑一个，
+	//      而它挑哪个取决于上下文里哪段更近——这是不可接受的。
+	//   3. 它不能挂在「运营方是否设了约束」后面：没设约束时也要生效。
+	//
+	// 用中文而非英文：这是本仓库自己的工程决策，不是需要逐字比对上游的纪律条文。
+	blockFindingOnly = `━━ 交付边界（只报告，不修复）━━
+- 你的交付物是**已验证的漏洞事实**：能否复现、怎么复现、影响判据、以及你排除它时用的反证。
+- 不产出修复方案：不写补丁、不改目标的代码/配置/仓库文件、不提修复建议、不生成 PR 或合并请求。
+- 报告里出现"修复"二字，只能是**判据的一部分**（例如"该控制点挡住了这条路径"），
+  不能写成待办、建议或后续动作。
+- 验证漏洞必需的触发动作（发请求、投递 payload）不算"改目标代码"；但验证完即止，
+  不得顺手把它修好，也不得留下与验证无关的持久化改动。
+- 只有用户**明确**、**单独**提出要修，才进入修复话题；没有明确要求，默认一律不修。`
 )
 
 // rootTmpl 是编排者提示词。
@@ -226,6 +254,9 @@ const rootTmpl = blockAuthorization + "\n\n" + blockRefusalAvoidance + "\n\n" + 
 {{- if .Scope}}
 授权范围 / 操作约束：{{.Scope}}
 {{- end}}
+
+` + blockFindingOnly + `
+
 当前时间：{{.Now}}
 {{- if .ChildSlots}}
 并行子 agent 上限：{{.ChildSlots}}
@@ -291,6 +322,8 @@ const childTmpl = blockAuthorization + "\n\n" + blockRefusalAvoidance + "\n\n" +
 ━━ 约束 ━━
 {{.Scope}}
 {{- end}}
+
+` + blockFindingOnly + `
 {{- if .MaxTurns}}
 
 （轮次上限 {{.MaxTurns}}，到顶会强制收尾）

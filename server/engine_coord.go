@@ -147,6 +147,13 @@ type CoordTaskOptions struct {
 	RootAgentKey  string
 	ChildAgentKey string
 
+	// Constraints 渲染本任务的操作约束（task_constraints）进提示词。
+	// nil = 该任务没有约束源（提示词里不出现该段）。
+	//
+	// 它是安全语义，不是文案：运营方写的 allow/deny 只落在 task_constraints 里
+	// 而模型看不到，等于范围约束从未生效。缺省不填是 bug，不是"少一个可选项"。
+	Constraints func() string
+
 	// WebFetch / WebSearch 是"联网取内容"的两条独立通道。
 	//
 	// WebFetch 走**记录代理**并信任其 MITM CA：目标的 HTTPS 响应因此和 curl
@@ -195,6 +202,7 @@ func (o CoordTaskOptions) runnerConfig() agent.RunnerConfig {
 		WebFetchCACert:     o.WebFetchCACert,
 		WebSearch:          o.WebSearch,
 		Emit:               o.Emit,
+		Constraints:        o.Constraints,
 	}
 }
 
