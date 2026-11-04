@@ -100,6 +100,14 @@ func (e *Engine) RunCoord(ctx context.Context, t *Task) {
 	if t == nil {
 		return
 	}
+	// 任务句柄没装配 store 时不要起图：RunCoordTask 起手就要写一条活动流，
+	// 会解引用 t.Store；而它跑在独立 goroutine 里，这里的 nil 解引用无法被
+	// 上层 recover，会直接把整个进程打崩——一个任务的开跑失败不该有这个代价。
+	// 口径与下面两道闸（工具面为空、没有 provider）一致：未就绪就跳过开跑。
+	if t.Store == nil {
+		log.Printf("[coord] task %s 未就绪：任务 store 未装配，跳过开跑", t.ID)
+		return
+	}
 	// 幂等：同一任务重复 Run 只 nudge，不重建图。
 	// 旧链路用 t.Notify() 唤醒规划轮；新链路里"唤醒"就是把收尾要求塞给根 agent。
 	if _, dup := coordGet(e, t.ID); dup {
