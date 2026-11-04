@@ -193,7 +193,7 @@ Do not report an unregistered name without an execution path, or an execution pa
 
 ## Reporting
 
-There is no CVE and no vulnerable installed version here, so this does not go through `create_dependency_report`; that tool requires an advisory-matched CVE. Use `create_vulnerability_report` only after the applicable core condition is fully verified.
+There is no CVE and no vulnerable installed version here, so this does not go through `report_finding`; that tool requires an advisory-matched CVE. Use `report_finding` only after the applicable core condition is fully verified.
 
 A registry lookup or `404` alone is candidate evidence, not a working PoC. The report must preserve the target invocation and execution context, show the exact selected package and binary/module, demonstrate the runner's execution transition in a representative controlled setup without publishing the contested name, and establish the authority inherited by that process. When source is available, include the responsible invocation/configuration and concrete fix in `code_locations`.
 

@@ -155,8 +155,8 @@ trivy fs --scanners vuln,misconfig --timeout 30m --offline-scan \
 ```
 
 Known-CVE dependency findings are the one exception to the "report only after
-dynamic validation" rule below: report each one with `create_dependency_report`
-(not `create_vulnerability_report`), setting `advisory_cvss` from the published
+dynamic validation" rule below: report each one with `report_finding`
+(not `report_finding`), setting `advisory_cvss` from the published
 advisory. `load_skill(["dependency_cve_scanning"])` for the full SCA workflow.
 
 ## JavaScript-Side Coverage

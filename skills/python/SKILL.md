@@ -1,83 +1,45 @@
 ---
 name: python
-description: Run Python through exec_command in the SDK sandbox. Use the image-baked caido_api module for Caido proxy automation from Python scripts.
+description: Run Python through Bash in the SDK sandbox. Captured HTTP traffic is read back with the traffic_search/traffic_get/traffic_blob tools; replay by rebuilding the request by hand, there is no replay tool.
 ---
 
 # Python In The Sandbox
 
-Use `exec_command` for Python. There is no separate Python executor.
+Use `Bash` for Python. There is no separate Python executor.
 
 Prefer writing reusable scripts to a `.py` file and running them with
 `python3 <name>.py`. For short one-off transformations, `python3 -c` or a
 small here-document is fine.
 
-The `shell` parameter on `exec_command` is for swapping POSIX shells
-(`bash`/`zsh`/`sh`), not for picking interpreters. Put the interpreter
-invocation in `cmd` instead: `cmd="python3 -c '...'"`, not
+Do not try to pick an interpreter through a tool parameter — there is none.
+Put the interpreter invocation in the command itself: `python3 -c '...'`
 `shell=python3, cmd="..."`. The `shell=<interpreter>` shortcut breaks
 in subtle ways — `python3` works only with `login=False` (because the
 SDK adds `-l`/`-i`), and other interpreters (`node`, `ruby`, `perl`)
 take `-e` not `-c` so they fail even with `login=False`.
 
-## Proxy Automation From Python
+## Working With Captured Traffic
 
-The sandbox image includes an installed `caido_api` module. Import it
-explicitly when Python code needs Caido traffic or replay access:
+Captured HTTP traffic is read back with this system's own tools. There is no
+`caido_api` Python module in the sandbox image — importing it will fail:
 
-```python
-from caido_api import (
-    list_requests,
-    list_sitemap,
-    repeat_request,
-    scope_rules,
-    view_request,
-    view_sitemap_entry,
-)
-```
+- `traffic_search(host=, contains=, body_contains=, limit=, page=)` — find
+  captured requests for a host. `contains` matches the request line and headers,
+  `body_contains` matches the body.
+- `traffic_get(id)` — fetch one request/response verbatim (truncated when huge).
+- `traffic_blob(hash, offset=, length=)` — read a truncated body in 8KB chunks.
 
-All helpers are async. Use them inside `asyncio.run(...)` or an async
-function:
-
-```python
-import asyncio
-
-from caido_api import list_requests, view_request
-
-
-async def main():
-    posts = await list_requests(
-        httpql_filter='req.method.eq:"POST" AND req.path.cont:"/api/"',
-        first=50,
-    )
-    candidates = []
-    for edge in posts.edges:
-        request_id = edge.node.request.id
-        body = await view_request(request_id, part="request")
-        raw = body.request.raw.decode("utf-8", errors="replace")
-        if "id=" in raw or "user=" in raw:
-            candidates.append(request_id)
-
-    print(f"{len(candidates)} candidates")
-    print(candidates[:10])
-
-
-asyncio.run(main())
-```
-
-Available helpers:
-
-- `list_requests(httpql_filter=, first=50, after=, sort_by=, sort_order=, scope_id=)` returns a cursor-paginated Caido SDK `Connection`.
-- `view_request(request_id, part="request")` returns a Caido SDK request object with raw request/response bytes.
-- `repeat_request(request_id, modifications={...})` replays a captured request after modifying `url`, `params`, `headers`, `body`, or `cookies`.
-- `list_sitemap(scope_id=, parent_id=, depth="DIRECT", page=1)` walks Caido's request-tree view of the discovered surface. Omit `parent_id` for root domains; pass an entry id with `depth="DIRECT"` or `"ALL"` to drill in.
-- `view_sitemap_entry(entry_id)` returns one entry plus its 30 most recent related requests.
-- `scope_rules(action, allowlist=, denylist=, scope_id=, scope_name=)` manages Caido scopes.
+There is no replay-and-modify tool. To replay a captured request with changes,
+rebuild it by hand with `curl` / `httpx` / `requests` in `Bash` (or in a script
+run with `python3`), changing the URL, params, headers, body or cookies
+yourself. Work from the raw request you pulled with `traffic_get` so you do not
+invent fields.
 
 For one-off arbitrary requests (e.g. probing a fresh endpoint, hitting an
-external API), use `exec_command` with `curl` / `httpx` / `requests`. The
-sandbox's `HTTP_PROXY` env routes all such traffic through Caido
-automatically, so it shows up in `list_requests` and you can use
-`repeat_request` to replay-and-modify any of it.
+external API), use `Bash` with `curl` / `httpx` / `requests`. Anything sent
+through the recording proxy is captured and searchable with `traffic_search`
+afterwards; to replay a captured request with modifications, rebuild it by hand in
+`Bash` — there is no replay tool.
 
 ## Workflow
 
@@ -86,7 +48,7 @@ For iterative exploit work, put code in a file:
 ```text
 1. Create or edit a task-unique script (e.g. `poc_<task-id>.py`, so it can't
    clobber a project file or another agent's script) with `apply_patch`.
-2. Run it with `exec_command`: `python3 poc_<task-id>.py`.
+2. Run it with `Bash`: `python3 poc_<task-id>.py`.
 3. Edit and rerun until the proof-of-concept is reliable.
 ```
 

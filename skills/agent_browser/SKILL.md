@@ -1,6 +1,6 @@
 ---
 name: agent_browser
-description: agent-browser CLI for headless Chrome via shell. Snapshot-and-ref workflow, click/fill/extract, screenshots, multi-tab, multi-session, network mocking. Pre-installed in the sandbox; invoke via exec_command.
+description: agent-browser CLI for headless Chrome via shell. Snapshot-and-ref workflow, click/fill/extract, screenshots, multi-tab, multi-session, network mocking. Pre-installed in the sandbox; invoke via Bash.
 ---
 
 # agent-browser core
@@ -11,7 +11,7 @@ Playwright or Puppeteer dependency. Accessibility-tree snapshots with compact
 parsing raw HTML.
 
 Pre-installed in the sandbox image. Always invoke via the
-``exec_command`` shell tool. The Caido HTTP/HTTPS proxy is already
+``Bash`` shell tool. The Caido HTTP/HTTPS proxy is already
 wired via ``http_proxy`` / ``https_proxy`` env vars — **do not pass
 ``--proxy``**; agent-browser picks it up automatically and Caido
 captures all page traffic. Localhost (CDP) traffic is excluded via
@@ -261,7 +261,7 @@ only for simple expressions.
 
 `agent-browser screenshot` writes a PNG to disk in the sandbox.
 ```bash
-exec_command:  agent-browser screenshot
+Bash:  agent-browser screenshot
 view_image:    {"path": "<path printed on stdout>"}
 You are running on a text-only model and cannot view images. Screenshots
 are only useful to you as a saved file (for example, login evidence).
@@ -388,7 +388,7 @@ load` if you were logged in. Distinguish the failure modes and react differently
 - **Malformed command** (`Unknown command`, `Ref not found`, bad flag): fix the
   command itself — re-snapshot for fresh refs, or correct the syntax.
 
-Invoke `agent-browser` directly through `exec_command`; there is no need to wrap
+Invoke `agent-browser` directly through `Bash`; there is no need to wrap
 it in an extra `sh -c "..."` / `bash -lc "..."` layer, which only adds shell
 quoting and startup-file pitfalls.
 
