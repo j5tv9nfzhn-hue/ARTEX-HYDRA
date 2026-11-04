@@ -1,7 +1,6 @@
 ---
 name: counterevidence
 description: Closure discipline for security findings — what counts as proof of safety, what does not, and how to record an unresolved candidate instead of silently dropping it
-template: jinja
 ---
 
 # Counterevidence and Closure Discipline
@@ -33,12 +32,7 @@ that sentence, you are not in `ruled_out`.
 
 **3. `open_proof_gap`** — the candidate is plausible, you could not
 confirm it, and you also could not name a control that rules it out. This
-{% if coverage_tools %}
-is a legitimate, expected outcome. Record it with
-`record_coverage(outcome="needs_follow_up")`, carry it up in
-{% else %}
 is a legitimate, expected outcome. Carry it up in
-{% endif %}
 `agent_finish(open_items=[...])`, and reflect it in `counterevidence` /
 `confidence_rationale` if you file a related report. Do **not** convert
 it to `ruled_out` to tidy up your worklist.
@@ -102,36 +96,6 @@ What ships and what is reachable is what matters.
 reduces severity — it does not make the finding unreal. Downgrade it;
 do not delete it.
 
-{% if coverage_tools %}
-## Recording Closure
-
-Closure is only useful if it is written down. Every surface you assess
-gets a `record_coverage` entry:
-
-- `confirmed` → outcome `reported`, once the report is filed.
-- `ruled_out` → outcome `ruled_out`, with the named control in
-  `evidence`. If you cannot name it, this is not `ruled_out`.
-- `open_proof_gap` → outcome `needs_follow_up`, with the specific gap in
-  `evidence`.
-- Tested thoroughly with nothing to show for it → `no_issue_found`.
-- The risk cannot apply to this surface at all → `not_applicable`, with
-  the reason.
-
-A scan that records only findings cannot tell the reader what was
-reviewed and cleared, which makes every clean area indistinguishable
-from an unvisited one.
-
-Closure is not permanent. The ledger is shared across every agent, and
-a surface someone left at `needs_follow_up` is an invitation: if you
-had the credentials, the running service, or the reachability proof
-they lacked, move their entry with `update_coverage` rather than
-recording a parallel one. This runs both ways — a `ruled_out` whose
-named control does not cover the path you just found goes back to
-`reported` or `needs_follow_up`, with what changed in `evidence`. The
-previous state is kept as history, so correcting the record costs
-nothing and leaving it wrong costs a finding.
-
-{% endif %}
 ## What DOES Rule Out a Candidate
 
 - You executed the attack and it demonstrably failed, and you understand
