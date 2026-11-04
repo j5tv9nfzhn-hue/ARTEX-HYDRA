@@ -43,6 +43,9 @@ type Options struct {
 	ExeDir string
 	// ListenAddr 是 HTTP 监听地址。
 	ListenAddr string
+	// Headless 为 true 时不启动 HTTP 监听器，只装配 manager 与 server。
+	// 终端 HARNESS（artex cli）用它在进程内直接驱动 agent，不占端口、不依赖浏览器。
+	Headless bool
 }
 
 // App 是一次已启动的服务实例，持有监听器、server 与双图库。
@@ -104,13 +107,23 @@ func Prepare(ctx context.Context, opts Options) (*App, error) {
 	srv := server.New(ctx, mgr, skillDir, opts.DataDir, opts.ExeDir)
 	// 必须在 Handler()/监听器之前定下来：requireAuth 是构建期装配的中间件。
 	srv.SetListenAddr(opts.ListenAddr)
-	srv.WarnIfExposed(opts.ListenAddr)
 
+	app := &App{Version: opts.Version, ListenAddr: opts.ListenAddr, srv: srv, mgr: mgr}
+	if opts.Headless {
+		// 终端 HARNESS：装配完毕即返回，让调用方在进程内直接跑任务。
+		// 不绑定端口、不写「listening on」——CLI 的 stdout 要留给对话内容。
+		log.Printf("ARTEX-HYDRA %s terminal harness ready (data=%s, agent_slots=%d)",
+			opts.Version, opts.DataDir, mgr.Workers())
+		return app, nil
+	}
+
+	srv.WarnIfExposed(opts.ListenAddr)
 	httpSrv := &http.Server{
 		Addr:              opts.ListenAddr,
 		Handler:           srv.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+	app.httpSrv = httpSrv
 	go func() {
 		log.Printf("ARTEX-HYDRA %s backend listening on %s (data=%s, agent_slots=%d)",
 			opts.Version, opts.ListenAddr, opts.DataDir, mgr.Workers())
@@ -123,13 +136,15 @@ func Prepare(ctx context.Context, opts Options) (*App, error) {
 		}
 	}()
 
-	return &App{
-		Version:    opts.Version,
-		ListenAddr: opts.ListenAddr,
-		srv:        srv,
-		httpSrv:    httpSrv,
-		mgr:        mgr,
-	}, nil
+	return app, nil
+}
+
+// Server 暴露进程内 server 实例，供终端 HARNESS（artex cli）直接驱动。
+func (a *App) Server() *server.Server {
+	if a == nil {
+		return nil
+	}
+	return a.srv
 }
 
 // Shutdown 按停机三条不变量收尾，别调换：

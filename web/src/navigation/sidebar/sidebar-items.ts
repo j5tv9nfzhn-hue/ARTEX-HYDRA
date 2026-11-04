@@ -23,7 +23,6 @@ import {
   HardDrive,
   LayoutDashboard,
   type LucideIcon,
-  MessageSquare,
   Network,
   Plug,
   Radio,
@@ -112,7 +111,6 @@ export const sidebarItems: NavGroup[] = [
     items: [
       { id: "dashboard", title: "总览", url: "/dashboard", icon: LayoutDashboard },
       { id: "tasks", title: "任务", url: "/function/tasks", icon: Target },
-      { id: "chat", title: "HARNESS", url: "/chat", icon: MessageSquare },
       { id: "workspace", title: "工作空间", url: "/function/workspace", icon: FolderOpen },
       { id: "findings", title: "发现", url: "/function/findings", icon: Bug },
       { id: "assets", title: "资产", url: "/function/assets", icon: Network },

@@ -12,7 +12,6 @@ import {
   CheckIcon,
   CircleAlertIcon,
   CrosshairIcon,
-  MessagesSquareIcon,
   PauseIcon,
   PlayIcon,
   ShieldAlertIcon,
@@ -423,15 +422,6 @@ function TaskDetailInner() {
           </Button>
           <div className="min-w-0 flex-1" />
           <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
-          <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 rounded-lg px-2.5 text-xs">
-            {/* 主 Agent 对话 = 对话 Harness（整屏舞台），带上任务 id 让线程与任务绑定：
-                对话页的任务带据此只显示这一个任务，不再让用户自己去找。
-                ?c= 缺省 → 落在新建线程的草稿页，首次发送时后端就写入 conversations.task_id。 */}
-            <Link href={`/chat?task=${encodeURIComponent(id)}`}>
-              <MessagesSquareIcon className="size-3.5" data-icon="inline-start" />
-              <span className="hidden sm:inline">主 Agent 对话</span>
-            </Link>
-          </Button>
           <TaskLLMControl task={task} profiles={profiles} onUpdated={loadTask} />
 
           {interceptPendingCount > 0 && (

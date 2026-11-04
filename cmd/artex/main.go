@@ -70,8 +70,13 @@ func run() int {
 	// 横幅、日志与子进程输出才不会在 GBK 控制台上乱码（批次 7 / #4–5）。
 	boot.EnableUTF8Console()
 
-	// 子命令分流必须在 flag.Parse 之前：`artex mcp serve` 的参数属于子命令，
-	// 交给全局 flag 会直接报 "flag provided but not defined"。
+	// 子命令分流必须在 flag.Parse 之前：子命令自己的参数交给全局 flag 会直接报
+	// "flag provided but not defined"。
+	//
+	// cli 是终端 HARNESS：头less 启动（不绑端口），在同一进程内跑 coord 任务。
+	if len(os.Args) > 1 && os.Args[1] == "cli" {
+		return runCLICommand(os.Args[2:])
+	}
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
 		return runMCPCommand(os.Args[2:])
 	}

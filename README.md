@@ -109,7 +109,14 @@ ARTEX 由国内开发者 **Autumn-27** 创建并开源（[Autumn-27/ARTEX](https
 
 ## 快速开始
 
-只发布 **Web 版**：纯 Go 单二进制（`CGO_ENABLED=0`）+ 内嵌 Next.js 静态前端，覆盖 Linux / macOS / Windows。
+只发布一个纯 Go 单二进制（`CGO_ENABLED=0`），覆盖 Linux / macOS / Windows。同一份程序提供两种入口：
+
+| 入口 | 形态 | 适用场景 |
+| --- | --- | --- |
+| Web 控制台（默认） | 内嵌 Next.js 前端 + HTTP API，浏览器操作 | 看资产图、发现、审批、完整转录 |
+| 终端 HARNESS（`artex cli`） | 进程内直接驱动 coord 根 agent，不占端口、不起浏览器 | 绿色启动、脚本/CI、终端里连续下指令 |
+
+两种入口共用同一个 `data/`、`config.json` 与 LLM 配置：先用任一入口配置一次，另一个入口直接复用。
 
 **方式一：下载发行包**
 
@@ -118,9 +125,21 @@ ARTEX 由国内开发者 **Autumn-27** 创建并开源（[Autumn-27/ARTEX](https
 ```bat
 copy config.example.json config.json   & rem 可选：指定数据库文件位置，留空自动创建 artex.db
 start.bat                              & rem → http://localhost:8787
+artex-rea.exe cli -t https://example.com
 ```
 
-Linux / macOS 用 `./start.sh`。
+Linux / macOS 用 `./start.sh`；终端 HARNESS 直接 `./artex-rea cli -t https://example.com`。
+
+终端 HARNESS 支持环境变量快捷启动（CI 不需要任何交互）：
+
+```bash
+export ARTEX_TARGET=https://example.com
+export ARTEX_INSTRUCTION="重点测试登录、越权与文件上传"
+export ARTEX_NONINTERACTIVE=1
+./artex-rea cli
+```
+
+LLM 可沿用 Web 控制台里已保存的配置；纯环境变量启动时设置 `ANTHROPIC_API_KEY` 或 `OPENAI_API_KEY` 加 `ARTEX_LLM_MODEL`（可选 `ARTEX_LLM_PROVIDER` / `ARTEX_LLM_BASE_URL`）。交互模式下直接输入文字即给根 agent 下指令，`/help` 查看命令，退出码 `0` 无漏洞、`2` 有漏洞、`1` 失败。
 
 **方式二：源码构建**（Go 1.26 + Node.js 22 LTS）
 
