@@ -1,6 +1,5 @@
 "use client";
 
-import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import type { CommandRecord, Tool } from "@/lib/types";
+import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 /**
  * 工具详情：参数 schema、绑定 Agent、调用统计与最近调用。
@@ -107,11 +107,7 @@ function ToolDetailInner() {
               <span>{tool.system ? t("system") : t("custom")}</span>
               <span>{tool.kind || "builtin"}</span>
               <span>{tool.enabled ? t("enabled") : t("disabled")}</span>
-              {tool.deferred ? (
-                <>
-                  <span>{t("deferred")}</span>
-                </>
-              ) : null}
+              {tool.deferred ? <span>{t("deferred")}</span> : null}
             </>
           }
           subtitle={tool.description}
@@ -122,23 +118,23 @@ function ToolDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.properties")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{propKeys.length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.properties")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{propKeys.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.required")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{required.length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.required")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{required.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.agents")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{tool.agents.length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.agents")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{tool.agents.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.calls")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{tool.calls ?? 0}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.calls")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{tool.calls ?? 0}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.kind")}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.kind")}</span>
           <span className="font-semibold text-[15px] leading-none">{tool.kind || "builtin"}</span>
         </div>
       </KpiRow>
@@ -163,7 +159,7 @@ function ToolDetailInner() {
                           {t("requiredTag")}
                         </Badge>
                       ) : (
-                        <span key="r" className="text-xs text-muted-foreground">
+                        <span key="r" className="text-muted-foreground text-xs">
                           {t("optionalTag")}
                         </span>
                       ),
@@ -171,9 +167,7 @@ function ToolDetailInner() {
                   >
                     <code className="block truncate font-mono text-[12px]">{p}</code>
                     {spec?.description ? (
-                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                        {spec.description}
-                      </span>
+                      <span className="mt-0.5 block truncate text-muted-foreground text-xs">{spec.description}</span>
                     ) : null}
                   </RecordRow>
                 );
@@ -217,20 +211,20 @@ function ToolDetailInner() {
                 {calls.map((c) => (
                   <RecordRow
                     key={c.id}
-                    lead={<span className="tabular-nums text-[10.5px]">{c.created_at.slice(5, 16)}</span>}
+                    lead={<span className="text-[10.5px] tabular-nums">{c.created_at.slice(5, 16)}</span>}
                     cols="88px minmax(0,1fr) auto"
                     values={[
                       <Link
                         key="l"
                         href={`/function/commands/detail?id=${c.id}${c.exploration_id ? `&task=${c.exploration_id}` : ""}`}
-                        className="text-xs text-primary hover:underline"
+                        className="text-primary text-xs hover:underline"
                       >
                         {t("open")}
                       </Link>,
                     ]}
                   >
                     <span className="block truncate font-mono text-xs">{c.command}</span>
-                    <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted-foreground text-xs">
                       <span className="shrink-0">{c.is_error ? t("callFailed") : t("callOk")}</span>
                       <span className="truncate">{c.worker || "—"}</span>
                     </span>

@@ -289,7 +289,7 @@ export function AssetTree({
         )}
       >
         <span>{t("asset.all")}</span>
-        <span className="text-xs tabular-nums text-muted-foreground">{findingTotal}</span>
+        <span className="text-muted-foreground text-xs tabular-nums">{findingTotal}</span>
       </button>
 
       <div className="max-h-[24rem] min-h-0 flex-1 overflow-y-auto pr-2 lg:max-h-[calc(100vh-16rem)]">
@@ -298,7 +298,7 @@ export function AssetTree({
           {/* 加载态与空态分开:加载时仍显示一行提示,加载完才用插画空态(树侧栏用 compact) */}
           {rows.length === 0 &&
             (loading ? (
-              <p className="px-2 py-8 text-center text-xs text-muted-foreground">{emptyHint}</p>
+              <p className="px-2 py-8 text-center text-muted-foreground text-xs">{emptyHint}</p>
             ) : (
               <EmptyState compact illustration="nodes" title={emptyHint} />
             ))}
@@ -306,7 +306,7 @@ export function AssetTree({
       </div>
 
       {truncated && (
-        <p className="px-1 text-xs text-muted-foreground">
+        <p className="px-1 text-muted-foreground text-xs">
           {t("assetTree.truncated", {
             kinds: (droppedKinds ?? []).map((k) => kindLabel(k)).join(" / "),
           })}

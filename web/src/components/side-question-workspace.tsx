@@ -160,12 +160,7 @@ function SidePanel({
             disabled={side.busy}
             onChange={(event) => side.setDraft(event.target.value)}
             onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                !event.shiftKey &&
-                !event.nativeEvent.isComposing &&
-                !isGhostEnter(event)
-              ) {
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && !isGhostEnter(event)) {
                 event.preventDefault();
                 void side.ask(side.draft);
               }

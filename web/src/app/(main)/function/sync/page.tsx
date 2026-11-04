@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { AlertCircleIcon, CheckCircle2Icon, DownloadIcon, PlugZapIcon, RefreshCwIcon, SearchIcon } from "lucide-react";
@@ -17,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import type { SSProject, SSTask } from "@/lib/types";
+import { Masthead, Sheet, SheetHead } from "@/ui/container";
 
 type SSStatus = {
   exists: boolean;
@@ -134,7 +134,8 @@ function DataSourceCard({
 
   return (
     <Sheet api={["ssDatasource", "ssStatus"]}>
-      <SheetHead index="01"
+      <SheetHead
+        index="01"
         icon={PlugZapIcon}
         title={
           <span className="flex items-center gap-2">

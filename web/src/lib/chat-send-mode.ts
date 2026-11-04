@@ -4,8 +4,8 @@ import * as React from "react";
 
 import { useTranslations } from "next-intl";
 
-import { getLocalStorageValue, setLocalStorageValue } from "@/lib/local-storage.client";
 import { isGhostEnter } from "@/lib/ime-guard";
+import { getLocalStorageValue, setLocalStorageValue } from "@/lib/local-storage.client";
 
 // 聊天发送、换行按键是浏览器本地偏好，只存 localStorage，不与账户同步。
 // 更换浏览器需重新设置。issue #39：0.3.2 从 Ctrl+Enter 改为 Enter，

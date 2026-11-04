@@ -80,7 +80,6 @@ function foldContext(lines: DiffLine[], context: number): DiffLine[] {
     if (!keep[i]) continue;
     distance[i] = 0;
     last = i;
-    continue;
   }
   for (let i = 0; i < lines.length; i += 1) {
     if (lines[i].kind === "ctx" && i - last <= context) distance[i] = i - last;

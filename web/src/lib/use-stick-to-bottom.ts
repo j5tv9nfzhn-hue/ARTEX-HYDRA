@@ -93,6 +93,10 @@ export function useStickToBottom(
     [contentRef],
   );
 
+  // 这里读 ref 的当前值是刻意的：atBottom 是调用方持有的 ref，ref.current 不参与
+  // 渲染，放进依赖数组既不会在它变化时正确触发重跑，也会让依赖比较失去意义
+  // （React 官方文档明确不建议把 ref.current 写进 deps）。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 见上方说明。
   const write = React.useCallback(() => {
     if (pausedRef.current || !atBottom.current) return;
     const vp = viewport();
@@ -123,6 +127,12 @@ export function useStickToBottom(
   //
   // 容器不是一定在这一刻就存在（选中会话后内容区才渲染），所以挂不上就按帧重试，
   // 最多约 2 秒；refreshKey 变化时重新走一遍整个过程。
+  //
+  // refreshKey 是「显式重跑触发器」：它不参与 effect 内部的计算，唯一作用就是变化时
+  // 让「挂 ResizeObserver → 挂不上按帧重试」整段重来（切会话时内容区才刚渲染，必须
+  // 重挂，否则贴底失效）。删掉它不会报错，只会让切会话后不再贴底——静默的功能退化。
+  // 与 assets-tab / assets/page 里的同名选项是同一个约定。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 见上方说明。
   React.useEffect(() => {
     let ro: ResizeObserver | null = null;
     const attach = (): boolean => {
@@ -160,7 +170,9 @@ export function useStickToBottom(
     };
     vp.addEventListener("scroll", onScroll, { passive: true });
     return () => vp.removeEventListener("scroll", onScroll);
-  }, [viewport, slack, atBottom, setAtBottom]);
+    // atBottom 是 ref 对象、身份全程稳定，放在 deps 里不会带来任何重新订阅，去掉更
+    // 贴合规则本意（这一处规则是对的，不需要 ignore）。
+  }, [viewport, slack, setAtBottom]);
 
   React.useEffect(
     () => () => {

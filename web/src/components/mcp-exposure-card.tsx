@@ -1,6 +1,5 @@
 "use client";
 
-import { GroupHead, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { CheckIcon, CopyIcon, KeyRoundIcon, RefreshCwIcon } from "lucide-react";
@@ -13,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import type { MCPExposure } from "@/lib/types";
+import { GroupHead, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 // 「对外接入」卡片：把 ARTEX 当成一台 MCP 服务器，给 Codex / OpenCode / Cursor /
 // Claude Code / VS Code / Gemini CLI / DSH 这些外部 harness 挂上。
@@ -126,7 +126,7 @@ export function MCPExposureCard() {
   React.useEffect(load, [load]);
 
   const endpoint = React.useMemo(() => {
-    if (status?.endpoint && status.endpoint.startsWith("http")) return status.endpoint;
+    if (status?.endpoint?.startsWith("http")) return status.endpoint;
     const origin = typeof window === "undefined" ? "http://127.0.0.1:8787" : window.location.origin;
     return `${origin}/mcp`;
   }, [status?.endpoint]);
@@ -185,16 +185,15 @@ export function MCPExposureCard() {
 
   return (
     <Sheet api={["mcpExposure", "saveMcpExposure", "rotateMcpExposureToken"]}>
-      <SheetHead index="02"
+      <SheetHead
+        index="02"
         icon={KeyRoundIcon}
         title={t("title")}
         hint={t("subtitle")}
         actions={
           <>
             {status ? (
-              <Badge variant={status.enabled ? "default" : "secondary"}>
-                {status.enabled ? t("on") : t("off")}
-              </Badge>
+              <Badge variant={status.enabled ? "default" : "secondary"}>{status.enabled ? t("on") : t("off")}</Badge>
             ) : null}
             <Button variant="ghost" size="sm" onClick={load} disabled={busy}>
               <RefreshCwIcon className="size-4" />
@@ -277,7 +276,7 @@ export function MCPExposureCard() {
           })}
         </div>
 
-        {status && status.tiers.includes("L2") ? (
+        {status?.tiers.includes("L2") ? (
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-700 text-xs dark:text-amber-400">
             {t("l2Warning")}
           </div>
@@ -317,9 +316,7 @@ export function MCPExposureCard() {
           <p className="mt-2 text-muted-foreground text-xs">{t("clientsHint")}</p>
         </div>
       </div>
-      {status ? (
-        <SheetFoot left={t("toolCount", { count: status.tool_count ?? 0 })} right={t("footHint")} />
-      ) : null}
+      {status ? <SheetFoot left={t("toolCount", { count: status.tool_count ?? 0 })} right={t("footHint")} /> : null}
     </Sheet>
   );
 }

@@ -114,11 +114,13 @@ function CommandBody({ sections, wrapLines, onToggleWrap }: ToolBodyProps) {
     <div className="divide-y divide-border/70">
       <div className="flex flex-col">
         <div className="flex items-center justify-between gap-2 bg-muted/40 px-3 py-1 text-ui-2xs">
-          <span className="font-semibold text-muted-foreground uppercase tracking-wide">{sections[0]?.label ?? ""}</span>
+          <span className="font-semibold text-muted-foreground uppercase tracking-wide">
+            {sections[0]?.label ?? ""}
+          </span>
           <div className="flex items-center gap-1">
             {long ? (
               <button
-                className="rounded px-1 text-ui-2xs text-muted-foreground hover:text-foreground"
+                className="rounded px-1 text-muted-foreground text-ui-2xs hover:text-foreground"
                 onClick={(event) => {
                   event.stopPropagation();
                   setExpanded((value) => !value);
@@ -172,7 +174,9 @@ function InputBody({ tool, sections, wrapLines, onToggleWrap }: ToolBodyProps) {
         <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 font-mono text-ui-xs">
           {path ? <span className="min-w-0 break-all text-foreground/90">{path}</span> : null}
           {detail ? <span className="text-muted-foreground">{detail}</span> : null}
-          {readLines > 0 ? <span className="text-muted-foreground tabular-nums">{t("tool.lines", { count: readLines })}</span> : null}
+          {readLines > 0 ? (
+            <span className="text-muted-foreground tabular-nums">{t("tool.lines", { count: readLines })}</span>
+          ) : null}
           <span className="ml-auto flex items-center gap-1">
             <CopyTextButton text={JSON.stringify(input, null, 2)} />
           </span>
@@ -190,7 +194,15 @@ function TodoBody({ sections, wrapLines, onToggleWrap }: ToolBodyProps) {
   const input = safeJson(sections[0]?.content ?? "");
   const raw = input && Array.isArray(input.todos) ? input.todos : null;
   if (!raw) {
-    return <GenericBody onToggleWrap={onToggleWrap} sections={sections} status="completed" tool="TodoWrite" wrapLines={wrapLines} />;
+    return (
+      <GenericBody
+        onToggleWrap={onToggleWrap}
+        sections={sections}
+        status="completed"
+        tool="TodoWrite"
+        wrapLines={wrapLines}
+      />
+    );
   }
   return (
     <div className="divide-y divide-border/70">
@@ -205,7 +217,9 @@ function TodoBody({ sections, wrapLines, onToggleWrap }: ToolBodyProps) {
               <span
                 className={cn(
                   "mt-0.5 flex size-3 shrink-0 items-center justify-center rounded-[3px] border",
-                  done ? "border-transparent bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "border-border",
+                  done
+                    ? "border-transparent bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                    : "border-border",
                 )}
               >
                 {done ? <CheckIcon className="size-2" /> : null}
@@ -268,7 +282,7 @@ function DiffJobView({ job }: { job: DiffJob }) {
   const model: DiffModel = React.useMemo(() => buildDiff(job.oldText, job.newText), [job.oldText, job.newText]);
   return (
     <div>
-      <div className="flex items-center gap-2 bg-muted/30 px-2 py-0.5 font-mono text-ui-2xs text-muted-foreground">
+      <div className="flex items-center gap-2 bg-muted/30 px-2 py-0.5 font-mono text-muted-foreground text-ui-2xs">
         <span className="min-w-0 truncate">{job.path}</span>
         <DiffStat added={model.added} className="ml-auto" removed={model.removed} />
       </div>
@@ -282,15 +296,25 @@ function DiffBody({ tool, sections, wrapLines, onToggleWrap }: ToolBodyProps) {
   const jobs = React.useMemo(() => diffJobs(tool, raw), [tool, raw]);
   const patchFiles = React.useMemo(() => (jobs ? [] : parsePatchDocument(raw)), [jobs, raw]);
   if (!jobs && patchFiles.length === 0) {
-    return <GenericBody onToggleWrap={onToggleWrap} sections={sections} status="completed" tool={tool} wrapLines={wrapLines} />;
+    return (
+      <GenericBody
+        onToggleWrap={onToggleWrap}
+        sections={sections}
+        status="completed"
+        tool={tool}
+        wrapLines={wrapLines}
+      />
+    );
   }
   return (
     <div className="divide-y divide-border/70">
       <div className="max-h-96 overflow-auto">
-        {jobs ? jobs.map((job, index) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: 同一次调用里的多处编辑按顺序展示
-          <DiffJobView job={job} key={index} />
-        )) : patchFiles.map((file) => <PatchFileView file={file} key={file.path} />)}
+        {jobs
+          ? jobs.map((job, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: 同一次调用里的多处编辑按顺序展示
+              <DiffJobView job={job} key={index} />
+            ))
+          : patchFiles.map((file) => <PatchFileView file={file} key={file.path} />)}
       </div>
       {sections[1] ? <SectionBlock onToggleWrap={onToggleWrap} section={sections[1]} wrapLines={wrapLines} /> : null}
     </div>
@@ -302,12 +326,7 @@ function GenericBody({ sections, wrapLines, onToggleWrap }: ToolBodyProps) {
   return (
     <div className="divide-y divide-border/70">
       {sections.map((section) => (
-        <SectionBlock
-          key={section.label}
-          onToggleWrap={onToggleWrap}
-          section={section}
-          wrapLines={wrapLines}
-        />
+        <SectionBlock key={section.label} onToggleWrap={onToggleWrap} section={section} wrapLines={wrapLines} />
       ))}
     </div>
   );

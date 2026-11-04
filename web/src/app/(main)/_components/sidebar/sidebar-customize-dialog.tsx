@@ -70,7 +70,7 @@ function SidebarCustomizeDialog({
         <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto py-1">
           {sidebarItems.map((group) => (
             <div key={group.id} className="flex flex-col gap-1">
-              <span className="text-muted-foreground px-1 text-xs font-medium">
+              <span className="px-1 font-medium text-muted-foreground text-xs">
                 {groupLabel(group.id, group.label)}
               </span>
               {group.items.map((item) => {

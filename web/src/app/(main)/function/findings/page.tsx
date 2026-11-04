@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -58,6 +57,7 @@ import type {
   Severity,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Masthead, Sheet } from "@/ui/container";
 
 import { AssetTree, assetPathOf } from "./_components/asset-tree";
 import {
@@ -583,7 +583,8 @@ export default function FindingsPage() {
 
   // 条件变化（视图/筛选/复测结束）立即刷新一次。等偏好水合后再发首个请求，
   // 否则会先按默认视图/筛选白拉一次。
-  // biome-ignore lint/correctness/useExhaustiveDependencies: activeRetestFingerprint 变化需要立刻重取，不等下一轮轮询。
+  // 依赖里刻意保留 activeRetestFingerprint（下面用 void 显式引用）：它变化时需要
+  // 立刻重取，不等下一轮轮询。
   React.useEffect(() => {
     if (!preferencesHydrated) return;
     void activeRetestFingerprint;
@@ -841,7 +842,18 @@ export default function FindingsPage() {
 
   // 平铺视图与资产视图右侧是同一张表 + 同一份分页,只是筛选条件不同。
   const flatListCard = (
-    <Sheet api={["findingsPage", "getFinding", "updateFinding", "deleteFinding", "setFindingStatus", "activeFindingRetests", "activeFindingVerifications"]} className="gap-0 py-0">
+    <Sheet
+      api={[
+        "findingsPage",
+        "getFinding",
+        "updateFinding",
+        "deleteFinding",
+        "setFindingStatus",
+        "activeFindingRetests",
+        "activeFindingVerifications",
+      ]}
+      className="gap-0 py-0"
+    >
       <div className="px-0">
         {flat.loading && !flat.loaded ? (
           <div className="flex min-h-36 items-center justify-center">
@@ -884,14 +896,17 @@ export default function FindingsPage() {
           {statCards.map((stat, index) => {
             const StatIcon = stat.icon;
             return (
-              <Sheet api={["findingStats"]}
+              <Sheet
+                api={["findingStats"]}
                 key={stat.label}
                 className="animate-fade-up gap-1 py-4"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="grid auto-rows-min items-start gap-1 px-4">
                   <p className="text-muted-foreground text-sm">{stat.label}</p>
-                  <div className={cn("flex items-center gap-2 font-heading text-2xl font-medium tabular-nums", stat.tone)}>
+                  <div
+                    className={cn("flex items-center gap-2 font-heading font-medium text-2xl tabular-nums", stat.tone)}
+                  >
                     <StatIcon className="size-5" aria-hidden="true" />
                     {stat.value}
                   </div>
@@ -1010,7 +1025,7 @@ export default function FindingsPage() {
 
           <div className="ml-auto flex items-center gap-3">
             {selectedIds.size > 0 && (
-              <span className="text-xs text-muted-foreground tabular-nums">
+              <span className="text-muted-foreground text-xs tabular-nums">
                 {t("selectedCount", { count: selectedIds.size })}
               </span>
             )}
@@ -1045,7 +1060,7 @@ export default function FindingsPage() {
               </div>
             </Sheet>
             <div className="flex min-w-0 flex-col gap-2">
-              <div className="flex min-w-0 flex-wrap items-center gap-1 text-sm text-muted-foreground">
+              <div className="flex min-w-0 flex-wrap items-center gap-1 text-muted-foreground text-sm">
                 <button
                   type="button"
                   className={cn("hover:text-foreground", assetScope === null && "font-medium text-foreground")}
@@ -1092,7 +1107,18 @@ export default function FindingsPage() {
                 loading: false,
               };
               return (
-                <Sheet api={["findingsPage", "findingGroups", "getFinding", "updateFinding", "deleteFinding", "setFindingStatus"]} key={key} className="gap-0 py-0">
+                <Sheet
+                  api={[
+                    "findingsPage",
+                    "findingGroups",
+                    "getFinding",
+                    "updateFinding",
+                    "deleteFinding",
+                    "setFindingStatus",
+                  ]}
+                  key={key}
+                  className="gap-0 py-0"
+                >
                   <div className="grid auto-rows-min items-start gap-1 px-4 py-3">
                     <div className="flex min-w-0 flex-wrap items-center gap-3">
                       <button
@@ -1108,7 +1134,7 @@ export default function FindingsPage() {
                           )}
                         />
                         <div className="flex min-w-0 flex-col gap-1">
-                          <div className="truncate font-heading text-sm font-medium leading-snug">
+                          <div className="truncate font-heading font-medium text-sm leading-snug">
                             {group.task_id === null
                               ? t("task.unassigned")
                               : group.task_name
@@ -1128,11 +1154,11 @@ export default function FindingsPage() {
                           return (
                             <span key={level} className="inline-flex items-center gap-1">
                               <StatusBadge domain="severity" value={level} dot />
-                              <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
+                              <span className="text-muted-foreground text-xs tabular-nums">{count}</span>
                             </span>
                           );
                         })}
-                        <span className="text-xs tabular-nums text-muted-foreground">
+                        <span className="text-muted-foreground text-xs tabular-nums">
                           {fmtTime(group.last_found_at)}
                         </span>
                         {group.task_id !== null && (
@@ -1298,7 +1324,7 @@ export default function FindingsPage() {
 
           <div className="flex flex-col gap-5 py-1">
             <div className="flex flex-col gap-2">
-              <span className="text-xs text-muted-foreground">{t("exportDialog.scopeLabel")}</span>
+              <span className="text-muted-foreground text-xs">{t("exportDialog.scopeLabel")}</span>
               <RadioGroup value={exportScope} onValueChange={(v) => setExportScope(v as typeof exportScope)}>
                 <label htmlFor="export-scope-filtered" className="flex items-center gap-2 text-sm">
                   <RadioGroupItem id="export-scope-filtered" value="filtered" />{" "}
@@ -1318,7 +1344,7 @@ export default function FindingsPage() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-xs text-muted-foreground">{t("exportDialog.formatLabel")}</span>
+              <span className="text-muted-foreground text-xs">{t("exportDialog.formatLabel")}</span>
               <RadioGroup value={exportFormat} onValueChange={(v) => setExportFormat(v as typeof exportFormat)}>
                 <label htmlFor="export-format-md-single" className="flex items-center gap-2 text-sm">
                   <RadioGroupItem id="export-format-md-single" value="md-single" /> {t("exportDialog.formatMdSingle")}

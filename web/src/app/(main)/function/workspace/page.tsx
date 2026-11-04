@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet as PaperSheet } from "@/ui/container";
 import * as React from "react";
 
 import {
@@ -31,6 +30,7 @@ import { api } from "@/lib/api";
 import type { WorkspaceEntry, WorkspaceFile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { workspaceHintFor, workspaceToneClass, workspaceToneLabelKey } from "@/lib/workspace-hints";
+import { Masthead, Sheet as PaperSheet } from "@/ui/container";
 
 function fmtSize(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -194,7 +194,7 @@ export default function WorkspacePage() {
       {/* 页头：路径面包屑与操作。 */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1 text-sm">
-          <HardDriveIcon className="text-muted-foreground mr-1 size-4 shrink-0" />
+          <HardDriveIcon className="mr-1 size-4 shrink-0 text-muted-foreground" />
           {crumbs.map((c, i) => (
             <React.Fragment key={c.path}>
               {i > 0 && <span className="text-muted-foreground">/</span>}
@@ -203,7 +203,7 @@ export default function WorkspacePage() {
                 onClick={() => load(c.path)}
                 className={cn(
                   "max-w-[160px] truncate rounded px-1.5 py-0.5 hover:bg-accent",
-                  i === crumbs.length - 1 ? "text-foreground font-medium" : "text-muted-foreground",
+                  i === crumbs.length - 1 ? "font-medium text-foreground" : "text-muted-foreground",
                 )}
               >
                 {c.name}
@@ -226,8 +226,8 @@ export default function WorkspacePage() {
       </div>
 
       {/* 当前目录合计：一眼看出这层占了多少、多少个文件。 */}
-      <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-        <span className="text-foreground font-mono text-sm">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground text-xs">
+        <span className="font-mono text-foreground text-sm">
           {summary.partial ? "≥ " : ""}
           {fmtSize(summary.size)}
         </span>
@@ -235,7 +235,18 @@ export default function WorkspacePage() {
         <span>{t("summary", { files: summary.files, dirs: summary.dirs })}</span>
       </div>
 
-      <PaperSheet api={["workspaceList", "workspaceRead", "workspaceWrite", "workspaceUpload", "workspaceMkdir", "workspaceBackup", "workspaceDownload", "workspaceDelete"]}>
+      <PaperSheet
+        api={[
+          "workspaceList",
+          "workspaceRead",
+          "workspaceWrite",
+          "workspaceUpload",
+          "workspaceMkdir",
+          "workspaceBackup",
+          "workspaceDownload",
+          "workspaceDelete",
+        ]}
+      >
         <div className="p-0">
           <Table>
             <TableHeader>
@@ -253,7 +264,7 @@ export default function WorkspacePage() {
                   <TableCell colSpan={5} className="p-0">
                     {/* 加载态与空态拆开:加载中显示文案,加载完成仍为空才给空态插画 */}
                     {loading ? (
-                      <div className="text-muted-foreground py-10 text-center text-sm">{t("loading")}</div>
+                      <div className="py-10 text-center text-muted-foreground text-sm">{t("loading")}</div>
                     ) : (
                       <EmptyState illustration="terminal" title={t("empty")} />
                     )}
@@ -274,7 +285,7 @@ export default function WorkspacePage() {
                         {e.dir ? (
                           <FolderIcon className="size-4 shrink-0 text-blue-500" />
                         ) : (
-                          <FileIcon className="text-muted-foreground size-4 shrink-0" />
+                          <FileIcon className="size-4 shrink-0 text-muted-foreground" />
                         )}
                         <span className="truncate font-mono text-sm">{e.name}</span>
                         {hint && (
@@ -288,11 +299,11 @@ export default function WorkspacePage() {
                         )}
                       </button>
                     </TableCell>
-                    <TableCell className="text-muted-foreground max-w-72 text-xs leading-relaxed">
+                    <TableCell className="max-w-72 text-muted-foreground text-xs leading-relaxed">
                       {hint ? t(`hints.${hint.key}.desc`) : null}
                     </TableCell>
                     <TableCell
-                      className="text-muted-foreground text-right font-mono text-xs"
+                      className="text-right font-mono text-muted-foreground text-xs"
                       title={e.size_partial ? t("sizePartial") : undefined}
                     >
                       {/* 目录显示子树累计占用；没统计完的加「≥」，不假装精确。 */}
@@ -330,7 +341,7 @@ export default function WorkspacePage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-destructive size-7"
+                          className="size-7 text-destructive"
                           title={t("delete")}
                           onClick={() => askDelete(e)}
                         >
@@ -401,7 +412,7 @@ export default function WorkspacePage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <TriangleAlertIcon className="text-destructive size-4" />
+              <TriangleAlertIcon className="size-4 text-destructive" />
               {t("deleteTitle")}
             </DialogTitle>
           </DialogHeader>

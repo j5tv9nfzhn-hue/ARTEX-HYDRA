@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, RecordSub, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -46,6 +45,7 @@ import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api";
 import type { LLMPoolMember, LLMPoolStatus, LLMProfile, LLMProvider, LLMRetryOverride } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Masthead, Sheet as PaperSheet, RecordSub, SheetHead } from "@/ui/container";
 
 import { ProfileRetryFields, RetryPolicyPanel, ZERO_OVERRIDE } from "./_components/retry";
 
@@ -315,9 +315,7 @@ function ProviderSheet({
   React.useEffect(() => {
     if (!open) return;
     setName(provider?.name ?? "");
-    setFormat(
-      provider?.format === "openai" || provider?.format === "openai-responses" ? provider.format : "anthropic",
-    );
+    setFormat(provider?.format === "openai" || provider?.format === "openai-responses" ? provider.format : "anthropic");
     setBaseUrl(provider?.base_url ?? "");
     setProxy(provider?.proxy ?? "");
     setApiKey("");
@@ -878,7 +876,6 @@ function ModelSheet({
                 placeholder="200"
               />
             </div>
-
           </div>
 
           <div className="grid gap-3 rounded-lg border p-3">
@@ -1055,7 +1052,9 @@ function ProviderCard({
     if (m?.state === "tripped") {
       return {
         label:
-          m.cooldown_secs > 0 ? t("health.trippedCooldown", { cooldown: cooldownText(m.cooldown_secs) }) : t("health.tripped"),
+          m.cooldown_secs > 0
+            ? t("health.trippedCooldown", { cooldown: cooldownText(m.cooldown_secs) })
+            : t("health.tripped"),
         cls: "border-destructive/50 text-destructive",
         hint: m.last_error,
       };
@@ -1071,8 +1070,25 @@ function ProviderCard({
   };
 
   return (
-    <PaperSheet api={["llmProviders", "llmProfiles", "testLLM", "fetchLLMModels", "activateLLMProfile", "saveLLMProfile", "saveLLMProvider", "deleteLLMProfile", "deleteLLMProvider", "llmPool", "resetLLMPool", "setSettings"]} className="gap-0 overflow-hidden py-0">
-      <SheetHead index="01"
+    <PaperSheet
+      api={[
+        "llmProviders",
+        "llmProfiles",
+        "testLLM",
+        "fetchLLMModels",
+        "activateLLMProfile",
+        "saveLLMProfile",
+        "saveLLMProvider",
+        "deleteLLMProfile",
+        "deleteLLMProvider",
+        "llmPool",
+        "resetLLMPool",
+        "setSettings",
+      ]}
+      className="gap-0 overflow-hidden py-0"
+    >
+      <SheetHead
+        index="01"
         icon={PlugZapIcon}
         title={<span className="truncate">{provider?.name ?? t("page.orphanTitle")}</span>}
         actions={
@@ -1086,30 +1102,28 @@ function ProviderCard({
               {t("card.providerModels", { n: models.length })}
             </Badge>
             {provider ? (
-              <>
-            <div className="flex shrink-0 gap-1">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-7"
-                aria-label={t("provider.edit")}
-                title={t("provider.edit")}
-                onClick={() => onEditProvider(provider)}
-              >
-                <SaveIcon className="size-3.5" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-7"
-                aria-label={t("provider.deleteAria")}
-                title={t("provider.deleteAria")}
-                onClick={() => onDeleteProvider(provider)}
-              >
-                <Trash2Icon className="size-3.5 text-destructive" />
-              </Button>
-            </div>
-              </>
+              <div className="flex shrink-0 gap-1">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-7"
+                  aria-label={t("provider.edit")}
+                  title={t("provider.edit")}
+                  onClick={() => onEditProvider(provider)}
+                >
+                  <SaveIcon className="size-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-7"
+                  aria-label={t("provider.deleteAria")}
+                  title={t("provider.deleteAria")}
+                  onClick={() => onDeleteProvider(provider)}
+                >
+                  <Trash2Icon className="size-3.5 text-destructive" />
+                </Button>
+              </div>
             ) : null}
           </>
         }
@@ -1117,25 +1131,39 @@ function ProviderCard({
       <div className="px-4 pt-2">
         <RecordSub
           items={[
-            provider?.base_url ? <code className="truncate font-mono">{provider.base_url}</code> : null,
+            provider?.base_url ? (
+              <code key="base_url" className="truncate font-mono">
+                {provider.base_url}
+              </code>
+            ) : null,
             provider?.key_error ? (
               // 读不出 Key 与「没配 Key」是两回事：前者要用户重填或找回主密钥，
               // 后者才是去填一把新的。混成一句会让人反复填正确的 Key。
-              <span className="text-destructive" title={provider.key_error}>
+              <span key="key_error" className="text-destructive" title={provider.key_error}>
                 {t("health.keyUnreadable")}
               </span>
             ) : provider?.api_key_hint ? (
-              <span>{provider.api_key_hint}</span>
+              <span key="api_key_hint">{provider.api_key_hint}</span>
             ) : provider ? (
-              <span className="text-destructive">{t("health.noKey.label")}</span>
+              <span key="no_key" className="text-destructive">
+                {t("health.noKey.label")}
+              </span>
             ) : null,
             provider ? (
-              <span>
+              <span key="rate">
                 {provider.rate_per_second}/s / {provider.rate_per_minute}/min
               </span>
             ) : null,
-            provider?.proxy ? <span className="truncate">{t("card.proxy", { proxy: provider.proxy })}</span> : null,
-            provider?.session_header_key ? <span className="font-mono">{provider.session_header_key}</span> : null,
+            provider?.proxy ? (
+              <span key="proxy" className="truncate">
+                {t("card.proxy", { proxy: provider.proxy })}
+              </span>
+            ) : null,
+            provider?.session_header_key ? (
+              <span key="session_header" className="font-mono">
+                {provider.session_header_key}
+              </span>
+            ) : null,
           ]}
         />
       </div>
@@ -1249,9 +1277,7 @@ function ProviderCard({
             </div>
           );
         })}
-        {models.length === 0 && (
-          <p className="px-4 py-3 text-muted-foreground text-xs">{t("provider.noModels")}</p>
-        )}
+        {models.length === 0 && <p className="px-4 py-3 text-muted-foreground text-xs">{t("provider.noModels")}</p>}
       </div>
 
       {/* 未归属卡片不提供「添加模型」：新模型必须落在某家供应商下（见 ModelSheet
@@ -1393,7 +1419,12 @@ export default function LLMPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <Masthead title="LLM" titleClassName="text-xl tracking-tight" subtitle={t("page.subtitle")} subtitleClassName="text-sm" />
+        <Masthead
+          title="LLM"
+          titleClassName="text-xl tracking-tight"
+          subtitle={t("page.subtitle")}
+          subtitleClassName="text-sm"
+        />
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => setPoolOpen(true)}>
             <ZapIcon /> {t("page.poolConfig")}
@@ -1484,7 +1515,9 @@ export default function LLMPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("provider.confirmDelete.title", { name: deletingProvider?.name ?? "" })}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("provider.confirmDelete.title", { name: deletingProvider?.name ?? "" })}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {deletingProvider?.model_count
                 ? t("provider.confirmDelete.withModels", { n: deletingProvider.model_count })

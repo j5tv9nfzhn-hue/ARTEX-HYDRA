@@ -2320,8 +2320,6 @@ export interface UpdateJournal {
   };
 }
 
-
-
 // 本机可用/在用的 Shell 执行器（GET /api/settings/shell）。
 export type ShellOption = {
   mode: string; // powershell | cmd | bash

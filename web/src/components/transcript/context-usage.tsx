@@ -19,22 +19,13 @@ function formatTokens(value: number): string {
 // ContextUsageRing 是输入条上的上下文容量指示：一个环 + 点击展开的小面板。
 // 数据只有「本轮已用 / 模型窗口」两个数，来自 usage 活动的 metadata（后端在
 // capture 时按模型窗口写入），前端不做任何估算；拿不到窗口就整块不渲染。
-export function ContextUsageRing({
-  used,
-  size,
-  className,
-}: {
-  used: number;
-  size: number;
-  className?: string;
-}) {
+export function ContextUsageRing({ used, size, className }: { used: number; size: number; className?: string }) {
   const t = useTranslations("transcript");
   const [open, setOpen] = React.useState(false);
   const wrapRef = React.useRef<HTMLDivElement>(null);
   const ratio = size > 0 ? Math.min(Math.max(used / size, 0), 1) : 0;
   const percent = ratio * 100;
-  const tone =
-    ratio >= 0.95 ? "text-red-500" : ratio >= 0.8 ? "text-amber-500" : "text-muted-foreground";
+  const tone = ratio >= 0.95 ? "text-red-500" : ratio >= 0.8 ? "text-amber-500" : "text-muted-foreground";
 
   React.useEffect(() => {
     if (!open) return;
@@ -58,23 +49,12 @@ export function ContextUsageRing({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={t("context.ariaLabel", { percent: percent.toFixed(1) })}
-        className={cn(
-          "inline-flex size-6 items-center justify-center rounded transition-colors hover:bg-accent",
-          tone,
-        )}
+        className={cn("inline-flex size-6 items-center justify-center rounded transition-colors hover:bg-accent", tone)}
         onClick={() => setOpen((value) => !value)}
         type="button"
       >
         <svg aria-hidden="true" className="size-3.5" viewBox="0 0 24 24">
-          <circle
-            cx="12"
-            cy="12"
-            fill="none"
-            opacity={0.25}
-            r={RADIUS}
-            stroke="currentColor"
-            strokeWidth="4"
-          />
+          <circle cx="12" cy="12" fill="none" opacity={0.25} r={RADIUS} stroke="currentColor" strokeWidth="4" />
           <circle
             cx="12"
             cy="12"
@@ -98,7 +78,7 @@ export function ContextUsageRing({
         >
           <div className="mb-2 flex items-baseline gap-2">
             <span className="font-medium text-xs">{t("context.title")}</span>
-            <span className="ml-auto font-mono text-ui-2xs text-muted-foreground tabular-nums">
+            <span className="ml-auto font-mono text-muted-foreground text-ui-2xs tabular-nums">
               {formatTokens(used)} / {formatTokens(size)} ({percent.toFixed(1)}%)
             </span>
           </div>
@@ -111,7 +91,7 @@ export function ContextUsageRing({
               style={{ width: `${Math.max(percent, 1)}%` }}
             />
           </div>
-          <p className="mt-2 text-ui-2xs text-muted-foreground leading-relaxed">{t("context.hint")}</p>
+          <p className="mt-2 text-muted-foreground text-ui-2xs leading-relaxed">{t("context.hint")}</p>
         </div>
       )}
     </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import { ApiBar } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -39,6 +38,7 @@ import type {
   InterceptReviewInput,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ApiBar } from "@/ui/container";
 
 type Translator = ReturnType<typeof useTranslations>;
 
@@ -410,10 +410,7 @@ export function ApprovalDetail({
           {!readOnly ? <DecisionActions row={current} busy={busy} decide={decide} /> : null}
           {/* 行内展开够快；要贴给别人、要从通知里直链，就走独立页。 */}
           <p className="text-xs">
-            <Link
-              href={`/system/intercept/approvals/detail?id=${current.id}`}
-              className="text-primary hover:underline"
-            >
+            <Link href={`/system/intercept/approvals/detail?id=${current.id}`} className="text-primary hover:underline">
               {t("openPage")}
             </Link>
           </p>

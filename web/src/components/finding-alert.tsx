@@ -90,7 +90,7 @@ function FindingAlertCard({ count, items }: { count: number; items: Finding[] })
           reduced-motion 下 globals.css 会将其静态隐藏,不会残留色块。 */}
       <span
         aria-hidden="true"
-        className={cn("animate-glow-once pointer-events-none absolute inset-0", severitySoftChipClass(severity))}
+        className={cn("pointer-events-none absolute inset-0 animate-glow-once", severitySoftChipClass(severity))}
       />
       <div className="relative flex items-stretch">
         {/* 严重度色条:与 severity 契约同源(severityBarClass),亮暗/预设自动跟随。 */}
@@ -105,11 +105,11 @@ function FindingAlertCard({ count, items }: { count: number; items: Finding[] })
             <ShieldAlertIcon className="size-4" />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium" title={title}>
+            <div className="truncate font-medium text-sm" title={title}>
               {title}
             </div>
             {source ? (
-              <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground" title={source}>
+              <div className="mt-0.5 line-clamp-2 text-muted-foreground text-xs" title={source}>
                 {source}
               </div>
             ) : null}

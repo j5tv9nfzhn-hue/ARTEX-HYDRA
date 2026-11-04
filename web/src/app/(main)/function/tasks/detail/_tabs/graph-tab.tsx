@@ -1,6 +1,5 @@
 "use client";
 
-import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { useTranslations } from "next-intl";
@@ -9,6 +8,7 @@ import { ExplorationGraph } from "@/components/exploration-graph";
 import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api";
 import type { Edge, TaskNode } from "@/lib/types";
+import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 // 探索链路页的重建成本很高（React Flow 全量节点 + 自动布局 + 边标签），而标签页
 // 切换会卸载/重挂本组件。这里保留最近一次拿到的图数据：再次进入同一任务时同步
@@ -81,7 +81,12 @@ export function GraphTab({ taskId }: { taskId: string }) {
 
   return (
     <Sheet api={["explorationGraph"]}>
-      <SheetHead index="01" title={t("tabs.graph")} count={`${nodes.length} / ${edges.length}`} hint={t("graph.hint")} />
+      <SheetHead
+        index="01"
+        title={t("tabs.graph")}
+        count={`${nodes.length} / ${edges.length}`}
+        hint={t("graph.hint")}
+      />
       <div className="px-0">
         <ExplorationGraph nodes={nodes} edges={edges} className="h-[72vh]" />
       </div>

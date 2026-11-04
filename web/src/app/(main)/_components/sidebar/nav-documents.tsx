@@ -1,7 +1,6 @@
 "use client";
 
 import { Ellipsis, Folder, Forward, type LucideIcon, Trash2 } from "lucide-react";
-
 import { useTranslations } from "next-intl";
 
 import {

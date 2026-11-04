@@ -8,6 +8,8 @@
  * 全部页面共用一个入口，之后要调整某个原语的版式，只需在这里换一处，
  * 不必再动 63 个文件的 import。这是后续「内容重构」的落点。
  */
+
+export type { PanelAnnotationKind, SeverityBarItem } from "@/components/editorial";
 export {
   ApiBar,
   ComposeBar,
@@ -19,7 +21,6 @@ export {
   SectionHead,
   SeverityBar,
 } from "@/components/editorial";
-
 export {
   GroupHead,
   RecordRow,
@@ -28,5 +29,3 @@ export {
   SheetFoot,
   SheetHead,
 } from "@/components/editorial-sheet";
-
-export type { PanelAnnotationKind, SeverityBarItem } from "@/components/editorial";

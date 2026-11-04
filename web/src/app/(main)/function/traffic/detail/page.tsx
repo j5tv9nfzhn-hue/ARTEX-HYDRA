@@ -1,6 +1,5 @@
 "use client";
 
-import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import type { TrafficDetail, TrafficExchange } from "@/lib/types";
+import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 /**
  * 报文详情：一次交换的请求 / 响应原文与元信息。
@@ -126,24 +126,24 @@ function TrafficDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.status")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{meta?.status ?? "—"}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.status")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{meta?.status ?? "—"}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.method")}</span>
-          <span className="font-semibold text-[22px] leading-none font-mono">{meta?.method ?? "—"}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.method")}</span>
+          <span className="font-mono font-semibold text-[22px] leading-none">{meta?.method ?? "—"}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.reqLines")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{reqLines}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.reqLines")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{reqLines}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.respLines")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{respLines}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.respLines")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{respLines}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.size")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.size")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">
             {meta ? `${Math.round(meta.resp_len / 102.4) / 10}K` : "—"}
           </span>
         </div>

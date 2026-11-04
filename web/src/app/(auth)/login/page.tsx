@@ -105,7 +105,7 @@ export default function LoginPage() {
       <div className="flex w-full items-center justify-center bg-background p-8 lg:w-2/3">
         <div className="w-full max-w-md space-y-10 py-24 lg:py-32">
           <div className="space-y-4 text-center">
-            <h2 className="text-2xl font-medium tracking-tight">{t("login.title")}</h2>
+            <h2 className="font-medium text-2xl tracking-tight">{t("login.title")}</h2>
             <p className="mx-auto max-w-xl text-muted-foreground">{t("login.welcome")}</p>
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -132,7 +132,7 @@ export default function LoginPage() {
                 onCheckedChange={(v) => setAgreed(v === true)}
                 className="mt-0.5"
               />
-              <Label htmlFor="agree-terms" className="text-sm font-normal leading-relaxed text-muted-foreground">
+              <Label htmlFor="agree-terms" className="font-normal text-muted-foreground text-sm leading-relaxed">
                 {t.rich("login.agree", {
                   terms: (chunks) => (
                     <button
@@ -146,7 +146,7 @@ export default function LoginPage() {
                 })}
               </Label>
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-destructive text-sm">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading || !password || !agreed}>
               {loading ? t("login.submitting") : t("login.submit")}
             </Button>
@@ -162,14 +162,14 @@ export default function LoginPage() {
             </div>
             <div className="space-y-0.5">
               <DialogTitle className="text-base">{t("terms.title")}</DialogTitle>
-              <p className="text-xs text-muted-foreground">{t("terms.meta")}</p>
+              <p className="text-muted-foreground text-xs">{t("terms.meta")}</p>
             </div>
           </DialogHeader>
 
           <div
             ref={termsBodyRef}
             onScroll={handleTermsScroll}
-            className="max-h-[60vh] space-y-5 overflow-y-auto px-6 py-5 text-sm leading-relaxed text-muted-foreground"
+            className="max-h-[60vh] space-y-5 overflow-y-auto px-6 py-5 text-muted-foreground text-sm leading-relaxed"
           >
             <p className="rounded-lg border bg-muted/40 p-3 text-foreground/80">
               {t("terms.intro")}
@@ -178,7 +178,7 @@ export default function LoginPage() {
 
             <section className="space-y-1.5">
               <h4 className="flex items-center gap-2 font-medium text-foreground">
-                <span className="flex size-5 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+                <span className="flex size-5 items-center justify-center rounded-md bg-muted font-semibold text-muted-foreground text-xs">
                   1
                 </span>
                 {t("terms.a1Title")}
@@ -188,7 +188,7 @@ export default function LoginPage() {
 
             <section className="space-y-1.5">
               <h4 className="flex items-center gap-2 font-medium text-foreground">
-                <span className="flex size-5 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+                <span className="flex size-5 items-center justify-center rounded-md bg-muted font-semibold text-muted-foreground text-xs">
                   2
                 </span>
                 {t("terms.a2Title")}
@@ -198,7 +198,7 @@ export default function LoginPage() {
 
             <section className="space-y-2">
               <h4 className="flex items-center gap-2 font-medium text-destructive">
-                <span className="flex size-5 items-center justify-center rounded-md bg-destructive/10 text-xs font-semibold text-destructive">
+                <span className="flex size-5 items-center justify-center rounded-md bg-destructive/10 font-semibold text-destructive text-xs">
                   3
                 </span>
                 <AlertTriangle className="size-4" />
@@ -215,7 +215,7 @@ export default function LoginPage() {
 
             <section className="space-y-1.5">
               <h4 className="flex items-center gap-2 font-medium text-foreground">
-                <span className="flex size-5 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+                <span className="flex size-5 items-center justify-center rounded-md bg-muted font-semibold text-muted-foreground text-xs">
                   4
                 </span>
                 {t("terms.a4Title")}
@@ -225,7 +225,7 @@ export default function LoginPage() {
 
             <section className="space-y-1.5">
               <h4 className="flex items-center gap-2 font-medium text-foreground">
-                <span className="flex size-5 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+                <span className="flex size-5 items-center justify-center rounded-md bg-muted font-semibold text-muted-foreground text-xs">
                   5
                 </span>
                 {t("terms.a5Title")}
@@ -235,7 +235,7 @@ export default function LoginPage() {
 
             <section className="space-y-1.5">
               <h4 className="flex items-center gap-2 font-medium text-foreground">
-                <span className="flex size-5 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+                <span className="flex size-5 items-center justify-center rounded-md bg-muted font-semibold text-muted-foreground text-xs">
                   6
                 </span>
                 {t("terms.a6Title")}
@@ -248,7 +248,7 @@ export default function LoginPage() {
 
             <section className="space-y-1.5">
               <h4 className="flex items-center gap-2 font-medium text-foreground">
-                <span className="flex size-5 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+                <span className="flex size-5 items-center justify-center rounded-md bg-muted font-semibold text-muted-foreground text-xs">
                   7
                 </span>
                 {t("terms.a7Title")}
@@ -258,7 +258,7 @@ export default function LoginPage() {
 
             <section className="space-y-1.5">
               <h4 className="flex items-center gap-2 font-medium text-foreground">
-                <span className="flex size-5 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+                <span className="flex size-5 items-center justify-center rounded-md bg-muted font-semibold text-muted-foreground text-xs">
                   8
                 </span>
                 {t("terms.a8Title")}
@@ -268,7 +268,7 @@ export default function LoginPage() {
           </div>
 
           <DialogFooter className="mx-0 mb-0 flex-col items-stretch gap-2 rounded-b-xl px-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {readToEnd ? t("terms.footerRead") : t("terms.footerNotRead")}
             </p>
             <DialogClose asChild>

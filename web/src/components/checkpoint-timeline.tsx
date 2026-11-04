@@ -120,7 +120,7 @@ export function CheckpointTimeline({
   let body: React.ReactNode;
   if (loading && items.length === 0) {
     body = (
-      <div className="text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm">
+      <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground text-sm">
         <Spinner /> {t("loading")}
       </div>
     );
@@ -153,16 +153,16 @@ export function CheckpointTimeline({
                 <Badge variant="outline" className="font-mono">
                   #{cp.seq}
                 </Badge>
-                <span className="text-sm font-medium">{reasonLabel(cp.reason)}</span>
+                <span className="font-medium text-sm">{reasonLabel(cp.reason)}</span>
                 {superseded && (
                   <Badge variant="secondary" title={t("supersededHint")}>
                     {t("superseded")}
                   </Badge>
                 )}
-                <span className="text-muted-foreground ml-auto text-xs tabular-nums">{shortTime(cp.created_at)}</span>
+                <span className="ml-auto text-muted-foreground text-xs tabular-nums">{shortTime(cp.created_at)}</span>
               </div>
-              {cp.summary && <p className="text-muted-foreground mt-1.5 text-sm break-words">{cp.summary}</p>}
-              <div className="text-muted-foreground mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              {cp.summary && <p className="mt-1.5 break-words text-muted-foreground text-sm">{cp.summary}</p>}
+              <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-xs">
                 <span>{t("boundary", { id: cp.snapshot.activity_id })}</span>
                 {typeof cp.snapshot.counts?.nodes === "number" && (
                   <span>
@@ -191,7 +191,7 @@ export function CheckpointTimeline({
   return (
     <div className={cn("flex min-w-0 flex-col gap-3", className)}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-muted-foreground min-w-0 flex-1 text-xs">{t("boundaryHint")}</p>
+        <p className="min-w-0 flex-1 text-muted-foreground text-xs">{t("boundaryHint")}</p>
         <Button size="sm" variant="ghost" onClick={load} disabled={loading} title={t("refresh")}>
           {loading ? <Spinner /> : <RefreshCwIcon />}
           {t("refresh")}

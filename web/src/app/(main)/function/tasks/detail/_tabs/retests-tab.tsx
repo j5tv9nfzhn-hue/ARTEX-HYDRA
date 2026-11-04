@@ -1,6 +1,5 @@
 "use client";
 
-import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -17,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import type { Finding, FindingsPage } from "@/lib/types";
+import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 const PAGE_SIZE = 20;
 
@@ -84,7 +84,8 @@ export function RetestsTab({ taskId }: { taskId: string }) {
       ) : null}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
         <Sheet api={["findingsPage"]} className="min-w-0">
-          <SheetHead index="01"
+          <SheetHead
+            index="01"
             title={t("retests.selectTitle")}
             count={data ? data.total : undefined}
             hint={t("retests.selectDesc")}

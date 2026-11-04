@@ -37,7 +37,7 @@ function stripFences(src: string): string {
         continue;
       }
     }
-    if (!open) out += line + "\n";
+    if (!open) out += `${line}\n`;
   }
   return out;
 }
@@ -61,7 +61,7 @@ export function repairStreamMarkdown(src: string): string {
     if (!open) open = f;
     else if (f[0] === open[0] && f.length >= open.length) open = null;
   }
-  if (open) return out + "\n" + open; // 代码块内部就是源码，不再做行内补全
+  if (open) return `${out}\n${open}`; // 代码块内部就是源码，不再做行内补全
 
   // 行内语法：补闭合符而不是整段回退——已经渲染出来的部分不会闪。
   const prose = stripFences(out);

@@ -1,6 +1,5 @@
 "use client";
 
-import { Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import {
@@ -20,6 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api";
 import type { UpdateCheck, UpdateJournal, UpdateProgress } from "@/lib/types";
+import { Sheet, SheetHead } from "@/ui/container";
 
 /** 字节数 → 人类可读大小；发布包通常在几十 MB。 */
 function humanSize(n?: number): string {
@@ -59,6 +59,9 @@ export function UpdateCard() {
   const [savingPref, setSavingPref] = React.useState(false);
   const currentRef = React.useRef("");
 
+  // 依赖里刻意不放 t：useTranslations 每次渲染都可能返回新函数，放进 deps 会让 load
+  // 反复重建，进而让下面 useEffect([load]) 无限重取。与「系统 → 存储」页同一个约定。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 见上方说明。
   const load = React.useCallback((force: boolean) => {
     setLoading(true);
     api
@@ -86,6 +89,11 @@ export function UpdateCard() {
   }, [load]);
 
   // 只在用户点了「立即更新」后订阅：平时不占一条长连接。
+  //
+  // 依赖只放 applying：这个 effect 开的是一条 SSE 进度流，多放任何会在渲染之间变身份
+  // 的值（比如 t 或 EventSource 的回调）都会让它重跑——流被关掉重开，正在进行的更新
+  // 就断了。t 只在流里报错时用于文案，不需要它变化时重新订阅。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 见上方说明。
   React.useEffect(() => {
     if (!applying) return;
     const es = new EventSource(api.updateStreamUrl());
@@ -138,8 +146,7 @@ export function UpdateCard() {
           const bad = j.state === "failed" || j.state === "rolled-back";
           // 台账还停在 staged/applying/swapped，说明换装压根没走完。
           // 等够 3 分钟仍无结论就显式收尾：无限转圈正是上一版的表现。
-          const stuck =
-            elapsed > 180000 && j.state !== "confirmed" && j.state !== "idle";
+          const stuck = elapsed > 180000 && j.state !== "confirmed" && j.state !== "idle";
           if (bad || stuck) {
             setJournalIssue(j);
             setRestarting(false);
@@ -216,7 +223,19 @@ export function UpdateCard() {
 
   return (
     // 设置页是多列瀑布流布局，卡片自己负责行间距并禁止跨列断开（见 page.tsx 的注释）。
-    <Sheet api={["checkUpdate", "applyUpdate", "rollbackUpdate", "updateJournal", "updateStreamUrl", "health", "settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
+    <Sheet
+      api={[
+        "checkUpdate",
+        "applyUpdate",
+        "rollbackUpdate",
+        "updateJournal",
+        "updateStreamUrl",
+        "health",
+        "settings",
+        "setSettings",
+      ]}
+      className="mb-4 break-inside-avoid md:mb-6"
+    >
       <SheetHead icon={CloudDownloadIcon} title={t("update.title")} />
       <div className="flex flex-col gap-4 px-4 py-3">
         <p className="text-muted-foreground text-sm">
@@ -265,9 +284,7 @@ export function UpdateCard() {
         {restarting && (
           <div className="rounded-md border bg-muted/30 p-3 text-sm">
             <div className="font-medium">{t("update.restarting")}</div>
-            <p className="mt-1 text-muted-foreground text-xs">
-              {t("update.restartingDesc")}
-            </p>
+            <p className="mt-1 text-muted-foreground text-xs">{t("update.restartingDesc")}</p>
           </div>
         )}
         {/* 升级失败：原因来自落盘台账，而不是一句"正在重启"。 */}
@@ -287,9 +304,7 @@ export function UpdateCard() {
           <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
             <div className="font-medium">{t("update.stagedTitle", { version: staged.replace(/^v(?=\d)/, "") })}</div>
             <p className="mt-1 text-muted-foreground text-xs">
-              {canRestart
-                ? t("update.stagedDescAuto")
-                : t("update.stagedDescManual")}
+              {canRestart ? t("update.stagedDescAuto") : t("update.stagedDescManual")}
             </p>
           </div>
         )}
@@ -350,11 +365,7 @@ export function UpdateCard() {
                 {t("update.noAssetInline", { os: check?.os, arch: check?.arch, asset: check?.asset ?? "" })}
               </p>
             )}
-            {docker && (
-              <p className="text-muted-foreground text-xs">
-                {t("update.dockerInline")}
-              </p>
-            )}
+            {docker && <p className="text-muted-foreground text-xs">{t("update.dockerInline")}</p>}
             <div className="flex flex-wrap gap-2">
               <Button onClick={apply} disabled={!canApply}>
                 <ArrowDownToLineIcon className="size-4" />
@@ -381,9 +392,7 @@ export function UpdateCard() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className="text-sm">{t("update.autoCheckTitle")}</div>
-              <p className="text-muted-foreground text-xs">
-                {t("update.autoCheckDesc")}
-              </p>
+              <p className="text-muted-foreground text-xs">{t("update.autoCheckDesc")}</p>
             </div>
             <Switch
               checked={autoCheck}
@@ -395,9 +404,7 @@ export function UpdateCard() {
             <div>
               <div className="text-sm">{t("update.autoDownloadTitle")}</div>
               <p className="text-muted-foreground text-xs">
-                {canRestart
-                  ? t("update.autoDownloadDescAuto")
-                  : t("update.autoDownloadDescManual")}
+                {canRestart ? t("update.autoDownloadDescAuto") : t("update.autoDownloadDescManual")}
               </p>
             </div>
             <Switch

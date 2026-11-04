@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet as PaperSheet } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -19,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api } from "@/lib/api";
 import type { CommandRecord, ToolStat } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Masthead, Sheet as PaperSheet } from "@/ui/container";
 
 function fmtTime(ts: string) {
   return new Date(ts).toLocaleString("zh-CN", {
@@ -47,7 +47,7 @@ function toolInput(raw: string): string {
 function truncate(s: string, maxLen: number): string {
   const first = s.split("\n")[0]; // single-line preview
   if (first.length <= maxLen) return first;
-  return first.slice(0, maxLen) + "…";
+  return `${first.slice(0, maxLen)}…`;
 }
 
 // error_class → 文案键。后端只存低基数标签（config / dialect / ...），文案在前端。
@@ -203,7 +203,7 @@ export default function CommandsPage() {
           {t("stats")}
         </Button>
 
-        <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="ml-auto flex items-center gap-2 text-muted-foreground text-xs">
           <span className="tabular-nums">
             {rangeStart}–{rangeEnd} / {total}
           </span>
@@ -267,17 +267,17 @@ export default function CommandsPage() {
                       className={cn("cursor-pointer", selected?.id === cmd.id && "bg-accent hover:bg-accent")}
                       onClick={() => setSelected(cmd)}
                     >
-                      <TableCell className="text-xs text-muted-foreground tabular-nums">
+                      <TableCell className="text-muted-foreground text-xs tabular-nums">
                         {fmtTime(cmd.created_at)}
                       </TableCell>
-                      <TableCell className="text-xs font-mono text-muted-foreground">#{cmd.exploration_id}</TableCell>
+                      <TableCell className="font-mono text-muted-foreground text-xs">#{cmd.exploration_id}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-xs font-mono">
+                        <Badge variant="outline" className="font-mono text-xs">
                           {cmd.worker || "-"}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="text-xs font-mono">
+                        <Badge variant="secondary" className="font-mono text-xs">
                           {cmd.tool || "-"}
                         </Badge>
                       </TableCell>
@@ -292,7 +292,7 @@ export default function CommandsPage() {
                             {t("failed")}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-xs text-emerald-600">
+                          <Badge variant="secondary" className="text-emerald-600 text-xs">
                             {t("success")}
                           </Badge>
                         )}
@@ -331,7 +331,7 @@ export default function CommandsPage() {
                   {statsErrors > 0 && (
                     <>
                       {" / "}
-                      {t("failed")} <span className="tabular-nums text-red-600 dark:text-red-400">{statsErrors}</span>
+                      {t("failed")} <span className="text-red-600 tabular-nums dark:text-red-400">{statsErrors}</span>
                     </>
                   )}
                 </>
@@ -342,31 +342,31 @@ export default function CommandsPage() {
           {/* 错误归因：只看 errors 总数无法回答「为什么失败」，这里按 error_class 拆开。 */}
           {statsErrors > 0 && (
             <div className="rounded-md border bg-muted/30 p-3">
-              <div className="mb-2 flex items-center justify-between text-xs font-medium">
+              <div className="mb-2 flex items-center justify-between font-medium text-xs">
                 <span>{t("classTitle")}</span>
-                <span className="tabular-nums text-muted-foreground">
+                <span className="text-muted-foreground tabular-nums">
                   {statsErrors} {t("failed")}
                 </span>
               </div>
               {classTotals.length === 0 ? (
                 // 旧账本行没有 error_class（归因上线前写入）：有失败但拆不开，
                 // 明说一句，别让人以为归因坏了。
-                <div className="text-xs text-muted-foreground">{t("classEmpty")}</div>
+                <div className="text-muted-foreground text-xs">{t("classEmpty")}</div>
               ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {classTotals.map(([cls, n]) => (
-                  <span
-                    key={cls}
-                    className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs"
-                  >
-                    <span className="text-muted-foreground">{classLabel(cls)}</span>
-                    <span className="font-semibold tabular-nums">{n}</span>
-                    <span className="tabular-nums text-muted-foreground">
-                      {statsErrors > 0 ? `${((n / statsErrors) * 100).toFixed(0)}%` : ""}
+                <div className="flex flex-wrap gap-1.5">
+                  {classTotals.map(([cls, n]) => (
+                    <span
+                      key={cls}
+                      className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs"
+                    >
+                      <span className="text-muted-foreground">{classLabel(cls)}</span>
+                      <span className="font-semibold tabular-nums">{n}</span>
+                      <span className="text-muted-foreground tabular-nums">
+                        {statsErrors > 0 ? `${((n / statsErrors) * 100).toFixed(0)}%` : ""}
+                      </span>
                     </span>
-                  </span>
-                ))}
-              </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -376,16 +376,16 @@ export default function CommandsPage() {
               <Loader2Icon className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : stats.length === 0 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">{t("statsEmpty")}</div>
+            <div className="py-10 text-center text-muted-foreground text-sm">{t("statsEmpty")}</div>
           ) : (
             <div className="-mr-2 max-h-[55vh] space-y-1 overflow-auto pr-2">
               {stats.map((s) => (
                 <div key={s.tool} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md p-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-mono text-xs font-medium">{s.tool}</span>
+                      <span className="truncate font-medium font-mono text-xs">{s.tool}</span>
                       {s.errors > 0 && (
-                        <span className="text-xs tabular-nums text-red-600 dark:text-red-400">
+                        <span className="text-red-600 text-xs tabular-nums dark:text-red-400">
                           {t("failed")} {s.errors}
                         </span>
                       )}
@@ -403,7 +403,7 @@ export default function CommandsPage() {
                           .map(([cls, n]) => (
                             <span
                               key={cls}
-                              className="rounded-sm bg-red-50 px-1.5 py-0.5 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                              className="rounded-sm bg-red-50 px-1.5 py-0.5 text-red-700 text-xs dark:bg-red-950/40 dark:text-red-300"
                             >
                               {classLabel(cls)} {n}
                             </span>
@@ -412,8 +412,8 @@ export default function CommandsPage() {
                     )}
                   </div>
                   <div className="text-right">
-                    <div className="text-xs font-semibold tabular-nums">{s.total}</div>
-                    <div className="text-xs tabular-nums text-muted-foreground">
+                    <div className="font-semibold text-xs tabular-nums">{s.total}</div>
+                    <div className="text-muted-foreground text-xs tabular-nums">
                       {statsTotal > 0 ? ((s.total / statsTotal) * 100).toFixed(1) : "0.0"}%
                     </div>
                   </div>
@@ -432,13 +432,13 @@ export default function CommandsPage() {
                 <SheetTitle className="pr-8">{t("detailTitle")}</SheetTitle>
                 <SheetDescription>{fmtTime(selected.created_at)}</SheetDescription>
                 <div className="flex flex-wrap items-center gap-2 pt-2">
-                  <Badge variant="outline" className="text-xs font-mono">
+                  <Badge variant="outline" className="font-mono text-xs">
                     #{selected.exploration_id}
                   </Badge>
-                  <Badge variant="outline" className="text-xs font-mono">
+                  <Badge variant="outline" className="font-mono text-xs">
                     {selected.worker || "-"}
                   </Badge>
-                  <Badge variant="secondary" className="text-xs font-mono">
+                  <Badge variant="secondary" className="font-mono text-xs">
                     {selected.tool || "-"}
                   </Badge>
                   {selected.is_error ? (
@@ -446,7 +446,7 @@ export default function CommandsPage() {
                       {t("failed")}
                     </Badge>
                   ) : (
-                    <Badge variant="secondary" className="text-xs text-emerald-600">
+                    <Badge variant="secondary" className="text-emerald-600 text-xs">
                       {t("success")}
                     </Badge>
                   )}
@@ -454,19 +454,19 @@ export default function CommandsPage() {
               </SheetHeader>
               <div className="grid min-h-0 flex-1 grid-rows-2 divide-y">
                 <div className="flex min-h-0 min-w-0 flex-col">
-                  <div className="border-b px-5 py-2 text-xs font-medium text-muted-foreground">{t("inputLabel")}</div>
+                  <div className="border-b px-5 py-2 font-medium text-muted-foreground text-xs">{t("inputLabel")}</div>
                   <div className="min-h-0 flex-1 overflow-auto">
-                    <pre className="p-5 font-mono text-xs break-all whitespace-pre-wrap">
+                    <pre className="whitespace-pre-wrap break-all p-5 font-mono text-xs">
                       {toolInput(selected.command)}
                     </pre>
                   </div>
                 </div>
                 <div className="flex min-h-0 min-w-0 flex-col">
-                  <div className="border-b px-5 py-2 text-xs font-medium text-muted-foreground">{t("outputLabel")}</div>
+                  <div className="border-b px-5 py-2 font-medium text-muted-foreground text-xs">{t("outputLabel")}</div>
                   <div className="min-h-0 flex-1 overflow-auto">
                     <pre
                       className={cn(
-                        "p-5 font-mono text-xs break-all whitespace-pre-wrap",
+                        "whitespace-pre-wrap break-all p-5 font-mono text-xs",
                         selected.is_error && "text-red-600 dark:text-red-400",
                       )}
                     >

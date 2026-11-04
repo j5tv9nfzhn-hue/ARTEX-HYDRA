@@ -10,16 +10,7 @@ import type { ShellCapability } from "@/lib/types";
  */
 
 /** 归到「命令执行」一类的工具名。逻辑判断仍用原始名，只有显示时改写。 */
-const EXEC_TOOLS = new Set([
-  "Bash",
-  "bash",
-  "shell",
-  "shell_open",
-  "shell_send",
-  "Shell",
-  "powershell",
-  "pwsh",
-]);
+const EXEC_TOOLS = new Set(["Bash", "bash", "shell", "shell_open", "shell_send", "Shell", "powershell", "pwsh"]);
 
 export function isExecTool(tool: string): boolean {
   return EXEC_TOOLS.has(tool);

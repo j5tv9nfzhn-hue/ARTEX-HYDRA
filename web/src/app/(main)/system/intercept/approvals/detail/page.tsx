@@ -1,6 +1,5 @@
 "use client";
 
-import { KpiRow, Masthead, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -15,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import type { InterceptApprovalRow } from "@/lib/types";
+import { KpiRow, Masthead, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 /**
  * 审批票详情：一张放行票的完整上下文。
@@ -117,11 +117,7 @@ function ApprovalDetailInner() {
               <span className="tabular-nums">{row.created_at}</span>
             </>
           }
-          subtitle={
-            row.task_id
-              ? t("taskLine", { id: row.task_id })
-              : row.conv_title || t("noTask")
-          }
+          subtitle={row.task_id ? t("taskLine", { id: row.task_id }) : row.conv_title || t("noTask")}
           titleClassName="text-xl"
         />
         {back}
@@ -129,34 +125,32 @@ function ApprovalDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.status")}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.status")}</span>
           <span className="font-semibold text-[15px] leading-none">
             <Badge variant="outline">{ta(`status.${row.status}`)}</Badge>
           </span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.source")}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.source")}</span>
           <span className="font-semibold text-[15px] leading-none">
             {row.decision_source === "model" ? ta("modelDecision") : row.rule_name || ta("ruleMissing")}
           </span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.agent")}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.agent")}</span>
           <span className="truncate font-mono text-[13px] leading-none">{row.agent_name || "—"}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.requested")}</span>
-          <span className="font-semibold text-[13px] leading-none tabular-nums">{row.created_at}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.requested")}</span>
+          <span className="font-semibold text-[13px] tabular-nums leading-none">{row.created_at}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.decided")}</span>
-          <span className="font-semibold text-[13px] leading-none tabular-nums">{row.decided_at || "—"}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.decided")}</span>
+          <span className="font-semibold text-[13px] tabular-nums leading-none">{row.decided_at || "—"}</span>
         </div>
       </KpiRow>
 
-      {error ? (
-        <p className="border-destructive/40 border-l-2 pl-3 text-[12.5px] text-destructive">{error}</p>
-      ) : null}
+      {error ? <p className="border-destructive/40 border-l-2 pl-3 text-[12.5px] text-destructive">{error}</p> : null}
 
       <Sheet>
         <SheetHead icon={ShieldCheckIcon} title={t("body")} hint={t("bodyHint")} />

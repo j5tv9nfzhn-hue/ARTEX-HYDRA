@@ -1,8 +1,8 @@
-import { Masthead } from "@/ui/container";
 import { useTranslations } from "next-intl";
 
 import { HarnessTargetsCard } from "@/components/harness-targets-card";
 import { MCPExposureCard } from "@/components/mcp-exposure-card";
+import { Masthead } from "@/ui/container";
 
 // 外部接入：ARTEX 作为 MCP 服务端，给 Codex / Claude Code / Cursor 这类外部 harness 用。
 //
@@ -12,7 +12,12 @@ export default function ExternalAccessPage() {
   const t = useTranslations("externalPage");
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
-      <Masthead title={t("title")} titleClassName="text-xl tracking-tight" subtitle={t("subtitle")} subtitleClassName="text-sm" />
+      <Masthead
+        title={t("title")}
+        titleClassName="text-xl tracking-tight"
+        subtitle={t("subtitle")}
+        subtitleClassName="text-sm"
+      />
 
       <HarnessTargetsCard />
 

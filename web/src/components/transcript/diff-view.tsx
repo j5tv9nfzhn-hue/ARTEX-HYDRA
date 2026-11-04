@@ -47,7 +47,7 @@ function SkipRow({ line }: { line: DiffLine }) {
           <Row key={`${item.oldNo}:${item.newNo}`} line={item} />
         ))}
         <button
-          className="flex w-full items-center justify-center gap-1 bg-muted/30 py-0.5 text-ui-2xs text-muted-foreground hover:text-foreground"
+          className="flex w-full items-center justify-center gap-1 bg-muted/30 py-0.5 text-muted-foreground text-ui-2xs hover:text-foreground"
           onClick={() => setOpen(false)}
           type="button"
         >
@@ -59,7 +59,7 @@ function SkipRow({ line }: { line: DiffLine }) {
   }
   return (
     <button
-      className="flex w-full items-center justify-center gap-1 bg-muted/30 py-0.5 text-ui-2xs text-muted-foreground hover:text-foreground"
+      className="flex w-full items-center justify-center gap-1 bg-muted/30 py-0.5 text-muted-foreground text-ui-2xs hover:text-foreground"
       onClick={() => setOpen(true)}
       type="button"
     >
@@ -77,7 +77,7 @@ export function DiffView({ model, className }: { model: DiffModel; className?: s
       {model.hunks.map((hunk) => (
         <div key={hunk.key}>
           {model.hunks.length > 1 ? (
-            <div className="bg-muted/30 px-2 py-0.5 font-mono text-ui-2xs text-muted-foreground">{hunk.header}</div>
+            <div className="bg-muted/30 px-2 py-0.5 font-mono text-muted-foreground text-ui-2xs">{hunk.header}</div>
           ) : null}
           {hunk.lines.map((line, index) =>
             line.kind === "skip" ? (
@@ -98,7 +98,7 @@ export function DiffView({ model, className }: { model: DiffModel; className?: s
 export function PatchFileView({ file }: { file: PatchFileDiff }) {
   return (
     <div>
-      <div className="flex items-center gap-2 bg-muted/30 px-2 py-0.5 font-mono text-ui-2xs text-muted-foreground">
+      <div className="flex items-center gap-2 bg-muted/30 px-2 py-0.5 font-mono text-muted-foreground text-ui-2xs">
         <span className="min-w-0 truncate">{file.path}</span>
         <DiffStat added={file.added} removed={file.removed} className="ml-auto" />
       </div>
@@ -119,8 +119,7 @@ export function PatchFileView({ file }: { file: PatchFileDiff }) {
 export function DiffStat({ added, removed, className }: { added: number; removed: number; className?: string }) {
   return (
     <span className={cn("shrink-0 font-mono text-ui-2xs tabular-nums", className)}>
-      <span className="text-diff-added">+{added}</span>{" "}
-      <span className="text-diff-removed">-{removed}</span>
+      <span className="text-diff-added">+{added}</span> <span className="text-diff-removed">-{removed}</span>
     </span>
   );
 }

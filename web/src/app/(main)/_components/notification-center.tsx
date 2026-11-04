@@ -84,7 +84,7 @@ export function NotificationCenter() {
         >
           <BellIcon className="size-4" />
           {count > 0 ? (
-            <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 font-semibold text-xs text-destructive-foreground tabular-nums">
+            <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 font-semibold text-destructive-foreground text-xs tabular-nums">
               {count > 99 ? "99+" : count}
             </span>
           ) : null}
@@ -107,15 +107,15 @@ export function NotificationCenter() {
           <div className="flex items-center gap-1.5 px-3 pt-2 pb-1">
             <ShieldCheckIcon className="size-3.5 text-amber-500" />
             <span className="font-medium text-xs">{t("pending")}</span>
-            <span className="text-xs text-muted-foreground tabular-nums">{pending.length}</span>
+            <span className="text-muted-foreground text-xs tabular-nums">{pending.length}</span>
             <span className="ml-auto">
-              <Link href="/system/intercept/approvals" className="text-xs text-primary hover:underline">
+              <Link href="/system/intercept/approvals" className="text-primary text-xs hover:underline">
                 {t("all")}
               </Link>
             </span>
           </div>
           {pending.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-muted-foreground">{t("pendingEmpty")}</p>
+            <p className="px-3 py-2 text-muted-foreground text-xs">{t("pendingEmpty")}</p>
           ) : (
             pending.slice(0, MAX_EACH).map((row) => (
               <Link
@@ -127,7 +127,7 @@ export function NotificationCenter() {
                 <span className="mt-1 size-1.5 shrink-0 rounded-full bg-amber-500" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-mono text-xs">{row.tool_name}</span>
-                  <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground text-xs">
                     <span className="truncate">{row.agent_name}</span>
                     <span className="shrink-0">{relTime(row.created_at, t)}</span>
                   </span>
@@ -140,15 +140,15 @@ export function NotificationCenter() {
           <div className="mt-1 flex items-center gap-1.5 border-t px-3 pt-2 pb-1">
             <ShieldAlertIcon className="size-3.5 text-rose-500" />
             <span className="font-medium text-xs">{t("severe")}</span>
-            <span className="text-xs text-muted-foreground tabular-nums">{severe.length}</span>
+            <span className="text-muted-foreground text-xs tabular-nums">{severe.length}</span>
             <span className="ml-auto">
-              <Link href="/function/findings" className="text-xs text-primary hover:underline">
+              <Link href="/function/findings" className="text-primary text-xs hover:underline">
                 {t("all")}
               </Link>
             </span>
           </div>
           {severe.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-muted-foreground">{t("severeEmpty")}</p>
+            <p className="px-3 py-2 text-muted-foreground text-xs">{t("severeEmpty")}</p>
           ) : (
             severe.map((f) => (
               <Link
@@ -165,10 +165,8 @@ export function NotificationCenter() {
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs">{f.name || f.vulnclass || f.summary}</span>
-                  <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="truncate">
-                      {f.task_description || (f.task_id ? `#${f.task_id}` : "—")}
-                    </span>
+                  <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground text-xs">
+                    <span className="truncate">{f.task_description || (f.task_id ? `#${f.task_id}` : "—")}</span>
                     <span className="shrink-0">{relTime(f.ts, t)}</span>
                   </span>
                 </span>

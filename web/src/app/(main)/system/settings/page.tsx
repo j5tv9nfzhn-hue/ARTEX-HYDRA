@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -19,7 +18,6 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +28,7 @@ import { LOCALE_LABELS } from "@/i18n/config";
 import { api } from "@/lib/api";
 import { type ChatSendMode, setChatSendMode, useChatSendMode, useChatSendModeOptions } from "@/lib/chat-send-mode";
 import type { Settings, ShellSettings } from "@/lib/types";
+import { Masthead, Sheet, SheetHead } from "@/ui/container";
 
 import { AboutCard } from "./_components/about-card";
 import { MigrateCard } from "./_components/migrate-card";
@@ -215,7 +214,7 @@ export default function SystemSettingsPage() {
         toast.success(t("shell.saved"));
         loadShell();
       })
-      .catch((e) => toast.error(t("shell.toastInvalid") + "：" + (e as Error).message))
+      .catch((e) => toast.error(`${t("shell.toastInvalid")}：${(e as Error).message}`))
       .finally(() => setSavingShell(false));
   };
 
@@ -421,7 +420,7 @@ export default function SystemSettingsPage() {
           <SheetHead index="01" icon={RadioTowerIcon} title={t("trafficCapture.title")} />
           <div className="flex items-center justify-between gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("trafficCapture.desc", richTags)}</p>
-            <Label htmlFor="traffic-capture" className="text-sm font-normal text-muted-foreground">
+            <Label htmlFor="traffic-capture" className="font-normal text-muted-foreground text-sm">
               {trafficCapture ? t("trafficCapture.on") : t("trafficCapture.off")}
             </Label>
             <Switch
@@ -438,9 +437,8 @@ export default function SystemSettingsPage() {
           <div className="flex items-center justify-between gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm" id="agent-traffic-binding-description">
               {t.rich("agentBinding.desc", richTags)}
-
             </p>
-            <Label htmlFor="agent-traffic-binding" className="text-sm font-normal text-muted-foreground">
+            <Label htmlFor="agent-traffic-binding" className="font-normal text-muted-foreground text-sm">
               {agentTrafficBinding ? t("agentBinding.on") : t("agentBinding.off")}
             </Label>
             <Switch
@@ -458,25 +456,13 @@ export default function SystemSettingsPage() {
           <div className="flex flex-col gap-3 px-4 py-3">
             <p className="text-muted-foreground text-sm" id="verify-gate-description">
               {t.rich("verifyGate.desc", richTags)}
-
             </p>
             <div className="flex flex-col gap-1.5">
-              <Label
-                htmlFor="verify-gate-threshold"
-                className="text-sm font-normal text-muted-foreground"
-              >
+              <Label htmlFor="verify-gate-threshold" className="font-normal text-muted-foreground text-sm">
                 {t("verifyGate.thresholdLabel")}
               </Label>
-              <Select
-                value={verifyThreshold}
-                disabled={!loaded || savingVerifyGate}
-                onValueChange={setVerifyThreshold}
-              >
-                <SelectTrigger
-                  id="verify-gate-threshold"
-                  aria-describedby="verify-gate-description"
-                  className="w-full"
-                >
+              <Select value={verifyThreshold} disabled={!loaded || savingVerifyGate} onValueChange={setVerifyThreshold}>
+                <SelectTrigger id="verify-gate-threshold" aria-describedby="verify-gate-description" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -489,10 +475,7 @@ export default function SystemSettingsPage() {
               </Select>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Label
-                htmlFor="verify-gate-sample"
-                className="text-sm font-normal text-muted-foreground"
-              >
+              <Label htmlFor="verify-gate-sample" className="font-normal text-muted-foreground text-sm">
                 {t("verifyGate.sampleLabel")}
               </Label>
               <Input
@@ -506,7 +489,7 @@ export default function SystemSettingsPage() {
                 disabled={!loaded || savingVerifyGate || verifyThreshold === "off"}
                 onChange={(e) => setVerifySamplePercent(e.target.value)}
               />
-              <span className="text-sm text-muted-foreground">%</span>
+              <span className="text-muted-foreground text-sm">%</span>
             </div>
             <p className="text-muted-foreground text-xs">{t("verifyGate.sampleHint")}</p>
             <div className="flex items-center justify-end">
@@ -524,7 +507,7 @@ export default function SystemSettingsPage() {
               {t.rich("dedupe.desc", richTags)}
             </p>
             <div className="flex items-center justify-between gap-4">
-              <Label htmlFor="dedupe-enabled" className="text-sm font-normal text-muted-foreground">
+              <Label htmlFor="dedupe-enabled" className="font-normal text-muted-foreground text-sm">
                 {dedupeEnabled ? t("dedupe.on") : t("dedupe.off")}
               </Label>
               <Switch
@@ -536,7 +519,7 @@ export default function SystemSettingsPage() {
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Label htmlFor="dedupe-profile" className="text-sm font-normal text-muted-foreground">
+              <Label htmlFor="dedupe-profile" className="font-normal text-muted-foreground text-sm">
                 {t("dedupe.profileLabel")}
               </Label>
               <Input
@@ -549,7 +532,7 @@ export default function SystemSettingsPage() {
                 disabled={!loaded || savingDedupe || !dedupeEnabled}
                 onChange={(e) => setDedupeProfileId(e.target.value)}
               />
-              <Label htmlFor="dedupe-timeout" className="text-sm font-normal text-muted-foreground">
+              <Label htmlFor="dedupe-timeout" className="font-normal text-muted-foreground text-sm">
                 {t("dedupe.timeoutLabel")}
               </Label>
               <Input
@@ -563,7 +546,7 @@ export default function SystemSettingsPage() {
                 disabled={!loaded || savingDedupe || !dedupeEnabled}
                 onChange={(e) => setDedupeTimeoutSecs(e.target.value)}
               />
-              <span className="text-sm text-muted-foreground">s</span>
+              <span className="text-muted-foreground text-sm">s</span>
             </div>
             <p className="text-muted-foreground text-xs">{t("dedupe.profileHint")}</p>
             <p className="text-muted-foreground text-xs">{t("dedupe.timeoutHint")}</p>
@@ -579,7 +562,7 @@ export default function SystemSettingsPage() {
           <SheetHead index="05" icon={RadioTowerIcon} title={t("globalProxy.title")} />
           <div className="flex flex-col gap-2 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("globalProxy.desc", richTags)}</p>
-            <Label htmlFor="global-proxy" className="text-sm font-normal text-muted-foreground">
+            <Label htmlFor="global-proxy" className="font-normal text-muted-foreground text-sm">
               {t("globalProxy.addrLabel")}
             </Label>
             <div className="flex items-center gap-2">
@@ -606,7 +589,7 @@ export default function SystemSettingsPage() {
           <div className="flex flex-col gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("skillEvolution.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
-              <Label htmlFor="skill-auto-distill" className="text-sm font-normal text-muted-foreground">
+              <Label htmlFor="skill-auto-distill" className="font-normal text-muted-foreground text-sm">
                 {t("skillEvolution.autoDistill")}
                 {skillAutoDistill ? t("onSuffix") : t("offSuffix")}
               </Label>
@@ -618,7 +601,7 @@ export default function SystemSettingsPage() {
               />
             </div>
             <div className="flex items-center justify-between gap-4">
-              <Label htmlFor="skill-review-gate" className="text-sm font-normal text-muted-foreground">
+              <Label htmlFor="skill-review-gate" className="font-normal text-muted-foreground text-sm">
                 {t("skillEvolution.reviewGate")}
                 {skillReviewGate ? t("onSuffix") : t("offSuffix")}
               </Label>
@@ -631,7 +614,7 @@ export default function SystemSettingsPage() {
             </div>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <Label htmlFor="skill-auto-distill-apply" className="text-sm font-normal text-muted-foreground">
+                <Label htmlFor="skill-auto-distill-apply" className="font-normal text-muted-foreground text-sm">
                   {t("skillEvolution.autoApply")}
                   {skillReviewGate && !skillAutoDistillApply ? t("offSuffix") : t("onSuffix")}
                 </Label>
@@ -662,7 +645,7 @@ export default function SystemSettingsPage() {
           <div className="flex flex-col gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("webSearch.desc", richTags)}</p>
             <div className="flex items-center justify-between gap-4">
-              <Label htmlFor="web-search" className="text-sm font-normal text-muted-foreground">
+              <Label htmlFor="web-search" className="font-normal text-muted-foreground text-sm">
                 {webSearch ? t("webSearch.on") : t("webSearch.off")}
               </Label>
               <Switch
@@ -678,7 +661,7 @@ export default function SystemSettingsPage() {
 
             {webSearch && (
               <div className="flex items-center justify-between gap-4">
-                <Label className="text-sm font-normal text-muted-foreground">{t("webSearch.sourceLabel")}</Label>
+                <Label className="font-normal text-muted-foreground text-sm">{t("webSearch.sourceLabel")}</Label>
                 <Select
                   value={backend}
                   disabled={!loaded || saving}
@@ -701,8 +684,8 @@ export default function SystemSettingsPage() {
             )}
 
             {webSearch && backend === "deepseek" && (
-              <div className="border-border/60 bg-muted/30 flex flex-col gap-2 rounded-md border p-3">
-                <p className="text-sm font-medium">{t("webSearch.deepseekTitle")}</p>
+              <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-muted/30 p-3">
+                <p className="font-medium text-sm">{t("webSearch.deepseekTitle")}</p>
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   {t.rich("webSearch.deepseekDesc1", richTags)}
                 </p>
@@ -715,9 +698,9 @@ export default function SystemSettingsPage() {
 
             {webSearch && backend === "brave-free" && (
               <div className="flex flex-col gap-2">
-                <Label htmlFor="brave-key" className="text-sm font-normal text-muted-foreground">
+                <Label htmlFor="brave-key" className="font-normal text-muted-foreground text-sm">
                   {t("webSearch.braveKeyLabel")}
-                  {braveKeySet && <span className="ml-2 text-xs text-emerald-500">{t("configured")}</span>}
+                  {braveKeySet && <span className="ml-2 text-emerald-500 text-xs">{t("configured")}</span>}
                 </Label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -739,16 +722,16 @@ export default function SystemSettingsPage() {
                     {t("save")}
                   </Button>
                 </div>
-                {braveNeedsKey && <p className="text-xs text-amber-500">{t("webSearch.braveNeedsKey")}</p>}
+                {braveNeedsKey && <p className="text-amber-500 text-xs">{t("webSearch.braveNeedsKey")}</p>}
                 <p className="text-muted-foreground text-xs">{t("webSearch.braveQuota")}</p>
               </div>
             )}
 
             {webSearch && backend === "tavily" && (
               <div className="flex flex-col gap-2">
-                <Label htmlFor="tavily-key" className="text-sm font-normal text-muted-foreground">
+                <Label htmlFor="tavily-key" className="font-normal text-muted-foreground text-sm">
                   {t("webSearch.tavilyKeyLabel")}
-                  {tavilyKeySet && <span className="ml-2 text-xs text-emerald-500">{t("configured")}</span>}
+                  {tavilyKeySet && <span className="ml-2 text-emerald-500 text-xs">{t("configured")}</span>}
                 </Label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -771,7 +754,7 @@ export default function SystemSettingsPage() {
                   </Button>
                 </div>
                 {webSearch && backend === "tavily" && !tavilyKeySet && (
-                  <p className="text-xs text-amber-500">{t("webSearch.tavilyNeedsKey")}</p>
+                  <p className="text-amber-500 text-xs">{t("webSearch.tavilyNeedsKey")}</p>
                 )}
                 <p className="text-muted-foreground text-xs">{t("webSearch.tavilyGetKey")}</p>
               </div>
@@ -779,7 +762,7 @@ export default function SystemSettingsPage() {
 
             {webSearch && (
               <div className="flex flex-col gap-2">
-                <Label htmlFor="ws-proxy" className="text-sm font-normal text-muted-foreground">
+                <Label htmlFor="ws-proxy" className="font-normal text-muted-foreground text-sm">
                   {t("webSearch.proxyLabel")}
                 </Label>
                 <div className="flex items-center gap-2">
@@ -885,7 +868,7 @@ export default function SystemSettingsPage() {
                 .resolved 会整页崩（Runtime TypeError 白屏）。契约上 runtime 可能缺席，
                 守卫收在块级：整块 runtime 明细只在 runtime 到位时渲染。 */}
             {shellInfo?.runtime && (
-              <div className="text-muted-foreground flex flex-col gap-1 border-t pt-3 text-xs">
+              <div className="flex flex-col gap-1 border-t pt-3 text-muted-foreground text-xs">
                 <span>
                   {t("shell.current")}：
                   {shellInfo.runtime.resolved
@@ -893,7 +876,8 @@ export default function SystemSettingsPage() {
                     : `${t("shell.unavailable")}${shellInfo.runtime.error ? `：${shellInfo.runtime.error}` : ""}`}
                 </span>
                 <span>
-                  {t("shell.pool")}：{t("shell.poolIdle", {
+                  {t("shell.pool")}：
+                  {t("shell.poolIdle", {
                     idle: shellInfo.runtime.pool_idle,
                     target: shellInfo.runtime.pool_target,
                   })}
@@ -919,7 +903,7 @@ export default function SystemSettingsPage() {
                 disabled={!loaded || savingTokenBudget}
                 onChange={(e) => setTokenBudgetK(e.target.value)}
               />
-              <span className="text-sm text-muted-foreground">k</span>
+              <span className="text-muted-foreground text-sm">k</span>
               <Button onClick={saveTokenBudget} disabled={!loaded || savingTokenBudget}>
                 {t("save")}
               </Button>
@@ -952,7 +936,7 @@ export default function SystemSettingsPage() {
           <SheetHead index="12" icon={LanguagesIcon} title={t("language.title")} />
           <div className="flex flex-col gap-2 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t("language.desc")}</p>
-            <p className="text-sm text-muted-foreground">{LOCALE_LABELS.zh}</p>
+            <p className="text-muted-foreground text-sm">{LOCALE_LABELS.zh}</p>
           </div>
         </Sheet>
 
@@ -960,7 +944,7 @@ export default function SystemSettingsPage() {
           <SheetHead index="13" icon={KeyboardIcon} title={t("sendKey.title")} />
           <div className="flex items-center justify-between gap-4 px-4 py-3">
             <p className="text-muted-foreground text-sm">{t.rich("sendKey.desc", richTags)}</p>
-            <Label htmlFor="chat-send-mode" className="text-sm font-normal text-muted-foreground">
+            <Label htmlFor="chat-send-mode" className="font-normal text-muted-foreground text-sm">
               {t("sendKey.label")}
             </Label>
             <Select value={sendMode} onValueChange={(v) => setChatSendMode(v as ChatSendMode)}>

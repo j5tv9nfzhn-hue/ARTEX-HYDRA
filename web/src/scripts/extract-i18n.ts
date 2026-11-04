@@ -15,7 +15,7 @@
 
 import * as ts from "typescript";
 
-import { type CatalogTree, mergeCatalogTree } from "../i18n/catalog-merge";
+import { mergeCatalogTree } from "../i18n/catalog-merge";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";

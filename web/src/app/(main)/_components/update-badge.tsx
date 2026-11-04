@@ -5,7 +5,6 @@ import * as React from "react";
 import Link from "next/link";
 
 import { ArrowUpCircleIcon } from "lucide-react";
-
 import { useTranslations } from "next-intl";
 
 import { api } from "@/lib/api";
@@ -55,7 +54,7 @@ export function UpdateBadge() {
           ? t("badge.stagedTitle", { version: status.staged_version ?? "-" })
           : t("badge.newTitle", { version: status.latest ?? "-" })
       }
-      className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-medium text-xs text-emerald-600 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400"
+      className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-600 text-xs transition-colors hover:bg-emerald-500/20 dark:text-emerald-400"
     >
       <ArrowUpCircleIcon className="size-3" />
       {staged ? t("badge.staged") : t("badge.new")}

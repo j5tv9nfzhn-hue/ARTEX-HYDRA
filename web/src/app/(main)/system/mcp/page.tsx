@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -21,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import type { Agent, MCPServer, MCPTool } from "@/lib/types";
+import { Masthead, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 
 type Transport = "stdio" | "http" | "sse";
 type FormState = {
@@ -383,7 +383,12 @@ export default function MCPPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
-      <Masthead title="MCP" titleClassName="text-xl tracking-tight" subtitle={t("subtitle")} subtitleClassName="text-sm" />
+      <Masthead
+        title="MCP"
+        titleClassName="text-xl tracking-tight"
+        subtitle={t("subtitle")}
+        subtitleClassName="text-sm"
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         <button
@@ -402,7 +407,8 @@ export default function MCPPage() {
             onClick={() => openEdit(s)}
             className="min-w-0 cursor-pointer gap-3 overflow-hidden transition hover:border-primary/60 hover:shadow-sm"
           >
-            <SheetHead index="01"
+            <SheetHead
+              index="01"
               icon={ServerIcon}
               title={<span className="block max-w-[14rem] truncate">{s.name}</span>}
               actions={
@@ -410,28 +416,34 @@ export default function MCPPage() {
                   <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-xs uppercase">
                     {s.transport}
                   </Badge>
-                {/* biome-ignore lint/a11y/noStaticElementInteractions: 此容器仅阻止向父卡片传播点击，本身不是交互元素；内部 Switch 和删除按钮均可由键盘操作。 */}
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: 仅阻止点击传播，无需额外键盘处理器。 */}
-                <div className="ml-auto flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                  {/* 完整一页：连接方式 + 工具清单 + 可见性说明。 */}
-                  <Button asChild size="icon-sm" variant="ghost" className="shrink-0" aria-label={t("openDetailAria")}>
-                    <Link href={`/system/mcp/detail?id=${s.id}`}>
-                      <ArrowUpRightIcon className="size-4" />
-                    </Link>
-                  </Button>
-                  <Switch checked={s.enabled} onCheckedChange={() => toggleEnabled(s)} aria-label={t("enableAria")} />
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    aria-label={t("deleteAria")}
-                    onClick={() => removeServer(s)}
-                  >
-                    <Trash2Icon className="size-4" />
-                  </Button>
-                </div>
-              </>
-            }
+                  {/* biome-ignore lint/a11y/noStaticElementInteractions: 此容器仅阻止向父卡片传播点击，本身不是交互元素；内部 Switch 和删除按钮均可由键盘操作。 */}
+                  {/* biome-ignore lint/a11y/useKeyWithClickEvents: 仅阻止点击传播，无需额外键盘处理器。 */}
+                  <div className="ml-auto flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    {/* 完整一页：连接方式 + 工具清单 + 可见性说明。 */}
+                    <Button
+                      asChild
+                      size="icon-sm"
+                      variant="ghost"
+                      className="shrink-0"
+                      aria-label={t("openDetailAria")}
+                    >
+                      <Link href={`/system/mcp/detail?id=${s.id}`}>
+                        <ArrowUpRightIcon className="size-4" />
+                      </Link>
+                    </Button>
+                    <Switch checked={s.enabled} onCheckedChange={() => toggleEnabled(s)} aria-label={t("enableAria")} />
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      aria-label={t("deleteAria")}
+                      onClick={() => removeServer(s)}
+                    >
+                      <Trash2Icon className="size-4" />
+                    </Button>
+                  </div>
+                </>
+              }
             />
             <div className="grid gap-3 px-4 py-3">
               <p className="text-muted-foreground text-sm">

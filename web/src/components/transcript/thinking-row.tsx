@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
 import * as React from "react";
+
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -76,19 +77,23 @@ export function ThinkingRow({
   const preview = React.useMemo(() => {
     const win = text.length > SCAN_WINDOW ? text.slice(-SCAN_WINDOW) : text;
     const flat = win.replace(/\s+/g, " ").trim();
-    return flat.length > PREVIEW_CHARS ? "\u2026" + flat.slice(-PREVIEW_CHARS) : flat;
+    return flat.length > PREVIEW_CHARS ? `\u2026${flat.slice(-PREVIEW_CHARS)}` : flat;
   }, [text]);
 
   const body = React.useMemo(() => {
     // trimStart：推理正文的第一帧几乎总是以换行开头（块边界），展开后就是一条空行 +
     // 首字缩进。只去前导空白，正文内部的缩进/空行是内容，原样保留。
     const src = (full ?? detail ?? text).replace(/^\s+/, "");
-    return src.length > MAX_BODY_CHARS ? "\u2026" + src.slice(-MAX_BODY_CHARS) : src;
+    return src.length > MAX_BODY_CHARS ? `\u2026${src.slice(-MAX_BODY_CHARS)}` : src;
   }, [full, detail, text]);
 
   // 展开态：推理还在涨，就把内层 <pre> 的滚动钉在底部。用户自己往上翻就停手。
   const preRef = React.useRef<HTMLPreElement>(null);
   const preStuck = React.useRef(true);
+  // body 是「推理正文又涨了」的触发器：effect 内部读的是 DOM 的 scrollHeight，不读
+  // body 本身，所以规则认为它多余；但没有它，正文增长时这个 effect 不会重跑，展开态
+  // 的自动贴底就只生效第一次。删掉不会报错，只会让贴底悄悄失效。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 见上方说明。
   React.useEffect(() => {
     if (!open || !live) return;
     const el = preRef.current;

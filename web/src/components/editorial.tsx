@@ -59,12 +59,12 @@ export function SectionHead({
 }) {
   return (
     <div data-editorial="sechead" className="mb-3 flex items-center justify-between">
-      <div className="flex items-center gap-1.5 text-xs font-semibold">
+      <div className="flex items-center gap-1.5 font-semibold text-xs">
         {index ? <span data-editorial="secnum">{index}</span> : null}
         {Icon ? <Icon className="size-3.5 text-muted-foreground" /> : null}
         {children}
       </div>
-      {sub ? <span className="text-xs text-muted-foreground">{sub}</span> : null}
+      {sub ? <span className="text-muted-foreground text-xs">{sub}</span> : null}
     </div>
   );
 }
@@ -170,7 +170,10 @@ export function Panel({
   bodyClassName?: string;
   children?: React.ReactNode;
 }) {
-  const hasHead = Boolean(index || title || annotation || actions);
+  // 同样走真值判断：空串标题、空 children 都算「没有」。写成 Boolean(x) || Boolean(y)
+  // 是为了把「判空」这件事显式说出来——直接 x || y 会被 lint 提示改成 ??，
+  // 而 ?? 会把空串当成有效标题，面板眉就多出一行空的。
+  const hasHead = Boolean(index) || Boolean(title) || Boolean(annotation) || Boolean(actions);
   return (
     <section data-editorial="panel" className={cn("rounded-xl border bg-card", className)}>
       {hasHead ? (
@@ -178,7 +181,7 @@ export function Panel({
           {index ? <span data-editorial="secnum">{index}</span> : null}
           {Icon ? <Icon className="size-3.5 text-muted-foreground" /> : null}
           {title ? (
-            <h2 data-editorial="panel-title" className="text-xs font-semibold">
+            <h2 data-editorial="panel-title" className="font-semibold text-xs">
               {title}
             </h2>
           ) : null}
@@ -295,7 +298,7 @@ export function ComposeBar({
   disabled?: boolean;
   className?: string;
 }) {
-  const blocked = Boolean(busy || disabled);
+  const blocked = Boolean(busy) || Boolean(disabled);
   return (
     <div data-editorial="compose" className={className} data-busy={busy ? "" : undefined}>
       {hint ? <div data-editorial="compose-hint">{hint}</div> : null}

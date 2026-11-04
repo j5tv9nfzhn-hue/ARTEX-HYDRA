@@ -2645,7 +2645,7 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
     const failed: Record<string, string> = {};
     for (const id of ids) {
       const row = D.skillProposals.find((p) => p.id === id);
-      if (!row || row.status !== "pending") {
+      if (row?.status !== "pending") {
         failed[id] = "提议不存在或已审阅";
         continue;
       }

@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet as PaperSheet } from "@/ui/container";
 import * as React from "react";
 
 import { BotIcon, ListFilterIcon, PencilIcon, PlusIcon, ShieldAlertIcon, Trash2Icon } from "lucide-react";
@@ -22,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import type { InterceptAction, InterceptRule, JudgeConfig, LLMProfile, Tool } from "@/lib/types";
+import { Masthead, Sheet as PaperSheet } from "@/ui/container";
 
 // ---- tool scope ----
 
@@ -87,7 +87,7 @@ function ActionBadge({ action, label }: { action: InterceptAction; label: string
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</Label>
+      <Label className="font-medium text-muted-foreground text-xs uppercase tracking-wide">{label}</Label>
       {children}
     </div>
   );
@@ -174,8 +174,8 @@ function JudgeCard() {
         <div className="flex items-center gap-2.5">
           <BotIcon className={`h-5 w-5 shrink-0 ${cfg.enabled ? "text-violet-600" : "text-muted-foreground"}`} />
           <div>
-            <p className="text-sm font-semibold leading-tight">{t("judge.title")}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="font-semibold text-sm leading-tight">{t("judge.title")}</p>
+            <p className="mt-0.5 text-muted-foreground text-xs">
               {t.rich("judge.desc", {
                 scope: (c) => <span className="font-medium text-foreground">{c}</span>,
                 norule: (c) => <span className="font-medium text-foreground">{c}</span>,
@@ -184,7 +184,7 @@ function JudgeCard() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             {cfg.enabled ? t("judge.enabled") : t("judge.disabled")}
           </span>
           <Switch checked={cfg.enabled} disabled={loading} onCheckedChange={(v) => patch({ enabled: v })} />
@@ -198,8 +198,8 @@ function JudgeCard() {
             <div className="flex h-full flex-col gap-2 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">{t("judge.promptTitle")}</p>
-                  <p className="text-xs text-muted-foreground">{t("judge.promptDesc")}</p>
+                  <p className="font-medium text-sm">{t("judge.promptTitle")}</p>
+                  <p className="text-muted-foreground text-xs">{t("judge.promptDesc")}</p>
                 </div>
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={restorePrompt} disabled={saving}>
                   {t("judge.restoreTemplate")}
@@ -212,17 +212,20 @@ function JudgeCard() {
                 placeholder={t("judge.promptPlaceholder")}
                 spellCheck={false}
               />
-              <p className="text-right text-xs text-muted-foreground">
+              <p className="text-right text-muted-foreground text-xs">
                 {t("judge.charCount", { count: cfg.prompt.length })}
               </p>
             </div>
           </PaperSheet>
 
           {/* 右侧：判定参数设置。 */}
-          <PaperSheet api={["interceptGetJudgeConfig", "interceptSetJudgeConfig", "llmProfiles"]} className="lg:col-span-2">
+          <PaperSheet
+            api={["interceptGetJudgeConfig", "interceptSetJudgeConfig", "llmProfiles"]}
+            className="lg:col-span-2"
+          >
             <div className="space-y-5 p-4">
               <div className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                   {t("judge.modelAndPolicy")}
                 </p>
                 <Field label={t("judge.approvalModel")}>
@@ -271,7 +274,7 @@ function JudgeCard() {
               <Separator />
 
               <div className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                   {t("judge.manualApproval")}
                 </p>
                 <Field label={t("judge.askTimeout")}>
@@ -533,7 +536,12 @@ export default function InterceptPage() {
       {/* ---- header ---- */}
       <div className="flex items-center gap-2.5">
         <ShieldAlertIcon className="h-5 w-5 shrink-0" />
-        <Masthead title={t("title")} titleClassName="text-lg leading-tight" subtitle={t("subtitle")} subtitleClassName="text-sm mt-0.5" />
+        <Masthead
+          title={t("title")}
+          titleClassName="text-lg leading-tight"
+          subtitle={t("subtitle")}
+          subtitleClassName="text-sm mt-0.5"
+        />
       </div>
 
       {/* 拦截范围信息栏由规则匹配与模型回退共用，范围外工具均不介入。 */}
@@ -578,17 +586,28 @@ export default function InterceptPage() {
         {/* ---- tab: rules ---- */}
         <TabsContent value="rules" className="mt-4 flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">{t("rules.priorityHint")}</p>
+            <p className="text-muted-foreground text-xs">{t("rules.priorityHint")}</p>
             <Button onClick={openNew} size="sm" className="shrink-0">
               <PlusIcon className="h-4 w-4" />
               {t("rules.add")}
             </Button>
           </div>
 
-          <PaperSheet api={["interceptRules", "createInterceptRule", "updateInterceptRule", "deleteInterceptRule", "toggleInterceptRule", "interceptGetToolConfig", "interceptSetToolConfig", "tools"]}>
+          <PaperSheet
+            api={[
+              "interceptRules",
+              "createInterceptRule",
+              "updateInterceptRule",
+              "deleteInterceptRule",
+              "toggleInterceptRule",
+              "interceptGetToolConfig",
+              "interceptSetToolConfig",
+              "tools",
+            ]}
+          >
             <div className="p-0">
               {loading ? (
-                <p className="p-6 text-sm text-muted-foreground">{t("rules.loading")}</p>
+                <p className="p-6 text-muted-foreground text-sm">{t("rules.loading")}</p>
               ) : rules.length === 0 ? (
                 <EmptyState
                   illustration="shield"
@@ -622,17 +641,17 @@ export default function InterceptPage() {
                         </TableCell>
                         <TableCell className="font-medium text-sm">{rule.name}</TableCell>
                         <TableCell>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground text-xs">
                             {rule.match_target === "tool_name" ? t("target.tool_name") : t("target.tool_input")}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground text-xs">
                             {rule.match_type === "regex" ? t("matchType.regex") : t("matchType.string")}
                           </span>
                         </TableCell>
                         <TableCell className="max-w-[220px]">
-                          <code className="block truncate rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+                          <code className="block truncate rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
                             {rule.pattern}
                           </code>
                         </TableCell>
@@ -680,7 +699,7 @@ export default function InterceptPage() {
             <SheetDescription className="text-xs">{t("editor.desc")}</SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
             <Field label={t("editor.name")}>
               <Input
                 placeholder={t("editor.namePlaceholder")}
@@ -693,7 +712,7 @@ export default function InterceptPage() {
               <Input
                 type="number"
                 value={form.priority}
-                onChange={(e) => set({ priority: parseInt(e.target.value) || 0 })}
+                onChange={(e) => set({ priority: parseInt(e.target.value, 10) || 0 })}
               />
             </Field>
 
@@ -733,9 +752,9 @@ export default function InterceptPage() {
                 onChange={(e) => set({ pattern: e.target.value })}
                 className={regexErr ? "border-destructive focus-visible:ring-destructive" : ""}
               />
-              {regexErr && <p className="text-xs text-destructive mt-1">{regexErr}</p>}
+              {regexErr && <p className="mt-1 text-destructive text-xs">{regexErr}</p>}
               {regexWarn && (
-                <p className="text-xs text-amber-600 mt-1">
+                <p className="mt-1 text-amber-600 text-xs">
                   {t.rich("editor.regexWarn", { code: (c) => <code className="font-mono">{c}</code> })}
                 </p>
               )}
@@ -773,8 +792,8 @@ export default function InterceptPage() {
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">{t("editor.enableTimeout")}</p>
-                    <p className="text-xs text-muted-foreground">{t("editor.enableTimeoutHint")}</p>
+                    <p className="font-medium text-sm">{t("editor.enableTimeout")}</p>
+                    <p className="text-muted-foreground text-xs">{t("editor.enableTimeoutHint")}</p>
                   </div>
                   <Switch checked={form.timeout_enabled} onCheckedChange={(v) => set({ timeout_enabled: v })} />
                 </div>
@@ -821,7 +840,7 @@ export default function InterceptPage() {
             </div>
           </div>
 
-          <SheetFooter className="border-t px-6 py-4 flex-row justify-end gap-2">
+          <SheetFooter className="flex-row justify-end gap-2 border-t px-6 py-4">
             <Button variant="outline" onClick={() => setOpen(false)}>
               {t("editor.cancel")}
             </Button>
@@ -835,7 +854,7 @@ export default function InterceptPage() {
       {/* ---- scope dialog ---- */}
       <Dialog open={scopeOpen} onOpenChange={setScopeOpen}>
         <DialogContent
-          className="sm:max-w-lg flex flex-col overflow-hidden p-0 gap-0"
+          className="flex flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
           style={{ maxHeight: "min(80vh, 560px)" }}
         >
           <DialogHeader className="shrink-0 border-b px-6 py-4">
@@ -846,14 +865,14 @@ export default function InterceptPage() {
             <DialogDescription className="text-xs">{t("scope.dialogDesc")}</DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-5">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">
             {scopeLoading ? (
-              <p className="text-sm text-muted-foreground py-4">{t("rules.loading")}</p>
+              <p className="py-4 text-muted-foreground text-sm">{t("rules.loading")}</p>
             ) : (
               toolGroups.map((group, gi) => (
                 <div key={group.label}>
                   {gi > 0 && <Separator className="mb-5" />}
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  <p className="mb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                     {group.label}
                   </p>
                   <div className="space-y-0.5">
@@ -864,7 +883,7 @@ export default function InterceptPage() {
                           checked={enabledTools.has(tool.key)}
                           onCheckedChange={(v) => toggleTool(tool.key, v)}
                         />
-                        <label htmlFor={`scope-${tool.key}`} className="flex-1 min-w-0 cursor-pointer">
+                        <label htmlFor={`scope-${tool.key}`} className="min-w-0 flex-1 cursor-pointer">
                           <div className="flex items-center gap-1.5">
                             <span className="font-mono text-sm">{tool.key}</span>
                             {tool.kind && tool.kind !== "builtin" && (
@@ -874,7 +893,7 @@ export default function InterceptPage() {
                             )}
                           </div>
                           {tool.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1">{tool.description}</p>
+                            <p className="line-clamp-1 text-muted-foreground text-xs">{tool.description}</p>
                           )}
                         </label>
                       </div>
@@ -885,7 +904,7 @@ export default function InterceptPage() {
             )}
           </div>
 
-          <div className="shrink-0 border-t px-6 py-3 flex justify-end gap-2">
+          <div className="flex shrink-0 justify-end gap-2 border-t px-6 py-3">
             <Button variant="outline" size="sm" onClick={() => setScopeOpen(false)}>
               {t("editor.cancel")}
             </Button>

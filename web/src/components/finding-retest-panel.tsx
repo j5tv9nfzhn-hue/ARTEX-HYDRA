@@ -1,6 +1,5 @@
 "use client";
 
-import { RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { RotateCcwIcon } from "lucide-react";
@@ -16,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import type { FindingRetest } from "@/lib/types";
+import { RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 function active(r: FindingRetest) {
   return r.status === "pending" || r.status === "running";
@@ -131,25 +131,25 @@ export function FindingRetestPanel({
               >
                 <div className="flex min-w-0 flex-col gap-1">
                   <RecordSub items={[`#${item.id}`]} />
-                {item.status === "completed" && item.summary ? (
-                  <p className="whitespace-pre-wrap break-words text-sm">{item.summary}</p>
-                ) : null}
-                {item.error ? (
-                  <p className="whitespace-pre-wrap break-words text-destructive text-sm">{item.error}</p>
-                ) : null}
-                {item.notes ? (
-                  <p className="whitespace-pre-wrap break-words text-muted-foreground text-xs">
-                    {t("notes", { notes: item.notes })}
-                  </p>
-                ) : null}
-                {item.status === "completed" && item.evidence ? (
-                  <details className="min-w-0">
-                    <summary className="cursor-pointer text-sm">{t("evidence")}</summary>
-                    <div className="mt-3 overflow-x-auto">
-                      <Markdown text={item.evidence} />
-                    </div>
-                  </details>
-                ) : null}
+                  {item.status === "completed" && item.summary ? (
+                    <p className="whitespace-pre-wrap break-words text-sm">{item.summary}</p>
+                  ) : null}
+                  {item.error ? (
+                    <p className="whitespace-pre-wrap break-words text-destructive text-sm">{item.error}</p>
+                  ) : null}
+                  {item.notes ? (
+                    <p className="whitespace-pre-wrap break-words text-muted-foreground text-xs">
+                      {t("notes", { notes: item.notes })}
+                    </p>
+                  ) : null}
+                  {item.status === "completed" && item.evidence ? (
+                    <details className="min-w-0">
+                      <summary className="cursor-pointer text-sm">{t("evidence")}</summary>
+                      <div className="mt-3 overflow-x-auto">
+                        <Markdown text={item.evidence} />
+                      </div>
+                    </details>
+                  ) : null}
                 </div>
               </RecordRow>
             ))

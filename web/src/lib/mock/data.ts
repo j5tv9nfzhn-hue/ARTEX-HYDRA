@@ -3215,13 +3215,7 @@ export function agentDetail(key: string): AgentDetail {
     versions: promptVersions,
     visibility: {
       mcp: [1, 2],
-      skill: [
-        "api-recon",
-        "web-vuln-tactics",
-        "reverse-engineering",
-        "exploit-kb-patterns",
-        "expert-triage-pivot",
-      ],
+      skill: ["api-recon", "web-vuln-tactics", "reverse-engineering", "exploit-kb-patterns", "expert-triage-pivot"],
     },
     // 可绑定的 LLM 配置候选（「默认模型」下拉 + 备用链编辑器共用），带能力字段。
     llm_profiles: llmProfiles.map((p) => ({
@@ -3325,8 +3319,7 @@ export const skills: SkillItem[] = [
   },
   {
     name: "exploit-kb-patterns",
-    description:
-      "全球高危漏洞报告模式与历史战果复用知识库（HackerOne/Bugcrowd 高危范式与跨任务经验检索规范）。",
+    description: "全球高危漏洞报告模式与历史战果复用知识库（HackerOne/Bugcrowd 高危范式与跨任务经验检索规范）。",
     files: ["SKILL.md"],
     calls: 15,
     tasks: 5,

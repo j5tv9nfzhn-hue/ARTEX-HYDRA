@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet as PaperSheet } from "@/ui/container";
 import * as React from "react";
 
 import { BanIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
@@ -20,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import type { AssetInterceptKind, AssetInterceptRule } from "@/lib/types";
+import { Masthead, Sheet as PaperSheet } from "@/ui/container";
 
 // kind 元数据：label 从 assetInterceptRules.kind.* 读取，
 // 组标题从 assetInterceptPage.group.* 读取。
@@ -60,9 +60,9 @@ function KindBadge({ kind, label }: { kind: AssetInterceptKind; label: string })
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</Label>
+      <Label className="font-medium text-muted-foreground text-xs uppercase tracking-wide">{label}</Label>
       {children}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-muted-foreground text-xs">{hint}</p>}
     </div>
   );
 }
@@ -183,21 +183,34 @@ export default function AssetInterceptPage() {
       {/* header */}
       <div className="flex items-center gap-2.5">
         <BanIcon className="h-5 w-5 shrink-0" />
-        <Masthead title={t("title")} titleClassName="text-lg leading-tight" subtitle={t("subtitle")} subtitleClassName="text-sm mt-0.5" />
+        <Masthead
+          title={t("title")}
+          titleClassName="text-lg leading-tight"
+          subtitle={t("subtitle")}
+          subtitleClassName="text-sm mt-0.5"
+        />
       </div>
 
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">{t("intro")}</p>
+        <p className="text-muted-foreground text-xs">{t("intro")}</p>
         <Button onClick={openNew} size="sm" className="shrink-0">
           <PlusIcon className="h-4 w-4" />
           {t("add")}
         </Button>
       </div>
 
-      <PaperSheet api={["assetInterceptRules", "createAssetInterceptRule", "updateAssetInterceptRule", "deleteAssetInterceptRule", "toggleAssetInterceptRule"]}>
+      <PaperSheet
+        api={[
+          "assetInterceptRules",
+          "createAssetInterceptRule",
+          "updateAssetInterceptRule",
+          "deleteAssetInterceptRule",
+          "toggleAssetInterceptRule",
+        ]}
+      >
         <div className="p-0">
           {loading ? (
-            <p className="p-6 text-sm text-muted-foreground">{t("loading")}</p>
+            <p className="p-6 text-muted-foreground text-sm">{t("loading")}</p>
           ) : rules.length === 0 ? (
             <EmptyState
               illustration="shield"
@@ -227,11 +240,11 @@ export default function AssetInterceptPage() {
                       <KindBadge kind={rule.kind} label={tr(`kind.${rule.kind}`)} />
                     </TableCell>
                     <TableCell className="max-w-[280px]">
-                      <code className="block truncate rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+                      <code className="block truncate rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
                         {rule.pattern}
                       </code>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-muted-foreground text-sm">
                       <div className="flex items-center gap-1.5">
                         {rule.builtin && (
                           <Badge variant="secondary" className="shrink-0 px-1 py-0 text-xs">
@@ -275,7 +288,7 @@ export default function AssetInterceptPage() {
             <SheetDescription className="text-xs">{t("editor.desc")}</SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
             <Field label={t("editor.matchType")}>
               <Select value={form.kind} onValueChange={(v) => set({ kind: v as AssetInterceptKind })}>
                 <SelectTrigger>
@@ -284,7 +297,7 @@ export default function AssetInterceptPage() {
                 <SelectContent>
                   {KIND_GROUPS.map((g) => (
                     <React.Fragment key={g}>
-                      <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <div className="px-2 py-1 font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                         {t(`group.${g}`)}
                       </div>
                       {KIND_OPTIONS.filter((o) => o.group === g).map((o) => (
@@ -335,7 +348,7 @@ export default function AssetInterceptPage() {
             </div>
           </div>
 
-          <SheetFooter className="border-t px-6 py-4 flex-row justify-end gap-2">
+          <SheetFooter className="flex-row justify-end gap-2 border-t px-6 py-4">
             <Button variant="outline" onClick={() => setOpen(false)}>
               {t("editor.cancel")}
             </Button>

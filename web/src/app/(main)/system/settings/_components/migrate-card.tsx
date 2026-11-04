@@ -1,14 +1,8 @@
 "use client";
 
-import { Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
-import {
-  CheckCircle2Icon,
-  DatabaseZapIcon,
-  FolderSearchIcon,
-  TriangleAlertIcon,
-} from "lucide-react";
+import { CheckCircle2Icon, DatabaseZapIcon, FolderSearchIcon, TriangleAlertIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -18,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import type { MigrateCandidate, MigrateResult } from "@/lib/types";
+import { Sheet, SheetHead } from "@/ui/container";
 
 /**
  * 数据迁移卡片（WEB 版 ⇄ 桌面端共用同一份前端）。
@@ -95,11 +90,7 @@ export function MigrateCard() {
     setBusy(true);
     setResult(null);
     try {
-      const res = await api.migrateImport(
-        selected.path,
-        mode,
-        mode === "replace" ? confirm.trim() : undefined,
-      );
+      const res = await api.migrateImport(selected.path, mode, mode === "replace" ? confirm.trim() : undefined);
       setResult(res);
       toast.success(t("migrate.toast.done", { rows: res.copied_rows }));
     } catch (err) {
@@ -166,7 +157,7 @@ export function MigrateCard() {
                   {c.is_current ? <Badge>{t("migrate.current")}</Badge> : null}
                   {c.running ? <Badge variant="destructive">{t("migrate.running")}</Badge> : null}
                 </div>
-                <div className="text-muted-foreground mt-1 break-all font-mono">{c.path}</div>
+                <div className="mt-1 break-all font-mono text-muted-foreground">{c.path}</div>
               </button>
             ))}
           </div>
@@ -178,7 +169,7 @@ export function MigrateCard() {
               <Badge variant="outline">{kindText(selected.kind)}</Badge>
               <span className="break-all font-mono">{selected.path}</span>
             </div>
-            <ul className="text-muted-foreground mt-2 space-y-0.5 text-xs">
+            <ul className="mt-2 space-y-0.5 text-muted-foreground text-xs">
               <li>
                 {t("migrate.dbLine", {
                   size: humanSize(selected.db_size_bytes),
@@ -199,12 +190,8 @@ export function MigrateCard() {
                 })}
               </li>
               {selected.note ? <li>{selected.note}</li> : null}
-              {selected.is_current ? (
-                <li className="text-destructive">{t("migrate.sameDir")}</li>
-              ) : null}
-              {selected.running ? (
-                <li className="text-destructive">{t("migrate.runningHint")}</li>
-              ) : null}
+              {selected.is_current ? <li className="text-destructive">{t("migrate.sameDir")}</li> : null}
+              {selected.running ? <li className="text-destructive">{t("migrate.runningHint")}</li> : null}
             </ul>
 
             {/* 模式：合并默认，替换需要手打确认词 */}
@@ -262,7 +249,7 @@ export function MigrateCard() {
               <CheckCircle2Icon className="size-4 text-emerald-500" />
               {t("migrate.resultTitle")}
             </div>
-            <ul className="text-muted-foreground mt-2 space-y-0.5">
+            <ul className="mt-2 space-y-0.5 text-muted-foreground">
               <li>
                 {t("migrate.resultRows", {
                   copied: result.copied_rows.toLocaleString(),
@@ -282,7 +269,7 @@ export function MigrateCard() {
             {result.tables.length > 0 ? (
               <table className="mt-2 w-full">
                 <thead>
-                  <tr className="text-muted-foreground text-left">
+                  <tr className="text-left text-muted-foreground">
                     <th className="font-normal">{t("migrate.tableName")}</th>
                     <th className="text-right font-normal">{t("migrate.tableCopied")}</th>
                     <th className="text-right font-normal">{t("migrate.tableSkipped")}</th>

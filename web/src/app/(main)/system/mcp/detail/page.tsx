@@ -1,6 +1,5 @@
 "use client";
 
-import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import type { MCPServer, MCPTool } from "@/lib/types";
+import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 /**
  * MCP 服务详情：连接方式、工具清单与「谁能用到这些工具」。
@@ -105,11 +105,7 @@ function MCPDetailInner() {
               <code className="font-mono text-xs">#{server.id}</code>
               <span className="font-mono">{server.transport}</span>
               <span>{server.enabled ? t("enabled") : t("disabled")}</span>
-              {server.insecure ? (
-                <>
-                  <span className="text-amber-600 dark:text-amber-400">{t("insecure")}</span>
-                </>
-              ) : null}
+              {server.insecure ? <span className="text-amber-600 dark:text-amber-400">{t("insecure")}</span> : null}
             </>
           }
           subtitle={server.url || [server.command, ...(server.args ?? [])].filter(Boolean).join(" ")}
@@ -120,25 +116,25 @@ function MCPDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.tools")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.tools")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">
             {tools.length || (server.tools ?? []).length}
           </span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.transport")}</span>
-          <span className="font-semibold text-[15px] leading-none font-mono">{server.transport}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.transport")}</span>
+          <span className="font-mono font-semibold text-[15px] leading-none">{server.transport}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.env")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{envKeys.length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.env")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{envKeys.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.args")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{(server.args ?? []).length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.args")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{(server.args ?? []).length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.state")}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.state")}</span>
           <span className="font-semibold text-[15px] leading-none">
             {server.enabled ? t("enabled") : t("disabled")}
           </span>
@@ -164,7 +160,7 @@ function MCPDetailInner() {
             {envKeys.length > 0 ? (
               <RecordRow lead={t("row.env")} cols="72px minmax(0,1fr)">
                 <span className="font-mono text-[12px]">{envKeys.join(" / ")}</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">{t("envHint")}</span>
+                <span className="mt-0.5 block text-muted-foreground text-xs">{t("envHint")}</span>
               </RecordRow>
             ) : null}
             <RecordRow lead={t("row.handshake")} cols="72px minmax(0,1fr)">
@@ -181,22 +177,23 @@ function MCPDetailInner() {
             count={`${tools.length || (server.tools ?? []).length}`}
             hint={t("toolsHint")}
           />
-          {(tools.length === 0 && (server.tools ?? []).length === 0) ? (
+          {tools.length === 0 && (server.tools ?? []).length === 0 ? (
             <div data-editorial="body" className="px-4 py-6 text-center text-muted-foreground text-xs">
               {t("toolsEmpty")}
             </div>
           ) : (
             <div data-editorial="body" className="px-4 pt-1 pb-2">
-              {(tools.length > 0 ? tools.map((x) => ({ name: x.name, description: x.description })) : (server.tools ?? []).map((n) => ({ name: n, description: "" }))).map(
-                (tool) => (
-                  <RecordRow key={tool.name} lead={<Badge variant="outline">mcp</Badge>} cols="56px minmax(0,1fr)">
-                    <code className="block truncate font-mono text-[12px]">{tool.name}</code>
-                    {tool.description ? (
-                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">{tool.description}</span>
-                    ) : null}
-                  </RecordRow>
-                ),
-              )}
+              {(tools.length > 0
+                ? tools.map((x) => ({ name: x.name, description: x.description }))
+                : (server.tools ?? []).map((n) => ({ name: n, description: "" }))
+              ).map((tool) => (
+                <RecordRow key={tool.name} lead={<Badge variant="outline">mcp</Badge>} cols="56px minmax(0,1fr)">
+                  <code className="block truncate font-mono text-[12px]">{tool.name}</code>
+                  {tool.description ? (
+                    <span className="mt-0.5 block truncate text-muted-foreground text-xs">{tool.description}</span>
+                  ) : null}
+                </RecordRow>
+              ))}
             </div>
           )}
           <SheetFoot left={t("toolsFoot")} right={t("exposureNote")} />

@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -23,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import type { Agent, Tool } from "@/lib/types";
+import { Masthead, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 
 // Traffic tools are host tools gated by the global 流量捕获 switch: bindable, but
 // only usable when capture is on. Keep in sync with traffic.SeedToolMetas.
@@ -243,7 +243,7 @@ function ToolEditor({
               }
             >
               <div className="flex flex-wrap items-center gap-2">
-                {r.parentKey && <span className="font-mono text-xs text-muted-foreground">↳</span>}
+                {r.parentKey && <span className="font-mono text-muted-foreground text-xs">↳</span>}
                 <span className="font-mono text-sm">{r.name}</span>
                 <Badge variant="secondary" className="px-1.5 py-0 text-xs">
                   {r.type || "?"}
@@ -253,11 +253,11 @@ function ToolEditor({
                     {t("required")}
                   </Badge>
                 )}
-                {r.parentKey && <span className="text-xs text-muted-foreground">{t("itemsSubfield")}</span>}
+                {r.parentKey && <span className="text-muted-foreground text-xs">{t("itemsSubfield")}</span>}
               </div>
               <div className="grid gap-2">
                 <div className="grid gap-1">
-                  <Label className="text-xs text-muted-foreground">{t("rowDesc")}</Label>
+                  <Label className="text-muted-foreground text-xs">{t("rowDesc")}</Label>
                   <Input
                     className="text-xs"
                     value={r.description}
@@ -265,7 +265,7 @@ function ToolEditor({
                   />
                 </div>
                 <div className="grid gap-1">
-                  <Label className="text-xs text-muted-foreground">{t("rowDefault")}</Label>
+                  <Label className="text-muted-foreground text-xs">{t("rowDefault")}</Label>
                   <Input
                     className="text-xs"
                     placeholder={r.scalar ? t("defaultEmptyHint") : t("scalarOnly")}
@@ -305,11 +305,9 @@ function ToolGridCard({ tool, onClick }: { tool: Tool; onClick: () => void }) {
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium font-mono text-sm">{tool.key}</span>
         {tool.system ? (
-          <>
-            <Badge variant="secondary" className="px-1.5 py-0 text-xs">
-              {t("badgeSystem")}
-            </Badge>
-          </>
+          <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+            {t("badgeSystem")}
+          </Badge>
         ) : (
           <Badge variant="outline" className="px-1.5 py-0 text-xs">
             {t("badgeCustom")} / {tool.kind}
@@ -321,7 +319,7 @@ function ToolGridCard({ tool, onClick }: { tool: Tool; onClick: () => void }) {
           </Badge>
         )}
         {!tool.enabled && (
-          <Badge variant="outline" className="px-1.5 py-0 text-xs text-destructive">
+          <Badge variant="outline" className="px-1.5 py-0 text-destructive text-xs">
             {t("badgeDisabled")}
           </Badge>
         )}
@@ -335,7 +333,7 @@ function ToolGridCard({ tool, onClick }: { tool: Tool; onClick: () => void }) {
       </div>
       <p className="line-clamp-1 h-4 text-muted-foreground text-xs">{tool.description || t("noDescription")}</p>
       <div className="mt-auto flex flex-wrap gap-1 pt-1">
-        {tool.agents.length === 0 && <span className="text-xs text-muted-foreground">{t("noBoundAgents")}</span>}
+        {tool.agents.length === 0 && <span className="text-muted-foreground text-xs">{t("noBoundAgents")}</span>}
         {tool.agents.map((a) => (
           <Badge key={a} variant="outline" className="px-1.5 py-0 text-xs">
             {a}
@@ -401,7 +399,12 @@ export default function ToolsPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <Masthead title={t("title")} titleClassName="text-xl tracking-tight" subtitle={t("subtitle")} subtitleClassName="text-sm" />
+        <Masthead
+          title={t("title")}
+          titleClassName="text-xl tracking-tight"
+          subtitle={t("subtitle")}
+          subtitleClassName="text-sm"
+        />
         <div className="relative w-64">
           <SearchIcon className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -443,7 +446,8 @@ export default function ToolsPage() {
 
         <TabsContent value="custom">
           <PaperSheet api={["tools", "createCustomTool", "deleteCustomTool", "resetTool", "updateCustomTool"]}>
-            <SheetHead index="02"
+            <SheetHead
+              index="02"
               title={t("tabCustom")}
               actions={
                 <Button size="sm" onClick={() => setCustomEdit("new")}>
@@ -480,9 +484,7 @@ export default function ToolsPage() {
                   <SheetTitle className="font-mono">{selected.key}</SheetTitle>
                   {/* 抽屉是主流程；「详情」把它铺成全宽的一页，便于外链与书签。 */}
                   <Button asChild size="sm" variant="ghost" className="shrink-0">
-                    <Link href={`/system/tools/detail?key=${encodeURIComponent(selected.key)}`}>
-                      {t("openDetail")}
-                    </Link>
+                    <Link href={`/system/tools/detail?key=${encodeURIComponent(selected.key)}`}>{t("openDetail")}</Link>
                   </Button>
                 </div>
                 <SheetDescription>{t("editSheetDesc")}</SheetDescription>

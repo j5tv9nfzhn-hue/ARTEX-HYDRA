@@ -1,6 +1,5 @@
 "use client";
 
-import { GroupHead, KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import type { Asset, Finding, TrafficExchange } from "@/lib/types";
+import { GroupHead, KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 /**
  * 资产详情：一个资产的画像、关联发现、出现过的任务与最近流量。
@@ -37,7 +37,13 @@ function AddressOf(a: Asset): string {
 }
 
 function LabelOf(a: Asset): string {
-  return a.domain || a.ip || a.app_name || a.service_name || a.c_segment || `#${a.id}`;
+  // 刻意「取第一个非空」而不是 ??：后端可能回空串，空域名不该被当成资产标签显示，
+  // 换成 ?? 会让空串一路穿到界面上。这里保留 || 的语义，只是不写 || 这个符号——
+  // 免得下次有人按 lint 提示顺手改成 ?? 又把行为改回去。
+  for (const v of [a.domain, a.ip, a.app_name, a.service_name, a.c_segment]) {
+    if (v) return v;
+  }
+  return `#${a.id}`;
 }
 
 function HostOf(a: Asset): string {
@@ -56,7 +62,7 @@ function HostOf(a: Asset): string {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-3 border-border/60 border-b py-1.5 last:border-b-0">
-      <span className="w-28 shrink-0 text-xs text-muted-foreground">{label}</span>
+      <span className="w-28 shrink-0 text-muted-foreground text-xs">{label}</span>
       <div className="min-w-0 flex-1 text-[13px] [overflow-wrap:anywhere]">{children}</div>
     </div>
   );
@@ -182,24 +188,24 @@ function AssetDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.ports")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{ports.length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.ports")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{ports.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.tech")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{tech.length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.tech")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{tech.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.tasks")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{taskIds.length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.tasks")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{taskIds.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.findings")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{findings.length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.findings")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{findings.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.status")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{asset.status_code ?? "—"}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.status")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{asset.status_code ?? "—"}</span>
         </div>
       </KpiRow>
 
@@ -228,7 +234,7 @@ function AssetDetailInner() {
               ) : null}
               {asset.favicon_mmh3 ? (
                 <Field label={t("field.favicon")}>
-                  <code className="font-mono text-xs text-muted-foreground">{asset.favicon_mmh3}</code>
+                  <code className="font-mono text-muted-foreground text-xs">{asset.favicon_mmh3}</code>
                 </Field>
               ) : null}
               {asset.company_id ? <Field label={t("field.company")}>#{asset.company_id}</Field> : null}
@@ -283,7 +289,7 @@ function AssetDetailInner() {
                     ]}
                   >
                     <span className="block truncate text-[13px]">{f.name || f.vulnclass || f.summary}</span>
-                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                    <span className="mt-0.5 block truncate text-muted-foreground text-xs">
                       {f.task_description || (f.task_id ? `#${f.task_id}` : "—")}
                     </span>
                   </RecordRow>

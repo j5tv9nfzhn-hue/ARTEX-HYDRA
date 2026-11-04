@@ -1,6 +1,5 @@
 "use client";
 
-import { ApiBar, Masthead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -49,6 +48,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api } from "@/lib/api";
 import type { Agent, MCPServer, MissingSkill, SkillCall, SkillItem, SkillProposal } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ApiBar, Masthead } from "@/ui/container";
 
 // ── 技能来源（与 server/skill_origin.go 对齐） ─────────────────────────────
 // 技能天然分两类：随版本发布的内置战法（知识库），以及任务结束后沉淀的复盘（记忆库）。
@@ -293,7 +293,7 @@ function SkillsOverview({
             >
               <p className="font-semibold text-2xl tabular-nums">{n}</p>
               <p className="font-medium text-xs">{bucketLabels[key]}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{bucketHints[key]}</p>
+              <p className="mt-0.5 text-muted-foreground text-xs">{bucketHints[key]}</p>
             </button>
           );
         })}
@@ -306,7 +306,7 @@ function SkillsOverview({
           <div key={s.label} className="rounded-lg border p-3">
             <p className="font-semibold text-2xl tabular-nums">{s.value}</p>
             <p className="font-medium text-xs">{s.label}</p>
-            {s.hint && <p className="mt-0.5 text-xs text-muted-foreground">{s.hint}</p>}
+            {s.hint && <p className="mt-0.5 text-muted-foreground text-xs">{s.hint}</p>}
           </div>
         ))}
         <ApiBar methods={["skills", "missingSkills"]} />
@@ -365,7 +365,7 @@ function SkillsOverview({
                   <span className="min-w-0 flex-1 truncate font-mono text-xs" title={s.name}>
                     {s.name}
                   </span>
-                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                  <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
                     {fmtTime(s.last_used, t("neverCalled"))}
                   </span>
                 </button>
@@ -1296,10 +1296,15 @@ export default function SkillsPage() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   }, [skills, bucket]);
 
+  // bucket 是「切换分区」的触发器：effect 内部只 setState、不读 bucket，规则因此判它
+  // 多余；但没有它，换分区后上一次的虚拟分类筛选会留着，列表可能整屏为空。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 见上方说明。
   React.useEffect(() => {
     setFamilyFilter("all");
     setVisibleSkillLimit(100);
   }, [bucket]);
+  // 同理：检索词或分类变了要把「已加载条数」归零，否则虚拟列表还停在上一次的长度上。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 见上方说明。
   React.useEffect(() => {
     setVisibleSkillLimit(100);
   }, [query, familyFilter]);
@@ -1445,16 +1450,18 @@ export default function SkillsPage() {
               placeholder={t("searchSkillsPlaceholder")}
               className="h-7 text-xs"
             />
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <label className="flex items-center gap-2 text-muted-foreground text-xs">
               <span className="shrink-0">{t("skillFamilyLabel")}</span>
               <select
                 value={familyFilter}
                 onChange={(e) => setFamilyFilter(e.target.value)}
-                className="h-7 min-w-0 flex-1 rounded-md border bg-background px-2 text-xs text-foreground"
+                className="h-7 min-w-0 flex-1 rounded-md border bg-background px-2 text-foreground text-xs"
               >
                 <option value="all">{t("skillFamilyAll")}</option>
                 {familyOptions.map(([family, count]) => (
-                  <option key={family} value={family}>{family} ({count})</option>
+                  <option key={family} value={family}>
+                    {family} ({count})
+                  </option>
                 ))}
               </select>
             </label>
@@ -1500,7 +1507,7 @@ export default function SkillsPage() {
                     {showGroup && (
                       <div
                         className={cn(
-                          "mb-1 flex items-center gap-1 px-2 text-xs text-muted-foreground",
+                          "mb-1 flex items-center gap-1 px-2 text-muted-foreground text-xs",
                           idx > 0 && "mt-2",
                         )}
                       >
@@ -1545,7 +1552,7 @@ export default function SkillsPage() {
                       </span>
                       {s.calls > 0 && (
                         <span
-                          className="shrink-0 rounded bg-muted px-1 text-xs text-muted-foreground tabular-nums"
+                          className="shrink-0 rounded bg-muted px-1 text-muted-foreground text-xs tabular-nums"
                           title={t("callCountTitle", { count: s.calls, last: fmtTime(s.last_used, t("neverCalled")) })}
                         >
                           {s.calls}
@@ -1738,7 +1745,7 @@ export default function SkillsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-6 border-amber-500/40 px-2 text-xs text-amber-600 dark:text-amber-400"
+                        className="h-6 border-amber-500/40 px-2 text-amber-600 text-xs dark:text-amber-400"
                         onClick={() => setRestoreOpen(true)}
                       >
                         {t("restoreBtn")}
@@ -2018,7 +2025,7 @@ export default function SkillsPage() {
               <TabsTrigger value="mcp">
                 {t("linkedMcp")}
                 {newMcps.length > 0 && (
-                  <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-xs text-primary-foreground leading-none">
+                  <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-primary-foreground text-xs leading-none">
                     {newMcps.length}
                   </span>
                 )}
@@ -2026,7 +2033,7 @@ export default function SkillsPage() {
               <TabsTrigger value="visibility">
                 {t("tabVisibility")}
                 {newVisibility.length > 0 && (
-                  <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-xs text-primary-foreground leading-none">
+                  <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-primary-foreground text-xs leading-none">
                     {newVisibility.length}
                   </span>
                 )}
@@ -2209,7 +2216,7 @@ export default function SkillsPage() {
                 onClick={() => setProposalFilter(tab.key)}
               >
                 {tab.label}
-                <span className="ml-1 font-mono text-xs opacity-80 tabular-nums">({tab.count})</span>
+                <span className="ml-1 font-mono text-xs tabular-nums opacity-80">({tab.count})</span>
               </Button>
             ))}
 
@@ -2343,14 +2350,14 @@ export default function SkillsPage() {
                                   : t("proposalStatusPending")}
                             </Badge>
                           </div>
-                          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center justify-between gap-2 text-muted-foreground text-xs">
                             <span>
                               {p.origin === "curator" ? t("proposalOriginCurator") : t("proposalOriginAgent")}
                             </span>
                             <span className="tabular-nums">{fmtTime(p.created_at, "—")}</span>
                           </div>
                           {p.lint && (
-                            <div className="flex items-center gap-1 text-xs text-amber-500">
+                            <div className="flex items-center gap-1 text-amber-500 text-xs">
                               <AlertTriangleIcon className="size-3 shrink-0" />
                               <span className="truncate">{p.lint}</span>
                             </div>
@@ -2514,7 +2521,7 @@ export default function SkillsPage() {
                   {importFiles.map((f) => (
                     <Badge key={`${f.name}-${f.size}`} variant="secondary" className="gap-1.5 font-mono text-xs">
                       <span>{f.name}</span>
-                      <span className="text-xs text-muted-foreground">({Math.ceil(f.size / 1024)} KB)</span>
+                      <span className="text-muted-foreground text-xs">({Math.ceil(f.size / 1024)} KB)</span>
                       <button
                         type="button"
                         className="ml-0.5 text-muted-foreground hover:text-foreground"

@@ -1,17 +1,17 @@
 "use client";
 
-import { Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { BotIcon, LayersIcon, ShieldCheckIcon, SparklesIcon, TargetIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { APP_CONFIG } from "@/config/app-config";
 import { api } from "@/lib/api";
+import { Sheet, SheetHead } from "@/ui/container";
 
 /**
  * 项目简介与架构概览。
@@ -43,9 +43,7 @@ export function AboutCard() {
     <Sheet api={["health"]} className="mb-4 break-inside-avoid md:mb-6">
       <SheetHead icon={LayersIcon} title={t("about.title")} />
       <div className="flex flex-col gap-4 px-4 py-3">
-        <p className="text-muted-foreground text-sm">
-          {t.rich("about.intro", { b: (chunks) => <b>{chunks}</b> })}
-        </p>
+        <p className="text-muted-foreground text-sm">{t.rich("about.intro", { b: (chunks) => <b>{chunks}</b> })}</p>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Badge variant="secondary" className="font-mono">
             {APP_CONFIG.name}

@@ -12,8 +12,8 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { AccountSwitcher } from "./sidebar/account-switcher";
 import { NotificationCenter } from "./notification-center";
+import { AccountSwitcher } from "./sidebar/account-switcher";
 import { LayoutControls } from "./sidebar/layout-controls";
 import { SearchDialog } from "./sidebar/search-dialog";
 import { ThemeSwitcher } from "./sidebar/theme-switcher";
@@ -82,7 +82,10 @@ export function MainContent({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <div data-editorial="body" className="min-h-0 min-w-0 flex-1 overflow-x-hidden p-4 has-data-[content-padding=false]:p-0 md:p-6 md:has-data-[content-padding=false]:p-0">
+      <div
+        data-editorial="body"
+        className="min-h-0 min-w-0 flex-1 overflow-x-hidden p-4 has-data-[content-padding=false]:p-0 md:p-6 md:has-data-[content-padding=false]:p-0"
+      >
         {children}
       </div>
     </>

@@ -21,7 +21,6 @@ import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 import { SidebarCustomize } from "./sidebar-customize-dialog";
-import { SidebarSupportCard } from "./sidebar-support-card";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentUser = useCurrentUser();

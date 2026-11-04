@@ -1,10 +1,10 @@
-import { Sheet, SheetHead } from "@/ui/container";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 
+import { useTranslations } from "next-intl";
 import { siX } from "simple-icons";
 
 import { SimpleIcon } from "@/components/simple-icon";
+import { Sheet, SheetHead } from "@/ui/container";
 
 export function SidebarSupportCard() {
   const t = useTranslations("sidebarSupport");

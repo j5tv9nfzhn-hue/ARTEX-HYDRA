@@ -1,4 +1,4 @@
-import { type ResolvedThemeMode, type ThemeMode } from "./theme";
+import type { ResolvedThemeMode, ThemeMode } from "./theme";
 
 export function resolveThemeMode(mode: ThemeMode): ResolvedThemeMode {
   if (mode === "system") {

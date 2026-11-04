@@ -81,10 +81,7 @@ export function SheetHead({
   iconClassName?: string;
 }) {
   return (
-    <div
-      data-editorial="sheet-head"
-      className={cn("flex shrink-0 items-center gap-2 border-b px-4 py-2", className)}
-    >
+    <div data-editorial="sheet-head" className={cn("flex shrink-0 items-center gap-2 border-b px-4 py-2", className)}>
       {index ? <span data-editorial="secnum">{index}</span> : null}
       {Icon ? <Icon className={cn("size-3.5 shrink-0 text-muted-foreground", iconClassName)} /> : null}
       <h2 className="shrink-0 font-semibold text-sm">{title}</h2>
@@ -174,7 +171,7 @@ export function RecordRow({
         className,
       )}
     >
-      {lead !== undefined ? <span className="text-xs text-muted-foreground tabular-nums">{lead}</span> : <span />}
+      {lead !== undefined ? <span className="text-muted-foreground text-xs tabular-nums">{lead}</span> : <span />}
       <div className="min-w-0">{children}</div>
       {(values ?? []).map((v, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: 右侧数位固定，位置即身份
@@ -192,7 +189,7 @@ export function RecordSub({ items }: { items: React.ReactNode[] }) {
   return (
     <div
       data-editorial="rec-sub"
-      className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground"
+      className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-muted-foreground text-xs"
     >
       {nodes.map((node, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: 以位置定身份，内容可能重复

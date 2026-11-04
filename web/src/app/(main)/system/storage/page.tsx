@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -24,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { type CompactResult, type GcResult, type StorageStats, storageApi } from "@/lib/storage-api";
 import type { WorkspaceListing } from "@/lib/types";
+import { Masthead, Sheet, SheetHead } from "@/ui/container";
 
 // 系统 → 存储与清理。
 //
@@ -87,9 +87,9 @@ export default function StoragePage() {
   const [keepDays, setKeepDays] = React.useState<number | null>(null);
   const [keepMaxRows, setKeepMaxRows] = React.useState<number | null>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 依赖里刻意不放 t——
-  // useTranslations 每次渲染都可能返回新函数，放进 useCallback 会让 load 反复重建 →
-  // effect 无限重取。
+  // 依赖里刻意不放 t：useTranslations 每次渲染都可能返回新函数，放进 useCallback
+  // 会让 load 反复重建 → effect 无限重取。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 见上方说明。
   const load = React.useCallback(async () => {
     setError(null);
     const [nextStats, nextWs] = await Promise.allSettled([storageApi.stats(), api.workspaceList("")]);
@@ -221,7 +221,7 @@ export default function StoragePage() {
                   <Stat label={t("dbAutoVacuum")} value={db.auto_vacuum} />
                   <Stat label={t("dbJournal")} value={db.journal_mode || "-"} />
                 </div>
-                <p className="break-all text-xs text-muted-foreground">{db.path}</p>
+                <p className="break-all text-muted-foreground text-xs">{db.path}</p>
                 <Button
                   variant="outline"
                   className="w-full"
@@ -246,7 +246,7 @@ export default function StoragePage() {
                   <Trash2Icon className="size-4" />
                   {busy === "compact" ? t("running") : t("dbCompact")}
                 </Button>
-                <p className="text-xs text-muted-foreground">{t("dbCompactHint")}</p>
+                <p className="text-muted-foreground text-xs">{t("dbCompactHint")}</p>
               </>
             )}
           </div>
@@ -408,7 +408,7 @@ export default function StoragePage() {
                     {busy === "activityPreview" || busy === "activity" ? t("running") : t("purgeActivity")}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">{t("mdbNote")}</p>
+                <p className="text-muted-foreground text-xs">{t("mdbNote")}</p>
               </>
             )}
           </div>
@@ -440,7 +440,7 @@ export default function StoragePage() {
                   <Stat label={t("wqRollbacks")} value={fmtNum(wq.rollbacks)} />
                   <Stat label={t("wqDepth")} value={fmtNum(wq.queue_depth)} />
                 </div>
-                <p className="text-xs text-muted-foreground">{t("wqNote")}</p>
+                <p className="text-muted-foreground text-xs">{t("wqNote")}</p>
               </>
             )}
           </div>
@@ -463,10 +463,7 @@ export default function StoragePage() {
                     它为 0 说明检查点跟得上；持续变大说明有读事务钉住了旧快照。
                     frames 在 WAL 被截断后会归零，所以不能直接拿它当积压量看。
                   */}
-                  <Stat
-                    label={t("walLag")}
-                    value={fmtNum(Math.max(0, (wal.frames ?? 0) - (wal.backfilled ?? 0)))}
-                  />
+                  <Stat label={t("walLag")} value={fmtNum(Math.max(0, (wal.frames ?? 0) - (wal.backfilled ?? 0)))} />
                   <Stat
                     label={t("walState")}
                     value={
@@ -485,7 +482,7 @@ export default function StoragePage() {
                     }
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">{t("walNote")}</p>
+                <p className="text-muted-foreground text-xs">{t("walNote")}</p>
               </>
             )}
           </div>
@@ -545,15 +542,13 @@ export default function StoragePage() {
             <Stat
               label={t("retentionLast")}
               value={
-                keep?.last_run_unix_ms
-                  ? new Date(keep.last_run_unix_ms).toLocaleString("zh-CN")
-                  : t("retentionNever")
+                keep?.last_run_unix_ms ? new Date(keep.last_run_unix_ms).toLocaleString("zh-CN") : t("retentionNever")
               }
             />
             <Stat label={t("retentionLastRows")} value={fmtNum(keep?.last_deleted ?? 0)} />
             <Stat label={t("retentionLastCapped")} value={fmtNum(keep?.last_capped ?? 0)} />
           </div>
-          <p className="text-xs text-muted-foreground">{t("retentionNote")}</p>
+          <p className="text-muted-foreground text-xs">{t("retentionNote")}</p>
         </div>
       </Sheet>
 

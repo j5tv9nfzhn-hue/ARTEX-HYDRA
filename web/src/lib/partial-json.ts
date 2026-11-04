@@ -150,7 +150,7 @@ export function scanToolInput(text: string): PartialScan {
     }
     if (ch === "}" || ch === "]") {
       const closing = frames.pop();
-      if (closing && closing.pushed) segments.pop();
+      if (closing?.pushed) segments.pop();
       i += 1;
       continue;
     }

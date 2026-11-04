@@ -464,7 +464,7 @@ function ExploreNode({ data, selected }: NodeProps<ExploreRFNode>) {
         <Handle
           type="target"
           position={Position.Left}
-          className="!size-2 !border-2 !border-neutral-300 !bg-white opacity-0 transition-opacity group-hover:opacity-100 dark:!border-neutral-600 dark:!bg-neutral-800"
+          className="!size-2 !border-2 !border-neutral-300 !bg-white dark:!border-neutral-600 dark:!bg-neutral-800 opacity-0 transition-opacity group-hover:opacity-100"
         />
         <div className="flex items-center gap-2 px-3 pt-3 pb-1.5">
           <span
@@ -473,7 +473,7 @@ function ExploreNode({ data, selected }: NodeProps<ExploreRFNode>) {
           >
             <Icon className="size-3.5 text-white" />
           </span>
-          <span className="grow truncate text-[13px] font-semibold text-neutral-700 dark:text-neutral-100">
+          <span className="grow truncate font-semibold text-[13px] text-neutral-700 dark:text-neutral-100">
             {label}
           </span>
           {signal && (
@@ -490,7 +490,7 @@ function ExploreNode({ data, selected }: NodeProps<ExploreRFNode>) {
           {showPriority && (
             <span
               className={cn(
-                "shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums",
+                "shrink-0 rounded-md px-1.5 py-0.5 font-semibold text-xs tabular-nums",
                 toneClasses[prioTone(n.priority)],
               )}
             >
@@ -498,7 +498,7 @@ function ExploreNode({ data, selected }: NodeProps<ExploreRFNode>) {
             </span>
           )}
         </div>
-        <div className="line-clamp-3 px-3 pb-2 text-[13px] leading-snug text-neutral-500 dark:text-neutral-400">
+        <div className="line-clamp-3 px-3 pb-2 text-[13px] text-neutral-500 leading-snug dark:text-neutral-400">
           {nodeSummary(n) || label}
         </div>
         <div className="flex items-center justify-between gap-2 px-3 pb-2.5">
@@ -518,16 +518,16 @@ function ExploreNode({ data, selected }: NodeProps<ExploreRFNode>) {
               className="px-1.5 py-0 text-xs"
             />
           ) : (
-            <span className="text-xs text-neutral-400 dark:text-neutral-500">{label}</span>
+            <span className="text-neutral-400 text-xs dark:text-neutral-500">{label}</span>
           )}
-          <span className="shrink-0 rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-muted-foreground tabular-nums leading-none">
+          <span className="shrink-0 rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-mono text-muted-foreground text-xs tabular-nums leading-none">
             #{n.id}
           </span>
         </div>
         <Handle
           type="source"
           position={Position.Right}
-          className="!size-2 !border-2 !border-neutral-300 !bg-white opacity-0 transition-opacity group-hover:opacity-100 dark:!border-neutral-600 dark:!bg-neutral-800"
+          className="!size-2 !border-2 !border-neutral-300 !bg-white dark:!border-neutral-600 dark:!bg-neutral-800 opacity-0 transition-opacity group-hover:opacity-100"
         />
       </div>
     </div>
@@ -539,8 +539,8 @@ const nodeTypes = { explore: ExploreNode };
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3 py-1.5 text-sm">
-      <span className="text-muted-foreground w-14 shrink-0">{label}</span>
-      <span className="text-foreground min-w-0 flex-1 break-words">{children}</span>
+      <span className="w-14 shrink-0 text-muted-foreground">{label}</span>
+      <span className="min-w-0 flex-1 break-words text-foreground">{children}</span>
     </div>
   );
 }
@@ -588,7 +588,7 @@ function NodeDetailSheet({
                 </span>
                 <div className="min-w-0">
                   <SheetTitle className="leading-tight">{t(meta.labelKey)}</SheetTitle>
-                  <span className="text-muted-foreground font-mono text-xs">{node.id}</span>
+                  <span className="font-mono text-muted-foreground text-xs">{node.id}</span>
                 </div>
                 {node.inherited && node.source_task_id && (
                   <Badge variant="outline" className="ml-auto shrink-0">
@@ -601,7 +601,7 @@ function NodeDetailSheet({
             <ScrollArea className="min-h-0 flex-1">
               <div className="flex w-full min-w-0 flex-col gap-4 p-4">
                 <section>
-                  <h4 className="text-muted-foreground mb-1 text-xs font-medium">{t("detail.attributes")}</h4>
+                  <h4 className="mb-1 font-medium text-muted-foreground text-xs">{t("detail.attributes")}</h4>
                   <DetailRow label={t("detail.type")}>{t(meta.labelKey)}</DetailRow>
                   <DetailRow label={t("detail.state")}>
                     {node.type === "goal" || node.type === "intent" ? (
@@ -635,16 +635,16 @@ function NodeDetailSheet({
                   <>
                     {nodeSummary(node) && (
                       <section className="border-t pt-3">
-                        <h4 className="text-muted-foreground mb-1.5 text-xs font-medium">
+                        <h4 className="mb-1.5 font-medium text-muted-foreground text-xs">
                           {t("detail.digestConclusion")}
                         </h4>
-                        <p className="text-foreground text-sm leading-relaxed break-words whitespace-pre-wrap">
+                        <p className="whitespace-pre-wrap break-words text-foreground text-sm leading-relaxed">
                           {nodeSummary(node)}
                         </p>
                       </section>
                     )}
                     <section className="border-t pt-3">
-                      <h4 className="text-muted-foreground mb-1.5 text-xs font-medium">
+                      <h4 className="mb-1.5 font-medium text-muted-foreground text-xs">
                         {t("detail.members", { count: memberIds.length })}
                       </h4>
                       <div className="flex flex-col gap-1.5">
@@ -657,7 +657,7 @@ function NodeDetailSheet({
                               key={m.id}
                               type="button"
                               onClick={() => onSelect(m)}
-                              className="hover:bg-accent flex items-start gap-2 rounded-md border p-2 text-left transition-colors"
+                              className="flex items-start gap-2 rounded-md border p-2 text-left transition-colors hover:bg-accent"
                             >
                               <span
                                 className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded"
@@ -666,10 +666,10 @@ function NodeDetailSheet({
                                 <MIcon className="size-3 text-white" />
                               </span>
                               <span className="min-w-0 flex-1">
-                                <span className="text-foreground line-clamp-2 text-xs leading-snug">
+                                <span className="line-clamp-2 text-foreground text-xs leading-snug">
                                   {nodeSummary(m) || t(mMeta.labelKey)}
                                 </span>
-                                <span className="text-muted-foreground block font-mono text-xs">
+                                <span className="block font-mono text-muted-foreground text-xs">
                                   {t(mMeta.labelKey)} / #{m.id}
                                 </span>
                               </span>
@@ -688,16 +688,16 @@ function NodeDetailSheet({
 
                 <section className="border-t pt-3">
                   <div className="mb-1.5 flex items-center justify-between">
-                    <h4 className="text-muted-foreground text-xs font-medium">{t("detail.raw")}</h4>
+                    <h4 className="font-medium text-muted-foreground text-xs">{t("detail.raw")}</h4>
                     <button
                       type="button"
                       onClick={copy}
-                      className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+                      className="text-muted-foreground text-xs transition-colors hover:text-foreground"
                     >
                       {copied ? t("detail.copied") : t("detail.copy")}
                     </button>
                   </div>
-                  <pre className="bg-muted/50 text-foreground max-w-full overflow-hidden rounded-md border p-3 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap">
+                  <pre className="max-w-full overflow-hidden whitespace-pre-wrap break-all rounded-md border bg-muted/50 p-3 font-mono text-foreground text-xs leading-relaxed">
                     {raw}
                   </pre>
                 </section>
@@ -885,14 +885,14 @@ function ExplorationGraphInner({ nodes, edges, emptyHint }: { nodes: TaskNode[];
           nodeBorderRadius={4}
         />
         <Panel position="top-left">
-          <div className="bg-card/95 flex flex-col gap-2.5 rounded-lg border p-3 text-xs shadow-sm backdrop-blur">
+          <div className="flex flex-col gap-2.5 rounded-lg border bg-card/95 p-3 text-xs shadow-sm backdrop-blur">
             {isEmpty && <span className="text-muted-foreground">{hint}</span>}
             <div className="flex flex-wrap gap-x-3 gap-y-1.5">
               {(["begin", "goal", "intent", "fact", "finding", "hint", "digest"] as ExploreKind[]).map((k) => {
                 const m = typeMeta[k];
                 const Icon = m.icon;
                 return (
-                  <span key={k} className="text-foreground inline-flex items-center gap-1.5">
+                  <span key={k} className="inline-flex items-center gap-1.5 text-foreground">
                     <span
                       className="flex size-4 items-center justify-center rounded"
                       style={{ backgroundColor: pick(kindColor[k] ?? kindColor.intent, mode) }}
@@ -904,7 +904,7 @@ function ExplorationGraphInner({ nodes, edges, emptyHint }: { nodes: TaskNode[];
                 );
               })}
             </div>
-            <div className="border-border/60 text-muted-foreground flex flex-wrap gap-x-3 gap-y-1.5 border-t pt-2">
+            <div className="flex flex-wrap gap-x-3 gap-y-1.5 border-border/60 border-t pt-2 text-muted-foreground">
               {Object.entries(relLabelKey).map(([k, keyName]) => (
                 <span key={k} className="inline-flex items-center gap-1.5">
                   <span

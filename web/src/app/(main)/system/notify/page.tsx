@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { BellIcon, PlusIcon, SendIcon, Trash2Icon } from "lucide-react";
@@ -18,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import type { NotificationChannel, NotificationFilter, NotificationMeta } from "@/lib/types";
+import { Masthead, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 
 import {
   CHANNEL_FIELDS,
@@ -280,7 +280,12 @@ export default function NotifyPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
       <div className="flex items-start justify-between gap-4">
-        <Masthead title={t("title")} titleClassName="text-xl tracking-tight" subtitle={t("subtitle")} subtitleClassName="text-sm" />
+        <Masthead
+          title={t("title")}
+          titleClassName="text-xl tracking-tight"
+          subtitle={t("subtitle")}
+          subtitleClassName="text-sm"
+        />
         {meta && (
           // 用 div 而不是 label：Switch 自带 aria-label，外面再套一层 label
           // 既关联不到任何原生控件，又会让点击文字看起来应该能切换。
@@ -392,36 +397,37 @@ export default function NotifyPage() {
                 onClick={() => openEdit(ch)}
                 className="cursor-pointer gap-3 transition hover:border-primary/60 hover:shadow-sm"
               >
-                <SheetHead index="02"
+                <SheetHead
+                  index="02"
                   icon={BellIcon}
                   title={<span className="block max-w-[12rem] truncate">{ch.name}</span>}
                   actions={
                     <>
-                    {/* 卡片整体可点（进入编辑），所以这两个控件必须各自吞掉冒泡，
+                      {/* 卡片整体可点（进入编辑），所以这两个控件必须各自吞掉冒泡，
                         否则开关/删除会顺带触发编辑。把 stopPropagation 挂在控件自己
                         身上，而不是套一层 div：套 div 会造出一个「看起来可交互但没有
                         角色」的静态元素，既触发 a11y 告警，语义上也说不通。 */}
-                    <div className="ml-auto flex items-center gap-2">
-                      <Switch
-                        checked={ch.enabled}
-                        onCheckedChange={() => toggleEnabled(ch)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={t("aria.enable")}
-                      />
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        aria-label={t("aria.delete")}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // void 显式丢弃 Promise：removeChannel 自己 catch 并 toast，
-                          // 这里不需要 await（onClick 不是 async）。
-                          void removeChannel(ch);
-                        }}
-                      >
-                        <Trash2Icon className="text-destructive" />
-                      </Button>
-                    </div>
+                      <div className="ml-auto flex items-center gap-2">
+                        <Switch
+                          checked={ch.enabled}
+                          onCheckedChange={() => toggleEnabled(ch)}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={t("aria.enable")}
+                        />
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          aria-label={t("aria.delete")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // void 显式丢弃 Promise：removeChannel 自己 catch 并 toast，
+                            // 这里不需要 await（onClick 不是 async）。
+                            void removeChannel(ch);
+                          }}
+                        >
+                          <Trash2Icon className="text-destructive" />
+                        </Button>
+                      </div>
                     </>
                   }
                 />

@@ -1,6 +1,5 @@
 "use client";
 
-import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import type { SkillCall, SkillItem } from "@/lib/types";
+import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 /**
  * 技能详情：说明、步骤正文（SKILL.md）、文件清单与最近调用。
@@ -129,16 +129,8 @@ function SkillDetailInner() {
             <>
               <span>{skill.origin || t("originUnknown")}</span>
               <span className="tabular-nums">{t("callsMeta", { n: skill.calls })}</span>
-              {skill.last_used ? (
-                <>
-                  <span className="tabular-nums">{skill.last_used}</span>
-                </>
-              ) : null}
-              {skill.out_of_sync ? (
-                <>
-                  <span>{t("outOfSync")}</span>
-                </>
-              ) : null}
+              {skill.last_used ? <span className="tabular-nums">{skill.last_used}</span> : null}
+              {skill.out_of_sync ? <span>{t("outOfSync")}</span> : null}
             </>
           }
           subtitle={skill.description}
@@ -149,24 +141,24 @@ function SkillDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.calls")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{skill.calls}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.calls")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{skill.calls}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.tasks")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{skill.tasks}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.tasks")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{skill.tasks}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.files")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{files.length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.files")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{files.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.agents")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{skill.usage_agents.length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.agents")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{skill.usage_agents.length}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.mcps")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{(skill.mcps ?? []).length}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.mcps")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{(skill.mcps ?? []).length}</span>
         </div>
       </KpiRow>
 
@@ -226,19 +218,19 @@ function SkillDetailInner() {
                         <Link
                           key="t"
                           href={`/function/tasks/detail?id=${c.task_id}`}
-                          className="text-xs text-primary hover:underline tabular-nums"
+                          className="text-primary text-xs tabular-nums hover:underline"
                         >
                           #{c.task_id}
                         </Link>
                       ) : (
-                        <span key="t" className="text-xs text-muted-foreground">
+                        <span key="t" className="text-muted-foreground text-xs">
                           {t("chat")}
                         </span>
                       ),
                     ]}
                   >
                     <span className="block truncate font-mono text-xs">{c.agent_key || "—"}</span>
-                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                    <span className="mt-0.5 block truncate text-muted-foreground text-xs">
                       {t("argsLen", { n: c.args_len })}
                     </span>
                   </RecordRow>

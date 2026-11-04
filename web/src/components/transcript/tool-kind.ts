@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   BookOpenIcon,
   FileTextIcon,
@@ -12,7 +13,6 @@ import {
   Terminal,
   Wrench,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 // 工具分类只管三件事：行首图标、类别文案、异常着色。
 // 刻意不再做十几色的胶囊角标 —— 摘要行的层级靠「状态圈 + 文案 + 目标路径」表达，

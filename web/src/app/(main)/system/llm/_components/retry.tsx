@@ -20,12 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import type {
-  LLMErrorRules,
-  LLMRetryOverride,
-  LLMRetryPolicy,
-  LLMRetryRule,
-} from "@/lib/types";
+import type { LLMErrorRules, LLMRetryOverride, LLMRetryPolicy, LLMRetryRule } from "@/lib/types";
 
 export const ZERO_RULE: LLMRetryRule = {
   attempts: 0,
@@ -238,9 +233,7 @@ export function RetryRuleFields({
         </div>
       </div>
       {/* 梯度三旋钮只在建连层出现：其余层的退避是写死的，给它们加旋钮没人会用。 */}
-      {layer === "connect" && !compact && (
-        <LadderFields idPrefix={idPrefix} value={value} onChange={onChange} />
-      )}
+      {layer === "connect" && !compact && <LadderFields idPrefix={idPrefix} value={value} onChange={onChange} />}
       {!compact && (
         <p className="text-muted-foreground text-xs">
           {t("retry.emptyLine", { hint: t(`retryLayer.${layer}.offHint`) })}

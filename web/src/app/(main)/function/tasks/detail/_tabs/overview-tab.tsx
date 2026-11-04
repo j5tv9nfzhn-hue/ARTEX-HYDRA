@@ -11,14 +11,10 @@ import {
   CoinsIcon,
   FileTextIcon,
   ListChecksIcon,
-  PencilIcon,
-  PlusIcon,
   RefreshCwIcon,
   ShieldAlertIcon,
   ShieldCheckIcon,
   TargetIcon,
-  Trash2Icon,
-  XIcon,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -36,13 +32,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
 import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api";
 import type {
-  AssetInterceptKind,
   AssetInterceptRule,
   Finding,
   ModelTokenStat,
@@ -121,7 +114,7 @@ function StatCard({
         <p className="flex items-center gap-1.5 text-muted-foreground text-sm">
           <Icon className="size-3.5" /> {label}
         </p>
-        <div className="font-heading text-2xl font-medium leading-snug tabular-nums">{value}</div>
+        <div className="font-heading font-medium text-2xl tabular-nums leading-snug">{value}</div>
       </div>
       {sub && <div className="px-4 text-muted-foreground text-xs">{sub}</div>}
     </Sheet>
@@ -526,7 +519,7 @@ export function OverviewTab({ taskId }: { taskId: string }) {
       {/* Heartbeat */}
       <Sheet api={["task", "stats", "intents"]}>
         <SheetHead index="03" icon={ActivityIcon} iconClassName="text-blue-500" title={t("heartbeat.title")} />
-        <div data-editorial="body" className="grid grid-cols-2 gap-4 sm:grid-cols-4 px-4 pt-2 pb-4">
+        <div data-editorial="body" className="grid grid-cols-2 gap-4 px-4 pt-2 pb-4 sm:grid-cols-4">
           <div>
             <div className="text-muted-foreground text-xs">{t("heartbeat.engineState")}</div>
             <StatusBadge
@@ -611,7 +604,7 @@ export function OverviewTab({ taskId }: { taskId: string }) {
 
         <Sheet api={["findings", "intents"]}>
           <SheetHead index="05" icon={AlertTriangleIcon} iconClassName="text-amber-500" title={t("attention.title")} />
-          <div data-editorial="body" className="grid grid-cols-2 gap-3 text-sm px-4 pt-2 pb-4">
+          <div data-editorial="body" className="grid grid-cols-2 gap-3 px-4 pt-2 pb-4 text-sm">
             <div>
               <div className="font-semibold text-2xl text-red-600 tabular-nums">{taskFindings.length}</div>
               <div className="text-muted-foreground text-xs">{t("attention.confirmedVuln")}</div>
@@ -685,7 +678,7 @@ export function OverviewTab({ taskId }: { taskId: string }) {
           {/* 创建时的原始任务描述、目标放在顶部，便于随时查看。 */}
           <Sheet api={["task"]}>
             <SheetHead index="08" icon={TargetIcon} iconClassName="text-primary" title={t("desc.title")} />
-            <div data-editorial="body" className="grid grid-cols-1 gap-4 sm:grid-cols-2 px-4 pt-2 pb-4">
+            <div data-editorial="body" className="grid grid-cols-1 gap-4 px-4 pt-2 pb-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <div className="font-medium text-muted-foreground text-xs">{t("desc.descLabel")}</div>
                 <p className="whitespace-pre-wrap break-words text-sm">{task?.description?.trim() || "—"}</p>

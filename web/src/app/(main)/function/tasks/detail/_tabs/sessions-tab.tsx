@@ -478,7 +478,7 @@ function SessionItem({
       >
         {icon ?? <span className="size-3.5 shrink-0" />}
         {s.intent_id && (
-          <span className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-xs text-muted-foreground tabular-nums">
+          <span className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-muted-foreground text-xs tabular-nums">
             #{s.intent_id}
           </span>
         )}
@@ -499,12 +499,12 @@ function SessionItem({
         )}
         {hasPending && <ShieldAlertIcon className="size-3.5 shrink-0 text-amber-500" />}
         {!active && unread ? (
-          <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-blue-500/15 px-1 font-medium text-xs text-blue-600 tabular-nums dark:text-blue-400">
+          <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-blue-500/15 px-1 font-medium text-blue-600 text-xs tabular-nums dark:text-blue-400">
             {unread > 99 ? "99+" : unread}
           </span>
         ) : null}
         {s.live && (
-          <span className="inline-flex items-center gap-1 rounded bg-blue-500/15 px-1.5 py-0.5 font-medium text-xs text-blue-600 dark:text-blue-400">
+          <span className="inline-flex items-center gap-1 rounded bg-blue-500/15 px-1.5 py-0.5 font-medium text-blue-600 text-xs dark:text-blue-400">
             <LiveDot className="size-1" />
             {t("item.live")}
           </span>
@@ -637,7 +637,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   const [sessionTokens, setSessionTokens] = React.useState<Record<string, SessionTokenUsage>>({});
   const [llmResolutions, setLLMResolutions] = React.useState<TaskLLMResolutions | null>(null);
   // profile 列表只用于上下文环的窗口回退（老会话 usage 行没 metadata）。
-  const [profiles, setProfiles] = React.useState<LLMProfile[]>([]);
+  const [_profiles, setProfiles] = React.useState<LLMProfile[]>([]);
   // Pending intercept requests for this task — used to show warning icons on sessions.
   const [pendingIntercepts, setPendingIntercepts] = React.useState<InterceptApprovalRow[]>([]);
   // 实时增量（未落库）：新的 activity 一到就清空，避免和已落库的行重复显示。
@@ -1324,9 +1324,12 @@ export function SessionsTab({ taskId }: { taskId: string }) {
     : active.intent_id
       ? liveIntentId === String(active.intent_id)
       : liveFrame.worker === "chat";
-  const liveDeltaForActive = liveBelongs
-    ? { kind: liveFrame!.kind, text: liveFrame!.text, tool: liveFrame!.tool }
-    : undefined;
+  // liveFrame 可能为 null，而 TS 无法通过 liveBelongs 这个布尔中间变量收窄它。
+  // 早先这里写的是 liveFrame!.kind：liveIntentId 有值而 liveFrame 为 null 时会抛
+  // TypeError；改成 ?. 又会把三个字段都放宽成 string | undefined，对不上
+  // liveDeltaForActive 的目标类型。显式再判一次 liveFrame 才两头都成立。
+  const liveDeltaForActive =
+    liveFrame && liveBelongs ? { kind: liveFrame.kind, text: liveFrame.text, tool: liveFrame.tool } : undefined;
   const activeState = store[activeKey];
   // A main turn is serialized per task (chat lock), so "busy" is task-wide: while any
   // main segment is mid-turn the active composer is disabled. Clear it the moment the
@@ -1334,7 +1337,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
   // re-enables immediately instead of waiting for the next chat-status poll.
   const activeItems = activeState?.items ?? [];
   const activeLast = activeItems[activeItems.length - 1];
-  const activeSettled =
+  const _activeSettled =
     !!activeLast && (activeLast.kind === "result" || (activeLast.kind === "text" && activeLast.is_error));
   // 统一状态机（与对话页同一份 deriveAgentPhase）：实时帧优先于已落库活动，
   // 避免“推理 → 正文 → 又回到推理”的来回跳（Memo 01）。
@@ -1578,7 +1581,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                       / {activeDisplayTitle}
                     </span>
                     {hiddenUnread > 0 && (
-                      <span className="inline-flex min-w-4 shrink-0 items-center justify-center rounded-full bg-blue-500/15 px-1 font-medium text-xs text-blue-600 tabular-nums lg:hidden dark:text-blue-400">
+                      <span className="inline-flex min-w-4 shrink-0 items-center justify-center rounded-full bg-blue-500/15 px-1 font-medium text-blue-600 text-xs tabular-nums lg:hidden dark:text-blue-400">
                         {hiddenUnread > 99 ? "99+" : hiddenUnread}
                       </span>
                     )}
@@ -1665,7 +1668,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
                       <Meta.icon className="size-3.5 text-primary/80" />
                       <span>{t(`role.${role}`)}</span>
                       {role === "worker" && (
-                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs text-muted-foreground tabular-nums">
+                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.2 font-mono text-muted-foreground text-xs tabular-nums">
                           {rawItems.length}
                         </span>
                       )}
@@ -1808,7 +1811,7 @@ export function SessionsTab({ taskId }: { taskId: string }) {
               )}
               {active.live && <AgentPhaseBadge phase={livePhase} />}
               {activeState?.hasMore && (
-                <span className="text-xs text-muted-foreground" title={t("header.olderHistoryTitle")}>
+                <span className="text-muted-foreground text-xs" title={t("header.olderHistoryTitle")}>
                   {t("header.olderHistoryLabel")}
                 </span>
               )}

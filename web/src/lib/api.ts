@@ -54,18 +54,17 @@ import type {
   HarnessScan,
   IntentAsset,
   IntentHandoffView,
-  ReviewerVerdict,
   InterceptApprovalFilter,
   InterceptApprovalRow,
   InterceptDetail,
   InterceptPending,
   InterceptRule,
   JudgeConfig,
+  LLMErrorRules,
   LLMPoolStatus,
   LLMProfile,
   LLMProvider,
   LLMRecordDetail,
-  LLMErrorRules,
   LLMRecordItem,
   LLMRetryOverride,
   LLMRetryPolicy,
@@ -97,11 +96,12 @@ import type {
   RESession,
   ReliabilityMetrics,
   ReportImportResult,
+  ReviewerVerdict,
   SessionTokenUsage,
   Settings,
-  ShellSettings,
   Severity,
   ShellCapability,
+  ShellSettings,
   SkillCall,
   SkillItem,
   SkillProposal,
@@ -690,9 +690,7 @@ export const api = {
     get<{ assets: IntentAsset[] }>(`/tasks/${taskId}/intent-assets`).then((r) => arr(r.assets)),
   // 回顾者（Reviewer）判决台账：任务面板「回顾者」分区的唯一数据源，只读。
   taskReviewerVerdicts: (taskId: string) =>
-    get<{ verdicts: ReviewerVerdict[] }>(`/tasks/${taskId}/reviewer-verdicts`).then((r) =>
-      arr(r.verdicts),
-    ),
+    get<{ verdicts: ReviewerVerdict[] }>(`/tasks/${taskId}/reviewer-verdicts`).then((r) => arr(r.verdicts)),
 
   // ---- companies (企业 + 资产范围；归属唯一来源) ----
   companies: () => get<Company[]>("/companies").then(arr),
@@ -1206,8 +1204,7 @@ export const api = {
     session_header_key?: string;
   }) => post<{ id: string }>("/llm/providers", v),
   // 级联删除：该供应商名下的模型一并删掉，models_deleted = 被带走的模型数。
-  deleteLLMProvider: (id: string) =>
-    del<{ deleted: string; models_deleted?: number }>(`/llm/providers/${id}`),
+  deleteLLMProvider: (id: string) => del<{ deleted: string; models_deleted?: number }>(`/llm/providers/${id}`),
   // 把一条模型挪到另一家供应商下（端点随之改变）。
   moveLLMProfileProvider: (id: string, providerID: number) =>
     post<{ ok: boolean }>(`/llm/profiles/${id}/provider`, { provider_id: providerID }),
@@ -1253,8 +1250,8 @@ export const api = {
   // ---- conversations (chat page) ----
   // task 可选：只取绑在该任务上的线程（对话页任务带之外的按任务过滤场景）。
   conversations: (task?: string) =>
-    get<{ conversations: Conversation[] }>(`/conversations${task ? `?task=${encodeURIComponent(task)}` : ""}`).then((r) =>
-      arr(r.conversations),
+    get<{ conversations: Conversation[] }>(`/conversations${task ? `?task=${encodeURIComponent(task)}` : ""}`).then(
+      (r) => arr(r.conversations),
     ),
   createConversation: (agent_key: string, title = "", llm_profile_id?: number | null, task_id?: string | null) =>
     post<Conversation>("/conversations", {
@@ -1729,5 +1726,3 @@ export const api = {
   migrateImport: (path: string, mode: "merge" | "replace", confirm?: string) =>
     post<MigrateResult>(`/migrate/import`, { path, mode, confirm }),
 };
-
-

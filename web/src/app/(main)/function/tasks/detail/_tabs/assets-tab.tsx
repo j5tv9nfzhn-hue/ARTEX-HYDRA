@@ -1,6 +1,5 @@
 "use client";
 
-import { Sheet as PaperSheet } from "@/ui/container";
 import * as React from "react";
 
 import {
@@ -45,6 +44,7 @@ import { api } from "@/lib/api";
 import { parseCompanyScopeText } from "@/lib/company-scope";
 import type { Asset, NewAssetType } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Sheet as PaperSheet } from "@/ui/container";
 
 const PAGE_SIZES = [25, 50, 100, 200];
 
@@ -206,11 +206,11 @@ function AssetCard({
     );
   }
   return (
-    <PaperSheet api={["taskAssets", "searchTaskAssets", "detachTaskAsset", "assetCounts"]} className="flex min-h-0 flex-1 flex-col">
-      <div
-        data-editorial="body"
-        className="scrollbar-thin scrollbar-track-transparent min-h-0 flex-1 overflow-auto"
-      >
+    <PaperSheet
+      api={["taskAssets", "searchTaskAssets", "detachTaskAsset", "assetCounts"]}
+      className="flex min-h-0 flex-1 flex-col"
+    >
+      <div data-editorial="body" className="scrollbar-thin scrollbar-track-transparent min-h-0 flex-1 overflow-auto">
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-card">
             <TableRow>

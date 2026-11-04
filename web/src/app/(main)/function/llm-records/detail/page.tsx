@@ -1,6 +1,5 @@
 "use client";
 
-import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import type { LLMRecordDetail } from "@/lib/types";
+import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 /**
  * 录制详情：一次模型调用的输入片段、输出全文与 token 账。
@@ -47,7 +47,7 @@ function RecordDetailInner() {
 
   const [rec, setRec] = React.useState<LLMRecordDetail | null>(null);
   const [loaded, setLoaded] = React.useState(false);
-  const [rawView, setRawView] = React.useState(false);
+  const [rawView, _setRawView] = React.useState(false);
 
   React.useEffect(() => {
     if (!Number.isFinite(id) || id <= 0) {
@@ -131,26 +131,24 @@ function RecordDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.input")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{fmtTokens(rec.input_tokens)}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.input")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{fmtTokens(rec.input_tokens)}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.output")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{fmtTokens(rec.output_tokens)}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.output")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{fmtTokens(rec.output_tokens)}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.cache")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">
-            {fmtTokens(rec.cache_read)}
-          </span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.cache")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{fmtTokens(rec.cache_read)}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.latency")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{fmtLatency(rec.latency_ms)}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.latency")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{fmtLatency(rec.latency_ms)}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.cost")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{fmtCost(rec.cost ?? 0)}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.cost")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{fmtCost(rec.cost ?? 0)}</span>
         </div>
       </KpiRow>
 
@@ -179,13 +177,16 @@ function RecordDetailInner() {
               className={
                 rec.status === "ok"
                   ? "max-h-[56vh] overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-relaxed [overflow-wrap:anywhere]"
-                  : "max-h-[56vh] overflow-auto whitespace-pre-wrap break-all border-l-2 border-l-destructive pl-3 font-mono text-xs leading-relaxed text-destructive [overflow-wrap:anywhere]"
+                  : "max-h-[56vh] overflow-auto whitespace-pre-wrap break-all border-l-2 border-l-destructive pl-3 font-mono text-destructive text-xs leading-relaxed [overflow-wrap:anywhere]"
               }
             >
               {respText || t("emptyContent")}
             </pre>
           </div>
-          <SheetFoot left={t("footChars", { n: respText.length })} right={hasRaw ? t("rawAvailable") : t("rawMissing")} />
+          <SheetFoot
+            left={t("footChars", { n: respText.length })}
+            right={hasRaw ? t("rawAvailable") : t("rawMissing")}
+          />
         </Sheet>
       </div>
 
@@ -205,11 +206,7 @@ function RecordDetailInner() {
                 {fmtTokens(rec.input_tokens)} / {fmtTokens(rec.output_tokens)}
               </span>
             </RecordRow>
-            <RecordRow
-              lead={t("row.cache")}
-              cols="96px minmax(0,1fr) auto"
-              values={[fmtTokens(rec.cache_write)]}
-            >
+            <RecordRow lead={t("row.cache")} cols="96px minmax(0,1fr) auto" values={[fmtTokens(rec.cache_write)]}>
               <span className="text-[13px] tabular-nums">{t("cacheRead", { n: fmtTokens(rec.cache_read) })}</span>
             </RecordRow>
             {rec.error ? (
@@ -231,14 +228,14 @@ function RecordDetailInner() {
               <RecordRow lead={t("row.task")} cols="96px minmax(0,1fr) auto">
                 <Link
                   href={`/function/tasks/detail?id=${encodeURIComponent(rec.task_id)}`}
-                  className="text-[13px] text-primary hover:underline tabular-nums"
+                  className="text-[13px] text-primary tabular-nums hover:underline"
                 >
                   {t("openTask", { id: rec.task_id })}
                 </Link>
               </RecordRow>
             ) : null}
             <RecordRow lead={t("row.session")} cols="96px minmax(0,1fr) auto">
-              <code className="font-mono text-xs text-muted-foreground">{rec.session_id || "—"}</code>
+              <code className="font-mono text-muted-foreground text-xs">{rec.session_id || "—"}</code>
             </RecordRow>
           </div>
           <SheetFoot left={t("footCost")} right={t("replayOff")} />

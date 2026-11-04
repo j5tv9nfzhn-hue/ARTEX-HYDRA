@@ -1,6 +1,5 @@
 "use client";
 
-import { ApiBar, Masthead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import type { Task } from "@/lib/types";
+import { ApiBar, Masthead } from "@/ui/container";
 
 import { SessionsTab } from "../detail/_tabs/sessions-tab";
 

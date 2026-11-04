@@ -142,7 +142,7 @@ export function EmptyState({
     <div
       data-slot="empty-state"
       className={cn(
-        "flex w-full min-w-0 flex-col items-center justify-center text-center text-balance",
+        "flex w-full min-w-0 flex-col items-center justify-center text-balance text-center",
         compact ? "gap-1.5 px-3 py-6" : "gap-2.5 px-4 py-10",
         className,
       )}
@@ -150,7 +150,7 @@ export function EmptyState({
       <Art aria-hidden="true" className={cn("h-auto shrink-0", artClass)} />
       <div className={cn("font-display font-medium tracking-tight", compact ? "text-sm" : "text-base")}>{title}</div>
       {description ? (
-        <div className={cn("text-muted-foreground max-w-md", compact ? "text-xs" : "text-sm/relaxed")}>
+        <div className={cn("max-w-md text-muted-foreground", compact ? "text-xs" : "text-sm/relaxed")}>
           {description}
         </div>
       ) : null}
@@ -162,7 +162,7 @@ export function EmptyState({
               key={s.label}
               type="button"
               onClick={s.onClick}
-              className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-foreground"
+              className="rounded-full border bg-background px-2.5 py-1 text-muted-foreground text-xs transition-colors hover:border-primary/50 hover:bg-accent hover:text-foreground"
             >
               {s.label}
             </button>

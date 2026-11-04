@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -11,6 +10,7 @@ import { useTranslations } from "next-intl";
 
 import { AgentEditor } from "@/components/agent-editor";
 import { Button } from "@/components/ui/button";
+import { Masthead, Sheet } from "@/ui/container";
 
 /**
  * Agent 详情：人设 / 工具 / 模型三段的全宽编辑器。

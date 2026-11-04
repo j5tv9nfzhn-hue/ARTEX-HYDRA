@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { Bot, PlusIcon, Trash2Icon } from "lucide-react";
@@ -39,6 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import type { Agent } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Masthead, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 
 // AgentGridCard is one clickable tile opening the agent's editor drawer. Custom
 // (non-builtin) agents get a delete button.
@@ -67,16 +67,16 @@ function AgentGridCard({
   return (
     <div
       className={cn(
-        "hover:border-primary/50 group relative flex flex-col gap-2 rounded-lg border p-4 transition-colors",
+        "group relative flex flex-col gap-2 rounded-lg border p-4 transition-colors hover:border-primary/50",
         delay !== undefined && "animate-fade-up",
       )}
       style={delay !== undefined ? { animationDelay: `${delay}ms` } : undefined}
     >
       <button type="button" onClick={onOpen} className="flex flex-col gap-2 text-left">
         <div className="flex flex-wrap items-center gap-2">
-          <Bot className="text-muted-foreground size-4" />
-          <span className="text-sm font-medium">{agent.name}</span>
-          <span className="text-muted-foreground font-mono text-xs">{agent.key}</span>
+          <Bot className="size-4 text-muted-foreground" />
+          <span className="font-medium text-sm">{agent.name}</span>
+          <span className="font-mono text-muted-foreground text-xs">{agent.key}</span>
           {agent.builtin ? (
             <Badge variant="secondary" className="px-1.5 py-0 text-xs">
               {t("badgeBuiltin")}
@@ -87,14 +87,14 @@ function AgentGridCard({
             </Badge>
           )}
           {!agent.enabled && (
-            <Badge variant="outline" className="text-destructive px-1.5 py-0 text-xs">
+            <Badge variant="outline" className="px-1.5 py-0 text-destructive text-xs">
               {t("badgeDisabled")}
             </Badge>
           )}
         </div>
         {/* biome-ignore lint/nursery/useNullishCoalescing: 空说明也应回退到提示文案，故有意使用 ||；?? 会直接显示空字符串。 */}
-        <p className="text-muted-foreground line-clamp-2 min-h-8 text-xs">{agent.description || t("noDescription")}</p>
-        <div className="text-muted-foreground flex flex-wrap gap-1.5 text-xs">
+        <p className="line-clamp-2 min-h-8 text-muted-foreground text-xs">{agent.description || t("noDescription")}</p>
+        <div className="flex flex-wrap gap-1.5 text-muted-foreground text-xs">
           <span className="rounded border px-1.5 py-0.5">MCP {agent.mcp_count ?? 0}</span>
           <span className="rounded border px-1.5 py-0.5">Skill {agent.skill_count ?? 0}</span>
           <span className="rounded border px-1.5 py-0.5">
@@ -108,7 +108,7 @@ function AgentGridCard({
             <Button
               variant="ghost"
               size="icon-sm"
-              className="text-muted-foreground hover:text-destructive absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
+              className="absolute top-2 right-2 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
             >
               <Trash2Icon className="size-3.5" />
             </Button>
@@ -304,7 +304,7 @@ export default function AgentsPage() {
               <SheetHeader className="px-4">
                 <SheetTitle className="flex items-center gap-2">
                   {editing.name}
-                  <span className="text-muted-foreground font-mono text-xs">{editing.key}</span>
+                  <span className="font-mono text-muted-foreground text-xs">{editing.key}</span>
                   {!editing.builtin && (
                     <Badge variant="outline" className="px-1.5 py-0 text-xs">
                       {t("badgeCustom")}

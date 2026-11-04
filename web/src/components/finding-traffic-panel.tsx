@@ -1,6 +1,5 @@
 "use client";
 
-import { RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { ArrowDownIcon, ArrowUpIcon, PlusIcon } from "lucide-react";
@@ -27,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import type { FindingTraffic, FindingTrafficBinding, TrafficEvidenceRole } from "@/lib/types";
+import { RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 // Role values in display order; labels resolve via t(`traffic.role.${value}`) at render time.
 const ROLE_VALUES: TrafficEvidenceRole[] = ["baseline", "proof", "verification", "supporting"];
@@ -136,7 +136,7 @@ export function FindingTrafficPanel({
                   </Badge>
                 }
                 values={[
-                  <span className="inline-flex flex-wrap gap-1">
+                  <span key="actions" className="inline-flex flex-wrap gap-1">
                     <Button variant="outline" size="sm" onClick={() => setPreview(b.id)}>
                       {t("traffic.viewRaw")}
                     </Button>
@@ -189,34 +189,29 @@ export function FindingTrafficPanel({
               >
                 <div className="flex min-w-0 flex-col gap-1">
                   <RecordSub
-                    items={
-                      [
-                        t("traffic.evidenceNo", { id: b.id }),
-                        `${b.snapshot.method} / ${b.snapshot.status}`,
-                        new Date(b.snapshot.captured_at * 1000).toLocaleString("zh-CN"),
-                      ]
-                    }
+                    items={[
+                      t("traffic.evidenceNo", { id: b.id }),
+                      `${b.snapshot.method} / ${b.snapshot.status}`,
+                      new Date(b.snapshot.captured_at * 1000).toLocaleString("zh-CN"),
+                    ]}
                   />
                   <Button
                     variant="link"
-                    className="h-auto justify-start p-0 text-left whitespace-normal"
+                    className="h-auto justify-start whitespace-normal p-0 text-left"
                     onClick={() => setPreview(b.id)}
                   >
                     <span className="break-all font-mono text-xs">{b.snapshot.url}</span>
                   </Button>
-                  {b.note ? <p className="text-sm whitespace-pre-wrap">{b.note}</p> : null}
+                  {b.note ? <p className="whitespace-pre-wrap text-sm">{b.note}</p> : null}
                 </div>
               </RecordRow>
             ))
           )}
-      </div>
-      {data && data.bindings.length > 0 ? (
-        <SheetFoot
-          left={t("traffic.foot", { total: data.bindings.length })}
-          right={t("traffic.footHint")}
-        />
-      ) : null}
-    </Sheet>
+        </div>
+        {data && data.bindings.length > 0 ? (
+          <SheetFoot left={t("traffic.foot", { total: data.bindings.length })} right={t("traffic.footHint")} />
+        ) : null}
+      </Sheet>
       {adding && data ? (
         <TrafficPickerDialog
           findingId={findingId}

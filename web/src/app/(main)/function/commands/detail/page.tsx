@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -14,6 +13,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import type { CommandRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Masthead } from "@/ui/container";
 
 /**
  * 工具执行详情：一次调用的原文与输出。
@@ -97,7 +97,7 @@ function CommandDetailInner() {
       v: record.exploration_id ? (
         <Link
           href={`/function/tasks/detail?id=${record.exploration_id}`}
-          className="text-primary hover:underline tabular-nums"
+          className="text-primary tabular-nums hover:underline"
         >
           #{record.exploration_id}
         </Link>
@@ -140,7 +140,7 @@ function CommandDetailInner() {
       <dl className="grid grid-cols-2 divide-border/60 border-border/60 border-y sm:grid-cols-3 lg:grid-cols-5 lg:divide-x">
         {fields.map((f) => (
           <div key={f.k} className="flex flex-col gap-0.5 px-3 py-2">
-            <dt className="text-xs tracking-[0.08em] text-muted-foreground">{f.k}</dt>
+            <dt className="text-muted-foreground text-xs tracking-[0.08em]">{f.k}</dt>
             <dd className="truncate text-[13px]">{f.v}</dd>
           </div>
         ))}
@@ -148,7 +148,7 @@ function CommandDetailInner() {
 
       {/* 输入：原文，等宽，可横向滚动 */}
       <section className="flex min-h-0 flex-col gap-1.5">
-        <h2 className="text-xs tracking-[0.08em] text-muted-foreground">{t("input")}</h2>
+        <h2 className="text-muted-foreground text-xs tracking-[0.08em]">{t("input")}</h2>
         <pre className="overflow-x-auto rounded-[2px] border border-border/70 bg-muted/25 p-3 font-mono text-xs leading-relaxed">
           {record.command}
         </pre>
@@ -156,7 +156,7 @@ function CommandDetailInner() {
 
       {/* 输出：成功/失败同一块，失败时整块转危险色的左边线 */}
       <section className="flex min-h-0 flex-col gap-1.5">
-        <h2 className="text-xs tracking-[0.08em] text-muted-foreground">{t("output")}</h2>
+        <h2 className="text-muted-foreground text-xs tracking-[0.08em]">{t("output")}</h2>
         {record.output ? (
           <pre
             className={cn(

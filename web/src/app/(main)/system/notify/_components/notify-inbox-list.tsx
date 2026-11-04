@@ -1,6 +1,5 @@
 "use client";
 
-import { Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -26,6 +25,7 @@ import {
 import { notifyInbox } from "@/lib/notify-inbox";
 import { iconTone, kindTone, levelIcon } from "@/lib/notify-visuals";
 import { cn } from "@/lib/utils";
+import { Sheet, SheetHead } from "@/ui/container";
 
 // 站内通知列表 —— 原先是一个从右下角铃铛打开的右侧抽屉，现在整块搬到
 // 侧边栏「通知推送」页。功能一一对应：筛选、按天分组、展开详情、单条删除、
@@ -160,7 +160,7 @@ export function NotifyInboxList() {
           ) : (
             groups.map((group) => (
               <section key={group.key}>
-                <div className="sticky top-0 z-10 flex items-center gap-2 bg-background/95 px-4 py-1.5 font-medium text-xs text-muted-foreground backdrop-blur">
+                <div className="sticky top-0 z-10 flex items-center gap-2 bg-background/95 px-4 py-1.5 font-medium text-muted-foreground text-xs backdrop-blur">
                   <BucketLabel bucket={group.key} />
                   <span className="tabular-nums opacity-60">{group.items.length}</span>
                 </div>
@@ -182,7 +182,7 @@ export function NotifyInboxList() {
           )}
         </div>
 
-        <p className="text-xs text-muted-foreground leading-4">{t("sessionNote", { count: MAX_KEPT })}</p>
+        <p className="text-muted-foreground text-xs leading-4">{t("sessionNote", { count: MAX_KEPT })}</p>
       </div>
     </Sheet>
   );
@@ -228,7 +228,7 @@ function Row({
               {event.body}
             </div>
           ) : null}
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs">
             <span className={cn("rounded px-1 py-px", kindTone(event.kind))}>{kind}</span>
             {unread ? (
               <span className="rounded bg-red-600/10 px-1 py-px font-medium text-red-700 dark:bg-red-400/10 dark:text-red-400">

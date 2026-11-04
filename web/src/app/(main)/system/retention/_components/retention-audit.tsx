@@ -1,12 +1,12 @@
 "use client";
 
-import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import { RefreshCwIcon, ScrollTextIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { parseRetentionPolicy, RETENTION_TABLES, type RetentionAuditEntry, type RetentionTable } from "@/lib/retention";
+import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 const actionNames = [
   "policy_saved",
@@ -114,7 +114,8 @@ export function RetentionAudit({
   if (!busy && !error) emptyMessage = loaded ? t("audit.empty") : t("audit.notLoaded");
   return (
     <Sheet api={["retentionApi.audit"]}>
-      <SheetHead index="04"
+      <SheetHead
+        index="04"
         icon={ScrollTextIcon}
         title={t("audit.title")}
         hint={t("audit.description")}
@@ -180,9 +181,7 @@ export function RetentionAudit({
         )}
         <p className="text-muted-foreground text-xs">{t("audit.actorLimit")}</p>
       </div>
-      {loaded && entries.length > 0 ? (
-        <SheetFoot left={t("audit.foot", { total: entries.length })} />
-      ) : null}
+      {loaded && entries.length > 0 ? <SheetFoot left={t("audit.foot", { total: entries.length })} /> : null}
     </Sheet>
   );
 }

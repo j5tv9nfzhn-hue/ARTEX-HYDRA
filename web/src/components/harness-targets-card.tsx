@@ -1,6 +1,5 @@
 "use client";
 
-import { RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { RefreshCwIcon, ShieldCheckIcon, WrenchIcon } from "lucide-react";
@@ -21,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import type { HarnessChange, HarnessClientStatus, HarnessScan } from "@/lib/types";
+import { RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 // 「已检测到的客户端」：把 MCPExposureCard 从「给你一段配置自己贴」升级成
 // 「扫描 → 预览 diff → 一键写入」。
@@ -139,7 +139,8 @@ export function HarnessTargetsCard() {
 
   return (
     <Sheet api={["harnessScan", "harnessPlan", "harnessApply"]}>
-      <SheetHead index="01"
+      <SheetHead
+        index="01"
         icon={WrenchIcon}
         title={t("harnessTitle")}
         count={scan ? `${scan.stats.linked}/${scan.stats.total}` : undefined}
@@ -192,7 +193,11 @@ export function HarnessTargetsCard() {
                     />
                   }
                   values={[
-                    !canPick ? <span className="text-muted-foreground">{t("harnessManual")}</span> : null,
+                    !canPick ? (
+                      <span key="manual" className="text-muted-foreground">
+                        {t("harnessManual")}
+                      </span>
+                    ) : null,
                   ]}
                 >
                   <div className="flex min-w-0 flex-col">
@@ -216,9 +221,7 @@ export function HarnessTargetsCard() {
                           {cfg.exists ? "✓" : "—"} {cfg.display}
                         </div>
                       ))}
-                      {c.configs.length > 2 ? (
-                        <div className="font-mono text-xs">+{c.configs.length - 2}</div>
-                      ) : null}
+                      {c.configs.length > 2 ? <div className="font-mono text-xs">+{c.configs.length - 2}</div> : null}
                     </div>
                   </div>
                 </RecordRow>
@@ -235,10 +238,7 @@ export function HarnessTargetsCard() {
         </div>
       </div>
       {clients.length > 0 ? (
-        <SheetFoot
-          left={t("harnessFoot", { n: targetIds.length })}
-          right={t("harnessFootHint")}
-        />
+        <SheetFoot left={t("harnessFoot", { n: targetIds.length })} right={t("harnessFootHint")} />
       ) : null}
 
       <Dialog open={changes !== null} onOpenChange={(open) => (open ? null : setChanges(null))}>
@@ -257,9 +257,7 @@ export function HarnessTargetsCard() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-sm">{ch.client_name || ch.client_id}</span>
                   <Badge variant={actionVariant(ch.action)}>{t(`harnessChange_${ch.action}`)}</Badge>
-                  <span className="truncate font-mono text-xs text-muted-foreground">
-                    {ch.path || ch.display_path}
-                  </span>
+                  <span className="truncate font-mono text-muted-foreground text-xs">{ch.path || ch.display_path}</span>
                 </div>
                 {ch.reason ? <p className="mt-1 text-muted-foreground text-xs">{ch.reason}</p> : null}
                 {ch.diff ? (

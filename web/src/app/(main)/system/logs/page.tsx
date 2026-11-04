@@ -1,6 +1,5 @@
 "use client";
 
-import { ApiBar, Masthead } from "@/ui/container";
 import * as React from "react";
 
 import { useTranslations } from "next-intl";
@@ -12,10 +11,11 @@ import { sseUrl } from "@/lib/api";
 import { MOCK } from "@/lib/mock/enabled";
 import type { LogLine } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ApiBar, Masthead } from "@/ui/container";
 
 /** 去掉行首重复的 [tag] 前缀——tag 已经单独占一列。 */
 function bodyOf(l: LogLine) {
-  return l.tag && l.text.startsWith("[" + l.tag + "]") ? l.text.slice(l.tag.length + 2).trimStart() : l.text;
+  return l.tag && l.text.startsWith(`[${l.tag}]`) ? l.text.slice(l.tag.length + 2).trimStart() : l.text;
 }
 
 // Mock 演示没有后端 SSE，填入少量示例日志。
@@ -77,7 +77,7 @@ const levelDot: Record<LogLine["level"], string> = {
 
 function fmtTime(ts: string) {
   const d = new Date(ts);
-  if (isNaN(d.getTime())) return "";
+  if (Number.isNaN(d.getTime())) return "";
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
@@ -225,7 +225,7 @@ export default function LogsPage() {
           <Button size="sm" variant="outline" className="h-8" onClick={() => setLines([])}>
             {t("clear")}
           </Button>
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="ml-auto text-muted-foreground text-xs">
             {t("totalLines", { count: counts.total })} /{" "}
             <span className="text-amber-600 dark:text-amber-400">{t("warnCount", { count: counts.warn })}</span> /{" "}
             <span className="text-red-600 dark:text-red-400">{t("errorCount", { count: counts.error })}</span>
@@ -272,9 +272,9 @@ export default function LogsPage() {
                     )}
                   >
                     <span className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", levelDot[l.level])} />
-                    <span className="shrink-0 tabular-nums text-muted-foreground">{fmtTime(l.ts)}</span>
+                    <span className="shrink-0 text-muted-foreground tabular-nums">{fmtTime(l.ts)}</span>
                     {l.tag && (
-                      <span className="shrink-0 rounded bg-muted px-1 text-xs text-foreground/70">{l.tag}</span>
+                      <span className="shrink-0 rounded bg-muted px-1 text-foreground/70 text-xs">{l.tag}</span>
                     )}
                     <span className={cn("min-w-0 whitespace-pre-wrap break-words", levelTone[l.level])}>{body}</span>
                   </button>

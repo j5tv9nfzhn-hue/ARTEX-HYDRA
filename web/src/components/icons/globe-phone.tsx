@@ -1,4 +1,4 @@
-import * as React from "react";
+import type * as React from "react";
 
 // GlobePhone 是侧边栏「局域网连接」那一项的自定义图标：
 // 一个地球，右下角叠一部手机——意思是「这台机器和手机在同一个局域网里」。
@@ -24,6 +24,9 @@ export function GlobePhone({ size = 24, strokeWidth = 2, ...props }: GlobePhoneP
       strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
+      // 侧边栏里它旁边总有文字标签，对读屏软件是纯装饰；aria-hidden 显式声明这一点，
+      // 比补一个空的 <title> 更符合语义。放在 {...props} 之前，调用方仍可覆盖。
+      aria-hidden="true"
       {...props}
     >
       {/* 地球：外圈 + 赤道 + 两条经线 */}

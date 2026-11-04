@@ -318,7 +318,7 @@ export function HarnessComposer({
           </div>
         )}
         {/* 输入框上方的一行：待办胶囊（左）+ 附件 chip（topSlot，自带换行）。 */}
-        {(todoSlot || topSlot) && (
+        {(todoSlot ?? topSlot) && (
           <div className="mb-1.5 flex min-w-0 flex-wrap items-center gap-1.5 px-0.5">
             {todoSlot}
             {topSlot}
@@ -381,7 +381,9 @@ export function HarnessComposer({
           </div>
         </div>
       </div>
-      <p className="mx-auto mt-1.5 w-full max-w-[800px] text-center text-muted-foreground/70 text-xs">{t("footerHint")}</p>
+      <p className="mx-auto mt-1.5 w-full max-w-[800px] text-center text-muted-foreground/70 text-xs">
+        {t("footerHint")}
+      </p>
     </div>
   );
 }

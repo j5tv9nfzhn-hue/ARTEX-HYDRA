@@ -1,6 +1,5 @@
 "use client";
 
-import { KpiRow, Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -25,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import { SEVERITIES } from "@/lib/severity";
 import type { Finding, FindingStatus, Severity } from "@/lib/types";
+import { KpiRow, Sheet, SheetHead } from "@/ui/container";
 
 import { FindingLineageView } from "./lineage";
 
@@ -48,7 +48,7 @@ function fmtTime(ts: string) {
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-3 py-2.5">
-      <span className="shrink-0 pt-0.5 text-xs text-muted-foreground">{label}</span>
+      <span className="shrink-0 pt-0.5 text-muted-foreground text-xs">{label}</span>
       <div className="flex min-w-0 flex-col items-end gap-1 text-right text-sm">{children}</div>
     </div>
   );
@@ -150,7 +150,7 @@ function FindingDetailInner() {
 
       {/* 书眉：编号 / 严重度 / 状态 / 复核 / 时间 / 标题 / 所属任务 */}
       <div className="flex flex-col gap-1 px-4 pt-2 pb-2 lg:px-6">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular-nums">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground text-xs tabular-nums">
           <code className="rounded-[2px] border border-border/60 px-1 py-px font-mono text-xs">#{finding.id}</code>
           <span>{finding.vulnclass || t("table.unclassified")}</span>
           <span className="h-2 w-px bg-border" />
@@ -160,11 +160,11 @@ function FindingDetailInner() {
           <span className="h-2 w-px bg-border" />
           <span>{fmtTime(finding.ts)}</span>
         </div>
-        <h1 className="font-display text-[26px] font-semibold leading-tight tracking-[-0.02em]" title={title}>
+        <h1 className="font-display font-semibold text-[26px] leading-tight tracking-[-0.02em]" title={title}>
           {title}
         </h1>
         {finding.task_description && (
-          <p className="flex items-start gap-1.5 text-[13px] leading-relaxed text-muted-foreground">
+          <p className="flex items-start gap-1.5 text-[13px] text-muted-foreground leading-relaxed">
             <ShieldAlertIcon className="mt-[3px] size-3.5 shrink-0 text-primary" />
             <Link
               href={`/function/tasks/detail?id=${finding.task_id}`}
@@ -183,8 +183,8 @@ function FindingDetailInner() {
           onClick={() => setTab("overview")}
           className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
         >
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("detail.fieldSeverity")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("detail.fieldSeverity")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">
             {tStatus(`severity.${finding.severity}`)}
           </span>
         </button>
@@ -193,17 +193,15 @@ function FindingDetailInner() {
           onClick={() => setTab("overview")}
           className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
         >
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("detail.fieldStatus")}</span>
-          <span className="font-semibold text-[22px] leading-none">
-            {tStatus(`finding.${finding.status}`)}
-          </span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("detail.fieldStatus")}</span>
+          <span className="font-semibold text-[22px] leading-none">{tStatus(`finding.${finding.status}`)}</span>
         </button>
         <button
           type="button"
           onClick={() => setTab("overview")}
           className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
         >
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">复核态</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">复核态</span>
           <span className="font-semibold text-[22px] leading-none">
             <StatusBadge domain="validation" value={finding.validation ?? "unverified"} dot />
           </span>
@@ -213,16 +211,16 @@ function FindingDetailInner() {
           onClick={() => setTab("overview")}
           className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
         >
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("detail.fieldAssets")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{finding.assets?.length ?? 0}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("detail.fieldAssets")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{finding.assets?.length ?? 0}</span>
         </button>
         <button
           type="button"
           onClick={() => setTab("overview")}
           className="flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
         >
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">证据</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">证据</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">
             {finding.evidence ? `${Math.max(1, Math.round(finding.evidence.length / 1024))}K` : "—"}
           </span>
         </button>
@@ -250,7 +248,7 @@ function FindingDetailInner() {
               <Sheet>
                 <SheetHead title={t("detail.summary")} icon={ShieldAlertIcon} />
                 <div data-editorial="body" className="px-4 pt-2 pb-4">
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">
                     {finding.summary || t("detail.summaryEmpty")}
                   </p>
                 </div>
@@ -272,12 +270,12 @@ function FindingDetailInner() {
                   {finding.evidence ? (
                     <pre
                       data-editorial="evidence"
-                      className="max-h-[46vh] overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap [overflow-wrap:anywhere]"
+                      className="max-h-[46vh] overflow-auto whitespace-pre-wrap rounded-md bg-muted px-3 py-2 font-mono text-xs [overflow-wrap:anywhere]"
                     >
                       {finding.evidence}
                     </pre>
                   ) : (
-                    <p className="text-sm text-muted-foreground">{t("detail.evidenceEmpty")}</p>
+                    <p className="text-muted-foreground text-sm">{t("detail.evidenceEmpty")}</p>
                   )}
                 </div>
               </Sheet>
@@ -308,7 +306,7 @@ function FindingDetailInner() {
                   {finding.report ? (
                     <Markdown text={finding.report} />
                   ) : (
-                    <p className="text-sm text-muted-foreground">{t("table.reportEmpty")}</p>
+                    <p className="text-muted-foreground text-sm">{t("table.reportEmpty")}</p>
                   )}
                 </div>
               </Sheet>
@@ -320,7 +318,7 @@ function FindingDetailInner() {
               <div data-editorial="body" className="divide-y px-4">
                 {/* 漏洞 ID */}
                 <FieldRow label={t("detail.fieldId")}>
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-muted-foreground text-xs">
                     #{finding.id}
                   </code>
                 </FieldRow>

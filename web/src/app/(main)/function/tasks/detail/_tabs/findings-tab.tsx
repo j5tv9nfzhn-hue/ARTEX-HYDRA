@@ -1,6 +1,5 @@
 "use client";
 
-import { GroupHead, RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -18,6 +17,7 @@ import { api } from "@/lib/api";
 import { useStoredSortPreference } from "@/lib/sort-preference";
 import type { Finding, FindingStatus, Severity } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { GroupHead, RecordRow, RecordSub, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 type FindingSortField = "time";
 
@@ -48,9 +48,7 @@ const SEVERITY_GROUPS = ["critical", "high", "medium", "low"] as const;
 type SeverityGroup = (typeof SEVERITY_GROUPS)[number];
 
 function groupOf(severity: Severity | undefined): SeverityGroup | "other" {
-  return (SEVERITY_GROUPS as readonly string[]).includes(severity ?? "")
-    ? (severity as SeverityGroup)
-    : "other";
+  return (SEVERITY_GROUPS as readonly string[]).includes(severity ?? "") ? (severity as SeverityGroup) : "other";
 }
 
 /**
@@ -153,7 +151,7 @@ function Row({
 
       {open && (
         <div className="px-4 pb-3 pl-14">
-          <div className="mb-1 text-xs text-muted-foreground tracking-[0.06em]">{t("evidencePoc")}</div>
+          <div className="mb-1 text-muted-foreground text-xs tracking-[0.06em]">{t("evidencePoc")}</div>
           <pre
             data-editorial="evidence"
             className="overflow-auto whitespace-pre-wrap rounded-md border bg-muted/25 p-3 font-mono text-xs"
@@ -231,7 +229,8 @@ export function FindingsTab({ taskId }: { taskId: string }) {
 
   return (
     <Sheet api={["findings", "setFindingStatus"]}>
-      <SheetHead index="01"
+      <SheetHead
+        index="01"
         title={t("columnFinding")}
         count={items.length}
         actions={

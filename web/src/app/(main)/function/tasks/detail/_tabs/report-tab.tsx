@@ -1,6 +1,5 @@
 "use client";
 
-import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { CheckIcon, CopyIcon, FileTextIcon } from "lucide-react";
@@ -12,6 +11,7 @@ import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { copyText } from "@/lib/utils";
+import { Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 export function ReportTab({
   taskId,
@@ -81,7 +81,8 @@ export function ReportTab({
 
   return (
     <Sheet api={["report"]}>
-      <SheetHead index="01"
+      <SheetHead
+        index="01"
         icon={FileTextIcon}
         title={t(softwareRE ? "softwareTitle" : "title")}
         count={report ? t("chars", { n: report.length.toLocaleString("zh-CN") }) : undefined}

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+
 import { useTranslations } from "next-intl";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -66,16 +67,12 @@ export function HandoffDialog({
         {loading && <p className="text-muted-foreground text-sm">{t("loading")}</p>}
         {err && <p className="text-red-500 text-sm">{err}</p>}
 
-        {!loading && !err && !h && (
-          <p className="text-muted-foreground text-sm">{t("empty")}</p>
-        )}
+        {!loading && !err && !h && <p className="text-muted-foreground text-sm">{t("empty")}</p>}
 
         {h && (
           <div className="flex flex-col gap-4 text-sm">
             <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
-              <span className="rounded border border-border/60 bg-muted/50 px-1.5 py-0.5 font-mono">
-                {h.schema}
-              </span>
+              <span className="rounded border border-border/60 bg-muted/50 px-1.5 py-0.5 font-mono">{h.schema}</span>
               <span>run #{h.run_id}</span>
               <span>{new Date(h.created_at).toLocaleString()}</span>
               <span className="font-mono" title={t("mechTip")}>
@@ -128,7 +125,7 @@ export function HandoffDialog({
                   {!!ow.negative_results?.length && (
                     <ul className="list-disc pl-5">
                       {ow.negative_results.map((s, i) => (
-                        <li key={`r-${i}`} className="text-xs text-muted-foreground">
+                        <li key={`r-${i}`} className="text-muted-foreground text-xs">
                           {s}
                         </li>
                       ))}

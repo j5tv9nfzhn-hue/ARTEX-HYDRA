@@ -1,6 +1,5 @@
 "use client";
 
-import { Sheet } from "@/ui/container";
 import * as React from "react";
 
 import { RefreshCwIcon, RotateCcwIcon } from "lucide-react";
@@ -15,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { NotificationChannel, NotificationDelivery } from "@/lib/types";
+import { Sheet } from "@/ui/container";
 
 // 事件类型徽标文案键（notifyPage 命名空间）。只有非「新建漏洞」的事件需要
 // 额外标注——新建是默认语义，标注它只会变成噪音。
@@ -111,7 +111,7 @@ export function DeliveryList({ channels }: { channels: NotificationChannel[] }) 
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>
           <RefreshCwIcon className={loading ? "animate-spin" : ""} /> {t("delivery.refresh")}
         </Button>
-        <span className="text-muted-foreground ml-auto text-xs">{t("delivery.totalCount", { total })}</span>
+        <span className="ml-auto text-muted-foreground text-xs">{t("delivery.totalCount", { total })}</span>
       </div>
 
       <Sheet className="py-0">
@@ -133,7 +133,7 @@ export function DeliveryList({ channels }: { channels: NotificationChannel[] }) 
                 <TableCell colSpan={7} className="p-0">
                   {/* 加载态与空态拆开:加载中一行文案,加载完成为空才展示空态 */}
                   {loading ? (
-                    <div className="text-muted-foreground py-8 text-center">{t("delivery.loading")}</div>
+                    <div className="py-8 text-center text-muted-foreground">{t("delivery.loading")}</div>
                   ) : (
                     <EmptyState illustration="chat" title={t("delivery.empty")} />
                   )}
@@ -142,7 +142,7 @@ export function DeliveryList({ channels }: { channels: NotificationChannel[] }) 
             ) : (
               rows.map((d) => (
                 <TableRow key={d.id}>
-                  <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap text-muted-foreground text-xs">
                     {formatTime(d.created_at)}
                   </TableCell>
                   <TableCell>
@@ -163,7 +163,7 @@ export function DeliveryList({ channels }: { channels: NotificationChannel[] }) 
                     <StatusBadge domain="delivery" value={d.state} />
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{d.attempts}</TableCell>
-                  <TableCell className="text-muted-foreground max-w-md text-xs break-all">{d.last_error}</TableCell>
+                  <TableCell className="max-w-md break-all text-muted-foreground text-xs">{d.last_error}</TableCell>
                   <TableCell>
                     {/* 只有失败/跳过的才给重发入口：已送达的重发会造成重复推送。 */}
                     {(d.state === "failed" || d.state === "skipped") && (

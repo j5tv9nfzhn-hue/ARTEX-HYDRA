@@ -1,6 +1,5 @@
 "use client";
 
-import { Masthead, Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { RefreshCwIcon, ShieldAlertIcon, WifiIcon, WifiOffIcon } from "lucide-react";
@@ -10,6 +9,7 @@ import { CopyButton } from "@/components/copy-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { http } from "@/lib/api";
+import { Masthead, Sheet, SheetHead } from "@/ui/container";
 
 // 系统 → 局域网连接
 //
@@ -104,7 +104,7 @@ export default function LanPage() {
       setFirewall("");
       setSwitching(true);
       try {
-        const res = await http<LanSwitchResult>("/lan/" + (lan ? "enable" : "disable"), {
+        const res = await http<LanSwitchResult>(`/lan/${lan ? "enable" : "disable"}`, {
           method: "POST",
           body: JSON.stringify({ lan }),
         });
@@ -128,7 +128,12 @@ export default function LanPage() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Masthead title={t("title")} subtitle={t("desc")} titleClassName="text-xl" subtitleClassName="text-sm font-normal leading-relaxed" />
+        <Masthead
+          title={t("title")}
+          subtitle={t("desc")}
+          titleClassName="text-xl"
+          subtitleClassName="text-sm font-normal leading-relaxed"
+        />
         <Button type="button" size="sm" variant="outline" disabled={loading || switching} onClick={() => void load()}>
           <RefreshCwIcon />
           {t("refresh")}
@@ -156,15 +161,9 @@ export default function LanPage() {
           <p className="text-muted-foreground text-sm">{t("statusDesc")}</p>
           <InfoRow label={t("listenLabel")}>{info?.listen_addr ?? "-"}</InfoRow>
           <InfoRow label={t("lanLabel")}>
-            {lanOpen ? (
-              <Badge variant="secondary">{t("lanYes")}</Badge>
-            ) : (
-              <Badge variant="outline">{t("lanNo")}</Badge>
-            )}
+            {lanOpen ? <Badge variant="secondary">{t("lanYes")}</Badge> : <Badge variant="outline">{t("lanNo")}</Badge>}
           </InfoRow>
-          <InfoRow label={t("passwordLabel")}>
-            {info?.password_set ? t("passwordSet") : t("passwordUnset")}
-          </InfoRow>
+          <InfoRow label={t("passwordLabel")}>{info?.password_set ? t("passwordSet") : t("passwordUnset")}</InfoRow>
         </div>
       </Sheet>
 
@@ -189,7 +188,7 @@ export default function LanPage() {
               </div>
             ) : null}
             {info?.password_set ? null : (
-              <p className="text-sm font-normal leading-relaxed text-destructive">{t("passwordNeedInit")}</p>
+              <p className="font-normal text-destructive text-sm leading-relaxed">{t("passwordNeedInit")}</p>
             )}
             <div className="pt-2">
               <Button
@@ -223,7 +222,7 @@ export default function LanPage() {
               <span className="text-muted-foreground text-xs">{t("enableButtonNote")}</span>
             </div>
             {info?.password_set ? null : (
-              <p className="text-sm font-normal leading-relaxed text-destructive">{t("passwordNeedInit")}</p>
+              <p className="font-normal text-destructive text-sm leading-relaxed">{t("passwordNeedInit")}</p>
             )}
 
             {firewall === "ok" ? <p className="text-muted-foreground text-xs">{t("firewallAuto")}</p> : null}
@@ -232,17 +231,21 @@ export default function LanPage() {
             <div className="space-y-2">
               <div className="text-muted-foreground text-xs">{t("firewallHint")}</div>
               <div className="flex flex-wrap items-center gap-2">
-                <code className="block select-all break-all rounded bg-muted p-2 text-xs">{info?.firewall_cmd ?? ""}</code>
+                <code className="block select-all break-all rounded bg-muted p-2 text-xs">
+                  {info?.firewall_cmd ?? ""}
+                </code>
                 <CopyButton text={info?.firewall_cmd} />
               </div>
             </div>
 
-            <p className="text-sm font-normal leading-relaxed text-muted-foreground">{t("enableNote")}</p>
+            <p className="font-normal text-muted-foreground text-sm leading-relaxed">{t("enableNote")}</p>
 
             <div className="space-y-2">
               <div className="text-muted-foreground text-xs">{t("scriptHint")}</div>
               <div className="flex flex-wrap items-center gap-2">
-                <code className="block select-all break-all rounded bg-muted p-2 text-xs">{info?.restart_cmd ?? ""}</code>
+                <code className="block select-all break-all rounded bg-muted p-2 text-xs">
+                  {info?.restart_cmd ?? ""}
+                </code>
                 <CopyButton text={info?.restart_cmd} />
               </div>
             </div>
@@ -251,12 +254,13 @@ export default function LanPage() {
       )}
 
       <Sheet>
-        <SheetHead index="04"
+        <SheetHead
+          index="04"
           icon={ShieldAlertIcon}
           title={<span className="font-medium text-foreground">{t("securityTitle")}</span>}
         />
         <div className="px-4 py-3">
-          <p className="text-sm font-normal leading-relaxed text-muted-foreground">{t("securityBody")}</p>
+          <p className="font-normal text-muted-foreground text-sm leading-relaxed">{t("securityBody")}</p>
         </div>
       </Sheet>
 

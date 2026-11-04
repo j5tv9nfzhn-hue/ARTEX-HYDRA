@@ -1,6 +1,5 @@
 "use client";
 
-import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import Link from "next/link";
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import type { LLMProfile, LLMProvider, ProfileUsage } from "@/lib/types";
+import { KpiRow, Masthead, RecordRow, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 function fmtCost(n: number) {
   if (!Number.isFinite(n) || n <= 0) return "—";
@@ -141,11 +141,7 @@ function LLMDetailInner() {
               <code className="font-mono text-xs">#{profile.id}</code>
               <span className="font-mono">{profile.model}</span>
               <span className="font-mono">{profile.format}</span>
-              {profile.is_default ? (
-                <>
-                  <span>{t("defaultTag")}</span>
-                </>
-              ) : null}
+              {profile.is_default ? <span>{t("defaultTag")}</span> : null}
             </>
           }
           subtitle={provider?.name || profile.provider_name || t("noProvider")}
@@ -156,30 +152,28 @@ function LLMDetailInner() {
 
       <KpiRow className="grid grid-cols-2 divide-y divide-border/60 border-border/60 border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.context")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.context")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">
             {profile.context_window_k ? `${profile.context_window_k}K` : "—"}
           </span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.rate")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">
-            {profile.rate_per_minute || "—"}
-          </span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.rate")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{profile.rate_per_minute || "—"}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.maxTokens")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.maxTokens")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">
             {profile.max_tokens ? fmtTokens(profile.max_tokens) : "—"}
           </span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.calls")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{usage?.calls ?? 0}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.calls")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{usage?.calls ?? 0}</span>
         </div>
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs tracking-[0.08em] text-muted-foreground">{t("kpi.cost")}</span>
-          <span className="font-semibold text-[22px] leading-none tabular-nums">{fmtCost(usage?.cost_usd ?? 0)}</span>
+          <span className="text-muted-foreground text-xs tracking-[0.08em]">{t("kpi.cost")}</span>
+          <span className="font-semibold text-[22px] tabular-nums leading-none">{fmtCost(usage?.cost_usd ?? 0)}</span>
         </div>
       </KpiRow>
 
@@ -227,23 +221,19 @@ function LLMDetailInner() {
           <SheetHead icon={RouteIcon} title={t("endpoint")} hint={provider?.base_url || profile.base_url || ""} />
           <div data-editorial="body" className="px-4 pt-1 pb-3">
             <RecordRow lead={t("row.provider")} cols="104px minmax(0,1fr) auto" values={[provider?.name || "—"]}>
-              <span className="font-mono text-xs text-muted-foreground">{profile.provider_id || "0"}</span>
+              <span className="font-mono text-muted-foreground text-xs">{profile.provider_id || "0"}</span>
             </RecordRow>
             <RecordRow lead={t("row.baseUrl")} cols="104px minmax(0,1fr) auto">
-              <code className="block truncate font-mono text-xs">
-                {provider?.base_url || profile.base_url || "—"}
-              </code>
+              <code className="block truncate font-mono text-xs">{provider?.base_url || profile.base_url || "—"}</code>
             </RecordRow>
             <RecordRow lead={t("row.proxy")} cols="104px minmax(0,1fr) auto">
-              <code className="block truncate font-mono text-xs">
-                {provider?.proxy || profile.proxy || "—"}
-              </code>
+              <code className="block truncate font-mono text-xs">{provider?.proxy || profile.proxy || "—"}</code>
             </RecordRow>
             <RecordRow lead={t("row.key")} cols="104px minmax(0,1fr) auto">
-              <code className="font-mono text-xs text-muted-foreground">
+              <code className="font-mono text-muted-foreground text-xs">
                 {provider?.api_key_hint || profile.api_key_hint || "—"}
               </code>
-              <span className="mt-0.5 block text-xs text-muted-foreground">{t("keyNote")}</span>
+              <span className="mt-0.5 block text-muted-foreground text-xs">{t("keyNote")}</span>
             </RecordRow>
             {profile.session_header_key ? (
               <RecordRow lead={t("row.sessionHeader")} cols="104px minmax(0,1fr) auto">
@@ -259,7 +249,11 @@ function LLMDetailInner() {
         <Sheet>
           <SheetHead icon={CoinsIcon} title={t("usage")} hint={t("usageHint")} count={usage ? `${usage.calls}` : "0"} />
           <div data-editorial="body" className="px-4 pt-1 pb-3">
-            <RecordRow lead={t("row.input")} cols="104px minmax(0,1fr) auto" values={[fmtTokens(usage?.input_tokens ?? 0)]}>
+            <RecordRow
+              lead={t("row.input")}
+              cols="104px minmax(0,1fr) auto"
+              values={[fmtTokens(usage?.input_tokens ?? 0)]}
+            >
               <span className="text-[13px] text-muted-foreground">{t("row.tokensIn")}</span>
             </RecordRow>
             <RecordRow
@@ -269,8 +263,14 @@ function LLMDetailInner() {
             >
               <span className="text-[13px] text-muted-foreground">{t("row.tokensOut")}</span>
             </RecordRow>
-            <RecordRow lead={t("row.cache")} cols="104px minmax(0,1fr) auto" values={[fmtTokens(usage?.cache_read_tokens ?? 0)]}>
-              <span className="text-[13px] text-muted-foreground">{t("cacheWrite", { n: fmtTokens(usage?.cache_write_tokens ?? 0) })}</span>
+            <RecordRow
+              lead={t("row.cache")}
+              cols="104px minmax(0,1fr) auto"
+              values={[fmtTokens(usage?.cache_read_tokens ?? 0)]}
+            >
+              <span className="text-[13px] text-muted-foreground">
+                {t("cacheWrite", { n: fmtTokens(usage?.cache_write_tokens ?? 0) })}
+              </span>
             </RecordRow>
             <RecordRow lead={t("row.tasks")} cols="104px minmax(0,1fr) auto" values={[String(usage?.tasks ?? 0)]}>
               <span className="text-[13px] text-muted-foreground">{t("row.tasksNote")}</span>
@@ -296,7 +296,7 @@ function LLMDetailInner() {
                     <Link
                       key="b"
                       href={`/system/llm/detail?id=${encodeURIComponent(p.id)}`}
-                      className="text-xs text-primary hover:underline"
+                      className="text-primary text-xs hover:underline"
                     >
                       {t("open")}
                     </Link>
@@ -304,7 +304,7 @@ function LLMDetailInner() {
                 ]}
               >
                 <span className="block truncate text-[13px]">{p.name}</span>
-                <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted-foreground text-xs">
                   <span className="truncate">{p.model}</span>
                   <span className="shrink-0">{p.pool_exclude ? t("excluded") : t("inPool")}</span>
                 </span>

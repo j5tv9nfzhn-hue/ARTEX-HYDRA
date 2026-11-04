@@ -1,6 +1,5 @@
 "use client";
 
-import { Sheet, SheetHead } from "@/ui/container";
 import * as React from "react";
 
 import { RotateCcwIcon, SendIcon } from "lucide-react";
@@ -25,6 +24,7 @@ import {
   TTL_MAX_SEC,
   TTL_MIN_SEC,
 } from "@/lib/notify-prefs";
+import { Sheet, SheetHead } from "@/ui/container";
 
 // 站内通知的显示设置。
 //
