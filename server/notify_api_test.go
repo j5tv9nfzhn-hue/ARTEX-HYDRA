@@ -41,6 +41,9 @@ type notifyFixture struct {
 	expID  int64
 	// cleanupMark 之后产生的事件在清理时一并删除。
 	cleanupMark int64
+	// findingIDs 累计本用例 record() 记下的漏洞 id，供 ownScope() 收窄查询。
+	// 见 ownScope 的注释：不收窄就会把共享装置的杂散事件算进「应有 N 条」。
+	findingIDs []int64
 }
 
 func newNotifyFixture(t *testing.T) *notifyFixture {
@@ -113,7 +116,33 @@ func (f *notifyFixture) record(t *testing.T, vulnclass, severity string) int64 {
 	if err != nil {
 		t.Fatalf("记录漏洞失败: %v", err)
 	}
+	f.findingIDs = append(f.findingIDs, out.FindingID)
 	return out.FindingID
+}
+
+// ownScope 返回「只看本用例投递」的 SQL 条件（配合 notification_deliveries 的
+// 别名 d 使用）。
+//
+// ── 为什么必须有它 ──────────────────────────────────────────────────────────
+//
+// FanOutPendingEvents 是**全局**的：它把库里所有未分派事件展开到所有匹配渠道上。
+// 共享装置 trafficEvidenceServer 自己就会记一条初始漏洞，而它的事件行可能晚于
+// cleanupMark 落库（写入走写队列，时序不保证）——于是 cleanupMark 那道隔离挡不住
+// 它，这条杂散事件会被分派到本用例的渠道上，多出一行。
+//
+// 表现是「应有 N 条投递」这类断言时对时错：60 还是 61 取决于调度时序，失败信息
+// 还长得像投递层把条目弄丢了（sent+pending != total），很容易把人引到错误方向。
+// 收窄到本用例 record() 出来的 finding_id 之后，外来事件天然被排除，与时序无关。
+func (f *notifyFixture) ownScope() string {
+	if len(f.findingIDs) == 0 {
+		return "1=0"
+	}
+	ids := make([]string, 0, len(f.findingIDs))
+	for _, id := range f.findingIDs {
+		ids = append(ids, strconv.FormatInt(id, 10))
+	}
+	return "d.event_id IN (SELECT e.id FROM notification_events e WHERE e.finding_id IN (" +
+		strings.Join(ids, ",") + "))"
 }
 
 // channel 读回渠道配置（供逐渠道调用 stepX 使用）。
@@ -137,8 +166,25 @@ func (f *notifyFixture) deliver(t *testing.T, chID int64, baseURL string) {
 }
 
 // createChannel 通过 HTTP 接口建渠道，顺带覆盖接口自身的校验路径。
+//
+// 建出来的渠道一律带上 `task_ids: [本用例 task]` 的过滤条件——这是本文件所有
+// 「应有 N 条投递 / 消息里应有 N 个漏洞」断言能成立的前提。理由见 fixture 头
+// 上 cleanupMark 的注释：隔离不能只靠"建 fixture 之前的事我不认"，因为写入
+// 时序不保证，光靠标记挡不住共享装置迟到的事件。把渠道绑到本用例的 task 上，
+// 外来事件在 fan-out 阶段就被 notify.Match 挡掉，与时序无关。
 func (f *notifyFixture) createChannel(t *testing.T, payload map[string]any) int64 {
 	t.Helper()
+	// 合并而不是覆盖：调用方自带的过滤条件（如 min_severity）必须保留。
+	filter := map[string]any{}
+	if existing, ok := payload["filter"].(map[string]any); ok {
+		for k, v := range existing {
+			filter[k] = v
+		}
+	}
+	if _, ok := filter["task_ids"]; !ok {
+		filter["task_ids"] = []any{f.taskID}
+	}
+	payload["filter"] = filter
 	raw, _ := json.Marshal(payload)
 	r := f.request("POST", "/api/notify/channels", string(raw))
 	if r.Code != 200 {
@@ -254,7 +300,7 @@ func TestNotifyEndToEndRealtimeDelivery(t *testing.T) {
 	}
 	// 投递应流转为 sent。
 	var pending int
-	if err := f.pg.QueryRow(`SELECT count(*) FROM notification_deliveries WHERE channel_id=$1 AND state <> $2`,
+	if err := f.pg.QueryRow(`SELECT count(*) FROM notification_deliveries d WHERE d.channel_id=$1 AND `+f.ownScope()+` AND d.state <> $2`,
 		chID, db.NotifyStateSent).Scan(&pending); err != nil {
 		t.Fatal(err)
 	}
@@ -447,7 +493,7 @@ func TestNotifyDigestBatchesMultipleFindingsIntoOneMessage(t *testing.T) {
 	}
 	// 同一批次应共享 batch_id。
 	var distinct, total int
-	if err := f.pg.QueryRow(`SELECT count(DISTINCT batch_id), count(*) FROM notification_deliveries WHERE channel_id=$1`, chID).Scan(&distinct, &total); err != nil {
+	if err := f.pg.QueryRow(`SELECT count(DISTINCT d.batch_id), count(*) FROM notification_deliveries d WHERE d.channel_id=$1 AND `+f.ownScope(), chID).Scan(&distinct, &total); err != nil {
 		t.Fatal(err)
 	}
 	if total != 3 || distinct != 1 {
@@ -775,9 +821,9 @@ func TestNotifyDigestSegmentsAndDefersRemainder(t *testing.T) {
 
 	var sent, pending int
 	if err := f.pg.QueryRow(`SELECT
-    count(*) FILTER (WHERE state=$2),
-    count(*) FILTER (WHERE state=$3)
-  FROM notification_deliveries WHERE channel_id=$1`, chID, db.NotifyStateSent, db.NotifyStatePending).
+    count(*) FILTER (WHERE d.state=$2),
+    count(*) FILTER (WHERE d.state=$3)
+  FROM notification_deliveries d WHERE d.channel_id=$1 AND `+f.ownScope(), chID, db.NotifyStateSent, db.NotifyStatePending).
 		Scan(&sent, &pending); err != nil {
 		t.Fatal(err)
 	}
@@ -798,8 +844,8 @@ func TestNotifyDigestSegmentsAndDefersRemainder(t *testing.T) {
 
 	// 被推迟的条目不得消耗重试预算：领取时 attempts 已乐观 +1，推迟时要减回去。
 	var maxAttempts int
-	if err := f.pg.QueryRow(`SELECT COALESCE(max(attempts),0) FROM notification_deliveries
-WHERE channel_id=$1 AND state=$2`, chID, db.NotifyStatePending).Scan(&maxAttempts); err != nil {
+	if err := f.pg.QueryRow(`SELECT COALESCE(max(d.attempts),0) FROM notification_deliveries d
+WHERE d.channel_id=$1 AND `+f.ownScope()+` AND d.state=$2`, chID, db.NotifyStatePending).Scan(&maxAttempts); err != nil {
 		t.Fatal(err)
 	}
 	if maxAttempts > 0 {
@@ -834,7 +880,7 @@ WHERE channel_id=$1 AND state <> $2 AND state <> $3`, chID, db.NotifyStateSent, 
 	}
 	// 首轮之后的每一轮都应是**纯续发**，不存在被渠道拒绝的条目。
 	var failed int
-	if err := f.pg.QueryRow(`SELECT count(*) FROM notification_deliveries WHERE channel_id=$1 AND state=$2`,
+	if err := f.pg.QueryRow(`SELECT count(*) FROM notification_deliveries d WHERE d.channel_id=$1 AND `+f.ownScope()+` AND d.state=$2`,
 		chID, db.NotifyStateFailed).Scan(&failed); err != nil {
 		t.Fatal(err)
 	}
