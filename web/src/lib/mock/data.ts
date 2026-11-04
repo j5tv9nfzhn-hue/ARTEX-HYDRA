@@ -3326,7 +3326,7 @@ export const skills: SkillItem[] = [
   {
     name: "exploit-kb-patterns",
     description:
-      "全球高危漏洞报告模式与历史战果复用知识库（HackerOne/Bugcrowd 高危范式与 tactical_kb 跨任务检索规范）。",
+      "全球高危漏洞报告模式与历史战果复用知识库（HackerOne/Bugcrowd 高危范式与跨任务经验检索规范）。",
     files: ["SKILL.md"],
     calls: 15,
     tasks: 5,

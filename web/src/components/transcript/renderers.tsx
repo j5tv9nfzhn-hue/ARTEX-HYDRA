@@ -185,29 +185,6 @@ function InputBody({ tool, sections, wrapLines, onToggleWrap }: ToolBodyProps) {
   );
 }
 
-// ---------- HTTP：方法 + URL 一行，响应头/体走通用分段 ----------
-function HttpBody({ sections, wrapLines, onToggleWrap }: ToolBodyProps) {
-  const input = safeJson(sections[0]?.content ?? "");
-  const method = input ? str(input.method).toUpperCase() || "GET" : "GET";
-  const url = input ? firstString(input, ["url", "target"]) : "";
-  return (
-    <div className="divide-y divide-border/70">
-      {input && url ? (
-        <div className="flex items-center gap-2 px-3 py-1.5">
-          <span className="rounded bg-sky-500/15 px-1.5 py-0.5 font-mono font-semibold text-ui-2xs text-sky-600 dark:text-sky-400">
-            {method}
-          </span>
-          <span className="min-w-0 flex-1 break-all font-mono text-ui-xs text-foreground/90">{url}</span>
-          <CopyTextButton text={url} />
-        </div>
-      ) : (
-        sections[0] && <SectionBlock onToggleWrap={onToggleWrap} section={sections[0]} wrapLines={wrapLines} />
-      )}
-      {sections[1] ? <SectionBlock onToggleWrap={onToggleWrap} section={sections[1]} wrapLines={wrapLines} /> : null}
-    </div>
-  );
-}
-
 // ---------- 计划：TodoWrite 的清单 ----------
 function TodoBody({ sections, wrapLines, onToggleWrap }: ToolBodyProps) {
   const input = safeJson(sections[0]?.content ?? "");
@@ -338,13 +315,11 @@ function GenericBody({ sections, wrapLines, onToggleWrap }: ToolBodyProps) {
 
 const EDIT_TOOLS = new Set(["Edit", "MultiEdit", "Write", "apply_patch", "NotebookEdit"]);
 const READ_TOOLS = new Set(["Read", "Grep", "Glob", "LS"]);
-const HTTP_TOOLS = new Set(["http_request", "http_fuzz", "http_sequence"]);
 
 // ToolBody 按工具名分发。新增工具只要在下面加一行，没有登记的工具自动走兜底渲染。
 export function ToolBody(props: ToolBodyProps) {
   if (EDIT_TOOLS.has(props.tool)) return <DiffBody {...props} />;
   if (props.tool === "Bash") return <CommandBody {...props} />;
-  if (HTTP_TOOLS.has(props.tool)) return <HttpBody {...props} />;
   if (props.tool === "TodoWrite") return <TodoBody {...props} />;
   if (READ_TOOLS.has(props.tool)) return <InputBody {...props} />;
   return <GenericBody {...props} />;

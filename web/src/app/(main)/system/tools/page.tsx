@@ -27,17 +27,6 @@ import type { Agent, Tool } from "@/lib/types";
 // Traffic tools are host tools gated by the global 流量捕获 switch: bindable, but
 // only usable when capture is on. Keep in sync with traffic.SeedToolMetas.
 const TRAFFIC_TOOL_KEYS = new Set(["traffic_search", "traffic_get"]);
-const NATIVE_GO_TOOL_KEYS = new Set([
-  "http_request",
-  "http_fuzz",
-  "http_sequence",
-  "web_recon",
-  "codec_crypto",
-  "extract_data",
-  "net_probe",
-  "dns_probe",
-  "tactical_kb",
-]);
 
 // paramRows flattens schema.properties into an ordered row list for editing.
 // name/type/required are read-only (welded to the Go handler); description/default
@@ -320,11 +309,6 @@ function ToolGridCard({ tool, onClick }: { tool: Tool; onClick: () => void }) {
             <Badge variant="secondary" className="px-1.5 py-0 text-xs">
               {t("badgeSystem")}
             </Badge>
-            {NATIVE_GO_TOOL_KEYS.has(tool.key) && (
-              <Badge variant="outline" className="px-1.5 py-0 text-xs">
-                Go Native
-              </Badge>
-            )}
           </>
         ) : (
           <Badge variant="outline" className="px-1.5 py-0 text-xs">

@@ -213,48 +213,10 @@ function ActivityTime({ ts }: { ts: string }) {
   );
 }
 
-// toolInputText renders a tool_use input for display. For Bash it pulls the shell
-// command out of the raw input JSON ({"command":…,"description":…}) so the UI shows
-// the command itself instead of JSON; other tools fall back to the raw text.
-function pickFirstString(o: Record<string, unknown>, keys: string[]): string {
-  for (const k of keys) {
-    const v = o[k];
-    if (typeof v === "string" && v.length > 0) return v;
-  }
-  return "";
-}
-
 function formatNativeToolInput(tool: string, raw: string): string | null {
   try {
     const o = JSON.parse(raw) as Record<string, unknown>;
     if (!o || typeof o !== "object") return null;
-    if (tool === "http_request" && typeof o.url === "string") {
-      const m = typeof o.method === "string" ? o.method.toUpperCase() : "GET";
-      return `${m} ${o.url}`;
-    }
-    if (
-      (tool === "http_sequence" || tool === "web_recon" || tool === "net_probe" || tool === "dns_probe") &&
-      typeof o.mode === "string"
-    ) {
-      const target = pickFirstString(o, ["url", "host", "domain"]);
-      return target ? `[${o.mode}] ${target}` : `[${o.mode}]`;
-    }
-    if (tool === "http_fuzz" && typeof o.url === "string") {
-      const m = typeof o.method === "string" ? o.method.toUpperCase() : "GET";
-      return `FUZZ ${m} ${o.url}`;
-    }
-    if (tool === "codec_crypto" && typeof o.operation === "string") {
-      const inp = typeof o.input === "string" ? o.input.slice(0, 48) : "";
-      return inp ? `[${o.operation}] ${inp}` : `[${o.operation}]`;
-    }
-    if (tool === "extract_data" && typeof o.mode === "string") {
-      const src = pickFirstString(o, ["file_path", "pattern"]);
-      return src ? `[${o.mode}] ${src}` : `[${o.mode}]`;
-    }
-    if (tool === "tactical_kb" && typeof o.mode === "string") {
-      const q = pickFirstString(o, ["query", "category"]);
-      return q ? `[${o.mode}] ${q}` : `[${o.mode}]`;
-    }
     if (tool === "Skill" && typeof o.skill === "string") {
       return o.skill;
     }
