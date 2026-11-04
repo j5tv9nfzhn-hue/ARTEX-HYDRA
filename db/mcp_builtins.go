@@ -106,6 +106,21 @@ func (d *DB) seedBuiltinMCPServersAndTools() error {
 		_ = d.SetSetting("browser_mcp_retired_v1", "done")
 	}
 
+	// 1b. 下线内置 artex-recon / artex-webscan：HTTP/DNS/端口类原生 Go 工具已由
+	//     Skill 与外部工具链取代。只删仍是出厂配置（command=artex-builtin）的行，
+	//     避免误删用户自定义的同名服务器。
+	if v, _, _ := d.GetSetting("native_httprecon_mcp_retired_v1"); v != "done" {
+		for _, name := range []string{"artex-recon", "artex-webscan"} {
+			var id int64
+			err := d.QueryRow(`SELECT id FROM mcp_servers WHERE name=$1 AND command=$2`, name, mcpbuiltin.Command).Scan(&id)
+			if err == nil && id > 0 {
+				_, _ = d.Exec(`DELETE FROM mcp_tools_cache WHERE server_id=$1`, id)
+				_, _ = d.Exec(`DELETE FROM mcp_servers WHERE id=$1`, id)
+			}
+		}
+		_ = d.SetSetting("native_httprecon_mcp_retired_v1", "done")
+	}
+
 	// 2. 为 ScopeSentry / rea / wpe64 预置初始工具缓存（仅当该 server 的 mcp_tools_cache 为空时写入）。
 	type catalog struct {
 		serverName string

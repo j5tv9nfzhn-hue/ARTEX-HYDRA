@@ -14,7 +14,7 @@ import (
 func TestBuiltinMCPConnect(t *testing.T) {
 	ctx := context.Background()
 	// 线上形态：transport=stdio + command=artex-builtin（表上有 CHECK 约束，不新增传输值）。
-	cl, err := connectMCP(ctx, &db.MCPServer{Name: "artex-webscan", Transport: "stdio", Command: mcpbuiltin.Command})
+	cl, err := connectMCP(ctx, &db.MCPServer{Name: "artex-binscan", Transport: "stdio", Command: mcpbuiltin.Command})
 	if err != nil {
 		t.Fatalf("连接内置服务器失败：%v", err)
 	}
@@ -27,7 +27,7 @@ func TestBuiltinMCPConnect(t *testing.T) {
 		t.Fatal("内置服务器不应返回空工具集")
 	}
 	for _, tool := range tools {
-		if !strings.HasPrefix(tool.Name(), "mcp__artex-webscan__") {
+		if !strings.HasPrefix(tool.Name(), "mcp__artex-binscan__") {
 			t.Fatalf("工具命名不符合 mcp__<server>__<tool>：%s", tool.Name())
 		}
 		if tool.Description() == "" || tool.InputSchema() == nil {
@@ -36,12 +36,12 @@ func TestBuiltinMCPConnect(t *testing.T) {
 	}
 	found := false
 	for _, tool := range tools {
-		if tool.Name() == "mcp__artex-webscan__http_send" {
+		if tool.Name() == "mcp__artex-binscan__file_identify" {
 			found = true
 		}
 	}
 	if !found {
-		t.Fatal("缺少 http_send（原始请求复现工具）")
+		t.Fatal("缺少 file_identify（样本静态分诊工具）")
 	}
 }
 

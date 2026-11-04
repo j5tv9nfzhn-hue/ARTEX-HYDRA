@@ -71,13 +71,13 @@ func TestMeterToolRecordsAttributionAndDelegates(t *testing.T) {
 // 一起被清理——线上正是这样把 47374 次调用的错误信息丢干净的。
 func TestMeterToolRecordsError(t *testing.T) {
 	base := actool.Build(actool.Spec{
-		Name: "http_request",
+		Name: "list_findings",
 		Run: func(context.Context, json.RawMessage, *actool.ToolContext) (actool.Result, error) {
 			return actool.Errorf("boom"), nil
 		},
 	})
 	recorder := &recordingToolUsage{}
-	wrapped := meterTool(base, recorder, "http_request", "worker", agent.RunInfo{})
+	wrapped := meterTool(base, recorder, "list_findings", "worker", agent.RunInfo{})
 	if _, err := wrapped.Call(context.Background(), nil, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -87,13 +87,13 @@ func TestMeterToolRecordsError(t *testing.T) {
 
 	// handler 直接返回 error（网络失败、panic 之前的提前返回）同样算错误。
 	base2 := actool.Build(actool.Spec{
-		Name: "http_request",
+		Name: "list_findings",
 		Run: func(context.Context, json.RawMessage, *actool.ToolContext) (actool.Result, error) {
 			return actool.Result{}, errors.New("dial tcp: timeout")
 		},
 	})
 	recorder2 := &recordingToolUsage{}
-	wrapped2 := meterTool(base2, recorder2, "http_request", "worker", agent.RunInfo{})
+	wrapped2 := meterTool(base2, recorder2, "list_findings", "worker", agent.RunInfo{})
 	if _, err := wrapped2.Call(context.Background(), nil, nil); err == nil {
 		t.Fatal("want the handler error surfaced to the caller")
 	}

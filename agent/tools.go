@@ -67,10 +67,6 @@ type ToolSet struct {
 	proxyAddr     string // recording MITM or egress proxy URL for built-in HTTP tools
 	proxyCACert   string // recording MITM CA cert path for built-in HTTP tools
 	workDir       string // per-run working directory for built-in file/wordlist tools
-	// steer 记录本 run 内的工具选择分布，让通用工具在决策点把活转给专用工具，
-	// 见 agent/tool_steering.go（实测 http_request 占 49.2%、http_sequence 仅 1.0%；
-	// 第二版按连击形态分级：软提示 3、强指令 6、有预算的硬拦截 10）。
-	steer toolChoiceSteering
 	// coverageDisabled mirrors tasks.coverage_enabled=false. Stored inverted so the
 	// zero value (all existing ToolSet constructions) means ENABLED — matching the
 	// DB default (true). When true: graphOverviewData drops the coverage block, the
@@ -142,12 +138,7 @@ type ToolSet struct {
 	// the planner having to spot it folded into the graph overview. Wired for the main
 	// agent + cross-task orchestration; nil elsewhere → falls back to the bare notify.
 	notifyHint func(texts []string)
-	// trafficStore 供原生渗透工具（http_request / http_fuzz / extract_data）旁路直写或读取流量库。
-	trafficStore TrafficDirectStore
 }
-
-// SetTrafficStore wires the direct traffic store (see ToolSet.trafficStore).
-func (t *ToolSet) SetTrafficStore(ts TrafficDirectStore) { t.trafficStore = ts }
 
 // SetNotifyGoal wires the goal-add trigger callback (see ToolSet.notifyGoal). Set only
 // by the main-agent chat, so runtime-added goals are announced to the planner by name.
@@ -226,14 +217,13 @@ func NewToolSet(ts *db.ExplorationStore, worker string) *ToolSet {
 func (t *ToolSet) SetTaskID(id int64) { t.taskID = id }
 
 // SetProxy wires the recording MITM / egress proxy and CA certificate path into
-// built-in Go native HTTP tools (http_request / http_fuzz).
+// the run's Bash environment.
 func (t *ToolSet) SetProxy(addr, caCert string) {
 	t.proxyAddr = strings.TrimSpace(addr)
 	t.proxyCACert = strings.TrimSpace(caCert)
 }
 
-// SetWorkDir wires the agent's per-run working directory into built-in Go native
-// tools (http_fuzz wordlist_file / extract_data file_path).
+// SetWorkDir wires the agent's per-run working directory.
 func (t *ToolSet) SetWorkDir(dir string) {
 	t.workDir = strings.TrimSpace(dir)
 }

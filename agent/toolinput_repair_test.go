@@ -8,35 +8,6 @@ import (
 	"testing"
 )
 
-func TestInferModeField(t *testing.T) {
-	cases := []struct {
-		name string
-		in   string
-		want string
-		ok   bool
-	}{
-		{"steps→chain", `{"steps":[{"url":"http://a"}]}`, "chain", true},
-		{"base_exchange_id→replay", `{"base_exchange_id":"ex1","override_body":"a=1"}`, "replay", true},
-		{"identities→bola", `{"identities":[{"name":"anon"}]}`, "bola", true},
-		{"race_count→race", `{"url":"http://a","race_count":15}`, "race", true},
-		{"exchange_id_a→diff", `{"exchange_id_a":"x","exchange_id_b":"y"}`, "diff", true},
-		{"显式 mode 不推断", `{"mode":"timing","steps":[{"url":"http://a"}]}`, "", false},
-		{"两个模式同时被暗示则不猜", `{"steps":[{"url":"http://a"}],"identities":[{"name":"anon"}]}`, "", false},
-		{"空值不算给出", `{"steps":[],"base_exchange_id":""}`, "", false},
-		{"无判别字段", `{"url":"http://a"}`, "", false},
-	}
-	for _, c := range cases {
-		var obj map[string]json.RawMessage
-		if err := json.Unmarshal([]byte(c.in), &obj); err != nil {
-			t.Fatalf("%s: bad fixture: %v", c.name, err)
-		}
-		got, ok := inferModeField("http_sequence", obj)
-		if ok != c.ok || got != c.want {
-			t.Fatalf("%s: got (%q,%v) want (%q,%v)", c.name, got, ok, c.want, c.ok)
-		}
-	}
-}
-
 func TestInputErrorHintCarriesRepairInfo(t *testing.T) {
 	schema := map[string]any{
 		"type":     "object",
@@ -95,31 +66,6 @@ func TestRe2RepeatHint(t *testing.T) {
 	}
 	if hint := re2RepeatHint(`a{0,10}`); hint != "" {
 		t.Fatalf("合法量词不该提示，实际 %q", hint)
-	}
-}
-
-func TestStringListAcceptsThreeShapes(t *testing.T) {
-	cases := map[string][]string{
-		`["Cookie","Authorization"]`:  {"Cookie", "Authorization"},
-		`"Cookie"`:                    {"Cookie"},
-		`{"Cookie":true,"X-Token":1}`: {"Cookie", "X-Token"},
-		`null`:                        nil,
-	}
-	for in, want := range cases {
-		var sl stringList
-		if err := json.Unmarshal([]byte(in), &sl); err != nil {
-			t.Fatalf("%s: %v", in, err)
-		}
-		if strings.Join(sl, ",") != strings.Join(want, ",") {
-			t.Fatalf("%s: got %v want %v", in, []string(sl), want)
-		}
-	}
-}
-
-func TestStringListRejectsNumbers(t *testing.T) {
-	var sl stringList
-	if err := json.Unmarshal([]byte(`42`), &sl); err == nil {
-		t.Fatalf("数字应报错，实际 %v", []string(sl))
 	}
 }
 

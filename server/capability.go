@@ -146,8 +146,6 @@ func buildRegistry(owner *Server, guard *mcpserver.FileGuard) *Registry {
 	}
 	add(mcpserver.BuiltinTools("artex-binscan", mcpserver.L0, guard))
 	add(owner.mcpL1Tools())
-	add(mcpserver.BuiltinTools("artex-recon", mcpserver.L2, nil))
-	add(mcpserver.BuiltinTools("artex-webscan", mcpserver.L2, nil))
 	add(owner.mcpL3Tools())
 	return r
 }

@@ -12,40 +12,16 @@ import (
 // 本文件负责把「模型给错参数」变成一条【一次就能改对】的反馈，而不是一句
 // 「请核对工具参数说明后重新调用」。两块能力：
 //
-//  1. inferModeField —— mode 型工具（http_sequence 等）漏传 mode 时，从它同时给出的
-//     判别字段反推。只在**唯一可判定**时生效：给了 steps 必然是 chain，给了
-//     base_exchange_id/override_* 必然是 replay……两个 mode 同时被暗示则不猜。
-//     判定结果写日志，不静默。
+//  1. inferModeField —— mode 型工具漏传 mode 时，从它同时给出的判别字段反推。
+//     只在**唯一可判定**时生效：两个 mode 同时被暗示则不猜。判定结果写日志，不静默。
 //  2. inputErrorHint —— 校验失败时把「实际收到的字段 / 必填但缺失 / 该字段声明的类型、
 //     枚举与说明」一并回给模型。同样的错误下一次就能改对，而不是反复盲试。
 //
 // 两者都不改变工具的语义与安全边界：不清空、不降级、不放宽校验，只是把错误讲清楚。
 
-// modeInference 记录「哪些入参只有在某个 mode 下才有意义」。
-var modeInference = map[string][]struct{ field, mode string }{
-	"http_sequence": {
-		{field: "steps", mode: "chain"},
-		{field: "initial_vars", mode: "chain"},
-		{field: "base_exchange_id", mode: "replay"},
-		{field: "override_method", mode: "replay"},
-		{field: "override_url", mode: "replay"},
-		{field: "override_path", mode: "replay"},
-		{field: "override_query", mode: "replay"},
-		{field: "override_headers", mode: "replay"},
-		{field: "override_cookie", mode: "replay"},
-		{field: "override_body", mode: "replay"},
-		{field: "strip_headers", mode: "replay"},
-		{field: "identities", mode: "bola"},
-		{field: "race_count", mode: "race"},
-		{field: "baseline_url", mode: "timing"},
-		{field: "baseline_body", mode: "timing"},
-		{field: "baseline_runs", mode: "timing"},
-		{field: "exchange_id_a", mode: "diff"},
-		{field: "exchange_id_b", mode: "diff"},
-		{field: "text_a", mode: "diff"},
-		{field: "text_b", mode: "diff"},
-	},
-}
+// modeInference 记录「哪些入参只有在某个 mode 下才有意义」。当前官方工具面没有
+// mode 型工具，保留空表供后续按需登记。
+var modeInference = map[string][]struct{ field, mode string }{}
 
 // emptyJSONScalar 判断一个入参值是否等价于「没给」。
 func emptyJSONScalar(raw json.RawMessage) bool {
@@ -133,10 +109,6 @@ func inputErrorHint(toolName string, schema map[string]any, in json.RawMessage, 
 		} else {
 			fmt.Fprintf(&b, " 字段 %s 要求 %s；", path, want)
 		}
-	}
-
-	if toolName == "http_sequence" && !containsString(got, "mode") {
-		b.WriteString(" 提示：mode 可省略，但必须能由入参唯一确定（steps→chain，base_exchange_id/override_*→replay，identities→bola，race_count→race，baseline_*→timing，exchange_id_a/b 或 text_a/b→diff）；也可显式传 mode=chain | replay | bola | race | timing | diff。")
 	}
 
 	b.WriteString("请按上述说明修正后重新调用，不要原样重试。")

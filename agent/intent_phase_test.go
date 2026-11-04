@@ -66,34 +66,7 @@ func TestWorkerToolsAlwaysReturnsFullCandidateCatalog(t *testing.T) {
 	}
 }
 
-// 静态专用工具预裁已删除：http_fuzz/codec_crypto/extract_data/binary_inspect
-// 是否出现只由 RouteToolFace 的向量分数决定，相关断言在 tool_router_test.go。
-
-// 资产指纹必须进入能力路由的输入文字：只给 "看看这个站点" 这类意图，路由选不出
-// 该上哪些专用工具；把资产形状（类型/域名/路径/方法/技术栈）拼进去才有信号。
-//
-// assetRouteText 已随 agent/worker.go 下线，现在这段拼装由调用方负责（见
-// tools_insert.go 里 AddIntent 前的 anchors 处理）。这条测试因此改为守住
-// **契约**：任何进入 RouteToolFace 的 intent 文字都必须含资产形状，
-// 并且 RouteToolFace 对此确实敏感（同一批工具、两份文字，选择可以不同）。
-func TestAssetShapeEntersRouteText(t *testing.T) {
-	a := &db.Asset{
-		Type: "endpoint", Domain: "api.example.test",
-		URL: "https://api.example.test/api/orders", Method: "GET",
-		ServiceName: "orders", Technologies: []string{"Nginx", "JWT"},
-	}
-	// 与运行期同源的拼装口径：类型 + 域名 + 路径 + 方法 + 技术栈。
-	route := strings.Join([]string{a.Type, a.Domain, a.URL, a.Method, strings.Join(a.Technologies, ",")}, " ")
-	for _, want := range []string{"endpoint", "api.example.test", "/api/orders", "GET", "JWT"} {
-		if !strings.Contains(route, want) {
-			t.Fatalf("资产路由文字缺少 %q：%s", want, route)
-		}
-	}
-	// 路由函数本身必须接受非空 intent 并返回工具（不能 panic / 返回 nil 丢面）。
-	if got := RouteToolFace(route, (&ToolSet{}).WorkerTools()); len(got) == 0 {
-		t.Fatal("RouteToolFace 对带资产形状的 intent 不应返回空工具集")
-	}
-}
+// 静态专用工具预裁与能力路由已整体下线；工具面由 Agent 绑定与官方白名单决定。
 
 // faceBytes 复刻运行期体积口径：lean 瘦身 + 按名字去重后的 name/description/
 // prompt/input_schema 的 JSON 总和。

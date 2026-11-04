@@ -192,25 +192,6 @@ func TestVerificationToolRejectsUnsupportedAndOversizedInputs(t *testing.T) {
 	}
 }
 
-func TestVerificationChallengesReachExistingLoopBreaker(t *testing.T) {
-	lb := newLoopBreaker()
-	in := json.RawMessage(`{"url":"https://example.invalid/resource"}`)
-	for i := 0; i < loopStrikeLimit; i++ {
-		release, blocked := lb.before(context.Background(), "http_request", in)
-		if blocked != nil {
-			t.Fatal("blocked before budget")
-		}
-		body := fmt.Sprintf(`{"status":200,"headers":{"cf-mitigated":"challenge"},"body":"dynamic challenge %d","body_truncated":true}`, i)
-		lb.inspect(context.Background(), "http_request", in, actool.Text(body), nil)
-		release()
-	}
-	release, blocked := lb.before(context.Background(), "http_request", in)
-	release()
-	if blocked == nil {
-		t.Fatal("200 challenges were not counted")
-	}
-}
-
 // 人机验证工具必须**真的挂在某个工具面上**，否则它只是库里的一段代码，
 // 模型永远看不到、也永远不会调用它。
 //

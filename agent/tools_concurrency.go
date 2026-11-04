@@ -24,9 +24,7 @@ import (
 // 本仓的工具面按构造器分成两半：
 //   - readTool / readExpTool 家族已经声明 Concurrent: true —— 本来就能并行；
 //   - writeTool / writeExpTool 家族（insert_assets、record_fact、report_finding、
-//     set_goals …）与直接 actool.Build 的探测工具（http_request、http_sequence、
-//     http_fuzz、web_recon、net_probe、dns_probe、codec_crypto、extract_data、
-//     binary_inspect、binary_lab、human_verification_flow），**一个都没声明**，
+//     set_goals …）与直接 actool.Build 的工具，**一个都没声明**，
 //     Build 的 fail-closed 默认把它们当不安全 —— 于是「记录一条事实」会把后面
 //     所有读写一起挡住，「改一个文件」也会挡住一次 HTTP 探测。
 //
@@ -276,12 +274,8 @@ var graphTools = nameSet(
 // 它们与谁都能并行。判据：每次调用自带 HTTP 客户端或纯计算；唯一的共享落点是流量库，
 // 而流量库本来就是并发安全的（MITM 代理在用多协程往里写）。
 var independentTools = nameSet(
-	"http_request", "http_sequence", "http_fuzz", "web_recon",
-	"net_probe", "dns_probe", "codec_crypto", "extract_data",
-	"binary_inspect", "binary_lab",
 	"human_verification", "human_verification_capabilities",
-	"human_verification_solve", "human_verification_flow",
-	"tactical_kb",
+	"human_verification_solve",
 	"Sleep",
 )
 

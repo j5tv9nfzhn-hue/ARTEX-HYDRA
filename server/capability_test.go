@@ -87,7 +87,7 @@ func TestCapabilityGolden(t *testing.T) {
 	}
 }
 
-// TestCapabilityCounts：档位边界不能变（11 / 21 / 27）。
+// TestCapabilityCounts：档位边界不能变（5 / 10 / 10 / 16）。
 func TestCapabilityCounts(t *testing.T) {
 	s := newMCPTestServer(t)
 	reg := buildRegistry(s, mcpFileGuard())
@@ -96,9 +96,9 @@ func TestCapabilityCounts(t *testing.T) {
 		want int
 	}{
 		{mcpserver.L0, 5},
-		{mcpserver.L1, 11},
-		{mcpserver.L2, 21},
-		{mcpserver.L3, 27},
+		{mcpserver.L1, 10},
+		{mcpserver.L2, 10},
+		{mcpserver.L3, 16},
 	}
 	for _, c := range cases {
 		if got := len(reg.Tools(c.tier)); got != c.want {
@@ -142,8 +142,8 @@ func TestCapabilityManifestShape(t *testing.T) {
 	s := newMCPTestServer(t)
 	reg := buildRegistry(s, mcpFileGuard())
 	m := reg.Manifest()
-	if len(m) != 27 {
-		t.Fatalf("manifest 应有 27 条，实际 %d", len(m))
+	if len(m) != 16 {
+		t.Fatalf("manifest 应有 16 条，实际 %d", len(m))
 	}
 	for _, c := range m {
 		if c.ID == "" || c.MCPName == "" || c.Tier == "" {

@@ -42,7 +42,7 @@ func codeSeed(t *testing.T, s *Server, key string) agent.ToolSeed {
 // 行内容被改旧（模拟旧版本 seed 的措辞）、没有指纹 → 同步后应回到代码默认值，并留下备份。
 func TestSyncToolCatalog_AdoptsStaleRow(t *testing.T) {
 	s, pg := newCatalogTestServer(t)
-	const key = "http_sequence"
+	const key = "list_findings"
 	sd := codeSeed(t, s, key)
 
 	row, err := pg.GetTool(key)
@@ -77,7 +77,7 @@ func TestSyncToolCatalog_AdoptsStaleRow(t *testing.T) {
 // 已改过的行不应被代码默认值覆盖。
 func TestSyncToolCatalog_KeepsOperatorEdit(t *testing.T) {
 	s, pg := newCatalogTestServer(t)
-	const key = "http_request"
+	const key = "record_fact"
 	row, err := pg.GetTool(key)
 	if err != nil || row == nil {
 		t.Fatalf("seed 后应存在 %s: %v", key, err)
@@ -114,10 +114,10 @@ func TestToolCatalogDriftFingerprint(t *testing.T) {
 	if rep.Drifted {
 		t.Fatalf("刚 seed 完不应漂移：counts=%v", rep.Counts)
 	}
-	const key = "extract_data"
+	const key = "node_detail"
 	row, _ := pg.GetTool(key)
 	if row == nil {
-		t.Fatal("extract_data 未 seed")
+		t.Fatal("node_detail 未 seed")
 	}
 	if err := pg.RefreshToolDefaults(key, "被改坏的说明", row.Schema); err != nil {
 		t.Fatal(err)
@@ -134,10 +134,10 @@ func TestToolCatalogDriftFingerprint(t *testing.T) {
 // TestSyncToolCatalog_OptOut 覆盖 tool_catalog_sync=off：只诊断、不写库。
 func TestSyncToolCatalog_OptOut(t *testing.T) {
 	s, pg := newCatalogTestServer(t)
-	const key = "http_fuzz"
+	const key = "search_all_worker_traces"
 	row, _ := pg.GetTool(key)
 	if row == nil {
-		t.Fatal("http_fuzz 未 seed")
+		t.Fatal("search_all_worker_traces 未 seed")
 	}
 	if err := pg.RefreshToolDefaults(key, "旧描述", row.Schema); err != nil {
 		t.Fatal(err)

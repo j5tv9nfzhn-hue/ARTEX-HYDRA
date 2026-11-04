@@ -241,7 +241,7 @@ func newToolHelpTool(mounted []string) actool.CoreTool {
 		Schema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"name": map[string]any{"type": "string", "description": "工具名，如 http_sequence"},
+				"name": map[string]any{"type": "string", "description": "工具名，如 list_findings"},
 			},
 			"required": []any{"name"},
 		},

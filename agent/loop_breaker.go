@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strings"
 	"sync"
 
@@ -30,15 +29,11 @@ type loopSlot struct {
 }
 
 // loopBreaker is local to one AugmentTools invocation, not persistent across
-// runs. It has two key classes:
-//   - semantic HTTP keys for http_request/http_fuzz, where negative outcomes can
-//     be classified from structured status/fuzz counters;
-//   - exact-call keys for other non-control tools (including http_sequence and
-//     MCP tools), where Result errors and Call errors count. This does not try
-//     to interpret opaque successful output.
+// runs. It keys on exact tool name + normalized input; Result errors and Call
+// errors count. This does not try to interpret opaque successful output.
 //
 // Bash, control-plane tools and meta tools are excluded. Traffic inside one
-// fuzz/sequence call remains outside its scope: this is not a network sandbox.
+// tool call remains outside its scope: this is not a network sandbox.
 // Same-key calls are serialized so concurrent calls cannot pass a tripped gate.
 // There is no model-callable reset; a new run starts with a new instance.
 type loopBreaker struct {
@@ -74,7 +69,7 @@ func (lb *loopBreaker) before(ctx context.Context, name string, in json.RawMessa
 	case s.gate <- struct{}{}:
 	case <-ctx.Done():
 		res := actool.Errorf("等待同目标执行槽位已取消：" + ctx.Err().Error() +
-			"。同一目标同一时刻只允许一次调用，本次在排队期间等待超时（通常是 run 时间上限，或同目标并发请求太多）。请减少同目标并发、改为顺序执行，或合并成一次 http_fuzz/http_sequence 批量调用。目标标识：" + key)
+			".同一目标同一时刻只允许一次调用，本次在排队期间等待超时（通常是 run 时间上限，或同目标并发请求太多）。请减少同目标并发或改为顺序执行。目标标识：" + key)
 		return noop, &res
 	}
 	var once sync.Once
@@ -94,36 +89,25 @@ func (lb *loopBreaker) before(ctx context.Context, name string, in json.RawMessa
 		if strings.HasPrefix(key, "exact:") {
 			msg = fmt.Sprintf("[执行层止损 / loop_blocked] 本轮同一工具与完全相同入参已连续 %d 次返回工具错误。本次未执行该工具。请先诊断参数/前置条件/目标状态，基于线索换一种方法或分支；不要改无关参数绕过止损。新执行轮会重建本轮状态，这不是跨轮安全隔离。调用标识：%s", streak, key)
 		}
-		msg += lb.hintFor(ctx, s, name, in)
+		msg += lb.hintFor(s)
 		res := actool.Errorf(msg)
 		return noop, &res
 	}
 	return release, nil
 }
 
-// hintFor 返回（并缓存）本槽位的线索缓存提示：止损不是终点，目的是让它换一条
+// hintFor 返回（并缓存）本槽位的换分支提示：止损不是终点，目的是让它换一条
 // 分支继续走，而不是原地停下或原地重试。
-func (lb *loopBreaker) hintFor(ctx context.Context, s *loopSlot, name string, in json.RawMessage) string {
+func (lb *loopBreaker) hintFor(s *loopSlot) string {
 	if s == nil {
 		return ""
 	}
 	lb.mu.Lock()
-	if s.hint != "" {
-		h := s.hint
-		lb.mu.Unlock()
-		return h
+	defer lb.mu.Unlock()
+	if s.hint == "" {
+		s.hint = "\n[执行层止损 / 换分支]\n不要原地重试同一调用：先诊断参数与前置条件，换一个端点/参数/身份或换一种方法；若确实走不通，记录负结果与证据后收尾。"
 	}
-	lb.mu.Unlock()
-	var parsed any
-	_ = json.Unmarshal(in, &parsed)
-	hint := clueSwitchHint(ctx, loopTargetLabel(name, parsed), 6)
-	if hint == "" {
-		hint = "\n[线索缓存 / 换分支]\n本 run 没有可用的线索缓存（非任务上下文）。不要原地重试同一请求：换一种输入思路，或记录负结果后收尾。"
-	}
-	lb.mu.Lock()
-	s.hint = hint
-	lb.mu.Unlock()
-	return hint
+	return s.hint
 }
 
 func (lb *loopBreaker) inspect(ctx context.Context, name string, in json.RawMessage, res actool.Result, callErr error) actool.Result {
@@ -180,89 +164,34 @@ func (lb *loopBreaker) inspect(ctx context.Context, name string, in json.RawMess
 		return res
 	}
 	warning := fmt.Sprintf("\n[执行层止损 / 3-Strike]\n已观察到连续 %d 次相同负反馈；本轮后续同键调用将于执行前拒绝。%s\n这仅说明当前调用上下文与方法未获得有效结果，不能证明后端实现、参数化查询、漏洞不存在或整个目标安全。记录原始状态与证据，将解释标为推断；不要以止损代替目标达成证明。", streak, diag)
-	warning += lb.hintFor(ctx, s, name, in)
+	warning += lb.hintFor(s)
 	// Append one text block; preserve existing text/non-text blocks, IsError, Extra.
 	res.Content = append(append([]llm.ContentBlock(nil), res.Content...), llm.TextBlock(warning))
 	return res
 }
 
-// Keys preserve literal paths (no replacing numeric/UUID resource identities).
-// Full query values and header/cookie/auth/body partition legitimate contexts.
-// No inference that differing resource IDs or payloads share an intent is made.
-// Only a short opaque digest is exposed, never credentials or payloads.
-func loopTargetKey(name string, raw json.RawMessage) string {
-	if name != "http_request" && name != "http_fuzz" {
-		return ""
-	}
-	var in map[string]json.RawMessage
-	if json.Unmarshal(raw, &in) != nil {
-		return ""
-	}
-	var rawURL, method string
-	if name == "http_fuzz" {
-		_ = json.Unmarshal(in["url_template"], &rawURL)
-	}
-	if rawURL == "" && json.Unmarshal(in["url"], &rawURL) != nil {
-		return ""
-	}
-	_ = json.Unmarshal(in["method"], &method)
-	method = strings.ToUpper(strings.TrimSpace(method))
-	if method == "" {
-		method = "GET"
-	}
-	u, err := url.Parse(rawURL)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return ""
-	}
-	query, err := url.ParseQuery(u.RawQuery)
-	if err != nil {
-		return ""
-	}
-	// Preserve all declared fields except URL and generic request/size timeouts.
-	// Canonical decoding also makes JSON object field order irrelevant.
-	contextFields := make(map[string]any)
-	for k, v := range in {
-		if k == "url" || k == "url_template" || k == "method" || k == "timeout_ms" || k == "max_body_bytes" {
-			continue
-		}
-		var value any
-		decoder := json.NewDecoder(bytes.NewReader(v))
-		decoder.UseNumber()
-		if decoder.Decode(&value) != nil {
-			return ""
-		}
-		contextFields[k] = value
-	}
-	path := u.EscapedPath()
-	if path == "" {
-		path = "/"
-	}
-	userinfo := ""
-	if u.User != nil {
-		userinfo = u.User.String()
-	}
-	identity := []any{name, method, strings.ToLower(u.Scheme), strings.ToLower(u.Host), path, query.Encode(), userinfo, contextFields}
-	encoded, err := json.Marshal(identity)
-	if err != nil {
-		return ""
-	}
-	sum := sha256.Sum256(encoded)
-	return name + ":" + hex.EncodeToString(sum[:12])
+// controlPlane 是协议面，不是侦察流程：没有它们，worker 就算测出了东西也交不
+// 出来，或者路由漏挂时完全无法自救。
+var controlPlane = map[string]string{
+	"record_fact":    "写回事实",
+	"add_finding":    "写回漏洞",
+	"report_finding": "上报漏洞",
+	"list_findings":  "查重",
+	"Bash":           "通用恢复手段（路由漏挂时的兜底）",
+	"Read":           "读取中间产物",
+	"fetch_evidence": "反投毒取证通道（受限只读，常驻）",
 }
 
-// loopExactOptOut 是不进入精确调用止损的元工具。Bash/Read/cache_clue 等已在
-// controlPlane 里统一排除；这里只补路由器之外的会话元能力。
+// loopExactOptOut 是不进入精确调用止损的元工具。写回/读取类已在 controlPlane
+// 里统一排除；这里只补路由器之外的会话元能力。
 var loopExactOptOut = map[string]bool{
 	ToolHelpToolName: true,
 	"Skill":          true,
 }
 
-// loopCallKey 返回本轮止损使用的键。HTTP 两个工具优先走语义键；其它非控制面
-// 工具走「工具名 + 规范化完整入参」的精确键。返回空串表示不纳入止损。
+// loopCallKey 返回本轮止损使用的键：非控制面工具走「工具名 + 规范化完整入参」的
+// 精确键。返回空串表示不纳入止损。
 func loopCallKey(name string, raw json.RawMessage) string {
-	if key := loopTargetKey(name, raw); key != "" {
-		return key
-	}
 	if _, isControl := controlPlane[name]; isControl || loopExactOptOut[name] {
 		return ""
 	}
@@ -311,65 +240,5 @@ func classifyNegativeOutcome(name string, res actool.Result) (string, string) {
 		sum := sha256.Sum256([]byte(text))
 		return "tool_error:" + hex.EncodeToString(sum[:]), "工具返回错误；请区分参数、网络和服务端错误。"
 	}
-	switch name {
-	case "http_request":
-		var out struct {
-			Status    int               `json:"status"`
-			Headers   map[string]string `json:"headers"`
-			Body      string            `json:"body"`
-			Error     string            `json:"error"`
-			Truncated bool              `json:"body_truncated"`
-		}
-		if json.Unmarshal([]byte(text), &out) != nil {
-			return "", ""
-		}
-		if out.Error != "" {
-			sum := sha256.Sum256([]byte(out.Error))
-			return "network:" + hex.EncodeToString(sum[:]), "观察到网络错误；不能据此推断服务不存在或被封禁。"
-		}
-		assessment := inspectVerification(out.Status, out.Headers, out.Body)
-		if assessment.Category == "challenge_page" {
-			return "challenge:" + assessment.Vendor, "确认当前响应为挑战页，而非业务成功；允许基于新证据选择不同的协议/已有浏览器策略，不默认要求人工，不能重复同一失败策略。"
-		}
-		if out.Truncated || out.Status < 400 || out.Status > 599 {
-			return "", ""
-		}
-		// Use the full retained body, not a prefix or digit-stripping heuristic.
-		sum := sha256.Sum256([]byte(strings.TrimSpace(out.Body)))
-		return fmt.Sprintf("http:%d:%x", out.Status, sum), diagnoseHTTPFailure(out.Status)
-	case "http_fuzz":
-		var out struct {
-			Hits   *int `json:"hits_count"`
-			Total  *int `json:"total_tested"`
-			Errors *int `json:"error_count"`
-		}
-		if json.Unmarshal([]byte(text), &out) != nil || out.Hits == nil || out.Total == nil || out.Errors == nil {
-			return "", ""
-		}
-		if *out.Total <= 0 || *out.Hits < 0 || *out.Errors < 0 || *out.Hits > *out.Total || *out.Errors > *out.Total {
-			return "", ""
-		}
-		if *out.Hits == 0 {
-			if *out.Errors == *out.Total {
-				return fmt.Sprintf("fuzz_all_errors:%d", *out.Total), "本轮批量请求全部报错；应检查可达性与参数，不能推断目标安全"
-			}
-			return fmt.Sprintf("fuzz_no_hits:%d:%d", *out.Total, *out.Errors), "本轮字典未命中仅覆盖本次输入与匹配规则，不证明目标不存在问题"
-		}
-	}
 	return "", ""
-}
-
-func diagnoseHTTPFailure(status int) string {
-	switch status {
-	case 400, 422:
-		return "当前输入收到参数/请求拒绝响应；具体校验层与技术栈需要独立证据。"
-	case 401, 403:
-		return "当前凭据或请求上下文收到访问拒绝；拒绝来源和授权边界尚需核实。"
-	case 404:
-		return "当前请求收到 404；不能区分路由缺失、访问隐藏或代理返回。"
-	case 429:
-		return "观察到限流响应；应停止重复请求，并依据授权与服务端指引安排后续。"
-	default:
-		return fmt.Sprintf("观察到 HTTP %d 错误响应；不能据此证明 ORM、参数化查询或某类问题已被排除。", status)
-	}
 }

@@ -6,56 +6,10 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-
-	actool "github.com/Autumn-27/norma/tool"
 )
-
-// binary_inspect is deliberately a bounded header/identity reader, not a
-// disassembler. No child process, extraction, sample execution or database writes.
-func (t *ToolSet) binaryInspectTool() actool.CoreTool {
-	return actool.Build(actool.Spec{
-		Name:        "binary_inspect",
-		Description: "原生只读软件样本检查：流式 SHA-256、文件大小、PE/ELF/Mach-O/WASM/DEX/ZIP 魔数与基础头部、有限 ASCII 字符串及文件偏移。最多读取 512 MiB；字符串仅扫描前 4 MiB。不会执行样本或反编译；格式未知不代表安全。",
-		Schema: map[string]any{"type": "object", "properties": map[string]any{
-			"file_path":   map[string]any{"type": "string", "description": "样本文件路径（相对当前工作目录或绝对路径）"},
-			"max_strings": map[string]any{"type": "integer", "minimum": 0, "maximum": 100, "description": "返回 ASCII 字符串数量，0 不提取；默认 20，最多 100"},
-		}, "required": []any{"file_path"}},
-		ReadOnly: noStoreRo, Permissions: allowAllPerm,
-		Run: func(ctx context.Context, in json.RawMessage, tc *actool.ToolContext) (actool.Result, error) {
-			var a struct {
-				FilePath   string `json:"file_path"`
-				MaxStrings *int   `json:"max_strings"`
-			}
-			if err := json.Unmarshal(in, &a); err != nil {
-				return actool.Errorf(err.Error()), nil
-			}
-			if a.FilePath == "" {
-				return actool.Errorf("file_path is required"), nil
-			}
-			n := 20
-			if a.MaxStrings != nil {
-				n = *a.MaxStrings
-			}
-			if n < 0 || n > 100 {
-				return actool.Errorf("max_strings must be between 0 and 100"), nil
-			}
-			path := t.resolveLocalPath(a.FilePath)
-			result, err := inspectBinaryFile(ctx, path, n)
-			if err != nil {
-				return actool.Errorf(err.Error()), nil
-			}
-			out, err := json.MarshalIndent(result, "", "  ")
-			if err != nil {
-				return actool.Errorf(err.Error()), nil
-			}
-			return actool.Text(actool.Capture(tc, string(out))), nil
-		},
-	})
-}
 
 // InspectBinaryFile exposes bounded static inspection to the sample-library service.
 func InspectBinaryFile(ctx context.Context, path string, maxStrings int) (map[string]any, error) {

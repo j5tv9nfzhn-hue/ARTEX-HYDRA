@@ -89,20 +89,13 @@ func (b *crossPlatformBashTool) Prompt() string {
 
 // Call 在原行为之上做三件事，都不改命令语义：
 //   - 输出统一转成合法 UTF-8（GBK/UTF-16LE 兜底解码），避免乱码被模型当成执行失败；
-//   - 写法不对导致的失败追加一条「正确写法」提示（见 windowsDialectHint）；
-//   - 逃生通道转向：模型在 Bash 里写/跑 Python 脚本时点名可替代的原生工具
-//     （回归证据：某安装 http_request 占全部调用的 49.4%，见 agent/tool_steering.go）。
-//     每个任务只说一次（noteBashPythonSteer），不随命令条数累加。
+//   - 写法不对导致的失败追加一条「正确写法」提示（见 windowsDialectHint）。
 func (b *crossPlatformBashTool) Call(ctx context.Context, in json.RawMessage, tc *actool.ToolContext) (actool.Result, error) {
 	res, err := b.call(ctx, in, tc)
 	if err != nil {
 		return res, err
 	}
 	res = utf8Result(res)
-	if note := noteBashPythonSteer(ctx, bashCommandOf(in)); note != "" {
-		// 追加一个 text block；保留既有 text/非 text block、IsError 与 Extra。
-		res.Content = append(append([]llm.ContentBlock(nil), res.Content...), llm.TextBlock(note))
-	}
 	if hint := shellDialectHint(resultText(res), res.IsError); hint != "" {
 		res.Content = append(append([]llm.ContentBlock(nil), res.Content...), llm.TextBlock(hint))
 	}
@@ -615,4 +608,20 @@ func splitShellWords(s string) ([]string, bool) {
 		args = append(args, cur.String())
 	}
 	return args, true
+}
+
+// decodeBase64Flexible 解码标准/URL-safe、带/不带 padding 的 Base64 文本。
+func decodeBase64Flexible(s string) ([]byte, error) {
+	s = strings.TrimSpace(s)
+	for _, enc := range []*base64.Encoding{
+		base64.StdEncoding,
+		base64.RawStdEncoding,
+		base64.URLEncoding,
+		base64.RawURLEncoding,
+	} {
+		if b, err := enc.DecodeString(s); err == nil {
+			return b, nil
+		}
+	}
+	return nil, fmt.Errorf("无效的 Base64 字符串")
 }

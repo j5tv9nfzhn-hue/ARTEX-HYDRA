@@ -38,8 +38,12 @@ type Server struct {
 }
 
 // All 返回全部内置服务器。顺序即界面上展示的顺序。
+//
+// Web 扫描（http_send/http_fuzz/dir_probe/...）与侦察（dns_recon/port_probe/
+// tls_inspect/...）已整体下线，由内置 Skill 与外部工具链承担；这里只保留
+// 离线二进制静态分诊。
 func All() []Server {
-	return []Server{reconServer(), webScanServer(), binScanServer()}
+	return []Server{binScanServer()}
 }
 
 // Names 返回全部内置服务器名（小写）。

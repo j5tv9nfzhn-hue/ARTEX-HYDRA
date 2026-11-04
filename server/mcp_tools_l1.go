@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/mcpserver"
 )
@@ -14,7 +13,7 @@ import (
 // L1 = 知识库只读：把 ARTEX 已经攒下的资产图、发现、公司、任务暴露给外部
 // harness。全部只读，不改一行数据；这也是「不重复扫描已知目标」的前提。
 
-// mcpL1Tools 返回 L1 六个工具。
+// mcpL1Tools 返回 L1 五个工具。
 func (s *Server) mcpL1Tools() []mcpserver.Tool {
 	if s.m == nil || s.m.pg == nil {
 		return nil
@@ -77,24 +76,6 @@ func (s *Server) mcpL1Tools() []mcpserver.Tool {
 				"required":   []string{"id"},
 			},
 			Handler: s.mcpGetTask,
-		},
-		{
-			Name:        "tactical_kb",
-			Title:       "战术知识库",
-			Description: "本地静态经验检索。mode=vuln_patterns 按分类取打法卡片；mode=logic_invariants 取业务不变量清单；mode=past_findings / past_assets 跨任务检索历史结论与资产。",
-			Tier:        mcpserver.L1,
-			ReadOnly:    true,
-			Schema: map[string]any{
-				"type": "object",
-				"properties": mcpProps(map[string]string{
-					"mode":     "vuln_patterns | logic_invariants | past_findings | past_assets",
-					"query":    "关键词/目标类型（如 ai_gateway、jwt、ssrf）",
-					"category": "vuln_patterns 模式下的分类，如 bola_idor / ssrf_cloud",
-					"limit":    "最多返回条数，默认 8，上限 25",
-				}),
-				"required": []string{"mode"},
-			},
-			Handler: s.mcpTacticalKB,
 		},
 	}
 }
@@ -288,58 +269,6 @@ func (s *Server) mcpGetTask(_ context.Context, raw json.RawMessage) (string, err
 	}
 	counts, _ := s.m.pg.Assets().CountsByTypeForTask(id)
 	return mcpJSONString(map[string]any{"task": t, "asset_counts": counts})
-}
-
-func (s *Server) mcpTacticalKB(_ context.Context, raw json.RawMessage) (string, error) {
-	var a struct {
-		Mode     string `json:"mode"`
-		Query    string `json:"query"`
-		Category string `json:"category"`
-		Limit    any    `json:"limit"`
-	}
-	if err := decodeMCPArgs(raw, &a); err != nil {
-		return "", err
-	}
-	mode := strings.ToLower(strings.TrimSpace(a.Mode))
-	query := strings.TrimSpace(a.Query)
-	category := strings.TrimSpace(a.Category)
-	limit := clampInt(mcpInt(a.Limit, 8), 1, 25)
-
-	switch mode {
-	case "vuln_patterns":
-		text, err := agent.KBVulnPatternsJSON(category, query, limit)
-		if err != nil {
-			return "", err
-		}
-		return text, nil
-	case "logic_invariants":
-		text, err := agent.KBLogicProfilesJSON(query, limit)
-		if err != nil {
-			return "", err
-		}
-		return text, nil
-	case "past_findings":
-		f := db.FindingFilter{Query: query}
-		rows, total, err := s.m.pg.ListFindingsPage(f, 1, limit)
-		if err != nil {
-			return "", err
-		}
-		items := make([]map[string]any, 0, len(rows))
-		for _, x := range rows {
-			items = append(items, map[string]any{
-				"id": x.ID, "task_id": x.TaskID, "vuln_class": x.VulnClass, "name": x.Name,
-				"severity": x.Severity, "status": x.Status, "summary": clipRunes(x.Summary, 300),
-			})
-		}
-		return mcpJSONString(map[string]any{"mode": mode, "total": total, "items": items})
-	case "past_assets":
-		rows, err := s.m.pg.Assets().Search(query, limit)
-		if err != nil {
-			return "", err
-		}
-		return mcpJSONString(map[string]any{"mode": mode, "count": len(rows), "items": rows})
-	}
-	return "", fmt.Errorf("未知 mode: %s（可选 vuln_patterns / logic_invariants / past_findings / past_assets）", mode)
 }
 
 // --- 小工具 ---

@@ -56,14 +56,12 @@ func hasTool(srv *mcpserver.Server, name string) bool {
 	return false
 }
 
-// TestMCPTierDefaults：默认只开 L0+L1；开 L2 后 21 个工具全部出现，L3 仍为空。
+// TestMCPTierDefaults：默认只开 L0+L1；L2 已无工具，L3 仍为空。
 func TestMCPTierDefaults(t *testing.T) {
 	s := newMCPTestServer(t)
 
 	l0 := []string{"file_identify", "pe_info", "strings_scan", "entropy_scan", "ioc_extract"}
-	l1 := []string{"list_assets", "list_findings", "list_companies", "list_tasks", "get_task", "tactical_kb"}
-	l2 := []string{"dns_recon", "port_probe", "tls_inspect", "tech_hints",
-		"http_send", "http_fuzz", "dir_probe", "param_probe", "jwt_inspect", "sqli_probe"}
+	l1 := []string{"list_assets", "list_findings", "list_companies", "list_tasks", "get_task"}
 
 	def := s.buildMCPServer()
 	for _, n := range append(append([]string{}, l0...), l1...) {
@@ -71,28 +69,18 @@ func TestMCPTierDefaults(t *testing.T) {
 			t.Fatalf("默认档位缺少工具 %s（实际 %v）", n, mcpToolNames(def))
 		}
 	}
-	for _, n := range l2 {
-		if hasTool(def, n) {
-			t.Fatalf("L2 工具 %s 在默认档位下不应可见", n)
-		}
-	}
-	if got := len(def.Tools()); got != 11 {
-		t.Fatalf("默认工具数=%d want 11", got)
+	if got := len(def.Tools()); got != 10 {
+		t.Fatalf("默认工具数=%d want 10", got)
 	}
 
 	if err := s.saveMCPTiers([]mcpserver.Tier{mcpserver.L0, mcpserver.L1, mcpserver.L2}); err != nil {
 		t.Fatalf("saveMCPTiers: %v", err)
 	}
 	full := s.buildMCPServer()
-	for _, n := range l2 {
-		if !hasTool(full, n) {
-			t.Fatalf("开 L2 后缺少工具 %s", n)
-		}
+	if got := len(full.Tools()); got != 10 {
+		t.Fatalf("开 L2 后工具数=%d want 10（L2 主动探测工具已整体下线）", got)
 	}
-	if got := len(full.Tools()); got != 21 {
-		t.Fatalf("开 L2 后工具数=%d want 21（L3 仍未实现）", got)
-	}
-	// 越权调用：L0 档位下调 dns_recon 必须被拒绝。
+	// 未注册的方法应返回 JSON-RPC 错误。
 	if _, err := full.Handle(context.Background(), "tools/call",
 		json.RawMessage(`{"name":"task_create","arguments":{}}`)); err == nil {
 		t.Fatal("未注册的方法应返回 JSON-RPC 错误")
@@ -126,19 +114,6 @@ func TestMCPToolSmoke(t *testing.T) {
 		{"list_companies", `{}`},
 		{"list_tasks", `{"limit":5}`},
 		{"get_task", `{"id":999999}`},
-		{"tactical_kb", `{"mode":"vuln_patterns","limit":2}`},
-		{"tactical_kb", `{"mode":"logic_invariants","query":"ai_gateway","limit":2}`},
-
-		{"dns_recon", `{"domain":"127.0.0.1","timeout_ms":800}`},
-		{"port_probe", `{"host":"127.0.0.1","ports":"1","timeout_ms":300}`},
-		{"tls_inspect", `{"target":"127.0.0.1:1","timeout_ms":500}`},
-		{"tech_hints", `{"url":"http://127.0.0.1:1/"}`},
-		{"http_send", `{"request":"GET / HTTP/1.1\u000d\u000aHost: 127.0.0.1:1\u000d\u000a\u000d\u000a","max_body":100}`},
-		{"http_fuzz", `{"request":"GET /FUZZ HTTP/1.1\u000d\u000aHost: 127.0.0.1:1\u000d\u000a\u000d\u000a","payloads":["a"]}`},
-		{"dir_probe", `{"url":"http://127.0.0.1:1/","wordlist":["a"]}`},
-		{"param_probe", `{"url":"http://127.0.0.1:1/?a=1","param":"a"}`},
-		{"jwt_inspect", `{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abcdef"}`},
-		{"sqli_probe", `{"url":"http://127.0.0.1:1/?a=1","param":"a"}`},
 	}
 
 	srv := s.buildMCPServer()
@@ -212,8 +187,8 @@ func TestMCPHTTPAuth(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("解析响应: %v", err)
 	}
-	if len(out.Result.Tools) != 11 {
-		t.Fatalf("HTTP tools/list 返回 %d 个工具，want 11", len(out.Result.Tools))
+	if len(out.Result.Tools) != 10 {
+		t.Fatalf("HTTP tools/list 返回 %d 个工具，want 10", len(out.Result.Tools))
 	}
 
 	// 轮换后旧 token 失效

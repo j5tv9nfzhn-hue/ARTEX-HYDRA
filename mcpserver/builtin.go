@@ -12,7 +12,7 @@ import (
 //
 // 复用而不是重写：同一份实现既服务控制台内部的 agent，也服务外部 harness，
 // 行为、截断、错误话术只有一套。差异只在两点：
-//   - 档位由调用方指定（bin.go → L0，recon.go/web.go → L2）；
+//   - 档位由调用方指定（bin.go → L0）；
 //   - L0 的 bin 工具带 path 参数，投影时套一层 FileGuard。
 func BuiltinTools(server string, tier Tier, guard *FileGuard) []Tool {
 	src := mcpbuiltin.Tools(server)

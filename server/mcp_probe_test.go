@@ -46,8 +46,8 @@ func TestMCPProbeAgainstRealServer(t *testing.T) {
 	if info.Name != "artex" {
 		t.Fatalf("serverInfo.name 应为 artex: %+v", info)
 	}
-	if info.Tools != 11 {
-		t.Fatalf("默认档位应有 11 个工具，实际 %d", info.Tools)
+	if info.Tools != 10 {
+		t.Fatalf("默认档位应有 10 个工具，实际 %d", info.Tools)
 	}
 	if len(info.Protocols) == 0 || info.Protocols[0] != mcpserver.ProtocolVersion {
 		t.Fatalf("协议版本应含 %s: %v", mcpserver.ProtocolVersion, info.Protocols)
