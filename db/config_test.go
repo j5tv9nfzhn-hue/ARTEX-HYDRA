@@ -64,6 +64,45 @@ func TestDeleteProfileContextHonorsCancellation(t *testing.T) {
 	}
 }
 
+// TestRefreshPromptIfSystemDefault：代码默认模板只在「当前版本仍由系统维护」时
+// 自动追平；用户通过 UI 保存过的版本必须原样保留。
+func TestRefreshPromptIfSystemDefault(t *testing.T) {
+	d, err := Open(testDSN(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	ag, err := d.GetAgentByKey("planner")
+	if err != nil || ag == nil {
+		t.Fatalf("planner agent: %v", err)
+	}
+	defer func() {
+		d.Exec(`DELETE FROM agent_prompts WHERE agent_id=$1`, ag.ID)
+		d.Exec(`UPDATE agents SET current_prompt_id=NULL WHERE id=$1`, ag.ID)
+	}()
+
+	if _, err := d.SavePrompt(ag.ID, "旧系统模板", "init", "system"); err != nil {
+		t.Fatal(err)
+	}
+	n, err := d.RefreshPromptIfSystemDefault(ag.ID, "新系统模板")
+	if err != nil || n == 0 {
+		t.Fatalf("系统模板应被刷新: n=%d err=%v", n, err)
+	}
+	if cur, _ := d.CurrentPrompt(ag.ID); cur != "新系统模板" {
+		t.Fatalf("刷新后模板=%q", cur)
+	}
+
+	if _, err := d.SavePrompt(ag.ID, "用户自定义", "edit", "ui"); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := d.RefreshPromptIfSystemDefault(ag.ID, "代码最新模板"); err != nil || n != 0 {
+		t.Fatalf("用户编辑过的模板不应被覆盖: n=%d err=%v", n, err)
+	}
+	if cur, _ := d.CurrentPrompt(ag.ID); cur != "用户自定义" {
+		t.Fatalf("用户模板被覆盖: %q", cur)
+	}
+}
+
 func TestConfigStores(t *testing.T) {
 	d, err := Open(testDSN(t))
 	if err != nil {

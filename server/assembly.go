@@ -593,18 +593,19 @@ func seedCoordAgentRows(pg *db.DB) {
 	type row struct {
 		key, name, desc, tmpl string
 	}
+	seedTemplates := agent.BuiltinPromptSeeds()
 	rows := []row{
 		{
 			key:  agent.PromptKeyCoordRoot,
 			name: "编排者",
 			desc: "任务级根 agent：把目标拆成路线、派发给子 agent、读回结论并收尾。只持调度工具，不亲自执行。",
-			tmpl: agent.RootSystemPrompt(agent.CoordVars{}),
+			tmpl: seedTemplates[agent.PromptKeyCoordRoot],
 		},
 		{
 			key:  agent.PromptKeyCoordChild,
 			name: "执行者",
 			desc: "子 agent：负责一条路线，把它走透，用 submit_report 如实交卷（confirmed / ruled_out / open_proof_gap）。",
-			tmpl: agent.ChildSystemPrompt(agent.CoordVars{}),
+			tmpl: seedTemplates[agent.PromptKeyCoordChild],
 		},
 	}
 	tx, err := pg.Begin()
@@ -653,9 +654,10 @@ VALUES ($1,1,$2,'内置默认','system') RETURNING id`, id, r.tmpl).Scan(&pid); 
 }
 
 // seedPrompts writes each built-in agent's code-default prompt body into
-// agent_prompts on startup — first-insert only (SeedPromptIfEmpty is a no-op once
-// any version exists), so the DB becomes the authoritative editable source while
-// user edits survive restarts. Runs after seedBuiltins has created the agent rows.
+// agent_prompts on startup. Ordinary roles are first-insert only so user edits
+// survive restarts; coord_root / coord_child additionally self-heal when the
+// current version is still code-managed (updated_by=system) but stale — this
+// is what stops an upgraded DB from running yesterday's root prompt forever.
 func seedPrompts(pg *db.DB) {
 	// 新调度层的两个角色不在建库脚本里，先补行再播种。
 	seedCoordAgentRows(pg)
@@ -667,6 +669,15 @@ func seedPrompts(pg *db.DB) {
 		}
 		if err := pg.SeedPromptIfEmpty(a.ID, tmpl); err != nil {
 			log.Printf("[prompts] seed %s 失败: %v", key, err)
+			continue
+		}
+		// 只对调度层的两个系统模板做"代码更新即跟随"；普通角色保持首次播种。
+		if key == agent.PromptKeyCoordRoot || key == agent.PromptKeyCoordChild {
+			if n, err := pg.RefreshPromptIfSystemDefault(a.ID, tmpl); err != nil {
+				log.Printf("[prompts] 刷新 %s 失败: %v", key, err)
+			} else if n > 0 {
+				log.Printf("[prompts] %s 已随代码更新到 v%d（用户编辑过的版本不会被覆盖）", key, n)
+			}
 		}
 	}
 }
@@ -729,6 +740,13 @@ func wireTools(pg *db.DB, domainReg map[string]actool.CoreTool) {
 		}
 		out := tools[:0:0]
 		for _, t := range tools {
+			// 调度层工具是代码注入的机制，不是 DB 目录项：旧库里即使残留同名
+			// 行（或行没绑到当前 agent），也不能把 delegate_task / finish_task
+			// 裁掉，否则根 agent 会变成"只能对话、不能派活"。
+			if agent.IsCoordinatorTool(t.Name()) {
+				out = append(out, meterTool(t, pg, t.Name(), agentKey, runInfo))
+				continue
+			}
 			row, known := byKey[t.Name()]
 			if !known { // SDK/meta tool: no tools row → visibility & defaults untouched
 				// 但仍必须计量。此前这里直接 append 原样放行，导致 Bash / Write /

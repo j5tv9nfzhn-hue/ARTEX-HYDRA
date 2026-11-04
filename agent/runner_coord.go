@@ -343,16 +343,11 @@ func (r *SessionRunner) assemble(ctx context.Context, spec AgentSpec, coord *Coo
 	} else {
 		base = append(base, r.BaseTools...)
 	}
-	// 协调器工具：根与子都需要 spawn/send/wait/graph。
-	// 用 ChildCoordTools 而不是 CoordTools(true)：根不该同时拿到 submit_report，
+	// 协调器工具：根与子共用 spawn/send/wait/graph/stop，生命周期出口各只有一个。
+	// 根拿 finish_task，子拿 submit_report；不要让根同时拿到 submit_report，
 	// 否则一个编排者可以用"子任务交卷"的口气结束整个任务。
 	ts := r.toolset
-	base = append(base, ts.ChildCoordTools()...)
-	if isRoot {
-		base = append(base, ts.finishTask())
-	} else {
-		base = append(base, ts.submitReport())
-	}
+	base = append(base, ts.CoordTools(isRoot)...)
 
 	// ---- 2. 一次成面 ----
 	sysBody := r.sysBodyFor(spec, coord, agentID, isRoot)

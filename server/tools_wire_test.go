@@ -19,8 +19,39 @@ func names(tools []actool.CoreTool) map[string]actool.CoreTool {
 	return m
 }
 
-// TestWireTools uses an isolated SQLite fixture to verify current default
-// bindings, explicit rebinding/disable filters, and description/default decoration.
+// TestToolResolveKeepsCoordinatorTools：旧库里即使残留 delegate_task 等同名行，
+// 也不能把调度层工具裁掉——根 agent 变回"只能对话"的根因之一就是这里。
+func TestToolResolveKeepsCoordinatorTools(t *testing.T) {
+	pg, err := db.Open("file:" + filepath.ToSlash(filepath.Join(t.TempDir(), "coord-tools.sqlite")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = pg.Close() })
+	originalResolve, originalTrafficBinding := agent.ToolResolve, agent.FindingTrafficBindingEnabled
+	wireTools(pg, nil)
+	t.Cleanup(func() {
+		agent.ToolResolve = originalResolve
+		agent.FindingTrafficBindingEnabled = originalTrafficBinding
+	})
+	t.Setenv("AGENT_CORE_DISABLE_INTERACTIVE_SHELL", "1")
+
+	// 模拟历史行：enabled=false 且没有绑定任何 agent。
+	if err := pg.SeedTool("delegate_task", "stale row", mustJSON(map[string]any{}), mustJSON([]string{})); err != nil {
+		t.Fatal(err)
+	}
+	if err := pg.UpdateTool("delegate_task", "stale row", mustJSON(map[string]any{}), mustJSON([]string{}), false); err != nil {
+		t.Fatal(err)
+	}
+
+	ts := agent.NewToolSet(nil, "")
+	root := names(agent.ToolResolve(context.Background(), "worker", ts.CoordTools(true)))
+	for _, name := range []string{agent.ToolDelegateTask, agent.ToolWaitForAgents, agent.ToolAgentsGraph, agent.ToolStopAgent, agent.ToolFinishTask} {
+		if _, ok := root[name]; !ok {
+			t.Fatalf("调度工具 %s 被历史 DB 行裁掉（当前 %v）", name, root)
+		}
+	}
+}
+
 func TestWireTools(t *testing.T) {
 	pg, err := db.Open("file:" + filepath.ToSlash(filepath.Join(t.TempDir(), "tools-wire.sqlite")))
 	if err != nil {

@@ -175,7 +175,7 @@ var DecommissionTable = []DecomEntry{
 	},
 	{
 		Symbol: "ToolSet.PlannerTools()", Where: "agent/tools.go:2321",
-		Replacement: "ToolSet.CoordTools(fallbackRoot)",
+		Replacement: "ToolSet.CoordTools(root)",
 		Note: "规划者专用工具面（add_intent / kill_work / steer_work / graph_overview …）。" +
 			"其中 graph_overview 保留但归属改成「根 agent 的只读态势视图」，其余派发类工具由 delegate_task 取代。",
 	},

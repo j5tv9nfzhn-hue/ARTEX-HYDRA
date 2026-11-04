@@ -38,43 +38,54 @@ const (
 	ToolFinishTask    = "finish_task"
 )
 
+// coordinatorToolNames 是调度层自带、不参与 DB tools 表绑定的工具。
+// 它们必须无视历史行：旧库里若残留同名 system 行（或无绑定行），
+// ToolResolve 的"有行但未绑定 → 丢弃"会把根的派发能力裁掉。
+var coordinatorToolNames = map[string]bool{
+	ToolDelegateTask:  true,
+	ToolSendToAgent:   true,
+	ToolWaitForAgents: true,
+	ToolAgentsGraph:   true,
+	ToolStopAgent:     true,
+	ToolSubmitReport:  true,
+	ToolFinishTask:    true,
+}
+
+// IsCoordinatorTool 报告 name 是否由调度层注入、应绕过 DB 工具表过滤。
+func IsCoordinatorTool(name string) bool {
+	return coordinatorToolNames[strings.TrimSpace(name)]
+}
+
 // waitWindowDefault 是 wait_for_agents 的单次等待窗口。
 // 取值理由是"比一次典型子任务短、比一次模型调用长"：太短会频繁返回而让模型
 // 以为子任务卡住，太长则一次卡顿就把父级的上下文预算耗在一个空等上。
 const waitWindowDefault = 5 * time.Minute
 
-// CoordTools 返回协调器工具集（根 agent 用）。
+// CoordTools 返回协调器工具集的完整形态。
 //
-// 这些工具的 handler 只用 ctx 里的 Spawner，不碰 *ToolSet 的探索存储，
-// 因此是**方法值**而不是实例状态依赖——宿主可以用任意 *ToolSet 调它，
-// 也可以直接调用导出的 CoordToolSet(ts)（见下）。
-func (t *ToolSet) CoordTools(fallbackRoot bool) []actool.CoreTool {
+// 根与子共享 delegate/send/wait/graph/stop，差异只在生命周期出口：
+//   - 根：finish_task（结束整个任务）
+//   - 子：submit_report（只结束自己）
+//
+// 一个 agent 只有一种"我完事了"的出口，避免模型在两种之间犹豫。
+func (t *ToolSet) CoordTools(root bool) []actool.CoreTool {
 	out := []actool.CoreTool{
 		t.delegateTask(),
 		t.sendToAgent(),
 		t.waitForAgents(),
 		t.agentsGraph(),
-		t.submitReport(),
+		t.stopAgent(),
 	}
-	if fallbackRoot {
-		out = append(out, t.finishTask())
+	if root {
+		return append(out, t.finishTask())
 	}
-	return out
+	return append(out, t.submitReport())
 }
 
-// ChildCoordTools 返回子 agent 的协调器工具集：没有 finish_task（那是根的收尾），
-// 也没有 delegate 之外的编排权，但保留 spawn 能力以便递归分组（受 MaxDepth 限制）。
+// ChildCoordTools 返回子 agent 的协调器工具集：保留 spawn 能力以便递归分组
+// （受 MaxDepth 限制），但没有 finish_task（那是根的收尾）。
 func (t *ToolSet) ChildCoordTools() []actool.CoreTool {
-	return []actool.CoreTool{
-		t.delegateTask(),
-		t.sendToAgent(),
-		t.waitForAgents(),
-		t.agentsGraph(),
-		// 停单个子代理。子代理也拿得到：它能停自己派生的下级，
-		// 亲缘判定保证越不了级（见 isDescendantOf）。
-		t.stopAgent(),
-		t.submitReport(),
-	}
+	return t.CoordTools(false)
 }
 
 // ---------- delegate_task ----------

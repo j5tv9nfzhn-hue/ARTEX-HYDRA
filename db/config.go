@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -1050,6 +1051,30 @@ func (d *DB) SeedPromptIfEmpty(agentID int64, tmpl string) error {
 	}
 	_, err := d.SavePrompt(agentID, tmpl, "内置默认", "system")
 	return err
+}
+
+// RefreshPromptIfSystemDefault 在「当前版本仍由代码维护（updated_by=system）」
+// 且文本与代码默认值不同时，追加一版新的系统默认模板。用户通过 UI 保存过的
+// 提示词（updated_by=ui）永远不动。
+func (d *DB) RefreshPromptIfSystemDefault(agentID int64, tmpl string) (int, error) {
+	var curID int64
+	var text, by sql.NullString
+	err := d.QueryRow(`SELECT p.id, p.template_text, p.updated_by
+FROM agents a JOIN agent_prompts p ON p.id = a.current_prompt_id
+WHERE a.id = $1`, agentID).Scan(&curID, &text, &by)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	if !by.Valid || strings.TrimSpace(by.String) != "system" {
+		return 0, nil // 用户编辑过：保留
+	}
+	if strings.TrimSpace(text.String) == strings.TrimSpace(tmpl) {
+		return 0, nil
+	}
+	return d.SavePrompt(agentID, tmpl, "内置默认随代码更新", "system")
 }
 
 // ResetPromptToDefault appends the code-default template as a new version and
