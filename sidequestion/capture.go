@@ -162,6 +162,7 @@ func (p *boundProvider) Stream(ctx context.Context, req llm.CompletionRequest) i
 		acc := llm.NewAccumulator()
 		failed := false
 		complete := false
+		stopped := false
 		for ev, err := range p.inner.Stream(ctx, req) {
 			if err != nil {
 				failed = true
@@ -172,8 +173,21 @@ func (p *boundProvider) Stream(ctx context.Context, req llm.CompletionRequest) i
 				}
 			}
 			if !yield(ev, err) {
-				return
+				stopped = true
+				break
 			}
+		}
+		// 消费方提前退出（最常见的是上层 break / 取消）：循环被中断，下面的
+		// 「流走完」分支永远到不了。这里必须自己补一个终态 checkpoint，否则
+		// 这一轮在追问面板上只留下「请求发出去了」的记录而没有收尾，
+		// 面板看到的最后状态落后于实际发生的事。
+		//
+		// req 只在成功分支被 append，所以这份快照天然不含半成品回复——
+		// TestSnapshotExcludesPartialStreamAndSelectsPoolMember 守的正是这一点：
+		// 中断的流绝不许把半截正文写进 checkpoint。
+		if stopped {
+			c.save(req, p.model)
+			return
 		}
 		if !failed && complete && ctx.Err() == nil {
 			msg := acc.Message()
