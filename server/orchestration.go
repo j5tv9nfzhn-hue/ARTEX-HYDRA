@@ -11,6 +11,7 @@ import (
 
 	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
+	"github.com/Autumn-27/artex/traffic"
 	"github.com/Autumn-27/norma/permission"
 	actool "github.com/Autumn-27/norma/tool"
 )
@@ -525,9 +526,28 @@ func (s *Server) deriveTaskStatus(t *Task) string {
 func (s *Server) seedOrchestrationTools() {
 	// 第六阶段：工具面精简为官方 25 个。
 	// 1. 不再 seed 任务编排 / 平台 / 软件分析类工具；
-	// 2. 一次性净化 tools 表中不在官方白名单内的 system 工具行，
+	// 2. 一次性净化 tools 表中不在保留名单内的 system 工具行，
 	//    防止历史行（SeedTool 是上抛式写入）继续对模型可见。
-	n, err := s.m.pg.PurgeNonOfficialTools(agent.OfficialToolKeys())
+	//
+	// 保留名单**以本次启动实际 seed 进 tools 表的集合为准**，官方白名单只作兜底。
+	// 只按手写的 25 个 key 删会删掉正在使用的工具 —— 白名单与代码一旦漂移，
+	// 表现就是「刚 seed 进来就被删」，而且只留下一行「工具面已精简：删除 N 个」，
+	// 没有任何报错。实测漂移了两处：
+	//   · human_verification / _capabilities / _solve：经 tools_concurrency.go
+	//     注册进 builtinToolsByAgent()，是「目标挂了人机验证」这条路的唯一解；
+	//   · traffic_search / traffic_get / traffic_blob：traffic.SeedToolMetas()
+	//     每次启动 seed，是流量证据子系统唯一进 tools 表的入口，被删后
+	//     finding_workflow.go 里绑定 worker/reporter 的 SQL 全部落空。
+	// 改成以代码为准之后，白名单再漏也不会把正在用的工具删掉。
+	keep := make([]string, 0, 32)
+	keep = append(keep, agent.OfficialToolKeys()...)
+	for _, seed := range agent.BuiltinToolSeeds() {
+		keep = append(keep, seed.Key)
+	}
+	for _, meta := range traffic.SeedToolMetas() {
+		keep = append(keep, meta.Name())
+	}
+	n, err := s.m.pg.PurgeNonOfficialTools(keep)
 	if err != nil {
 		log.Printf("[tools] 工具面净化失败: %v", err)
 		return

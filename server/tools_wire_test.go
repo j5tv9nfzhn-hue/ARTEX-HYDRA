@@ -87,19 +87,30 @@ func TestWireTools(t *testing.T) {
 		t.Error("worker lost record_fact")
 	}
 	// SDK generic tools aren't seeded → ToolResolve passes them through unchanged
-	// (same object, original description — not decorated), except the by-design
-	// platform note (#9) appended on non-bash platforms (Windows → PowerShell).
+	// (same object, original description). Two decorations ARE by design and are
+	// therefore part of the expected string:
+	//   1. 平台环境提示 platformShellNote (#9)，非 bash 平台（Windows → PowerShell）追加
+	//   2. 【写文件】指引 bashWriteNote，按「这个 agent 实际拿到的工具集」生成 ——
+	//      worker 默认被裁掉 Write/Edit，写死文案会让模型去调不存在的工具。
+	// 除这两条外不得再有任何装饰：任何第三处改写都说明又有人在全局改 SDK 工具描述。
 	// No startup prune touches non-catalog rows, so future user-defined custom
 	// tools survive too.
 	if bash, ok := worker["Bash"]; !ok {
 		t.Error("worker lost Bash (should pass through)")
-	} else if want := actool.NewBash().Description() + platformShellNote(); bash.Description() != want {
-		t.Errorf("Bash should pass through undecorated (plus platform note #9), got %q want %q", bash.Description(), want)
+	} else if want := actool.NewBash().Description() + bashWriteNote(base) + platformShellNote(); bash.Description() != want {
+		t.Errorf("Bash should carry only the two by-design notes, got %q want %q", bash.Description(), want)
 	}
-	// Planner now has record_fact by default for its own evidence-backed findings.
+	// 第六阶段（626bda05）把 PlannerTools 收敛成与上游逐项一致的 20 个，其中不含
+	// record_fact —— 记录事实是 mainagent（root 编排者）的职责，rootTmpl 里要求
+	// 沉淀结论的正是它。这里守住的是「planner 面不被悄悄加回写工具」，以及
+	// 「写事实的能力没有整体消失」：后者由 mainagent 这一侧的断言保证。
 	planner := names(agent.ToolResolve(ctx, "planner", base))
-	if _, ok := planner["record_fact"]; !ok {
-		t.Error("planner lost default record_fact binding")
+	if _, ok := planner["record_fact"]; ok {
+		t.Error("planner regained record_fact; 第六阶段的 planner 面不应含写工具")
+	}
+	mainagent := names(agent.ToolResolve(ctx, "mainagent", base))
+	if _, ok := mainagent["record_fact"]; !ok {
+		t.Error("mainagent lost record_fact —— rootTmpl 明确要求编排者用它沉淀结论")
 	}
 
 	// Edit description + add a default to a scalar param, then confirm the resolved

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"net"
 	"strings"
 	"sync"
 	"testing"
@@ -495,7 +496,13 @@ func TestTaskLLMStreamSurfacesTransientAfterRetriesExhausted(t *testing.T) {
 	defer withZeroRetryBackoff()()
 	provider := &flakyThenOKProvider{
 		failCount: 99, // never recovers
-		failErr:   errors.New("dial tcp: connection reset by peer"),
+		// 必须是真正的 net.Error。llmclass 对传输层故障是**按类型**判定的
+		// （ClassifyWith 里 errors.As(err, &net.Error) → VerdictRetry），
+		// 不是按错误文案匹配；用 errors.New 伪造一句 "connection reset by peer"
+		// 会走到 code==0 的默认分支，被判成 VerdictSwitch（换供应商）而不是原地重试，
+		// 于是 provider 只被调用 1 次、重试逻辑根本没被触发。
+		// 见 llmclass.TestClassifyTransportFailure 对同一语义的约定。
+		failErr: &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection reset by peer")},
 	}
 	hooks := taskLLMStreamHooks{
 		current: func() (taskLLMSelection, error) {

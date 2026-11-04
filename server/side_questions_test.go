@@ -504,6 +504,16 @@ func TestSideRestoredWorkerRuntimePublishesNewCheckpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// 真正模拟一次「进程重启」：先把任务从管理器的内存表里摘掉，让它只能从磁盘重载。
+	//
+	// restoreTaskRuntimes 遍历的是 LoadExisting 的返回值，而 LoadExisting 是
+	// 「增量补载」语义 —— m.tasks 里已有的条目会被 `continue` 整批跳过。所以
+	// 刚 CreateTask 出来的任务如果留在内存表里，就永远走不到 deadline 协调器，
+	// engine.runtimes[taskID] 也就不会被注册（启动后拿不到 runtime）。
+	// 生产冷启动时 m.tasks 本来就是空的，所以「先摘掉再 restore」正是真实重启的形态。
+	f.m.mu.Lock()
+	delete(f.m.tasks, task.ID)
+	f.m.mu.Unlock()
 	// Exercise the production startup path, including the deadline coordinator
 	// which registers the shared runtime before the worker loops.
 	f.s.restoreTaskRuntimes()

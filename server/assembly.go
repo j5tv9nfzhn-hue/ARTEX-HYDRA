@@ -687,6 +687,39 @@ func seedPrompts(pg *db.DB) {
 // tool-assembly time each built-in tool is filtered by its agent binding / enabled
 // flag and, if kept, wrapped so the model sees the DB-overridden description/schema
 // and 缺省入参 get injected. MCP/skill/host tools have no row and pass through.
+// bashWriteNote 按「这个 agent 实际拿到的工具集」生成 Shell 描述末尾的写文件指引，
+// 而不是在全局文案里写死。
+//
+// worker 默认被裁掉 Write / Edit / apply_patch（见 agent/worker.go 的 trimSDK），
+// 但上一版全局文案写着「改用 Read / Grep / Glob / Edit」，模型照着去调不存在的
+// Write，日志里只留下一句 Error: unknown tool "Write"——文案与工具面不一致，
+// 是这个错误的唯一来源。所以这里先看工具集里到底有没有，再决定写「用它们」
+// 还是「一律在 Shell 里自己写」。
+//
+// 抽成函数是为了让 tools_wire_test.go 能复用同一份口径，而不是把文案抄一份到测试里。
+func bashWriteNote(tools []actool.CoreTool) string {
+	hasWrite, hasEdit := false, false
+	for _, t := range tools {
+		switch t.Name() {
+		case "Write":
+			hasWrite = true
+		case "Edit", "MultiEdit":
+			hasEdit = true
+		}
+	}
+	if !hasWrite && !hasEdit {
+		return "\n\n【写文件】本 agent 没有写文件工具：新建或修改文件一律在本 Shell 里用 python 或重定向完成，不要调用工具表里没有的写入工具。"
+	}
+	names := make([]string, 0, 2)
+	if hasWrite {
+		names = append(names, "Write")
+	}
+	if hasEdit {
+		names = append(names, "Edit / MultiEdit")
+	}
+	return "\n\n【写文件】本 agent 装有 " + strings.Join(names, "、") + "：新建或修改文件优先直接调用它们，不必绕 Shell。"
+}
+
 func wireTools(pg *db.DB, domainReg map[string]actool.CoreTool) {
 	agent.FindingTrafficBindingEnabled = func() bool { return pg.GetBool(settingAgentTrafficBinding, false) }
 	// 复核成本闸门：阈值与采样比例由系统设置页配置，未配置时回退默认口径
@@ -814,26 +847,7 @@ func wireTools(pg *db.DB, domainReg map[string]actool.CoreTool) {
 		// 但上一版全局文案写着「改用 Read / Grep / Glob / Edit」，模型照着去调不存在的
 		// Write，日志里只留下一句 Error: unknown tool "Write"——文案与工具面不一致，
 		// 是这个错误的唯一来源。
-		hasWrite, hasEdit := false, false
-		for _, t := range out {
-			switch t.Name() {
-			case "Write":
-				hasWrite = true
-			case "Edit", "MultiEdit":
-				hasEdit = true
-			}
-		}
-		writeNote := "\n\n【写文件】本 agent 没有写文件工具：新建或修改文件一律在本 Shell 里用 python 或重定向完成，不要调用工具表里没有的写入工具。"
-		if hasWrite || hasEdit {
-			names := make([]string, 0, 2)
-			if hasWrite {
-				names = append(names, "Write")
-			}
-			if hasEdit {
-				names = append(names, "Edit / MultiEdit")
-			}
-			writeNote = "\n\n【写文件】本 agent 装有 " + strings.Join(names, "、") + "：新建或修改文件优先直接调用它们，不必绕 Shell。"
-		}
+		writeNote := bashWriteNote(out)
 		for i, t := range out {
 			if t.Name() == "Bash" {
 				out[i] = agent.DecorateTool(t, t.Description()+writeNote, t.InputSchema())

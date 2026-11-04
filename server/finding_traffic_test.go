@@ -90,7 +90,17 @@ func TestFindingTrafficToolUpgradePreservesCustomization(t *testing.T) {
 		t.Fatal(err)
 	}
 	custom := json.RawMessage(`{"type":"object","properties":{"evidence":{"type":"string","description":"user evidence instructions"}},"required":["evidence"]}`)
-	for _, key := range []string{"report_finding", "update_finding_report", "get_finding_traffic"} {
+	// 只保护「tools 表里确实有行」的工具。
+	//
+	// update_finding_report 与 get_finding_traffic 都不在这个集合里，但原因不同：
+	//   · update_finding_report 是第六阶段（626bda05）从模型可见工具面上摘掉的：
+	//     不在 BuiltinToolSeeds、不在官方白名单，tools 表不会有它的行。
+	//     报告写入已合并进 report_finding 一次完成。
+	//   · get_finding_traffic / bind_finding_traffic / traffic_* 走内存注册
+	//     （AllDomainTools + AugmentTools），不经 tools 表 seed，因此
+	//     pg.GetTool 查不到 —— 它们的绑定由 finding_workflow.go 的 SQL 直接改。
+	// 继续在这里等它们出现，等于要求一个被有意删除（或根本不走这条路）的工具回来。
+	for _, key := range []string{"report_finding"} {
 		old, err := pg.GetTool(key)
 		if err != nil || old == nil {
 			t.Fatal("missing tool", key, err)
@@ -107,7 +117,7 @@ func TestFindingTrafficToolUpgradePreservesCustomization(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.seedFindingTrafficTools()
-	for key, property := range map[string]string{"report_finding": "traffic_refs", "update_finding_report": "evidence_version"} {
+	for key, property := range map[string]string{"report_finding": "traffic_refs"} {
 		tool, err := pg.GetTool(key)
 		if err != nil || tool == nil {
 			t.Fatal(err)
@@ -123,18 +133,20 @@ func TestFindingTrafficToolUpgradePreservesCustomization(t *testing.T) {
 			t.Fatalf("custom configuration overwritten: %+v", tool)
 		}
 	}
-	reader, _ := pg.GetTool("get_finding_traffic")
-	if reader.Enabled || !contains(reader.Agents, "reporter") {
-		t.Fatal("reader should be bound without enabling it")
-	}
-	if err := pg.RemoveAgentFromTool("reporter", "get_finding_traffic"); err != nil {
-		t.Fatal(err)
-	}
-	s.seedFindingTrafficTools()
-	reader, _ = pg.GetTool("get_finding_traffic")
-	if contains(reader.Agents, "reporter") {
-		t.Fatal("restart overwrote user's unbinding")
-	}
+	// 这里原本断言「seedFindingTrafficTools 把 reporter 绑到 get_finding_traffic
+	// 上，且用户解绑后重启不再覆盖」。
+	//
+	// 现在 get_finding_traffic 在 tools 表里**没有行**——它和 bind_finding_traffic
+	// 一样属于内存注册工具（AllDomainTools + AugmentTools），不经 tools 表 seed。
+	// ToolResolve 对「表里没有行」的工具是原样放行、完全不由表控制的
+	// （assembly.go: if !known { ... visibility untouched }），因此
+	// seedFindingTrafficTools 末尾那句 AddAgentToToolBinding 对它永远是空操作，
+	// 而 RemoveAgentFromTool 也删不到任何东西。继续断言它的绑定结果，是给一段
+	// 不可达的行为写回归。
+	//
+	// 「只绑一次、且尊重用户解绑」这条性质本身仍然要守，改由
+	// TestFindingWorkflowMigrationPreservesUserConfiguration 在**真正有行**的
+	// traffic_search 上覆盖。
 	if got, _ := pg.CurrentPrompt(worker.ID); got != "USER CUSTOM PROMPT" {
 		t.Fatal("custom prompt replaced")
 	}

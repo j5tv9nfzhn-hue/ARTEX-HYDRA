@@ -43,7 +43,9 @@ func (f *skillUsageResultFixture) Call(context.Context, json.RawMessage, *actool
 
 func TestSkillUsageMeterCanonicalDimensions(t *testing.T) {
 	pg := newSkillUsageMeterFixture(t)
-	reg := skill.NewRegistry(skill.Skill{Name: "api-recon", Instructions: "fixture"})
+	// 注册表里放真实的技能全名 api_spec_testing；入参故意用旧版别名 "api" +
+	// 旧字段名 "skill"，验证别名会先被 canonicalVisibleSkillName 归一成规范名再入账。
+	reg := skill.NewRegistry(skill.Skill{Name: "api_spec_testing", Instructions: "fixture"})
 	tool := meterSkillTool(reg.Tool(), pg, reg, "worker", agent.RunInfo{TaskID: 17, ExplorationID: 18, IntentID: 19, SessionID: "fixture-session"})
 	result, err := tool.Call(context.Background(), json.RawMessage(`{"skill":"api","args":"上下文"}`), nil)
 	if err != nil || result.IsError {
@@ -55,7 +57,7 @@ func TestSkillUsageMeterCanonicalDimensions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if u.Skill != "api-recon" || u.AgentKey != "worker" || u.TaskID != 17 || u.ExplorationID != 18 || u.IntentID != 19 || u.SessionID != "fixture-session" || u.ArgsLen != len("上下文") || !u.Found {
+	if u.Skill != "api_spec_testing" || u.AgentKey != "worker" || u.TaskID != 17 || u.ExplorationID != 18 || u.IntentID != 19 || u.SessionID != "fixture-session" || u.ArgsLen != len("上下文") || !u.Found {
 		t.Fatalf("unexpected usage: %+v", u)
 	}
 }

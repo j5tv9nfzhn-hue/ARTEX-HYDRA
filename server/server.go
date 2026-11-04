@@ -458,6 +458,13 @@ func (s *Server) restoreTaskRuntimes() {
 	m := s.m
 	// reload tasks persisted on disk so the task list survives a restart; every
 	// non-terminal task is loaded paused (a restart never auto-resumes runs).
+	//
+	// 注意这里遍历的是 LoadExisting 的返回值，不是 m.List()。LoadExisting 是
+	// 「增量补载」语义（m.tasks 里已有的条目会被跳过），而本函数的语义是
+	// 「一次冷启动的恢复」：把所有非终态任务置为暂停并补上 deadline 协调器。
+	// 换成 m.List() 会把调用时才新建的任务也一并暂停，语义就变成了「随时
+	// 冻结全部任务」—— 生产上只在启动时调用所以看不出来，但任何复用本函数的
+	// 地方都会把刚创建的任务立刻冻住。
 	for _, t := range m.LoadExisting() {
 		lifecycle := t.lifecycleSnapshot()
 		// clear stale 'running' intents from a prior crash/restart (no live worker

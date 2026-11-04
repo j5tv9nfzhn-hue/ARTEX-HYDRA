@@ -179,7 +179,17 @@ func TestFindingWorkflowAutoHintToPlannerAndSetting(t *testing.T) {
 	workflowCall(t, ctx, bind, input, true)
 	// Turning binding off must still save a confirmed finding from an already
 	// assembled tool, even if the model sends the old optional evidence fields.
-	offResult := workflowCall(t, ctx, report, map[string]any{"vulnclass": "TEST", "severity": "low", "summary": "off", "evidence_hint_id": hints.IDs[0]}, false)
+	// 关掉自动绑定只是不再要求 traffic_refs，反证闭环四字段与 CVSS 八项仍是
+	// report_finding 的必填面，不会随开关一起消失。这里复用上面那份合格样本，
+	// 只把 summary 换掉以便与上一份区分 —— 继续传「旧的四个可选字段」会被
+	// stage=tool_validate 拦下，与本用例要验证的「关开关仍能入库」不是一回事。
+	offPayload := make(map[string]any, len(payload)+2)
+	for k, v := range payload {
+		offPayload[k] = v
+	}
+	offPayload["summary"] = "off"
+	offPayload["evidence_hint_id"] = hints.IDs[0]
+	offResult := workflowCall(t, ctx, report, offPayload, false)
 	var offRecord struct {
 		db.RecordedFinding
 		EvidenceStatus string `json:"evidence_status"`
@@ -191,7 +201,15 @@ func TestFindingWorkflowAutoHintToPlannerAndSetting(t *testing.T) {
 	if offRecord.FindingID <= 0 || len(offRecord.Traffic.Bindings) != 0 || offRecord.EvidenceStatus != "not_bound" || !strings.Contains(offRecord.EvidenceNote, "已关闭") {
 		t.Fatal("disabled binding discarded finding or bound evidence", offResult)
 	}
-	workflowCall(t, ctx, report, map[string]any{"vulnclass": "TCP", "severity": "low", "summary": "no packet needed"}, false)
+	// 同上：无包场景只豁免流量引用，不豁免反证闭环必填面。
+	noPacket := make(map[string]any, len(payload)+1)
+	for k, v := range payload {
+		noPacket[k] = v
+	}
+	noPacket["vulnclass"] = "TCP"
+	noPacket["summary"] = "no packet needed"
+	delete(noPacket, "evidence_hint_id") // 无包场景本就不该带引用
+	workflowCall(t, ctx, report, noPacket, false)
 	if notices != 3 {
 		t.Fatal("optional no-packet report failed")
 	}
@@ -211,7 +229,16 @@ func TestFindingWorkflowAutoHintToPlannerAndSetting(t *testing.T) {
 func TestFindingWorkflowMigrationPreservesUserConfiguration(t *testing.T) {
 	s, _, _ := trafficEvidenceServer(t)
 	pg := s.m.pg
-	for _, key := range []string{"report_finding", "add_hint", "add_task_hint", "traffic_search", "traffic_get", "traffic_blob", "bind_finding_traffic", "get_finding_traffic"} {
+	// 只列 tools 表里**确实有行**的工具。两处已经不存在，原因不同：
+	//   · add_task_hint：第六阶段（626bda05）从模型可见工具面上摘掉，既不在
+	//     BuiltinToolSeeds 也不在白名单，表里不会有它的行；
+	//   · bind_finding_traffic / get_finding_traffic：走内存注册
+	//     （AllDomainTools + AugmentTools），不经 tools 表 seed。
+	//     ToolResolve 对「表里没有行」的工具原样放行、不由表控制，所以本用例
+	//     要验证的「迁移不覆盖用户配置」对它们根本无从谈起。
+	// traffic_search / traffic_get / traffic_blob 由 traffic.SeedToolMetas()
+	// 正常 seed，是这条迁移链路真正作用的对象，必须保留。
+	for _, key := range []string{"report_finding", "add_hint", "traffic_search", "traffic_get", "traffic_blob"} {
 		old, err := pg.GetTool(key)
 		if err != nil || old == nil {
 			t.Fatal("missing tool", key, err)
@@ -222,7 +249,7 @@ func TestFindingWorkflowMigrationPreservesUserConfiguration(t *testing.T) {
 		})
 	}
 	custom := json.RawMessage(`{"type":"object","properties":{"text":{"type":"string","description":"USER TEXT"},"hints":{"type":"array","items":{"type":"object","properties":{"text":{"type":"string","description":"USER ITEM"}}}}},"required":["text"]}`)
-	for _, key := range []string{"report_finding", "add_hint", "add_task_hint"} {
+	for _, key := range []string{"report_finding", "add_hint"} {
 		if err := pg.UpdateTool(key, "USER DESCRIPTION", custom, json.RawMessage(`["custom-agent"]`), false); err != nil {
 			t.Fatal(err)
 		}
@@ -241,7 +268,7 @@ func TestFindingWorkflowMigrationPreservesUserConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.seedFindingWorkflowTools()
-	for _, key := range []string{"report_finding", "add_hint", "add_task_hint"} {
+	for _, key := range []string{"report_finding", "add_hint"} {
 		row, _ := pg.GetTool(key)
 		if row.Enabled || row.Description != "USER DESCRIPTION" || len(row.Agents) != 1 || row.Agents[0] != "custom-agent" {
 			t.Fatal("changed user tool configuration", key)
@@ -288,12 +315,41 @@ func TestFindingWorkflowReporterBindsBeforeWritingReport(t *testing.T) {
 	}
 	seedServerEvidenceFlow(t, s, "reporter-proof", []byte("local proof payload"))
 	seedServerEvidenceFlow(t, s, "reporter-baseline", []byte("local normal response"))
-	tools, def, cleanup := agent.AugmentTools(ctx, "reporter", nil)
+	// 两处与现状对齐的改动：
+	//
+	// 1) 不再用 "reporter"。预置「报告撰写」agent 的 seedReporterAgent() 调用被
+	//    第六阶段（626bda05）删除，库里不再有 reporter 这个 agent，传它的 key
+	//    只会拿到 0 个工具和空引导。流量绑定工作流本身仍然活着
+	//    （findingWorkflowTools 对每个带 report_finding 的 agent 都注入），
+	//    所以改用仍然存在的 planner 来守这条注入。
+	//
+	// 2) 基础工具列表要显式带上宿主工具。traffic_* / bind_finding_traffic /
+	//    get_finding_traffic / update_finding_report 都不在任何 agent 的
+	//    ToolSet 里，AugmentTools 传 nil 时一个也拿不到（实测 0 个工具）。
+	//    这里按 C1 的惯例显式拼进去，本用例要跑的证据→绑定→写报告链路才成立。
+	//
+	// 用 worker 而不是 planner：traffic_search / traffic_get / traffic_blob 由
+	// traffic.SeedToolMetas() 以 agents=["worker"] 落库，ToolResolve 对有库行的
+	// 工具按 agents 过滤，换成别的 agent 会先把它们挡掉，后面的链路根本跑不到。
+	ts := agent.NewToolSet(nil, "worker")
+	base := append(ts.WorkerTools(), s.m.traffic.Tools()...)
+	base = append(base, s.toolGetTaskNodeDetail(), s.toolBindFindingTraffic(),
+		s.toolGetFindingTraffic(), s.toolUpdateFindingReport())
+	tools, def, cleanup := agent.AugmentTools(ctx, "worker", base)
 	defer cleanup()
-	if !strings.Contains(def.FindingGuidance, "报告前自动关联流量") || !strings.Contains(def.FindingGuidance, "绑定成功后重新调用") {
-		t.Fatal("reporter did not receive binding workflow")
+	// 这里原先断言的两串文案（"报告前自动关联流量" / "绑定成功后重新调用"）在全仓
+	// 只出现在本文件里——实现侧从来没产出过它们，断言是对着一份不存在的文案写的。
+	// 真正由 findingWorkflowTools 注入、且承载同样意图的是下面这两条：
+	//   1. 自动绑定由报告 Agent 在「漏洞入库后、编写报告前」完成（即"报告前关联流量"）；
+	//   2. 引用只接受**已核实**的 ID（防止模型拿域名/时间猜 ID 后宣称绑定成功）。
+	// 断言改成实际注入的口径，守的仍是"reporter 必须拿到绑定工作流"这件事。
+	if !strings.Contains(def.FindingGuidance, "自动绑定默认由报告 Agent 在漏洞入库后、编写报告前完成") ||
+		!strings.Contains(def.FindingGuidance, "只接受**已核实**的引用") {
+		t.Fatalf("reporter did not receive binding workflow, got: %q", def.FindingGuidance)
 	}
-	for _, name := range []string{"traffic_search", "traffic_get", "get_task_worker_trace", "get_task_node_detail", "bind_finding_traffic", "get_finding_traffic", "update_finding_report"} {
+	// get_task_worker_trace 不再列在这里：它在官方白名单内有库行，agents 绑定的是
+	// planner / mainagent，worker 解析不到；而本用例跑的证据链路也用不到它。
+	for _, name := range []string{"traffic_search", "traffic_get", "get_task_node_detail", "bind_finding_traffic", "get_finding_traffic", "update_finding_report"} {
 		workflowTool(t, tools, name)
 	}
 	finding, _ := pg.GetFinding(f.FindingID)
@@ -326,7 +382,7 @@ func TestFindingWorkflowReporterBindsBeforeWritingReport(t *testing.T) {
 	if r := request("PUT", "/api/settings", `{"agent_traffic_binding":false}`); r.Code != 200 {
 		t.Fatal(r.Code, r.Body)
 	}
-	off, offDef, closeOff := agent.AugmentTools(ctx, "reporter", nil)
+	off, offDef, closeOff := agent.AugmentTools(ctx, "planner", base)
 	defer closeOff()
 	if offDef.FindingGuidance != "" {
 		t.Fatal("off reporter still receives auto-binding guidance")

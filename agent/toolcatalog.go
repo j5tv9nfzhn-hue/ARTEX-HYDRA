@@ -77,6 +77,15 @@ func OfficialToolKeys() []string {
 		"add_company_scope", "add_task_scope",
 		// 发现 / 事实写回
 		"report_finding", "record_fact",
+		// 人机验证（verification ToolSet 的三个入口）。
+		//
+		// 这三个工具由 agent/tools_verification.go、verification_solvers.go、
+		// verification_helper.go 定义，并经 tools_concurrency.go 注册进
+		// builtinToolsByAgent()，因此 BuiltinToolSeeds() 每次启动都会 seed 它们。
+		// 第六阶段精简工具面时白名单漏掉了这三项，PurgeNonOfficialTools 于是把
+		// 刚 seed 进来的行立刻删掉 —— 模型面对需要过人机验证的目标时拿不到工具。
+		// 白名单必须与 BuiltinToolSeeds() 保持一致，否则就是「注册即删除」。
+		"human_verification", "human_verification_capabilities", "human_verification_solve",
 	}
 }
 

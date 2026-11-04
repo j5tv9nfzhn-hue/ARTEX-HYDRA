@@ -16,7 +16,6 @@ import (
 
 	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/intercept"
 	"github.com/Autumn-27/norma/llm"
 	actool "github.com/Autumn-27/norma/tool"
 )
@@ -157,12 +156,21 @@ func TestRetestActiveStatusLifecycle(t *testing.T) {
 	}
 }
 
-func TestRetestHTTPThroughConversationAndTools(t *testing.T) {
+// 第六阶段之后复测不再持有任何工具：上下文由引擎在会话开头注入，结论由引擎在会话
+// 收敛时解析最终回复里的 JSON 落库（见 db/finding_retests.go 的 InitialMessage 与
+// server/verdict_capture.go）。用例因此改为驱动「一次收敛的对话」，不再模拟
+// get_finding_retest_context / record_finding_retest_result 的工具往返。
+func TestRetestHTTPThroughConversation(t *testing.T) {
 	s, fid := newRetestServer(t)
 	entered, release := make(chan struct{}), make(chan struct{})
 	var calls atomic.Int32
 	setRetestProvider(s, retestProvider{complete: func(ctx context.Context, req llm.CompletionRequest) (llm.Message, string, llm.Usage, error) {
 		n := calls.Add(1)
+		serialized, _ := json.Marshal(req.Messages)
+		// 引擎必须把「复测哪个漏洞」注入到会话里——这是新契约里模型唯一的上下文来源。
+		if !bytes.Contains(serialized, []byte("请复测漏洞 #"+strconv.FormatInt(fid, 10))) {
+			t.Error("agent did not receive the retest instruction")
+		}
 		if n == 1 {
 			close(entered)
 			select {
@@ -171,18 +179,8 @@ func TestRetestHTTPThroughConversationAndTools(t *testing.T) {
 				return llm.Message{}, "", llm.Usage{}, ctx.Err()
 			}
 		}
-		name, input := "get_finding_retest_context", `{}`
-		if n == 2 {
-			serialized, _ := json.Marshal(req.Messages)
-			if !bytes.Contains(serialized, []byte("original proof")) {
-				t.Error("agent did not receive source evidence")
-			}
-			name, input = "record_finding_retest_result", `{"verdict":"inconclusive","summary":"缺少测试登录态","evidence":"已检查原证据；当前缺少有效登录态，无法确认修复状态。"}`
-		}
-		if n > 2 {
-			return llm.Message{Role: llm.RoleAssistant, Content: []llm.ContentBlock{llm.TextBlock("复测结论已保存")}}, "end_turn", llm.Usage{}, nil
-		}
-		return llm.Message{Role: llm.RoleAssistant, Content: []llm.ContentBlock{{Type: llm.BlockToolUse, ID: strconv.Itoa(int(n)), Name: name, Input: json.RawMessage(input)}}}, "tool_use", llm.Usage{}, nil
+		return llm.Message{Role: llm.RoleAssistant, Content: []llm.ContentBlock{llm.TextBlock(
+			`{"verdict":"inconclusive","summary":"缺少测试登录态","evidence":"已检查原证据；当前缺少有效登录态，无法确认修复状态。"}`)}}, "end_turn", llm.Usage{}, nil
 	}})
 	w := retestRequest(s.startFindingRetest, "POST", fid, `{"notes":"仅验证原接口"}`)
 	if w.Code != 202 {
@@ -203,7 +201,7 @@ func TestRetestHTTPThroughConversationAndTools(t *testing.T) {
 	if err != nil || len(rows) != 1 || rows[0].Status != "completed" || rows[0].Verdict != "inconclusive" {
 		t.Fatalf("history=%+v err=%v", rows, err)
 	}
-	if calls.Load() != 3 {
+	if calls.Load() != 1 {
 		t.Fatal("unexpected LLM calls", calls.Load())
 	}
 	f, _ := s.m.pg.GetFinding(fid)
@@ -213,10 +211,6 @@ func TestRetestHTTPThroughConversationAndTools(t *testing.T) {
 	listing := retestRequest(s.listFindingRetests, "GET", fid, "")
 	if listing.Code != 200 || strings.Contains(listing.Body.String(), `"snapshot"`) {
 		t.Fatalf("history %d %s", listing.Code, listing.Body)
-	}
-	res, err := s.findingRetestTools()[1].Call(intercept.WithConvID(t.Context(), *rows[0].ConversationID), json.RawMessage(`{"verdict":"fixed","summary":"bad overwrite","evidence":"bad"}`), nil)
-	if err != nil || !res.IsError {
-		t.Fatal("sealed result accepted", res, err)
 	}
 }
 
@@ -266,7 +260,9 @@ func TestRetestFixedUpdatesFindingThroughConversation(t *testing.T) {
 	var calls atomic.Int32
 	setRetestProvider(s, retestProvider{complete: func(context.Context, llm.CompletionRequest) (llm.Message, string, llm.Usage, error) {
 		if calls.Add(1) == 1 {
-			return llm.Message{Role: llm.RoleAssistant, Content: []llm.ContentBlock{{Type: llm.BlockToolUse, ID: "fixed-result", Name: "record_finding_retest_result", Input: json.RawMessage(`{"verdict":"fixed","summary":"修复生效","evidence":"原触发条件失效，正常对照仍可用。"}`)}}}, "tool_use", llm.Usage{}, nil
+			// 新契约：结论写在最终文本回复里，由引擎解析落库，不再通过工具。
+			return llm.Message{Role: llm.RoleAssistant, Content: []llm.ContentBlock{llm.TextBlock(
+				`{"verdict":"fixed","summary":"修复生效","evidence":"原触发条件失效，正常对照仍可用。"}`)}}, "end_turn", llm.Usage{}, nil
 		}
 		return llm.Message{Role: llm.RoleAssistant, Content: []llm.ContentBlock{llm.TextBlock("结论已保存")}}, "end_turn", llm.Usage{}, nil
 	}})

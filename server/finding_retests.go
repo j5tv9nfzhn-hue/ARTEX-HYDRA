@@ -7,7 +7,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -106,17 +105,14 @@ func (s *Server) startFindingRetest(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 409, errFindingRetestAgentMissing)
 		return
 	}
-	for _, key := range []string{"get_finding_retest_context", "record_finding_retest_result"} {
-		t, err := pg.GetTool(key)
-		if err != nil {
-			writeErr(w, 500, err.Error())
-			return
-		}
-		if t == nil || !t.Enabled || !slices.Contains(t.Agents, a.Key) {
-			writeErr(w, 409, errFindingRetestToolRequired+key)
-			return
-		}
-	}
+	// 第六阶段之后这里不再校验复验工具。get_finding_retest_context /
+	// record_finding_retest_result 已随「工具面精简为官方 25 个」从工具面物理删除
+	// （见 verdict_capture.go 的设计说明）：上下文改由引擎在会话开头注入，结论改由
+	// 引擎在会话收敛时解析模型最终回复里的 JSON 落库，模型不再持有任何写结论的工具。
+	//
+	// 这段校验没跟着删，于是每次创建复验都会撞 409「请为复验智能体启用并连接工具」，
+	// 而那个工具在任何新装环境里都不存在 —— 整个复验功能等于被这一道闸门关死。
+	// 保留对复验智能体本身的启用校验（它确实还存在且可配置）。
 	if s.resolveChatAgent(&db.Conversation{AgentKey: a.Key}) == nil {
 		writeErr(w, 503, s.chatUnavailableReason())
 		return
