@@ -221,6 +221,13 @@ package_binary() {
     *) core_ext="" ;;
   esac
   cp "$binary" "$package_root/artex-rea-core${core_ext}"
+  # 用户入口 artex[.exe]：极简转发壳。artex → 终端 HARNESS，artex web → Web
+  # 控制台。壳必须与内核同目录分发，内核负责安装目录守卫等真正的启动逻辑。
+  if ! GOSUMDB="$ARTEX_GOSUMDB" CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
+      go build -trimpath -ldflags "-s -w -buildid=" \
+      -o "$package_root/artex${core_ext}" ./cmd/artex-launcher; then
+    die "编译用户入口 artex 失败"
+  fi
   # 启动监护脚本是正式入口；页面一键更新需要进程退出后由脚本重启。
   # 直接运行 artex-rea 不会自动重启，发布包仅包含对应系统的启动脚本。
   # 启动脚本必须真的能执行：start-lan.* 曾被 base64 文本覆盖，双击只会报

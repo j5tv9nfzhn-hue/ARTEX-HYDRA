@@ -111,12 +111,12 @@ ARTEX 由国内开发者 **Autumn-27** 创建并开源（[Autumn-27/ARTEX](https
 
 只发布一个纯 Go 单二进制（`CGO_ENABLED=0`），覆盖 Linux / macOS / Windows。同一份程序提供两种入口：
 
-| 入口 | 形态 | 适用场景 |
+| 入口 | 命令 | 适用场景 |
 | --- | --- | --- |
-| Web 控制台（默认） | 内嵌 Next.js 前端 + HTTP API，浏览器操作 | 看资产图、发现、审批、完整转录 |
-| 终端 HARNESS（`artex cli`） | 进程内直接驱动 coord 根 agent，不占端口、不起浏览器 | 绿色启动、脚本/CI、终端里连续下指令 |
+| 终端 HARNESS | `artex`（安装目录内直接运行） | 交互式 REPL / 脚本化跑任务，不占端口、不起浏览器 |
+| Web 控制台 | `artex web` 或双击 `start.bat` | 浏览器操作：LLM、Agent、Skill、MCP、预算、完整转录 |
 
-两种入口共用同一个 `data/`、`config.json` 与 LLM 配置：先用任一入口配置一次，另一个入口直接复用。
+两种入口共用同一个 `artex.db` 与 LLM 配置：**所有配置只在 Web 控制台做**，保存后终端 HARNESS 在下一回合自动生效，无需重启。
 
 **方式一：下载发行包**
 
@@ -124,22 +124,19 @@ ARTEX 由国内开发者 **Autumn-27** 创建并开源（[Autumn-27/ARTEX](https
 
 ```bat
 copy config.example.json config.json   & rem 可选：指定数据库文件位置，留空自动创建 artex.db
-start.bat                              & rem → http://localhost:8787
-artex-rea.exe cli -t https://example.com
+start.bat                              & rem → Web 控制台 http://localhost:8787
+artex                                  & rem → 终端 HARNESS（交互式）
+artex cli -t https://example.com       & rem → 带目标直接开跑
 ```
 
-Linux / macOS 用 `./start.sh`；终端 HARNESS 直接 `./artex-rea cli -t https://example.com`。
+Linux / macOS 用 `./start.sh` 启动 Web 控制台，`./artex` 启动终端 HARNESS。
 
-终端 HARNESS 支持环境变量快捷启动（CI 不需要任何交互）：
+终端 HARNESS 的两条硬约束：
 
-```bash
-export ARTEX_TARGET=https://example.com
-export ARTEX_INSTRUCTION="重点测试登录、越权与文件上传"
-export ARTEX_NONINTERACTIVE=1
-./artex-rea cli
-```
+- **只允许在安装目录内运行**：从其他目录启动会被拒绝，避免 `artex.db`、`credential.key` 散落到别处，也保证 CLI 与 Web 控制台读写同一份数据。
+- **不读取任何环境变量**：`ARTEX_TARGET` 等快捷启动变量已废弃；LLM 配置（含 API Key）只在 Web 控制台「系统 → LLM」录入，CLI 首次运行时若没有已启用的配置会明确提示。
 
-LLM 可沿用 Web 控制台里已保存的配置；纯环境变量启动时设置 `ANTHROPIC_API_KEY` 或 `OPENAI_API_KEY` 加 `ARTEX_LLM_MODEL`（可选 `ARTEX_LLM_PROVIDER` / `ARTEX_LLM_BASE_URL`）。交互模式下直接输入文字即给根 agent 下指令，`/help` 查看命令，退出码 `0` 无漏洞、`2` 有漏洞、`1` 失败。
+交互模式下直接输入文字即给根 agent 下指令，`/help` 查看命令，`/config` 显示配置入口。退出码 `0` 完成无漏洞、`2` 完成有漏洞、`1` 失败。
 
 **方式二：源码构建**（Go 1.26 + Node.js 22 LTS）
 

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/agent"
+	"github.com/Autumn-27/artex/config"
 	"github.com/Autumn-27/artex/db"
 )
 
@@ -67,8 +68,8 @@ type CLIResult struct {
 }
 
 var (
-	errCLINoLLM    = errors.New("未配置可用的 LLM：请设置 ANTHROPIC_API_KEY / OPENAI_API_KEY 与 ARTEX_LLM_MODEL（可选 ARTEX_LLM_PROVIDER / ARTEX_LLM_BASE_URL），或先在 Web 控制台配置一次后复用同一 data 目录")
-	errCLINoTarget = errors.New("缺少目标：请用 -t/--target 或环境变量 ARTEX_TARGET 指定授权目标")
+	errCLINoLLM    = errors.New("尚未配置可用的 LLM：请在 Web 控制台「系统 → LLM」添加并启用一个配置（终端 HARNESS 只从 artex.db 读取配置，不再读取环境变量）")
+	errCLINoTarget = errors.New("缺少目标：请用 -t/--target 指定授权目标，例如 artex cli -t https://example.com")
 	errCLINotCoord = errors.New("终端 HARNESS 需要 coord 编排模式（ARTEX_SCHED=coord）；当前是 legacy 模式，请去掉 ARTEX_SCHED=legacy")
 )
 
@@ -90,7 +91,10 @@ func (s *Server) RunCLI(ctx context.Context, opts CLIOptions) (CLIResult, error)
 	}
 	pr := &cliPrinter{w: out, color: opts.Color, verbose: opts.Verbose}
 
-	if !s.cliLLMReady() {
+	// LLM 只认 Web 控制台写入的激活配置（loadLLMConfig 直读 artex.db）。
+	// 这里不看 s.llmOn：那个标志可能来自 env 兜底，而终端 HARNESS 已禁用
+	// 环境变量配置——没有 DB profile 就明确拒绝，把用户引到 Web 控制台。
+	if _, ok := s.loadLLMConfig(); !ok {
 		return CLIResult{}, errCLINoLLM
 	}
 	if !agent.CoordEnabled() {
@@ -135,6 +139,7 @@ func (s *Server) RunCLI(ctx context.Context, opts CLIOptions) (CLIResult, error)
 	pr.line("%s  任务 #%s", pr.bold("ARTEX HARNESS"), t.ID)
 	pr.line("目标  %s", strings.Join(targets, ", "))
 	pr.line("模式  根 agent 编排（%s）", coordModeLabel())
+	pr.line("配置  LLM 来自 Web 控制台（%s）· Web 侧修改后下一回合自动生效", s.cliActiveModelLabel())
 	if opts.Interactive {
 		pr.line("提示  直接输入文字 = 给编排者下指令；/help 查看命令；/exit 退出（会中止本进程内的任务）")
 	} else {
@@ -156,6 +161,7 @@ func (s *Server) RunCLI(ctx context.Context, opts CLIOptions) (CLIResult, error)
 	}
 
 	lastStatus := ""
+	lastSig := s.cliActiveProfileSignature()
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -190,6 +196,15 @@ func (s *Server) RunCLI(ctx context.Context, opts CLIOptions) (CLIResult, error)
 			if status != lastStatus {
 				lastStatus = status
 				pr.line("%s  状态 → %s", pr.dim("·"), status)
+			}
+			// Web 控制台配置热同步：激活配置的签名变了就重建 provider，
+			// 在跑的回合继续用旧配置，下一个回合自动切换，无需重启。
+			if sig := s.cliActiveProfileSignature(); sig != lastSig {
+				lastSig = sig
+				s.reapplyActiveProfile()
+				if m := s.cliActiveModelLabel(); m != "" {
+					pr.line("%s  检测到 Web 控制台配置变更：模型 → %s（下一回合生效）", pr.cyan("◆"), m)
+				}
 			}
 			if isTerminalStatus(status) {
 				// 终态先落库、收尾摘要后 emit：给活动流一个短暂的排空窗口，
@@ -244,6 +259,7 @@ func (s *Server) cliHandleLine(t *Task, line string, pr *cliPrinter) bool {
 		pr.line("命令：")
 		pr.line("  /status     任务状态与漏洞数")
 		pr.line("  /findings   列出本任务已记录漏洞")
+		pr.line("  /config     显示 Web 控制台配置入口")
 		pr.line("  /pause      暂停任务并退出（可在控制台恢复）")
 		pr.line("  /verbose    切换 thinking 流显示")
 		pr.line("  /exit       退出（本进程内的任务会被中止）")
@@ -251,6 +267,11 @@ func (s *Server) cliHandleLine(t *Task, line string, pr *cliPrinter) bool {
 		return false
 	case "/status":
 		pr.line("任务 #%s · 状态 %s · 漏洞 %d 条", t.ID, s.resolvedTaskStatus(t), len(s.cliFindings(t)))
+		return false
+	case "/config":
+		pr.line("配置入口：Web 控制台 http://%s", config.DefaultListenAddr)
+		pr.line("  LLM / Agent / Skill / 预算 / 通知均在 Web 控制台配置；")
+		pr.line("  配置写入 artex.db，本会话下一回合自动生效，无需重启。")
 		return false
 	case "/findings":
 		printCLIFindings(pr, s.cliFindings(t))
@@ -359,10 +380,34 @@ func (s *Server) cliFindings(t *Task) []CLIFinding {
 	return out
 }
 
-func (s *Server) cliLLMReady() bool {
-	s.cfgMu.Lock()
-	defer s.cfgMu.Unlock()
-	return s.llmOn
+// cliActiveProfileSignature 汇总 Web 控制台激活 LLM 配置的关键字段，供 CLI
+// 每秒比对一次以检测「Web 侧改了配置」。签名只包含影响模型行为的字段；
+// CLI 自身不提供任何修改配置的命令，变更只可能来自 Web UI 写库。
+func (s *Server) cliActiveProfileSignature() string {
+	if s == nil || s.m == nil || s.m.pg == nil {
+		return ""
+	}
+	p, err := s.m.pg.ActiveProfile()
+	if err != nil || p == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d|%s|%s|%s|%t|%d|%d|%s|%s",
+		p.ID, p.Model, p.BaseURL, p.APIKey, p.Streaming, p.MaxTokens, p.ContextWindowK, p.ThinkingType, p.ReasoningEffort)
+}
+
+// cliActiveModelLabel 返回「模型（配置名）」形式的可读标签，用于横幅与变更提示。
+func (s *Server) cliActiveModelLabel() string {
+	if s == nil || s.m == nil || s.m.pg == nil {
+		return ""
+	}
+	p, err := s.m.pg.ActiveProfile()
+	if err != nil || p == nil {
+		return ""
+	}
+	if name := strings.TrimSpace(p.Name); name != "" {
+		return fmt.Sprintf("%s · %s", p.Model, name)
+	}
+	return p.Model
 }
 
 func coordModeLabel() string {
