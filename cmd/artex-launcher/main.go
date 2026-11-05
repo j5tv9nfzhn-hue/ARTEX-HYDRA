@@ -2,8 +2,8 @@
 //
 // 它只做一件事：把命令转发给同目录的 artex-rea 内核。
 //
-//	artex              → artex-rea cli        （终端 HARNESS，默认行为）
-//	artex cli ...      → artex-rea cli ...    （同上，带参数）
+//	artex              → artex-rea tui        （终端 TUI，默认行为）
+//	artex tui ...      → artex-rea tui ...    （同上，带参数）
 //	artex web ...      → artex-rea ...        （Web 控制台，剥掉 web 子命令）
 //	artex mcp ...      → artex-rea mcp ...    （外部 MCP 接入）
 //	artex -addr ...    → artex-rea -addr ...  （其余参数原样转发）
@@ -41,8 +41,8 @@ func run() int {
 	args := os.Args[1:]
 	switch {
 	case len(args) == 0:
-		// 直接运行 artex = 启动终端 HARNESS。
-		args = []string{"cli"}
+		// 直接运行 artex = 启动终端 TUI。
+		args = []string{"tui"}
 	case args[0] == "web":
 		// artex web = Web 控制台；内核不带子命令时默认起服务，剥掉 web 即可。
 		args = args[1:]
@@ -82,11 +82,11 @@ func ext() string {
 func usage() {
 	fmt.Print(`artex —— ARTEX-HYDRA 用户入口
 
-  artex            启动终端 HARNESS（交互式，配置来自 Web 控制台）
-  artex cli ...    同上，可带参数（artex cli -h 查看全部参数）
+  artex            启动终端 TUI（全屏交互，配置来自 Web 控制台）
+  artex tui ...    同上，可带参数（artex tui -h 查看全部参数）
   artex web ...    启动 Web 控制台（LLM / Agent / Skill / 预算都在这里配置）
   artex mcp ...    外部 MCP 接入
 
-注意：终端 HARNESS 只允许在安装目录内运行；从其他目录启动会被拒绝。
+注意：终端 TUI 只允许在安装目录内运行；从其他目录启动会被拒绝。
 `)
 }

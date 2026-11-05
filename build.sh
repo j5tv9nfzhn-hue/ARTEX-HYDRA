@@ -221,7 +221,7 @@ package_binary() {
     *) core_ext="" ;;
   esac
   cp "$binary" "$package_root/artex-rea-core${core_ext}"
-  # 用户入口 artex[.exe]：极简转发壳。artex → 终端 HARNESS，artex web → Web
+  # 用户入口 artex[.exe]：极简转发壳。artex → 终端 TUI，artex web → Web
   # 控制台。壳必须与内核同目录分发，内核负责安装目录守卫等真正的启动逻辑。
   if ! GOSUMDB="$ARTEX_GOSUMDB" CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
       go build -trimpath -ldflags "-s -w -buildid=" \

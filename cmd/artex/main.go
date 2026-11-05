@@ -73,9 +73,10 @@ func run() int {
 	// 子命令分流必须在 flag.Parse 之前：子命令自己的参数交给全局 flag 会直接报
 	// "flag provided but not defined"。
 	//
-	// cli 是终端 HARNESS：头less 启动（不绑端口），在同一进程内跑 coord 任务。
-	if len(os.Args) > 1 && os.Args[1] == "cli" {
-		return runCLICommand(os.Args[2:])
+	// tui 是终端 TUI：headless 启动（不绑端口），在同一进程内跑 coord 任务，
+	// 全屏渲染活动流、漏洞与任务概览。
+	if len(os.Args) > 1 && os.Args[1] == "tui" {
+		return runTUICommand(os.Args[2:])
 	}
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
 		return runMCPCommand(os.Args[2:])

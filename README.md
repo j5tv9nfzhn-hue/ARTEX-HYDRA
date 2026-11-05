@@ -113,10 +113,10 @@ ARTEX 由国内开发者 **Autumn-27** 创建并开源（[Autumn-27/ARTEX](https
 
 | 入口 | 命令 | 适用场景 |
 | --- | --- | --- |
-| 终端 HARNESS | `artex`（安装目录内直接运行） | 交互式 REPL / 脚本化跑任务，不占端口、不起浏览器 |
+| 终端 TUI | `artex`（安装目录内直接运行） | 全屏交互：活动流 + 漏洞 + 任务同屏，不占端口、不起浏览器 |
 | Web 控制台 | `artex web` 或双击 `start.bat` | 浏览器操作：LLM、Agent、Skill、MCP、预算、完整转录 |
 
-两种入口共用同一个 `artex.db` 与 LLM 配置：**所有配置只在 Web 控制台做**，保存后终端 HARNESS 在下一回合自动生效，无需重启。
+两种入口共用同一个 `artex.db` 与 LLM 配置：**所有配置只在 Web 控制台做**，保存后终端 TUI 在下一回合自动生效，无需重启。
 
 **方式一：下载发行包**
 
@@ -125,18 +125,18 @@ ARTEX 由国内开发者 **Autumn-27** 创建并开源（[Autumn-27/ARTEX](https
 ```bat
 copy config.example.json config.json   & rem 可选：指定数据库文件位置，留空自动创建 artex.db
 start.bat                              & rem → Web 控制台 http://localhost:8787
-artex                                  & rem → 终端 HARNESS（交互式）
-artex cli -t https://example.com       & rem → 带目标直接开跑
+artex                                  & rem → 终端 TUI（全屏交互）
+artex tui -t https://example.com       & rem → 带目标直接开跑
 ```
 
-Linux / macOS 用 `./start.sh` 启动 Web 控制台，`./artex` 启动终端 HARNESS。
+Linux / macOS 用 `./start.sh` 启动 Web 控制台，`./artex` 启动终端 TUI。
 
-终端 HARNESS 的两条硬约束：
+终端 TUI 的两条硬约束：
 
-- **只允许在安装目录内运行**：从其他目录启动会被拒绝，避免 `artex.db`、`credential.key` 散落到别处，也保证 CLI 与 Web 控制台读写同一份数据。
-- **不读取任何环境变量**：`ARTEX_TARGET` 等快捷启动变量已废弃；LLM 配置（含 API Key）只在 Web 控制台「系统 → LLM」录入，CLI 首次运行时若没有已启用的配置会明确提示。
+- **只允许在安装目录内运行**：从其他目录启动会被拒绝，避免 `artex.db`、`credential.key` 散落到别处，也保证 TUI 与 Web 控制台读写同一份数据。
+- **不读取任何环境变量**：`ARTEX_TARGET` 等快捷启动变量已废弃；LLM 配置（含 API Key）只在 Web 控制台「系统 → LLM」录入，首次运行时若没有已启用的配置会明确提示。
 
-交互模式下直接输入文字即给根 agent 下指令，`/help` 查看命令，`/config` 显示配置入口。退出码 `0` 完成无漏洞、`2` 完成有漏洞、`1` 失败。
+界面为「活动流 + 侧栏」双栏：左区实时显示 agent 在做什么，右区在概览 / 漏洞 / 任务之间切换（`Ctrl-F`、`Ctrl-T`）。底部输入框直接输入文字即给根 agent 下指令，`Ctrl-N` 开新任务，`?` 查看全部按键。终端窄于 78 列时侧栏自动隐藏。退出码 `0` 完成无漏洞、`2` 完成有漏洞、`1` 失败。
 
 **方式二：源码构建**（Go 1.26 + Node.js 22 LTS）
 
