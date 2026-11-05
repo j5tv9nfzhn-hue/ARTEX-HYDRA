@@ -18,11 +18,25 @@ name: release
 #
 # 触发方式：
 #   push tag vX.Y.Z   完整流水线并发布
-#   workflow_dispatch 干跑（不发布），用于打 tag 前确认能编过
+#   workflow_dispatch 无 tag 手动构建（不发布），可指定平台与版本号
+#
+# workflow_dispatch 输入：
+#   targets  逗号分隔的目标（如 linux/amd64,windows/amd64）；留空 = 全部 6 端
+#   version  无 tag 构建时的版本号，仅用于二进制内嵌与产物命名；默认 dev
+# 无 tag 手动构建只产出 artifact，不建 Release；发布仍必须打 tag。
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      targets:
+        description: "构建目标，逗号分隔（如 linux/amd64,windows/amd64）；留空 = 全部 6 端"
+        required: false
+        default: ""
+      version:
+        description: "无 tag 构建时的版本号，仅用于命名；默认 dev"
+        required: false
+        default: "dev"
 
 permissions:
   contents: write # 建草稿、传资产、公开 Release
@@ -96,9 +110,58 @@ jobs:
           version: v2.14.0
           args: --timeout=5m
 
+  # ⓪b 计算构建矩阵与版本号：让无 tag 的手动构建也能只编指定平台。
+  #
+  # 输出两个值供下游 job 复用：
+  #   matrix   由 targets 输入过滤出的 {goos,goarch} 列表（留空 = 全部 6 端）
+  #   version  生效版本号：tag 推送以 tag 为唯一真相来源，手动构建取 version 输入
+  # 请求了不受支持的目标时显式失败，避免只构建了子集却看不出少了哪些。
+  plan:
+    needs: gate
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      version: ${{ steps.plan.outputs.version }}
+    steps:
+      - id: plan
+        env:
+          INPUT_TARGETS: ${{ inputs.targets }}
+          INPUT_VERSION: ${{ inputs.version }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          full='[{"goos":"linux","goarch":"amd64"},{"goos":"linux","goarch":"arm64"},{"goos":"darwin","goarch":"amd64"},{"goos":"darwin","goarch":"arm64"},{"goos":"windows","goarch":"amd64"},{"goos":"windows","goarch":"arm64"}]'
+          targets="$(printf '%s' "${INPUT_TARGETS:-}" | tr -d '[:space:]')"
+          if [ -z "$targets" ]; then
+            matrix="$full"
+          else
+            matrix="$(jq -c --arg t "$targets" '
+              ($t | split(",")) as $want
+              | map(select((.goos + "/" + .goarch) as $k | ($want | index($k))))
+            ' <<<"$full")"
+            n_req="$(printf '%s' "$targets" | tr ',' '\n' | sort -u | grep -c . || true)"
+            n_sel="$(jq 'length' <<<"$matrix")"
+            if [ "$n_req" != "$n_sel" ]; then
+              bad="$(jq -rn --argjson m "$matrix" --arg t "$targets" '
+                ($t | split(",")) - [ $m[] | (.goos + "/" + .goarch) ] | join(",")
+              ')"
+              echo "::error::不支持的目标：$bad（支持：linux/amd64,linux/arm64,darwin/amd64,darwin/arm64,windows/amd64,windows/arm64）"
+              exit 1
+            fi
+          fi
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          if [ "$REF_TYPE" = "tag" ]; then
+            version="$REF_NAME"
+          else
+            version="${INPUT_VERSION:-dev}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "本次构建平台：$(jq -r '[.[]|(.goos+"/"+.goarch)]|join(", ")' <<<"$matrix")；版本：$version"
+
   # ① 前端静态导出仅执行一次，供各平台目标复用。
   frontend:
-    needs: gate
+    needs: [gate, plan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -131,10 +194,10 @@ jobs:
       - run: npm run build:static
         working-directory: web
         env:
-          # 版本只有一个真相来源：tag。这里把 tag 内嵌进静态包（四段版本
-          # v0.0.0.1 也要原样落地），运行期再由 /api/health 的二进制版本校正；
-          # workflow_dispatch 干跑没有 tag，注入空值，前端回落到 package.json 占位。
-          NEXT_PUBLIC_APP_VERSION: ${{ github.ref_name }}
+          # 版本只有一个真相来源：tag 推送取 tag，手动构建取 plan 计算的版本；
+          # 这里把版本内嵌进静态包（四段版本 v0.0.0.1 也要原样落地），运行期
+          # 再由 /api/health 的二进制版本校正。
+          NEXT_PUBLIC_APP_VERSION: ${{ needs.plan.outputs.version }}
       - uses: actions/upload-artifact@v7
         with:
           name: web-dist
@@ -148,18 +211,15 @@ jobs:
   # cache-mode: read —— 该 job 持有构建产物，限定只读缓存，防止低信任来源写入的
   # 缓存条目污染发布构建（2026-06 起 GitHub 对高权限 job 的缓存隔离机制）。
   binaries:
-    needs: frontend
+    needs: [frontend, plan]
     runs-on: ubuntu-latest
     cache-mode: read
     strategy:
+      # 手动构建指定平台时，某一端失败不该连带取消其它端，方便逐端定位。
+      fail-fast: false
+      # 平台清单由 plan 计算：留空输入 = 全部 6 端，指定则只编请求的目标。
       matrix:
-        include:
-          - { goos: linux, goarch: amd64 }
-          - { goos: linux, goarch: arm64 }
-          - { goos: darwin, goarch: amd64 }
-          - { goos: darwin, goarch: arm64 }
-          - { goos: windows, goarch: amd64 }
-          - { goos: windows, goarch: arm64 }
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -184,7 +244,7 @@ jobs:
         env:
           ARTEX_TARGET_OS: ${{ matrix.goos }}
           ARTEX_TARGET_ARCH: ${{ matrix.goarch }}
-          ARTEX_BUILD_VERSION: ${{ github.ref_name }}
+          ARTEX_BUILD_VERSION: ${{ needs.plan.outputs.version }}
           # 更新源在构建期写死为本仓库：fork 出来的构建不会去连上游仓库。
           ARTEX_UPDATE_REPO: ${{ github.repository }}
           ARTEX_SKIP_FRONTEND: "1"
@@ -199,13 +259,16 @@ jobs:
       # 校验可执行文件头与目标架构（PE/ELF/Mach-O 的魔数与机器类型）代替冒烟测试。
       - name: 校验可执行文件头与目标架构
         run: python3 -I scripts/check-binary-headers.py "${{ matrix.goos }}/${{ matrix.goarch }}"
-      # 包名里的版本段与 build.sh 第 106 行同源（ref_name 剥 v 前缀），
+      # 包名里的版本段与 build.sh 第 106 行同源（plan 版本剥 v 前缀），
       # 先算出来再当路径用：下面的 artifact 上传要精确到这一个文件。
       - name: 计算本平台包名
         id: pkg
+        env:
+          # 与 build.sh 的命名同源：版本取 plan 的生效版本（tag 或 version 输入）。
+          V: ${{ needs.plan.outputs.version }}
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
+          version="${V#v}"
           name="artex-rea-${version}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
           test -f "dist/$name" || { echo "::error::打包未产出 dist/$name"; exit 1; }
           echo "name=$name" >> "$GITHUB_OUTPUT"
