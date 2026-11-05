@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import Link from "next/link";
+
 import { ShieldCheckIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -86,10 +88,12 @@ export function FindingVerifyPanel({
         actions={
           <>
             {running?.conversation_id != null ? (
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                <Spinner aria-hidden="true" />
-                {t("status.running")}
-              </span>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/chat?c=${running.conversation_id}`} title={t("viewRunning")}>
+                  <Spinner data-icon="inline-start" aria-hidden="true" />
+                  {t("status.running")}
+                </Link>
+              </Button>
             ) : null}
             {!running && !readOnly ? (
               <Button size="sm" onClick={() => setOpen(true)} disabled={items === null || !!error}>
@@ -119,7 +123,7 @@ export function FindingVerifyPanel({
           ? items.map((item) => (
               <RecordRow
                 key={item.id}
-                cols="88px minmax(0,1fr) auto"
+                cols="88px minmax(0,1fr) auto auto"
                 lead={
                   item.status === "completed" && item.verdict ? (
                     <StatusBadge
@@ -132,9 +136,16 @@ export function FindingVerifyPanel({
                   )
                 }
                 values={[
-                  <span key="time" className="text-muted-foreground">
+                  <span className="text-muted-foreground">
                     {new Date(item.created_at).toLocaleString()}
                   </span>,
+                  item.conversation_id != null ? (
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href={`/chat?c=${item.conversation_id}`}>{t("viewSession")}</Link>
+                    </Button>
+                  ) : (
+                    <span className="text-muted-foreground">{t("sessionDeleted")}</span>
+                  ),
                 ]}
               >
                 <div className="flex min-w-0 flex-col gap-1">

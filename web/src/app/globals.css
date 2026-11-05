@@ -133,38 +133,43 @@ These serve as the fallback; there is no separate default.css file. */
 }
 
 .dark {
-  --background: oklch(0.155 0.016 252);
+  /* 深色底不再压到近黑：0.155 的明度配 0.76/0.145 的高亮蓝，边界对比过冲，
+     长时间盯屏会发灰发刺。整体抬到 0.185 一档，层级仍靠 0.03 的步进拉开。 */
+  --background: oklch(0.185 0.012 252);
   --foreground: oklch(0.945 0.008 240);
-  --card: oklch(0.185 0.018 252);
+  --card: oklch(0.215 0.014 252);
   --card-foreground: oklch(0.945 0.008 240);
-  --popover: oklch(0.215 0.02 252);
+  --popover: oklch(0.24 0.016 252);
   --popover-foreground: oklch(0.945 0.008 240);
   --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.165 0.018 252);
-  --secondary: oklch(0.225 0.02 252);
+  --primary-foreground: oklch(0.185 0.014 252);
+  --secondary: oklch(0.25 0.014 252);
   --secondary-foreground: oklch(0.945 0.008 240);
-  --muted: oklch(0.205 0.018 252);
-  --muted-foreground: oklch(0.685 0.016 248);
-  --accent: oklch(0.245 0.022 250);
+  --muted: oklch(0.235 0.014 252);
+  --muted-foreground: oklch(0.715 0.014 248);
+  --accent: oklch(0.27 0.016 250);
   --accent-foreground: oklch(0.955 0.01 240);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.255 0.018 252);
-  --input: oklch(0.265 0.02 252);
-  --ring: oklch(0.76 0.145 212);
+  --border: oklch(0.285 0.014 252);
+  --input: oklch(0.295 0.016 252);
+  /* 强调蓝从 0.76/0.145 收到 0.68/0.115：仍高于 4.5:1 的可读线，
+     但不再在深底上「发荧光」。下面三个同源变量必须一起改，否则焦点环、
+     侧栏高亮与图表第一档会出现三种蓝。 */
+  --ring: oklch(0.68 0.115 212);
   /* 暗色成对色板:与亮色同色相、提亮明度(冷色 ~0.7、暖色 ~0.8),保证深底上的可读性 */
-  --chart-1: oklch(0.76 0.145 212);
+  --chart-1: oklch(0.68 0.115 212);
   --chart-2: oklch(0.7 0.17 288);
   --chart-3: oklch(0.74 0.14 165);
   --chart-4: oklch(0.8 0.15 75);
   --chart-5: oklch(0.72 0.17 10);
-  --sidebar: oklch(0.135 0.015 252);
+  --sidebar: oklch(0.165 0.012 252);
   --sidebar-foreground: oklch(0.92 0.01 240);
-  --sidebar-primary: oklch(0.76 0.145 212);
-  --sidebar-primary-foreground: oklch(0.145 0.02 252);
-  --sidebar-accent: oklch(0.22 0.02 250);
+  --sidebar-primary: oklch(0.68 0.115 212);
+  --sidebar-primary-foreground: oklch(0.175 0.014 252);
+  --sidebar-accent: oklch(0.25 0.016 250);
   --sidebar-accent-foreground: oklch(0.95 0.01 240);
-  --sidebar-border: oklch(0.225 0.016 252);
-  --sidebar-ring: oklch(0.76 0.145 212);
+  --sidebar-border: oklch(0.255 0.014 252);
+  --sidebar-ring: oklch(0.68 0.115 212);
 }
 
 @layer base {

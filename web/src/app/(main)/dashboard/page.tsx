@@ -58,6 +58,13 @@ function fmtRel(ts?: string | number): string | null {
   return `${Math.floor(h / 24)}d`;
 }
 
+// localISODate 返回**本地时区**的 YYYY-MM-DD。
+// 直接用 toISOString() 拿到的是 UTC 日期，在 UTC+8 的凌晨会退回前一天，
+// 让「最近 7 天」实际只剩 6 天。
+function localISODate(d: Date): string {
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
 function fmtTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
@@ -284,21 +291,11 @@ export default function DashboardPage() {
   const activeProfile = llmProfiles.find((p) => p.is_default);
   const pendingCount = pending.length;
 
-  // 页头「作战状态摘要」:探索中/暂停/待审批/发现,全部复用上面的派生值(零新增请求)。
-  // 计数为 0 的段省略;全空(数据未到或确为 0)时整行不渲染,避免空数据下的噪音。
-  const headerSummary = [
-    (tasksByStatus.running ?? 0) > 0 ? `${tStatus("engine.exploring")} ${tasksByStatus.running}` : null,
-    (tasksByStatus.paused ?? 0) > 0 ? `${t("statPaused")} ${tasksByStatus.paused}` : null,
-    pendingCount > 0 ? t("pendingApprovals", { count: pendingCount }) : null,
-    findings.length > 0 ? `${t("findings")} ${findings.length}` : null,
-  ].filter((s): s is string => s !== null);
-
   // ── token stats per LLM profile ──────────────────────────────────────────
   // tasks whose llm_profile_id is null/undefined used the active default profile
   const defaultProfileId = activeProfile ? Number(activeProfile.id) : null;
 
-  // 数据源开关：旧版 = activity（task.tokens + 会话），新版 = llm_usage 计量账本。
-  const [tokenVersion, setTokenVersion] = React.useState<"old" | "new">("old");
+  // 数据源已合并为一份（新账本优先、旧数据兜底），不再需要用户切换。
   // selected profile tab: "all" = 全部; number = specific profile id
   const [tokenTab, setTokenTab] = React.useState<number | null | "all">("all");
   // day range for the daily bar chart
@@ -313,7 +310,18 @@ export default function DashboardPage() {
 
   type Bucket = { input: number; output: number; cacheRead: number; cacheWrite: number; taskCount: number };
 
+  // 计量账本的起始日：llm_usage 里最早的一天。它之前的用量只存在于旧数据里，
+  // 之后的两份都覆盖——合并必须按这条分界线切，否则要么丢历史、要么双计。
+  const ledgerStart = React.useMemo(() => {
+    const days = (usageStats?.daily ?? [])
+      .map((d) => d.date)
+      .filter(Boolean)
+      .sort();
+    return days.length > 0 ? days[0] : null;
+  }, [usageStats]);
+
   // 旧版：按 profile 归桶（来自 activity 的 task.tokens + 会话用量）。
+  // 这份保留**全量历史**，供「账本还没启用」的库直接使用。
   const tokenByProfileOld = React.useMemo<Map<number | null, Bucket>>(() => {
     const m = new Map<number | null, Bucket>();
     const fold = (key: number | null, inp: number, out: number, cr: number, cw: number, addTask: boolean) => {
@@ -349,10 +357,54 @@ export default function DashboardPage() {
     return m;
   }, [tasks, convTokens, defaultProfileId]);
 
+  // 只取「账本启用之前」的那部分旧数据。这部分与 llm_usage 在时间上不相交，
+  // 所以可以直接相加而不会双计。
+  const tokenByProfileOldBeforeLedger = React.useMemo<Map<number | null, Bucket>>(() => {
+    if (!ledgerStart) return tokenByProfileOld;
+    const m = new Map<number | null, Bucket>();
+    const fold = (key: number | null, inp: number, out: number, cr: number, cw: number, addTask: boolean) => {
+      const prev = m.get(key) ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, taskCount: 0 };
+      m.set(key, {
+        input: prev.input + inp,
+        output: prev.output + out,
+        cacheRead: prev.cacheRead + cr,
+        cacheWrite: prev.cacheWrite + cw,
+        taskCount: prev.taskCount + (addTask ? 1 : 0),
+      });
+    };
+    for (const t of tasks) {
+      if ((t.created_at ?? "").slice(0, 10) >= ledgerStart) continue;
+      fold(
+        t.llm_profile_id ?? defaultProfileId,
+        t.tokens?.input_tokens ?? 0,
+        t.tokens?.output_tokens ?? 0,
+        t.tokens?.cache_read_tokens ?? 0,
+        t.tokens?.cache_write_tokens ?? 0,
+        true,
+      );
+    }
+    for (const c of convTokens) {
+      if ((c.created_at ?? "").slice(0, 10) >= ledgerStart) continue;
+      fold(
+        c.llm_profile_id ?? defaultProfileId,
+        c.input_tokens,
+        c.output_tokens,
+        c.cache_read_tokens,
+        c.cache_write_tokens,
+        false,
+      );
+    }
+    return m;
+  }, [tasks, convTokens, ledgerStart, tokenByProfileOld, defaultProfileId]);
+
   // 新版：按 profile 归桶（来自 llm_usage 全局聚合，逐次调用精确）。
   const tokenByProfileNew = React.useMemo<Map<number | null, Bucket>>(() => {
     const m = new Map<number | null, Bucket>();
-    for (const p of usageStats?.by_profile ?? []) {
+    // daily 为空说明账本没有覆盖任何一天（未启用或还没产生调用）。此时不能
+    // 把 by_profile 的合计并进来——没有分界线就无从判断哪些用量已被旧数据
+    // 计过，相加就是双计。宁可先只显示旧数据，也不给出一个偏大的数。
+    if (!usageStats || usageStats.daily.length === 0) return m;
+    for (const p of usageStats.by_profile ?? []) {
       // 未匹配到现有 profile（改名/删除/空名）→ 落到默认桶，仍计入「全部」。
       const key = profileIdByName.get(p.profile_name) ?? defaultProfileId;
       const prev = m.get(key) ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, taskCount: 0 };
@@ -367,7 +419,26 @@ export default function DashboardPage() {
     return m;
   }, [usageStats, profileIdByName, defaultProfileId]);
 
-  const tokenByProfile = tokenVersion === "new" ? tokenByProfileNew : tokenByProfileOld;
+  // 合并：账本启用前的旧数据 + 账本自身的精确数据。
+  // 两段在时间上不相交，所以相加是安全的；同一段时间里绝不会两份都算。
+  const tokenByProfile = React.useMemo(() => {
+    const merged = new Map<number | null, Bucket>(tokenByProfileOldBeforeLedger);
+    for (const [k, v] of tokenByProfileNew) {
+      const prev = merged.get(k);
+      if (!prev) {
+        merged.set(k, v);
+        continue;
+      }
+      merged.set(k, {
+        input: prev.input + v.input,
+        output: prev.output + v.output,
+        cacheRead: prev.cacheRead + v.cacheRead,
+        cacheWrite: prev.cacheWrite + v.cacheWrite,
+        taskCount: prev.taskCount + v.taskCount,
+      });
+    }
+    return merged;
+  }, [tokenByProfileOldBeforeLedger, tokenByProfileNew]);
 
   const displayedTokens = React.useMemo(() => {
     if (tokenTab === "all") {
@@ -391,11 +462,12 @@ export default function DashboardPage() {
       : { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, taskCount: 0 };
   }, [tokenTab, tokenByProfile]);
 
+  // 统一时间窗按**本地日期**算。此前用 toISOString().slice(0,10)，在 UTC+8 的
+  // 00:00–08:00 之间拿到的还是前一天，7 天窗口会实打实少一天。
+  const cutoff = React.useMemo(() => localISODate(new Date(Date.now() - tokenDays * 86400000)), [tokenDays]);
+
   // 旧版每日：把任务/会话的总量按其创建日期归桶（近似，非真实每日消耗）。
   const dailyTokenDataOld = React.useMemo(() => {
-    const now = new Date();
-    now.setDate(now.getDate() - tokenDays);
-    const cutoff = now.toISOString().slice(0, 10);
     const m = new Map<string, { input: number; output: number; cacheRead: number }>();
     const fold = (date: string, inp: number, out: number, cr: number) => {
       if (date < cutoff) return;
@@ -415,14 +487,11 @@ export default function DashboardPage() {
       if (tokenTab !== "all" && (c.llm_profile_id ?? defaultProfileId) !== tokenTab) continue;
       fold(c.created_at.slice(0, 10), c.input_tokens, c.output_tokens, c.cache_read_tokens);
     }
-    return [...m.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({ date: date.slice(5), ...v }));
-  }, [tasks, convTokens, tokenDays, tokenTab, defaultProfileId]);
+    return m;
+  }, [tasks, convTokens, cutoff, tokenTab, defaultProfileId]);
 
   // 新版每日：来自 llm_usage 的真实每日消耗（ts 是实际调用时刻）。
   const dailyTokenDataNew = React.useMemo(() => {
-    const now = new Date();
-    now.setDate(now.getDate() - tokenDays);
-    const cutoff = now.toISOString().slice(0, 10);
     const m = new Map<string, { input: number; output: number; cacheRead: number }>();
     for (const d of usageStats?.daily ?? []) {
       if (d.date < cutoff) continue;
@@ -434,10 +503,34 @@ export default function DashboardPage() {
         cacheRead: prev.cacheRead + d.cache_read_tokens,
       });
     }
-    return [...m.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({ date: date.slice(5), ...v }));
-  }, [usageStats, tokenDays, tokenTab, profileIdByName, defaultProfileId]);
+    return m;
+  }, [usageStats, cutoff, tokenTab, profileIdByName, defaultProfileId]);
 
-  const dailyTokenData = tokenVersion === "new" ? dailyTokenDataNew : dailyTokenDataOld;
+  // 合并：账本起始日之前用旧数据，之后用账本；分界日两边都只覆盖一部分，
+  // 逐项取较大值——既不双计，也不把分界日算漏。
+  const dailyTokenData = React.useMemo(() => {
+    const merged = new Map<string, { input: number; output: number; cacheRead: number }>();
+    for (const [date, v] of dailyTokenDataOld) {
+      if (ledgerStart && date > ledgerStart) continue; // 账本已完整覆盖这一天
+      merged.set(date, v);
+    }
+    for (const [date, v] of dailyTokenDataNew) {
+      const prev = merged.get(date);
+      merged.set(
+        date,
+        prev
+          ? {
+              input: Math.max(prev.input, v.input),
+              output: Math.max(prev.output, v.output),
+              cacheRead: Math.max(prev.cacheRead, v.cacheRead),
+            }
+          : v,
+      );
+    }
+    return [...merged.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => ({ date: date.slice(5), ...v }));
+  }, [dailyTokenDataOld, dailyTokenDataNew, ledgerStart]);
 
   // 可靠性卡片的派生视图（本次启动以来）：阶段细分按次数降序，top 工具只留出过错的。
   const stageRows = React.useMemo(
@@ -472,11 +565,7 @@ export default function DashboardPage() {
   return (
     <div data-editorial="body" className="flex flex-1 flex-col gap-5 pb-6">
       {/* ── Header ── */}
-      <Masthead
-        title={t("title")}
-        subtitle={t("subtitle")}
-        meta={headerSummary.length > 0 ? headerSummary.join(" / ") : undefined}
-      />
+      <Masthead title={t("title")} subtitle={t("subtitle")} />
 
       {/* ── Row 1: 战况行 —— 主 KPI + 次级指标矩阵(非对称层级) ──
           主 KPI 选「活跃任务」:指挥室视角下先回答「系统现在在跑什么」再看出什么结果,
@@ -604,33 +693,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-1.5 font-semibold text-xs">
             <ZapIcon className="size-3.5 text-muted-foreground" />
             {t("tokenConsumption")}
-            {/* 数据源开关：旧版=activity 统计（含历史任务），新版=llm_usage 计量账本（更准，仅覆盖启用后） */}
-            <div className="ml-1 flex gap-0.5 rounded-md border bg-muted/30 p-0.5">
-              {(
-                [
-                  { v: "old", label: t("verOld") },
-                  { v: "new", label: t("verNew") },
-                ] as const
-              ).map(({ v, label }) => (
-                <button
-                  type="button"
-                  key={v}
-                  onClick={() => setTokenVersion(v)}
-                  title={v === "new" ? t("tooltipNew") : t("tooltipOld")}
-                  className={cn(
-                    "rounded px-2 py-0.5 font-medium text-xs transition-colors",
-                    tokenVersion === v
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <span className="font-normal text-muted-foreground text-xs">
-              {tokenVersion === "new" ? t("srcNew") : t("srcOld")}
-            </span>
+            <span className="font-normal text-muted-foreground text-xs">{t("srcMerged")}</span>
           </div>
           {/* Profile tabs */}
           <div className="flex flex-wrap items-center gap-1">

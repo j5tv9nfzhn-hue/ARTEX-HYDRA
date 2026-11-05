@@ -73,11 +73,8 @@ func run() int {
 	// 子命令分流必须在 flag.Parse 之前：子命令自己的参数交给全局 flag 会直接报
 	// "flag provided but not defined"。
 	//
-	// tui 是终端 TUI：headless 启动（不绑端口），在同一进程内跑 coord 任务，
-	// 全屏渲染活动流、漏洞与任务概览。
-	if len(os.Args) > 1 && os.Args[1] == "tui" {
-		return runTUICommand(os.Args[2:])
-	}
+	// 终端 TUI（原 `artex tui`）已归档到 _archive/tui-harness/，不再参与构建；
+	// 人机交互统一走 Web 控制台（start.sh / start.bat）。
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
 		return runMCPCommand(os.Args[2:])
 	}

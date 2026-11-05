@@ -10,7 +10,7 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
-import { type LucideIcon, Monitor, Moon, Search, Sun, Target } from "lucide-react";
+import { type LucideIcon, MessageSquare, Monitor, Moon, Search, Sun, Target } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
@@ -191,6 +191,15 @@ export function SearchDialog() {
       // 任务页的新建入口是页面内抽屉（CreateTaskSheet），不读 query 参数，
       // 无法从外部一步打开，因此这里跳转到任务列表页。
       run: () => router.push("/function/tasks"),
+    },
+    {
+      id: "new-conversation",
+      label: t("action.newConversation"),
+      icon: MessageSquare,
+      keywords: ["chat", "create"],
+      // 对话页的「新建对话」是页内状态（selectConversation(null)）；不带 ?c= 打开 /chat
+      // 即落在新建视图，无需额外触发。
+      run: () => router.push("/chat"),
     },
     ...THEME_MODE_OPTIONS.map((mode) => ({
       id: `theme-mode-${mode.value}`,

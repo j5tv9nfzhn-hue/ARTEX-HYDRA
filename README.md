@@ -109,14 +109,16 @@ ARTEX 由国内开发者 **Autumn-27** 创建并开源（[Autumn-27/ARTEX](https
 
 ## 快速开始
 
-只发布一个纯 Go 单二进制（`CGO_ENABLED=0`），覆盖 Linux / macOS / Windows。同一份程序提供两种入口：
+只发布一个纯 Go 单二进制（`CGO_ENABLED=0`），覆盖 Linux / macOS / Windows。人机交互统一走 Web 控制台：
 
 | 入口 | 命令 | 适用场景 |
 | --- | --- | --- |
-| 终端 TUI | `artex`（安装目录内直接运行） | 全屏交互：活动流 + 漏洞 + 任务同屏，不占端口、不起浏览器 |
-| Web 控制台 | `artex web` 或双击 `start.bat` | 浏览器操作：LLM、Agent、Skill、MCP、预算、完整转录 |
+| Web 控制台 | `artex`、`artex web` 或双击 `start.bat` | 浏览器操作：对话、任务、漏洞、LLM、Agent、Skill、MCP、预算、完整转录 |
 
-两种入口共用同一个 `artex.db` 与 LLM 配置：**所有配置只在 Web 控制台做**，保存后终端 TUI 在下一回合自动生效，无需重启。
+**所有配置都在 Web 控制台完成**（LLM / Agent / Skill / 预算），写入 `artex.db`。
+
+> 终端 TUI（原 `artex tui`）已暂停开发并归档到 [`_archive/tui-harness/`](_archive/tui-harness/README.md)。
+> 代码完整保留，但**不参与构建、测试、编译与任何 CI 流程**；恢复步骤见该目录的 README。
 
 **方式一：下载发行包**
 
@@ -125,18 +127,12 @@ ARTEX 由国内开发者 **Autumn-27** 创建并开源（[Autumn-27/ARTEX](https
 ```bat
 copy config.example.json config.json   & rem 可选：指定数据库文件位置，留空自动创建 artex.db
 start.bat                              & rem → Web 控制台 http://localhost:8787
-artex                                  & rem → 终端 TUI（全屏交互）
-artex tui -t https://example.com       & rem → 带目标直接开跑
+artex                                  & rem → 同上（默认行为）
 ```
 
-Linux / macOS 用 `./start.sh` 启动 Web 控制台，`./artex` 启动终端 TUI。
+Linux / macOS 用 `./start.sh` 启动。
 
-终端 TUI 的两条硬约束：
-
-- **只允许在安装目录内运行**：从其他目录启动会被拒绝，避免 `artex.db`、`credential.key` 散落到别处，也保证 TUI 与 Web 控制台读写同一份数据。
-- **不读取任何环境变量**：`ARTEX_TARGET` 等快捷启动变量已废弃；LLM 配置（含 API Key）只在 Web 控制台「系统 → LLM」录入，首次运行时若没有已启用的配置会明确提示。
-
-界面为「活动流 + 侧栏」双栏：左区实时显示 agent 在做什么，右区在概览 / 漏洞 / 任务之间切换（`Ctrl-F`、`Ctrl-T`）。底部输入框直接输入文字即给根 agent 下指令，`Ctrl-N` 开新任务，`?` 查看全部按键。终端窄于 78 列时侧栏自动隐藏。退出码 `0` 完成无漏洞、`2` 完成有漏洞、`1` 失败。
+首次进入后可在左侧边栏打开 **HARNESS 对话页**（`/chat`）与主 Agent 交互，或从任务详情页的「主 Agent 对话」按钮带着任务上下文进入。
 
 **方式二：源码构建**（Go 1.26 + Node.js 22 LTS）
 

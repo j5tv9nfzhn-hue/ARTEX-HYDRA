@@ -44,7 +44,8 @@ type Options struct {
 	// ListenAddr 是 HTTP 监听地址。
 	ListenAddr string
 	// Headless 为 true 时不启动 HTTP 监听器，只装配 manager 与 server。
-	// 终端 TUI（artex tui）用它在进程内直接驱动 agent，不占端口、不依赖浏览器。
+	// 保留给已归档的终端 TUI（_archive/tui-harness/）：它需要"装配完毕即返回"，
+	// 在进程内直接驱动 agent，不占端口。恢复归档时无需改动本文件。
 	Headless bool
 }
 
@@ -110,9 +111,9 @@ func Prepare(ctx context.Context, opts Options) (*App, error) {
 
 	app := &App{Version: opts.Version, ListenAddr: opts.ListenAddr, srv: srv, mgr: mgr}
 	if opts.Headless {
-		// 终端 TUI：装配完毕即返回，让调用方在进程内直接跑任务。
+		// 归档的终端 TUI 用这条路径：装配完毕即返回，让调用方在进程内直接跑任务。
 		// 不绑定端口、不写「listening on」——全屏界面不能被日志插行。
-		log.Printf("ARTEX-HYDRA %s terminal tui ready (data=%s, agent_slots=%d)",
+		log.Printf("ARTEX-HYDRA %s headless ready (data=%s, agent_slots=%d)",
 			opts.Version, opts.DataDir, mgr.Workers())
 		return app, nil
 	}
@@ -139,7 +140,7 @@ func Prepare(ctx context.Context, opts Options) (*App, error) {
 	return app, nil
 }
 
-// Server 暴露进程内 server 实例，供终端 TUI（artex tui）直接驱动。
+// Server 暴露进程内 server 实例，供无头调用方（归档的终端 TUI）直接驱动。
 func (a *App) Server() *server.Server {
 	if a == nil {
 		return nil

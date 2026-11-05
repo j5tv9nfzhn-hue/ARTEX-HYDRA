@@ -38,10 +38,8 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { api } from "@/lib/api";
-import type { Checkpoint, Conversation, InterceptPending } from "@/lib/types";
+import type { Checkpoint, InterceptPending } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-import type { HarnessRecipient } from "./harness-composer";
 
 export type HarnessDockPanel = "tasks" | "approvals" | "checkpoints" | "files";
 
@@ -60,6 +58,24 @@ export function readDockPanel(): HarnessDockPanel | null {
     return raw && PANEL_IDS.includes(raw as HarnessDockPanel) ? (raw as HarnessDockPanel) : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * 惰性读取已保存的坞宽。
+ *
+ * 放进 useState 的初始化函数而不是挂载后的 effect：否则首帧先按默认宽度画一遍，
+ * 下一帧再跳到记忆宽度，看得见一次抽动。坞只在客户端挂载（面板 id 也是从
+ * localStorage 读的），所以这里不需要考虑服务端渲染的一致性。
+ */
+function readStoredWidth(): number {
+  if (typeof window === "undefined") return DOCK_DEFAULT;
+  try {
+    const raw = window.localStorage.getItem(DOCK_WIDTH_KEY);
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) && n >= DOCK_MIN ? Math.min(n, DOCK_MAX) : DOCK_DEFAULT;
+  } catch {
+    return DOCK_DEFAULT;
   }
 }
 
@@ -135,13 +151,13 @@ export function DockSwitcher({
 }
 
 export type DockContext = {
-  conv: Conversation;
-  running: boolean;
-  workerRecipients: HarnessRecipient[];
+  /** 当前会话 id。坞内只有检查点面板需要它，传 id 而不是整个 Conversation，
+   *  这样流式消息更新导致 Conversation 换引用时，坞不会被连带重渲染。 */
+  conversationId: number;
   onOpenTask?: (taskId: string) => void;
 };
 
-export function HarnessDock({
+export const HarnessDock = React.memo(function HarnessDock({
   panel,
   onPanelChange,
   onClose,
@@ -153,53 +169,56 @@ export function HarnessDock({
   context: DockContext;
 }) {
   const t = useTranslations("chat.harness.dock");
-  const [width, setWidth] = React.useState(DOCK_DEFAULT);
+  const asideRef = React.useRef<HTMLElement | null>(null);
+  // 宽度有两个副本，各有分工：
+  //   - state  → 给 aria-valuenow 与持久化用，变化频率低；
+  //   - ref    → 给拖动期间的即时值，变化频率等于指针事件频率。
+  // 拖动时只写 ref + DOM，一次 React 渲染都不做：面板里有列表和逐条记录，
+  // 按 pointermove 频率重渲染正是「拖起来卡」的根因。
+  const [width, setWidth] = React.useState(readStoredWidth);
+  const widthRef = React.useRef(width);
   const dragRef = React.useRef<{ startX: number; startW: number } | null>(null);
 
-  React.useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(DOCK_WIDTH_KEY);
-      const n = raw ? Number(raw) : NaN;
-      if (Number.isFinite(n) && n >= DOCK_MIN) setWidth(Math.min(n, DOCK_MAX));
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  // state 是唯一真相，统一落到 DOM。
+  // 刻意不用 style={{ width }}：那样父组件任何一次重渲染都会把拖动中的
+  // 实时宽度覆盖回旧 state，指针一动就被拽回去。
+  React.useLayoutEffect(() => {
+    widthRef.current = width;
+    if (asideRef.current) asideRef.current.style.width = `${width}px`;
+  }, [width]);
 
   // 拖动左边缘改宽。上限同时受「给主列留够 MAIN_MIN」约束，窗口窄时坞先让。
-  const onDragStart = React.useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      dragRef.current = { startX: event.clientX, startW: width };
-      (event.target as HTMLElement).setPointerCapture(event.pointerId);
-    },
-    [width],
-  );
+  const onDragStart = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current = { startX: event.clientX, startW: widthRef.current };
+    (event.target as HTMLElement).setPointerCapture(event.pointerId);
+  }, []);
   const onDragMove = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag) return;
     const room = Math.max(DOCK_MIN, window.innerWidth - MAIN_MIN);
     const next = Math.min(Math.max(drag.startW + (drag.startX - event.clientX), DOCK_MIN), Math.min(DOCK_MAX, room));
-    setWidth(next);
+    widthRef.current = next;
+    if (asideRef.current) asideRef.current.style.width = `${next}px`;
   }, []);
   const onDragEnd = React.useCallback(() => {
     if (!dragRef.current) return;
     dragRef.current = null;
-    setWidth((w) => {
-      try {
-        window.localStorage.setItem(DOCK_WIDTH_KEY, String(w));
-      } catch {
-        /* ignore */
-      }
-      return w;
-    });
+    // 拖动结束才提交 state：同步 aria-valuenow，并落盘一次。
+    const final = widthRef.current;
+    setWidth(final);
+    try {
+      window.localStorage.setItem(DOCK_WIDTH_KEY, String(final));
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const title = t(PANEL_LABEL_KEY[panel]);
 
   return (
     <aside
+      ref={asideRef}
       className="relative flex min-h-0 shrink-0 flex-col border-border/70 border-l bg-card"
-      style={{ width }}
       aria-label={t("asideAria")}
     >
       {/* 左边缘拖拽条：3px 命中区，hover 显现主色。 */}
@@ -221,7 +240,7 @@ export function HarnessDock({
           if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
           event.preventDefault();
           const delta = event.key === "ArrowLeft" ? 24 : -24;
-          setWidth((w) => Math.min(Math.max(w + delta, DOCK_MIN), DOCK_MAX));
+          setWidth(Math.min(Math.max(widthRef.current + delta, DOCK_MIN), DOCK_MAX));
         }}
         className="absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize hover:bg-primary/20 focus-visible:bg-primary/30 focus-visible:outline-none"
       />
@@ -245,7 +264,7 @@ export function HarnessDock({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {panel === "tasks" && <TasksDock context={context} />}
         {panel === "approvals" && <ApprovalsDock />}
-        {panel === "checkpoints" && <CheckpointsDock conv={context.conv} />}
+        {panel === "checkpoints" && <CheckpointsDock conversationId={context.conversationId} />}
         {panel === "files" && <FilesDock />}
       </div>
       {/* 面板切换条：竖版单列时也要能换到别的面板，不用先收起再点。 */}
@@ -263,7 +282,7 @@ export function HarnessDock({
       </div>
     </aside>
   );
-}
+});
 
 // ── 任务面板：任务 → Worker 两级，最多两级。数据源与第五轮的任务带同源。 ──
 function TasksDock({ context }: { context: DockContext }) {
@@ -445,14 +464,14 @@ function ApprovalsDock() {
 }
 
 // ── 检查点面板：读当前会话的检查点，回滚入口仍由消息气泡提供（避免两处写入口）。 ──
-function CheckpointsDock({ conv }: { conv: Conversation }) {
+function CheckpointsDock({ conversationId }: { conversationId: number }) {
   const t = useTranslations("chat.harness.dock");
   const [items, setItems] = React.useState<Checkpoint[] | null>(null);
 
   React.useEffect(() => {
     let alive = true;
     api
-      .conversationCheckpoints(conv.id)
+      .conversationCheckpoints(conversationId)
       .then((rows) => {
         if (alive) setItems(rows);
       })
@@ -462,7 +481,7 @@ function CheckpointsDock({ conv }: { conv: Conversation }) {
     return () => {
       alive = false;
     };
-  }, [conv.id]);
+  }, [conversationId]);
 
   if (items === null) return <DockLoading />;
   if (items.length === 0) return <DockEmpty text={t("empty.checkpoints")} />;

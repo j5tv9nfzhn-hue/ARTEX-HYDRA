@@ -2,14 +2,15 @@
 //
 // 它只做一件事：把命令转发给同目录的 artex-rea 内核。
 //
-//	artex              → artex-rea tui        （终端 TUI，默认行为）
-//	artex tui ...      → artex-rea tui ...    （同上，带参数）
-//	artex web ...      → artex-rea ...        （Web 控制台，剥掉 web 子命令）
+//	artex              → artex-rea            （Web 控制台，默认行为）
+//	artex web ...      → artex-rea ...        （同上，剥掉 web 子命令）
 //	artex mcp ...      → artex-rea mcp ...    （外部 MCP 接入）
 //	artex -addr ...    → artex-rea -addr ...  （其余参数原样转发）
 //
 // 内核负责真正的启动逻辑（含安装目录守卫与自更新转发），这个壳故意保持
 // 极小、零依赖：它必须先于任何数据库/网络初始化运行，出错时给出一句人话。
+//
+// 终端 TUI 已归档到 _archive/tui-harness/，本壳不再有 tui 子命令路由。
 package main
 
 import (
@@ -41,8 +42,13 @@ func run() int {
 	args := os.Args[1:]
 	switch {
 	case len(args) == 0:
-		// 直接运行 artex = 启动终端 TUI。
-		args = []string{"tui"}
+		// 直接运行 artex = 启动 Web 控制台。内核不带子命令时的默认行为就是起服务，
+		// 这里不需要补任何参数。
+	case args[0] == "tui":
+		// 终端 TUI 已归档。静默按默认行为起 Web 控制台会让用户以为 tui 还能用，
+		// 所以明确告知归档位置，再剥掉这个子命令继续走默认路径。
+		fmt.Fprintln(os.Stderr, "artex: 终端 TUI 已归档到 _archive/tui-harness/，暂不参与构建；本次启动 Web 控制台。")
+		args = args[1:]
 	case args[0] == "web":
 		// artex web = Web 控制台；内核不带子命令时默认起服务，剥掉 web 即可。
 		args = args[1:]
@@ -82,11 +88,11 @@ func ext() string {
 func usage() {
 	fmt.Print(`artex —— ARTEX-HYDRA 用户入口
 
-  artex            启动终端 TUI（全屏交互，配置来自 Web 控制台）
-  artex tui ...    同上，可带参数（artex tui -h 查看全部参数）
-  artex web ...    启动 Web 控制台（LLM / Agent / Skill / 预算都在这里配置）
+  artex            启动 Web 控制台（默认行为）
+  artex web ...    同上，可带参数
   artex mcp ...    外部 MCP 接入
 
-注意：终端 TUI 只允许在安装目录内运行；从其他目录启动会被拒绝。
+配置（LLM / Agent / Skill / 预算）全部在 Web 控制台完成。
+终端 TUI 已归档到 _archive/tui-harness/，暂不参与构建。
 `)
 }

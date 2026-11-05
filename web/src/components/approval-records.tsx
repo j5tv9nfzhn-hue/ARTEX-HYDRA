@@ -71,8 +71,10 @@ function ApprovalOrigin({ row, detail = false }: { row: InterceptApprovalRow; de
   const label = detail && row.task_id ? t("taskRef", { id: row.task_id }) : originLabel(row, t);
   const query = new URLSearchParams({ approval: String(row.id) });
   let href: string | undefined;
-  // 顶层 /chat 页面已下线：会话型审批不再提供跳转，任务型仍定位到任务详情。
-  if (row.task_id) {
+  if (row.conversation_id) {
+    query.set("c", String(row.conversation_id));
+    href = `/chat?${query}`;
+  } else if (row.task_id) {
     query.set("id", row.task_id);
     href = `/function/tasks/detail?${query}`;
   }

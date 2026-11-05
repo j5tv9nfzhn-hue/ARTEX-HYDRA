@@ -216,6 +216,7 @@
     "badgeBuiltin": "内置",
     "badgeCustom": "自定义",
     "badgeDisabled": "已停用",
+  "badgeRuntime": "运行时模板",
     "cancel": "取消",
     "countTotal": "共 {count} 个",
     "create": "创建",
@@ -241,7 +242,9 @@
     "new": "新建 Agent",
     "noDescription": "（无描述）",
     "subtitle": "一个根 Agent 编排整个任务，子代理按需临时派发；这里维护提示词模板与运行配置",
-    "groupOrchestration": "任务运行时",
+    "groupAll": "全部 Agent",
+  "groupAllDesc": "一个根 Agent 编排整个任务，子代理由它在任务里按需临时派发，没有固定清单、也不需要预先创建。这里是根/子代理的提示词模板、共用运行配置，以及你自建的对话助手。",
+  "groupOrchestration": "任务运行时",
     "groupOrchestrationDesc": "根 Agent 与它派发的子代理共用这些系统提示词模板与运行配置。子代理没有固定清单——派几个、派什么，由根在当前任务里自行决定。",
     "groupSessions": "会话 Agent",
     "groupSessionsDesc": "在对话里可选的助手。与任务运行时无关，不会被任务派发。",
@@ -719,6 +722,18 @@
       "welcome": "欢迎回来，请输入密码以继续使用 ARTEX-HYDRA"
     },
     "setup": {
+    "or": "或",
+    "skip": "跳过初始化，直接进入控制台",
+    "skipTitle": "跳过令牌与密码设置？",
+    "skipDesc": "将用服务端生成的随机密码完成初始化，并直接登录。",
+    "skipPoint1": "随机密码只打印在服务器控制台日志里（[auth] 行），不会回传到浏览器。",
+    "skipPoint2": "登录后请到「系统配置 → 登录密码」改成你自己记得住的密码。",
+    "skipPoint3": "为防远程抢占管理员账户，此入口只对服务器本机开放；从其他机器访问请填写设置令牌。",
+    "skipCancel": "返回设置",
+    "skipConfirm": "确认跳过并进入",
+    "skipping": "正在初始化…",
+    "errorSkip": "跳过初始化失败，请改用设置令牌完成初始化。",
+
       "confirmPassword": "确认密码",
       "confirmPlaceholder": "再次输入密码",
       "desc": "首次使用 ARTEX-HYDRA，请为账户设置一个登录密码（至少 8 位）",
@@ -1126,7 +1141,8 @@
     "replaySuccessRate": "崩溃重放成功率",
     "requestCount": "{count} 次请求",
     "sinceStart": "本次启动以来",
-    "srcNew": "计量账本",
+    "srcMerged": "新账本优先 · 旧数据兜底（已合并）",
+  "srcNew": "计量账本",
     "srcOld": "活动统计",
     "stage": {
       "exec": "执行",
@@ -5337,6 +5353,8 @@
     "logout": "退出登录"
   },
   "workspace": {
+    "tabFiles": "文件",
+    "tabStorage": "存储与清理",
     "backup": "备份",
     "backupDone": "已下载备份 “{name}”",
     "backupFailed": "备份失败：{msg}",

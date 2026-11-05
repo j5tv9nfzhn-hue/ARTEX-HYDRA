@@ -1811,24 +1811,6 @@ export interface InterceptApprovalRow extends InterceptPending {
   rule_name: string; // "" if rule was deleted
 }
 
-// ── 资产同步 (ScopeSentry 数据源) ──────────────────────────────────────────────
-export interface SSProject {
-  id: string; // MongoDB ObjectID — used as filter.project
-  name: string;
-  logo?: string;
-  AssetCount?: number;
-  tag?: string;
-}
-
-export interface SSTask {
-  id: string;
-  name: string; // used as filter.task
-  status?: number;
-  progress?: number;
-  creatTime?: string;
-  endTime?: string;
-}
-
 // ConvTokenSummary — one conversation's token total (+ profile/date) for merging
 // chat usage into the dashboard token stats. GET /api/tokens/conversations.
 export interface ConvTokenSummary {

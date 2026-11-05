@@ -87,35 +87,56 @@ type promptVar struct{ name, desc, example, source string }
 func intp(v int) *int { return &v }
 
 // builtinAgents mirrors docs §5(a). 内置工具不入库；这里只 seed agent + 变量目录。
-// 注：planner/worker/mainagent/auto 的交互式 shell 默认由下方 interactive_shell_default_v1
-// 块统一置 true（尊重后续 toggle）；这里的 interactiveShell 只给需要「建行即默认开」的新 agent。
+//
+// 新调度层（coord）只有一个根 Agent，子代理由根在任务里临时派发，因此这里
+// **不再 seed 任何内置角色**：planner / mainagent / reviewer / auto / pentest
+// 都已下线（前三个的源码是 //go:build decommissioned 桩，后两个的对话入口
+// 已并入根 Agent）。保留下来的两条不是「角色」：
+//
+//	worker —— DefaultCoordRootAgentKey，根 Agent 与子代理共用的运行配置载体
+//	          （模型档位 / 轮次 / 工具绑定）与提示词挂载点，必须有库行。
+//	goals  —— 建任务时那一次 LLM 目标拆解，不是常驻角色。
+//
+// 旧行由 pruneLegacyAgents 在启动时清掉，避免它们继续出现在 Agent 页。
 var builtinAgents = []builtinAgent{
 	{"goals", "目标拆解", "goals", "把渗透任务目标拆解成若干独立、可验证的子目标。", []promptVar{
 		{"EngagementDescription", "任务描述（测试对象/背景）", "测试 example.com 站点", "exploration"},
 		// Now 是全局 runtime 变量(见 server.globalPromptVars),不再在各 agent 目录里
 		// 重复定义,否则 withGlobalVars 追加时会与全局项撞名。
 	}, false, nil},
-	{"planner", "规划", "planner", "读取态势、判定目标，只在确有未覆盖的新方向时补充探索意图（每任务一个规划循环）。", []promptVar{
-		{"Goal", "任务总目标", "拿下 example.com 的管理员权限", "exploration"},
-		{"AssetSummary", "资产计数/类型分布摘要(可选)", "domain:3 ip:5 site:2", "distilled"},
-	}, false, nil},
-	{"mainagent", "主", "main", "人机接口：观察进展，把人的意图落成 hint 或高优先级意图。", []promptVar{
-		{"Goal", "当前任务目标", "拿下 example.com 的管理员权限", "exploration"},
-		{"AssetSummary", "开局态势摘要(可选)", "domain:3 ip:5", "distilled"},
-		{"FindingsSummary", "已确认漏洞摘要(可选)", "high:1 medium:2", "distilled"},
-	}, false, nil},
-	{"worker", "执行", "worker", "领取一条意图执行，把发现的事实/漏洞写回知识图谱后停止。", []promptVar{
+	// worker 的 key 被 agent.DefaultCoordRootAgentKey 引用，不能改名；
+	// 显示名改成「根 Agent」，避免和旧版「执行」角色混淆。
+	{"worker", "根 Agent", "worker", "根 Agent 与子代理共用的运行配置（模型档位/轮次/工具绑定）与提示词载体。", []promptVar{
 		{"ProxyAddr", "记录代理地址(驱动 if 双文案)", "127.0.0.1:8080", "runtime"},
 		{"WorkerName", "worker 自我标识(可选)", "worker-1", "runtime"},
 	}, false, nil},
-	// Auto:内置「平台操作」agent。不参与渗透编排循环,经对话页驱动,用工具操作平台。
-	{"auto", "Auto", "assistant", "平台操作助手：用工具管理任务(建/看/暂停/给提示)与资产，并可创建/修改 skill、自定义工具、MCP。", nil, false, nil},
-	// 渗透测试:内置「独立渗透」agent。经对话页驱动,一人从侦察到收尾走完整条渗透链,自己规划自己执行自己验证。默认开启交互式 shell。
-	// Reviewer：链路上的独立裁判（第四关）。它不跑 harness 循环、不接受聊天输入，
-	// 只吃 Worker 的原始输出并给出裁决；列在这里是为了让它和其它 Agent 一样
-	// 拥有 DB 行 → 提示词可版本化、可在配置面板里读改。
-	{"reviewer", "Reviewer", "worker", "独立裁决者：消化 Worker 的原始输出，产出可执行的判决（advance/pivot/abandon/escalate）。", nil, false, nil},
-	{"pentest", "渗透测试", "assistant", "独立渗透 agent：一人从侦察→找攻击面→深入利用→验证→收尾走完整条链，自己规划、自己执行、自己对抗式验证。", nil, true, intp(0)},
+}
+
+// legacyAgentKeys 是已下线、但旧库里可能仍留有行的内置角色。
+// 启动时按这个名单清库，让 Agent 页只剩当前世代。
+var legacyAgentKeys = []string{"planner", "mainagent", "reviewer", "auto", "pentest"}
+
+// pruneLegacyAgents 删除已下线内置角色的库行（含提示词、变量目录、工具/技能绑定）。
+// 用 settings 标记做成一次性迁移：用户若手工把某个 key 建回来（自定义 agent 同名），
+// 后续启动不会再被删掉。
+func (d *DB) pruneLegacyAgents() error {
+	if v, _, _ := d.GetSetting("agent_prune_legacy_v1"); v == "true" {
+		return nil
+	}
+	for _, key := range legacyAgentKeys {
+		if _, err := d.Exec(`DELETE FROM agents WHERE key = $1 AND builtin`, key); err != nil {
+			return fmt.Errorf("prune legacy agent %s: %w", key, err)
+		}
+	}
+	// agent_prompts / agent_prompt_vars 靠 ON DELETE CASCADE 跟着走；外键开关
+	// 关掉时（历史库）会留下孤儿行，这里兜一次底，避免提示词页出现无主的版本。
+	if _, err := d.Exec(`DELETE FROM agent_prompts WHERE agent_id NOT IN (SELECT id FROM agents)`); err != nil {
+		return fmt.Errorf("prune orphan agent prompts: %w", err)
+	}
+	if _, err := d.Exec(`DELETE FROM agent_prompt_vars WHERE agent_id NOT IN (SELECT id FROM agents)`); err != nil {
+		return fmt.Errorf("prune orphan agent vars: %w", err)
+	}
+	return d.SetSetting("agent_prune_legacy_v1", "true")
 }
 
 // seedBuiltins inserts the fixed built-in agents and their variable catalog (idempotent).
@@ -152,7 +173,7 @@ ON CONFLICT (agent_id, var_name) DO UPDATE
 	// ONCE — respects a later user toggle-off (guarded by a settings flag). goals(one-shot
 	// decomposer) stays off. Runs after the column exists (schema applied before seed).
 	if v, _, _ := d.GetSetting("interactive_shell_default_v1"); v != "true" {
-		if _, err := d.Exec(`UPDATE agents SET interactive_shell=true WHERE key IN ('planner','worker','mainagent','auto')`); err != nil {
+		if _, err := d.Exec(`UPDATE agents SET interactive_shell=true WHERE key = 'worker'`); err != nil {
 			return fmt.Errorf("seed interactive_shell defaults: %w", err)
 		}
 		_ = d.SetSetting("interactive_shell_default_v1", "true")
@@ -209,6 +230,11 @@ ON CONFLICT (name) DO NOTHING`, name, mcpbuiltin.Command, args); err != nil {
 	if err := d.seedDefaultAssetInterceptRules(); err != nil {
 		return fmt.Errorf("seed asset intercept rules: %w", err)
 	}
+	// 最后清旧角色行：必须在 builtinAgents 播种之后，否则 ON CONFLICT 会把
+	// 已删除的旧 key 当成「不存在」而重建（这里本来也不再 seed 它们）。
+	if err := d.pruneLegacyAgents(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -241,8 +267,9 @@ ON CONFLICT DO NOTHING`, r.kind, r.pattern, r.note); err != nil {
 	return d.SetSetting("asset_intercept_default_rules_v1", "done")
 }
 
-// builtinSkillAgentKeys 是内置技能包默认可见的五类内置 Agent。
-var builtinSkillAgentKeys = []string{"auto", "pentest", "worker", "planner", "mainagent"}
+// builtinSkillAgentKeys 是内置技能包默认可见的内置 Agent。
+// 现在只剩根 Agent 的运行配置行（key=worker）；旧四角色与 auto/pentest 已下线。
+var builtinSkillAgentKeys = []string{"worker"}
 
 // builtinSkillNames 列出随二进制下发的内置技能包目录名。技能文件本身在文件系统上
 // （SkillDir，由 SDK 加载），DB 只存可见性绑定。

@@ -72,9 +72,9 @@ func TestRefreshPromptIfSystemDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer d.Close()
-	ag, err := d.GetAgentByKey("planner")
+	ag, err := d.GetAgentByKey("worker")
 	if err != nil || ag == nil {
-		t.Fatalf("planner agent: %v", err)
+		t.Fatalf("worker agent: %v", err)
 	}
 	defer func() {
 		d.Exec(`DELETE FROM agent_prompts WHERE agent_id=$1`, ag.ID)
@@ -140,20 +140,20 @@ func TestConfigStores(t *testing.T) {
 	}
 
 	// agents seeded; prompt versioning
-	ag, err := d.GetAgentByKey("planner")
+	ag, err := d.GetAgentByKey("worker")
 	if err != nil || ag == nil {
-		t.Fatalf("planner agent: %v", err)
+		t.Fatalf("worker agent: %v", err)
 	}
-	v1, err := d.SavePrompt(ag.ID, "你是规划者 {{.Goal}}", "init", "test")
+	v1, err := d.SavePrompt(ag.ID, "你是根 Agent {{.ProxyAddr}}", "init", "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	v2, _ := d.SavePrompt(ag.ID, "你是规划者 v2 {{.Goal}} {{.Scope}}", "edit", "test")
+	v2, _ := d.SavePrompt(ag.ID, "你是根 Agent v2 {{.ProxyAddr}} {{.WorkerName}}", "edit", "test")
 	if v2 != v1+1 {
 		t.Fatalf("version should increment: %d -> %d", v1, v2)
 	}
 	cur, _ := d.CurrentPrompt(ag.ID)
-	if cur != "你是规划者 v2 {{.Goal}} {{.Scope}}" {
+	if cur != "你是根 Agent v2 {{.ProxyAddr}} {{.WorkerName}}" {
 		t.Fatalf("current prompt wrong: %q", cur)
 	}
 	vers, _ := d.ListPromptVersions(ag.ID)
@@ -161,9 +161,9 @@ func TestConfigStores(t *testing.T) {
 		t.Fatalf("want >=2 versions, got %d", len(vers))
 	}
 	pv, _ := d.PromptVars(ag.ID)
-	// planner must have at least the seeded catalog vars (Goal, AssetSummary)
+	// worker（根 Agent 的运行配置行）must have at least the seeded catalog vars (ProxyAddr, WorkerName)
 	if len(pv) < 2 {
-		t.Fatalf("planner catalog want >=2 vars, got %d", len(pv))
+		t.Fatalf("worker catalog want >=2 vars, got %d", len(pv))
 	}
 	d.Exec(`DELETE FROM agent_prompts WHERE agent_id=$1`, ag.ID)
 	d.Exec(`UPDATE agents SET current_prompt_id=NULL WHERE id=$1`, ag.ID)

@@ -106,8 +106,6 @@ import type {
   SkillItem,
   SkillProposal,
   SkillProposalListResponse,
-  SSProject,
-  SSTask,
   Stats,
   Task,
   TaskArchive,
@@ -300,6 +298,9 @@ export const api = {
   // 桌面壳窗口（进不来网络请求），它可以直接设置登录密码。
   initPassword: (password: string, setupToken: string) =>
     post<{ token: string }>("/auth/init", { password, setup_token: setupToken }),
+  // 首启「跳过初始化」：免令牌、免密码，服务端生成随机密码并只打到控制台日志，
+  // 直接返回会话 token。仅服务器本机可调用（远程会拿到 403）。
+  skipInit: () => post<{ token: string }>("/auth/skip", {}),
   // 修改密码会使旧 token 失效，使用响应中的新 token 延续当前会话。
   changePassword: (oldPassword: string, newPassword: string) =>
     post<{ ok: boolean; token?: string }>("/auth/change-password", {
@@ -1406,35 +1407,6 @@ export const api = {
       denied: { id: string; title: string; reason?: string }[];
       tool_count: number;
     }>("/capabilities"),
-
-  // ---- 资产同步 (ScopeSentry 数据源) ----
-  ssStatus: () =>
-    get<{ exists: boolean; configured: boolean; enabled: boolean; reachable: boolean; url?: string; tools: string[] }>(
-      "/sync/scopesentry/status",
-    ),
-  ssDatasource: (body: { url?: string; api_key?: string }) =>
-    post<{ id: number; enabled: boolean }>("/sync/scopesentry/datasource", body),
-  ssProjects: (page = 1, size = 50, search = "") =>
-    get<{ projects: SSProject[]; tag: Record<string, number> }>(
-      `/sync/scopesentry/projects?page=${page}&size=${size}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
-    ).then((r) => ({ projects: arr(r.projects), tag: r.tag ?? {} })),
-  ssTasks: (page = 1, size = 50, search = "") =>
-    get<{ tasks: SSTask[] }>(
-      `/sync/scopesentry/tasks?page=${page}&size=${size}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
-    ).then((r) => arr(r.tasks)),
-  ssSync: (body: {
-    dimension: "project" | "task";
-    targets: string[];
-    asset_types: string[];
-    create_company?: boolean;
-    page_size?: number;
-  }) =>
-    post<{
-      synced: Record<string, number>;
-      companies: string[] | null;
-      warnings: string[] | null;
-      errors: string[] | null;
-    }>("/sync/scopesentry/sync", body),
 
   // ---- skills (文件系统) ----
   skills: (params?: { origin?: string; q?: string }) => {

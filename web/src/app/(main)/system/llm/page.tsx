@@ -36,6 +36,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SecretInput } from "@/components/ui/secret-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -54,6 +55,15 @@ import { ProfileRetryFields, RetryPolicyPanel, ZERO_OVERRIDE } from "./_componen
 // 存库空字符串 = 该字段【不发送】；Radix Select 不接受空 value，故 UI 用 "none"
 // 哨兵表示不发送，存取时与 "" 互转（NONE / fromStore / toStore）。
 const NONE = "none";
+
+/**
+ * 共享的空模型列表。
+ *
+ * 卡片按 provider 分组渲染，没有模型的供应商原本写 `?? []` —— 每次渲染都新建
+ * 一个数组，React.memo 的浅比较必然失败，卡片照旧重渲染。用同一个常量兜底，
+ * 「空卡片」才真正能跳过渲染。
+ */
+const EMPTY_PROFILES: LLMProfile[] = [];
 const fromStore = (v?: string) => (v ? v : NONE);
 const toStore = (v: string) => (v === NONE ? "" : v);
 
@@ -489,15 +499,15 @@ function ProviderSheet({
               新 Key 时才覆盖）。 */}
           <div className="grid gap-2">
             <Label htmlFor="v-api-key">API Key</Label>
-            <Input
+            <SecretInput
               id="v-api-key"
               // 阻止浏览器密码管理器把已保存的登录密码自动填进来（同模型表单）。
               name={`llm-provider-key-${provider?.id ?? "new"}`}
               autoComplete="new-password"
-              type="password"
               placeholder={keyHint ? t("profile.apiKey.placeholderSet", { hint: keyHint }) : "sk-…"}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
+              label="API Key"
             />
             <p className="text-muted-foreground text-xs">{t("profile.apiKey.hint")}</p>
           </div>
@@ -1014,7 +1024,7 @@ function ModelSheet({
 // 否则设置页会静默丢掉这些配置。
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ProviderCard({
+const ProviderCard = React.memo(function ProviderCard({
   provider,
   models,
   health,
@@ -1291,7 +1301,7 @@ function ProviderCard({
       )}
     </PaperSheet>
   );
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1374,32 +1384,34 @@ export default function LLMPage() {
     return m;
   }, [pool]);
 
-  async function activate(p: LLMProfile) {
-    try {
-      await api.activateLLMProfile(p.id);
-      toast.success(t("page.toast.activated", { name: p.name }));
-      await load();
-    } catch (e) {
-      toast.error(t("page.toast.activateFailed", { msg: (e as Error).message }));
-    }
-  }
+  const activate = React.useCallback(
+    async (p: LLMProfile) => {
+      try {
+        await api.activateLLMProfile(p.id);
+        toast.success(t("page.toast.activated", { name: p.name }));
+        await load();
+      } catch (e) {
+        toast.error(t("page.toast.activateFailed", { msg: (e as Error).message }));
+      }
+    },
+    [t, load],
+  );
 
-  async function removeModel(p: LLMProfile) {
-    try {
-      await api.deleteLLMProfile(p.id);
-      toast.success(t("page.toast.deleted", { name: p.name }));
-      await load();
-    } catch (e) {
-      toast.error(t("page.toast.deleteFailed", { msg: (e as Error).message }));
-    }
-  }
+  const removeModel = React.useCallback(
+    async (p: LLMProfile) => {
+      try {
+        await api.deleteLLMProfile(p.id);
+        toast.success(t("page.toast.deleted", { name: p.name }));
+        await load();
+      } catch (e) {
+        toast.error(t("page.toast.deleteFailed", { msg: (e as Error).message }));
+      }
+    },
+    [t, load],
+  );
 
   // 删供应商是一次性动作：名下的模型、配置、任务链引用全部随之消失，所以只在
   // 这里弹一个确认框说清「会连带删掉几个模型」，确认后一次请求删干净。
-  function removeProvider(v: LLMProvider) {
-    setDeletingProvider(v);
-  }
-
   async function confirmRemoveProvider() {
     const v = deletingProvider;
     if (!v) return;
@@ -1415,6 +1427,28 @@ export default function LLMPage() {
   }
 
   const poolOn = pool?.enabled ?? false;
+
+  // 供应商卡是 React.memo 的：回调必须稳定，否则每开一次抽屉、每改一个字段，
+  // 都会让所有卡片连同其下的模型行整片重渲染。空模型列表用同一个常量数组，
+  // 避免 `?? []` 每次渲染都产生新引用、把 memo 打穿。
+  const handleDeleteProvider = React.useCallback((v: LLMProvider) => {
+    setDeletingProvider(v);
+  }, []);
+  const noopDeleteProvider = React.useCallback(() => undefined, []);
+  const handleAddModel = React.useCallback((v: LLMProvider | null) => openModel(null, v?.id ?? ""), [openModel]);
+  const handleEditModel = React.useCallback((p: LLMProfile) => openModel(p, p.provider_id ?? ""), [openModel]);
+  const handleDeleteModel = React.useCallback(
+    (p: LLMProfile) => {
+      void removeModel(p);
+    },
+    [removeModel],
+  );
+  const handleActivate = React.useCallback(
+    (p: LLMProfile) => {
+      void activate(p);
+    },
+    [activate],
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
@@ -1452,15 +1486,15 @@ export default function LLMPage() {
               <ProviderCard
                 key={v.id}
                 provider={v}
-                models={grouped.byProv.get(v.id) ?? []}
+                models={grouped.byProv.get(v.id) ?? EMPTY_PROFILES}
                 health={health}
                 poolOn={poolOn}
                 onEditProvider={openProvider}
-                onDeleteProvider={(x) => void removeProvider(x)}
-                onAddModel={(x) => openModel(null, x?.id ?? "")}
-                onEditModel={(p) => openModel(p, p.provider_id ?? "")}
-                onDeleteModel={(p) => void removeModel(p)}
-                onActivate={(p) => void activate(p)}
+                onDeleteProvider={handleDeleteProvider}
+                onAddModel={handleAddModel}
+                onEditModel={handleEditModel}
+                onDeleteModel={handleDeleteModel}
+                onActivate={handleActivate}
               />
             ))}
             {grouped.orphans.length > 0 && (
@@ -1470,11 +1504,11 @@ export default function LLMPage() {
                 health={health}
                 poolOn={poolOn}
                 onEditProvider={openProvider}
-                onDeleteProvider={() => undefined}
-                onAddModel={(x) => openModel(null, x?.id ?? "")}
-                onEditModel={(p) => openModel(p, "")}
-                onDeleteModel={(p) => void removeModel(p)}
-                onActivate={(p) => void activate(p)}
+                onDeleteProvider={noopDeleteProvider}
+                onAddModel={handleAddModel}
+                onEditModel={handleEditModel}
+                onDeleteModel={handleDeleteModel}
+                onActivate={handleActivate}
               />
             )}
             {providers.length === 0 && grouped.orphans.length === 0 && (

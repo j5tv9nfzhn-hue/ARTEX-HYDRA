@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import * as React from "react";
 
 import { AppSidebar } from "@/app/(main)/_components/sidebar/app-sidebar";
+import { LegacyRemnantDialog } from "@/components/legacy-remnant-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { UINotifier } from "@/components/ui-notifier";
 import { api } from "@/lib/api";
@@ -98,6 +99,9 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
           MainContent 对任务详情页是 full-bleed 直接返回 children，只有挂在这一层
           才能保证「任何页面（含子页面）都收得到」。 */}
       <UINotifier />
+      {/* 升级后的一次性残留提示：等界面挂载完再检查，避免和首屏请求抢带宽。
+          数据全部来自真实接口；没有残留就不弹。 */}
+      <LegacyRemnantDialog />
     </SidebarProvider>
   );
 }

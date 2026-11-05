@@ -14,8 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SecretInput } from "@/components/ui/secret-input";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 
@@ -76,35 +76,35 @@ export function ChangePasswordDialog({
           <div className="flex flex-col gap-3 py-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cp-old">{t("currentPassword")}</Label>
-              <Input
+              <SecretInput
                 id="cp-old"
-                type="password"
                 autoComplete="current-password"
                 value={oldPassword}
                 disabled={saving}
                 onChange={(e) => setOldPassword(e.target.value)}
+                label="当前密码"
               />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cp-new">{t("newPassword")}</Label>
-              <Input
+              <SecretInput
                 id="cp-new"
-                type="password"
                 autoComplete="new-password"
                 value={newPassword}
                 disabled={saving}
                 onChange={(e) => setNewPassword(e.target.value)}
+                label="新密码"
               />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cp-confirm">{t("confirmPassword")}</Label>
-              <Input
+              <SecretInput
                 id="cp-confirm"
-                type="password"
                 autoComplete="new-password"
                 value={confirmPassword}
                 disabled={saving}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                label="确认密码"
               />
             </div>
           </div>

@@ -44,11 +44,14 @@ import { Masthead, Sheet as PaperSheet, SheetHead } from "@/ui/container";
 // (non-builtin) agents get a delete button.
 function AgentGridCard({
   agent,
+  runtime,
   onOpen,
   onDeleted,
   delay,
 }: {
   agent: Agent;
+  /** 运行时模板（根/子代理/共用配置/目标拆解），与自定义助手用不同徽章区分。 */
+  runtime?: boolean;
   onOpen: () => void;
   onDeleted: () => void;
   /** 首批进场延迟(ms),由父层 useStaggerOnce 的窗口下发;其余时刻 undefined(不挂动画)。 */
@@ -77,7 +80,11 @@ function AgentGridCard({
           <Bot className="size-4 text-muted-foreground" />
           <span className="font-medium text-sm">{agent.name}</span>
           <span className="font-mono text-muted-foreground text-xs">{agent.key}</span>
-          {agent.builtin ? (
+          {runtime ? (
+            <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+              {t("badgeRuntime")}
+            </Badge>
+          ) : agent.builtin ? (
             <Badge variant="secondary" className="px-1.5 py-0 text-xs">
               {t("badgeBuiltin")}
             </Badge>
@@ -252,39 +259,32 @@ export default function AgentsPage() {
         />
       </div>
 
-      <PaperSheet api={["agents", "createAgent", "deleteAgent"]}>
-        <SheetHead index="01" title={t("groupOrchestration")} count={orchestration.length} />
+      {/* 一张清单：运行时模板在前，自定义助手在后。
+          旧版把两者拆成「任务运行时 / 会话 Agent」两块，同一批内置角色会在两处
+          重复出现；合并后只按来源打徽章，不再有第二份清单。 */}
+      <PaperSheet api={["agents", "orchestration", "createAgent", "deleteAgent"]}>
+        <SheetHead index="01" title={t("groupAll")} count={orchestration.length + agents.length} />
         <div className="flex flex-col gap-3 px-4 py-3">
-          <p className="text-muted-foreground text-sm">{t("groupOrchestrationDesc")}</p>
-          {orchestration.length > 0 && (
+          <p className="text-muted-foreground text-sm">{t("groupAllDesc")}</p>
+          {orchestration.length + agents.length === 0 ? (
+            <EmptyState illustration="nodes" title={t("empty")} />
+          ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {orchestration.map((a, index) => (
                 <AgentGridCard
-                  key={a.key}
+                  key={`runtime-${a.key}`}
                   agent={a}
+                  runtime
                   delay={listIntro ? Math.min(index * 50, 450) : undefined}
                   onOpen={() => setEditKey(a.key)}
                   onDeleted={reload}
                 />
               ))}
-            </div>
-          )}
-        </div>
-      </PaperSheet>
-
-      <PaperSheet api={["agents", "createAgent", "deleteAgent"]}>
-        <SheetHead index="02" title={t("groupSessions")} count={agents.length} />
-        <div className="flex flex-col gap-3 px-4 py-3">
-          <p className="text-muted-foreground text-sm">{t("groupSessionsDesc")}</p>
-          {agents.length === 0 ? (
-            <EmptyState illustration="nodes" title={t("empty")} />
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {agents.map((a, index) => (
                 <AgentGridCard
-                  key={a.key}
+                  key={`agent-${a.key}`}
                   agent={a}
-                  delay={listIntro ? Math.min(index * 50, 450) : undefined}
+                  delay={listIntro ? Math.min((orchestration.length + index) * 50, 450) : undefined}
                   onOpen={() => setEditKey(a.key)}
                   onDeleted={reload}
                 />

@@ -302,10 +302,12 @@ export function FindingsTable({
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1">
                     {retest ? (
-                      <span className="inline-flex items-center gap-1 text-sm" title={t("table.retestingTitle")}>
-                        <Spinner data-icon="inline-start" />
-                        {t("table.retesting")}
-                      </span>
+                      <Button asChild size="sm" variant="ghost">
+                        <Link href={`/chat?c=${retest.conversation_id}`} title={t("table.retestingTitle")}>
+                          <Spinner data-icon="inline-start" />
+                          {t("table.retesting")}
+                        </Link>
+                      </Button>
                     ) : null}
                     {!retest && f.finding_id && !f.inherited ? (
                       <Button size="sm" variant="ghost" onClick={() => onRetest(f)} title={t("table.retestTitle")}>
@@ -314,10 +316,12 @@ export function FindingsTable({
                       </Button>
                     ) : null}
                     {verifying ? (
-                      <span className="inline-flex items-center gap-1 text-sm" title={t("table.verifyingTitle")}>
-                        <Spinner data-icon="inline-start" />
-                        {t("table.verifying")}
-                      </span>
+                      <Button asChild size="sm" variant="ghost">
+                        <Link href={`/chat?c=${verifying.conversation_id}`} title={t("table.verifyingTitle")}>
+                          <Spinner data-icon="inline-start" />
+                          {t("table.verifying")}
+                        </Link>
+                      </Button>
                     ) : null}
                     {!verifying && f.finding_id && !f.inherited ? (
                       <Button size="sm" variant="ghost" onClick={() => onVerify(f)} title={t("table.verifyTitle")}>

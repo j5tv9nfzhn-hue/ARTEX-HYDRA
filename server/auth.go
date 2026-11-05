@@ -56,6 +56,7 @@ const (
 	authErrCurrentPasswordWrong = "当前密码不正确"
 	authErrBadCredential        = "用户名或密码不正确"
 	authErrSetupTokenInvalid    = "设置令牌不正确。请输入服务器控制台日志 [auth] 行中打印的设置令牌"
+	authErrSkipLocalOnly        = "「跳过初始化」只允许在服务器本机打开控制台时使用；远程访问请填写设置令牌"
 	authErrTooManyAttempts      = "失败次数过多，请稍后再试"
 )
 
@@ -450,6 +451,89 @@ func (s *Server) authStatus(w http.ResponseWriter, r *http.Request) {
 		"setup_token_required": hash == "",
 		"auth_disabled":        false,
 	})
+}
+
+// POST /api/auth/skip — 首启「跳过初始化」。
+//
+// 免设置令牌、免手填密码：服务端生成高强度随机密码，只把明文打到**服务端控制台**，
+// 库里存哈希，随后直接返回会话 token 让操作员进控制台。明文不回传给浏览器，
+// 避免凭据落到前端日志、开发者工具或代理缓存里。
+//
+// 安全边界（对齐「不产生弱口令、不放大攻击面」）：
+//   - 只接受**回环地址**直连，且请求不得带 X-Forwarded-For / X-Real-IP。
+//     否则任何人只要能连上端口就能抢先初始化并接管管理员账户。
+//   - 已经初始化过则一律 403，不会把既有密码覆盖成随机值。
+//   - 与 /api/auth/init 共用同一把 initMu 和失败限流器。
+func (s *Server) authSkip(w http.ResponseWriter, r *http.Request) {
+	pg := s.pg(w)
+	if pg == nil {
+		return
+	}
+	if !loopbackRequest(r) {
+		writeErr(w, 403, authErrSkipLocalOnly)
+		return
+	}
+	key := clientKey(r)
+	if !s.limiter().allow(key) {
+		writeErr(w, 429, authErrTooManyAttempts)
+		return
+	}
+	s.initMu.Lock()
+	defer s.initMu.Unlock()
+	if existing := s.reloadPassHash(); existing != "" {
+		writeErr(w, 403, authErrPasswordAlreadySet)
+		return
+	}
+	pw, err := randomToken(32)
+	if err != nil {
+		writeErr(w, 500, authErrPasswordHash)
+		return
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
+	if err != nil {
+		writeErr(w, 500, authErrPasswordHash)
+		return
+	}
+	if err := pg.SetSetting(authPassKey, string(hash)); err != nil {
+		writeErr(w, 500, trMsg(authErrSaveFailedPrefix)+err.Error())
+		return
+	}
+	s.setPassHash(string(hash))
+	s.clearSetupToken()
+	s.limiter().reset(key)
+	tok, err := signJWT(s.signingKey(string(hash)))
+	if err != nil {
+		writeErr(w, 500, authErrTokenGen)
+		return
+	}
+	log.Printf(logT("[auth] 已按「跳过初始化」生成随机管理员密码: %s (client=%s)"), pw, clientLogID(r))
+	log.Print(logT("[auth] 该密码只在本控制台输出这一次；登录后请到「系统配置 → 登录密码」修改。"))
+	writeJSON(w, 200, map[string]any{"token": tok})
+}
+
+// loopbackRequest reports whether the request arrived directly from the local
+// machine.
+//
+// 判定必须同时满足两条，缺一不可：
+//  1. TCP 对端是回环地址；
+//  2. 请求里**没有任何**转发类头。
+//
+// 第 2 条是关键：服务常被同机的 nginx / Caddy 反代到 127.0.0.1:8787，此时
+// 所有远程客户端在 TCP 层看起来都是 127.0.0.1。只看第 1 条，等于把「跳过
+// 初始化」开放给全网。转发头存在就按「不是本机」处理，宁可让人回退到设置
+// 令牌，也不给远程抢占管理员账户的机会。
+func loopbackRequest(r *http.Request) bool {
+	for k := range r.Header {
+		lk := strings.ToLower(k)
+		if strings.HasPrefix(lk, "x-forwarded-") ||
+			lk == "forwarded" || lk == "via" ||
+			lk == "x-real-ip" || lk == "x-client-ip" ||
+			lk == "cf-connecting-ip" || lk == "true-client-ip" {
+			return false
+		}
+	}
+	ip := net.ParseIP(clientKey(r))
+	return ip != nil && ip.IsLoopback()
 }
 
 // POST /api/auth/init — sets the password for the first time; rejected if already

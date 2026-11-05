@@ -7,8 +7,8 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SecretInput } from "@/components/ui/secret-input";
 import { http } from "@/lib/api";
 import { Sheet, SheetHead } from "@/ui/container";
 
@@ -122,35 +122,35 @@ export function PasswordCard() {
         {mode === "change" ? (
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="pw-old">{t("oldLabel")}</Label>
-            <Input
+            <SecretInput
               id="pw-old"
-              type="password"
               autoComplete="current-password"
               value={oldPassword}
               onChange={(e) => setOldPassword(e.target.value)}
+              label="原密码"
             />
           </div>
         ) : null}
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="pw-new">{t("newLabel")}</Label>
-          <Input
+          <SecretInput
             id="pw-new"
-            type="password"
             autoComplete="new-password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
+            label="新密码"
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="pw-confirm">{t("confirmLabel")}</Label>
-          <Input
+          <SecretInput
             id="pw-confirm"
-            type="password"
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
+            label="确认密码"
           />
         </div>
 

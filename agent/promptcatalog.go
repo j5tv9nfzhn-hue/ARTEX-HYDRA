@@ -141,11 +141,5 @@ func BuiltinPromptSeeds() map[string]string {
 		// （DecomposeGoals），由 server/goals.go 的 createGoals 在任务创建时
 		// 调用，与调度链路无关，因此继续存活、继续可编辑。
 		"goals": goalsDefaultTmpl,
-
-		// ── 独立/自定义角色 ───────────────────────────────────────────────
-		"auto":    autoDefaultTmpl,
-		"pentest": pentestDefaultTmpl,
-		// reviewer 已下线（agent/reviewer.go 是 //go:build decommissioned 桩），
-		// 它的提示词常量随之消失。这里不能再列出该 key，否则本行是悬空引用。
 	}
 }

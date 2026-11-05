@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SecretInput } from "@/components/ui/secret-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -703,9 +704,8 @@ export default function SystemSettingsPage() {
                   {braveKeySet && <span className="ml-2 text-emerald-500 text-xs">{t("configured")}</span>}
                 </Label>
                 <div className="flex items-center gap-2">
-                  <Input
+                  <SecretInput
                     id="brave-key"
-                    type="password"
                     autoComplete="off"
                     placeholder={
                       braveKeySet ? t("webSearch.braveKeyPlaceholderSet") : t("webSearch.braveKeyPlaceholderUnset")
@@ -713,6 +713,7 @@ export default function SystemSettingsPage() {
                     value={braveKeyInput}
                     disabled={!loaded || savingKey}
                     onChange={(e) => setBraveKeyInput(e.target.value)}
+                    label="Brave API Key"
                   />
                   <Button
                     type="button"
@@ -734,9 +735,8 @@ export default function SystemSettingsPage() {
                   {tavilyKeySet && <span className="ml-2 text-emerald-500 text-xs">{t("configured")}</span>}
                 </Label>
                 <div className="flex items-center gap-2">
-                  <Input
+                  <SecretInput
                     id="tavily-key"
-                    type="password"
                     autoComplete="off"
                     placeholder={
                       tavilyKeySet ? t("webSearch.tavilyKeyPlaceholderSet") : t("webSearch.tavilyKeyPlaceholderUnset")
@@ -744,6 +744,7 @@ export default function SystemSettingsPage() {
                     value={tavilyKeyInput}
                     disabled={!loaded || savingTavilyKey}
                     onChange={(e) => setTavilyKeyInput(e.target.value)}
+                    label="Tavily API Key"
                   />
                   <Button
                     type="button"

@@ -28,6 +28,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   useSidebar,
+  useSidebarIsRevealed,
 } from "@/components/ui/sidebar";
 import { useNotifyUnread } from "@/hooks/use-notify-inbox";
 import { usePolling } from "@/hooks/use-polling";
@@ -108,6 +109,7 @@ export function NavMain({ items }: NavMainProps) {
   const t = useTranslations("nav");
   const rawPath = usePathname();
   const { state, isMobile } = useSidebar();
+  const revealed = useSidebarIsRevealed();
   const prefs = useSidebarPrefs();
   // 路由段含中文，pathname 可能是百分号编码，解码后再与导航 url 比较，保证高亮命中。
   const path = (() => {
@@ -136,7 +138,9 @@ export function NavMain({ items }: NavMainProps) {
 
   // 图标折叠模式下分组标签被 CSS 隐藏（opacity-0/-mt-8），若再折叠内容会完全不可达；
   // 因此该模式始终展开分组（保持改造前行为），只有非图标模式允许折叠。
-  const groupsCollapsible = !(state === "collapsed" && !isMobile);
+  // 覆盖层展开时标签已经可见，此时按「已展开」处理——否则会出现「看起来展开了、
+  // 点分组标题却没反应」。
+  const groupsCollapsible = !(state === "collapsed" && !isMobile && !revealed);
 
   const hiddenSet = new Set(prefs.hidden);
   const pinnedSet = new Set(prefs.pinned);
@@ -252,7 +256,10 @@ function NavGroupSection({
 
 function NavItem({ item, isItemActive, isSubItemActive, isSubmenuOpen }: NavItemProps) {
   const { state, isMobile } = useSidebar();
-  const isCollapsedDesktop = state === "collapsed" && !isMobile;
+  const revealed = useSidebarIsRevealed();
+  // 覆盖层展开时按展开态渲染：否则侧栏视觉上已铺开，带子项的条目仍弹浮层菜单，
+  // 与「就地展开」的观感不一致。
+  const isCollapsedDesktop = state === "collapsed" && !isMobile && !revealed;
 
   if (!hasSubItems(item)) {
     return <NavLinkItem item={item} isActive={isItemActive(item)} showIconFallback={isCollapsedDesktop} />;

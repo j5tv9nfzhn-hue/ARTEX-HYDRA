@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SecretInput } from "@/components/ui/secret-input";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 
@@ -115,14 +116,14 @@ export default function LoginPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">{t("login.password")}</Label>
-              <Input
+              <SecretInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t("login.passwordPlaceholder")}
                 autoFocus
                 autoComplete="current-password"
+                label="登录密码"
               />
             </div>
             <div className="flex items-start gap-2">
