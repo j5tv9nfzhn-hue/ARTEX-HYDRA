@@ -1,7 +1,7 @@
 // Package selfupdate implements ARTEX-HYDRA 的页面一键更新：从 GitHub Release 拉取新版
 // 二进制、校验、暂存，并在下次启动时原子换装。
 //
-// 整体分工（见 start.sh / start.bat）：
+// 整体分工（见 start.sh；Windows 直接运行入口程序）：
 //
 //	启动脚本  = 傻瓜守护循环，只负责"进程退出后按退出码决定是否再拉起"
 //	本包      = 全部易错逻辑（下载 / SHA256 校验 / 冒烟 / 换装 / 失败回滚）
@@ -188,12 +188,12 @@ func parseVersion(s string) ([4]int, bool) {
 	return out, true
 }
 
-// supervisedEnv 由 start.sh / start.bat 设置：它告诉进程"外面有个循环会在
+// supervisedEnv 由 start.sh 设置：它告诉进程"外面有个循环会在
 // 我以 ExitRestart 退出后把我重新拉起来"。没有它，换装后进程退出就再没人拉起，
 // 用户看到的是"更新完程序打不开了"。
 const supervisedEnv = "ARTEX_SUPERVISED"
 
-// Supervised 报告当前进程是否由守护脚本（start.sh / start.bat）启动。
+// Supervised 报告当前进程是否由守护脚本（start.sh）启动。
 func Supervised() bool {
 	switch strings.ToLower(strings.TrimSpace(os.Getenv(supervisedEnv))) {
 	case "1", "true", "yes", "on":

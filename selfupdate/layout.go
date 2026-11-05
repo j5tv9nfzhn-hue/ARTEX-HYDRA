@@ -65,12 +65,19 @@ const (
 	bundledRetiredSuffix = ".bundled-"
 )
 
-// entryStem / coreStem 是发行包入口与核心程序的文件名基名，默认
-// artex-rea / artex-rea-core，保持「入口 + 核心两件套 + versions/ 版本化布局」
-// ——Windows 上换装不能覆盖运行中的 exe，只能靠"新增版本目录 + 原子改指针"。
+// entryStem / coreStem 是发行包入口与核心程序的文件名基名。
+//
+// 现行名字是 artex-hydra / artex-hydra-core（仓库项目名「九头蛇」）。旧版用的是
+// artex-rea / artex-rea-core —— 改名不能只改新包，否则已经装过旧版的机器升级后
+// 会在 versions/<ver>/ 里找不到自己的核心程序。legacy* 两个常量就是给这批机器
+// 留的只读回退：新名优先，找不到再认旧名，不主动搬运文件。
 var (
-	entryStem = "artex-rea"
-	coreStem  = "artex-rea-core"
+	entryStem = "artex-hydra"
+	coreStem  = "artex-hydra-core"
+
+	// legacyEntryStem / legacyCoreStem 是改名前的文件名，仅用于兼容读取。
+	legacyEntryStem = "artex-rea"
+	legacyCoreStem  = "artex-rea-core"
 
 	// outerBackupPrefix 是替换引导程序时留下的备份前缀（<入口名>.old-<ts>），
 	// 下次启动清掉。
@@ -182,6 +189,25 @@ func CorePath(l Layout, version string) string {
 	return filepath.Join(l.Versions, versionKey(version), coreStem+exeExt())
 }
 
+// legacyCorePath 返回改名前的核心程序路径（artex-rea-core[.exe]）。
+//
+// 只用于读取：已经装过旧版的机器，versions/<ver>/ 里躺着的是旧名文件。升级到
+// 改名后的版本时先认新名、再认旧名，避免出现「指针指向的版本不存在」而回落到
+// 根目录的入口程序、把版本化布局整个丢掉。
+func legacyCorePath(l Layout, version string) string {
+	return filepath.Join(l.Versions, versionKey(version), legacyCoreStem+exeExt())
+}
+
+// corePathFor 返回该版本真实存在的核心程序路径：新名优先，旧名兜底。
+func corePathFor(l Layout, version string) (string, bool) {
+	for _, p := range []string{CorePath(l, version), legacyCorePath(l, version)} {
+		if _, err := os.Stat(p); err == nil {
+			return p, true
+		}
+	}
+	return "", false
+}
+
 // StagedPath 返回某个版本的暂存件路径。
 //
 // 文件名固定为 artex-rea.staged[.exe]：带 .staged 是为了让"被误启动"能在启动守卫里
@@ -251,7 +277,10 @@ func InstalledVersions(l Layout) []string {
 			continue
 		}
 		if _, err := os.Stat(filepath.Join(l.Versions, e.Name(), coreStem+exeExt())); err != nil {
-			continue // 目录不完整（安装中断），不算一个版本
+			// 改名前的安装用旧名（artex-rea-core），同样算一个完整版本。
+			if _, legacyErr := os.Stat(filepath.Join(l.Versions, e.Name(), legacyCoreStem+exeExt())); legacyErr != nil {
+				continue // 目录不完整（安装中断），不算一个版本
+			}
 		}
 		out = append(out, e.Name())
 	}
@@ -350,18 +379,18 @@ func Handoff() (int, bool) {
 	if !ok || strings.TrimSpace(ptr.Current) == "" {
 		return 0, false
 	}
-	target := CorePath(l, ptr.Current)
+	target, ok := corePathFor(l, ptr.Current)
+	if !ok {
+		logUpdate(l, "指针指向的版本 %s 不存在（新旧两种文件名都没找到），先按当前可执行文件启动", ptr.Current)
+		return 0, false
+	}
 	if filepath.Clean(target) == filepath.Clean(exe) {
 		return 0, false // 自己就是那个核心，继续转交会递归
-	}
-	if _, err := os.Stat(target); err != nil {
-		logUpdate(l, "指针指向的版本 %s 不存在：%v，先按当前可执行文件启动", ptr.Current, err)
-		return 0, false
 	}
 	logUpdate(l, "控制权转交：%s → %s", filepath.Base(exe), target)
 
 	// 监护循环：入口 exe 本来就是父进程（在等 core 退出），把"等"改成"等 + 按需重启"，
-	// 就不再需要 start.sh / start.bat 在外面再套一层循环。
+	// 就不再需要 start.sh（Windows 上不再有 bat）在外面再套一层循环。
 	// 只有"孩子写了重启意图"才重新拉起：用户 Ctrl-C 出去的进程不会被复活。
 	var restarts []time.Time
 	for {
@@ -384,9 +413,8 @@ func Handoff() (int, bool) {
 		}
 		// 安装与回滚都只改指针，每一轮都重新读，才能真正"换成新版本"。
 		if next, ok := ReadPointer(l); ok && strings.TrimSpace(next.Current) != "" {
-			candidate := CorePath(l, next.Current)
-			if filepath.Clean(candidate) != filepath.Clean(target) {
-				if _, err := os.Stat(candidate); err == nil {
+			if candidate, found := corePathFor(l, next.Current); found {
+				if filepath.Clean(candidate) != filepath.Clean(target) {
 					logUpdate(l, "按重启意图（%s）改跑 versions/%s", intent.Reason, versionKey(next.Current))
 					target = candidate
 				}
@@ -412,7 +440,7 @@ func RefuseUnsafeExecutable() error {
 		if strings.Contains(base, bad) {
 			return fmt.Errorf(
 				"检测到从升级临时文件启动（%s）：这不是一个可用的安装。\n"+
-					"请用 start.bat / start.sh 启动正式程序（%s%s）；"+
+					"请直接运行正式程序（%s%s，Linux / macOS 可用 start.sh）；"+
 					"若上次升级失败，请查看 logs/update.log 与 updates/journal.json，或删除该残留文件后重启。",
 				exe, entryStem, exeExt())
 		}

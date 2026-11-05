@@ -13,8 +13,8 @@ import (
 //
 // 背景（批次 7 / #4–5 编码审计）：Go 以 UTF-8 字节写 stdout/stderr，而中文版
 // Windows 的控制台默认是 GBK（936）。直连控制台运行时，启动横幅与日志里的中文
-// 会被按 GBK 解释成乱码。start.bat 已用 `chcp 65001` 处理「经脚本启动」的路径，
-// 这里补上「直接运行 exe / go run」的路径：
+// 会被按 GBK 解释成乱码。早期靠 start.bat 里的 `chcp 65001` 兜住「经脚本启动」的
+// 路径；bat 已下线，现在统一由这里负责「直接运行 exe / go run」的路径：
 //  1. 本进程的标准输出、错误按 UTF-8 渲染；
 //  2. 之后派生的子进程（powershell / cmd / python）经 GetConsoleOutputCP()
 //     看到 UTF-8，PowerShell 在重定向管道里默认采用的输出编码随之变为 UTF-8，

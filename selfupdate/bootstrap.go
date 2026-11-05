@@ -117,14 +117,14 @@ func Bootstrap(version string) (Action, State) {
 	return Continue, State{}
 }
 
-// adoptBundledCore 把发行包自带的 artex-rea-core[.exe] 收进 versions/<当前版本>/。
+// adoptBundledCore 把发行包自带的 artex-hydra-core[.exe] 收进 versions/<当前版本>/。
 //
-// 发行包是"入口 + core"两件套：入口（artex-rea）永远待在根目录只做转发，
-// 真正干活的是 core。首次启动时把 core 收进版本目录，此后升级就只是
-// "新增 versions/<新版本>/ + 改 pointer.json"，不再替换任何正在运行的文件。
+// 旧发行包是"入口 + core"两件套：入口留在根目录只做转发，真正干活的是 core；
+// 首次启动把 core 收进版本目录，此后升级就只是"新增 versions/<新版本>/ + 改指针"。
 //
-// 找不到 core（旧发行包、`go run`、开发构建）就静默返回：没有它，
-// 入口仍然按旧方式在本目录启动，行为与改造前一致。
+// **新版发行包不再附带 core**（入口自己就是完整程序），这里因此多数时候走的是
+// 下面那条"找不到就静默返回"的分支：入口按旧方式在本目录启动，等第一次升级时
+// 更新流程才会把新版本装进 versions/ 并建立指针。老包仍会被正确收养。
 func adoptBundledCore(l Layout, version string) {
 	v := versionKey(version)
 	if v == "unknown" || v == "dev" {

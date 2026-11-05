@@ -4,7 +4,7 @@ package selfupdate
 
 // Windows 没有 execve，入口只能派生核心并等它结束，再把退出码原样交回去。
 //
-// 这里必须**前台等待**：退出码 75 是与 start.bat 之间的重启协议，入口如果
+// 这里必须**前台等待**：退出码 75 是与上层（入口监护循环 / start.sh）的重启协议，入口如果
 // detach 或吃掉退出码，一键更新就会"看起来成功、其实没换版本"。
 // 而 core 位于 versions/<ver>/ 下，程序自己的端口自举认得这个路径
 // （见 cmd/artex/boot_windows.go 的 isOwnedProcess），

@@ -24,11 +24,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-# 本仓库唯一的发行产物族：artex-rea-<版本>-<os>-<arch>.zip。
+# 本仓库唯一的发行产物族：artex-hydra-<版本>-<os>-<arch>.zip。
 # 与 scripts/gen-update-manifest.py 的 WEB_STEM/PLATFORMS 同一口径；
 # 发布说明只列这类包，别族的 zip 一律不展示。
 ASSET_RE = re.compile(
-    r"artex-rea-[0-9][^-]*(?:\.[0-9]+)*-(?P<os>linux|darwin|windows)-(?P<arch>amd64|arm64)\.zip"
+    r"artex-hydra-[0-9][^-]*(?:\.[0-9]+)*-(?P<os>linux|darwin|windows)-(?P<arch>amd64|arm64)\.zip"
 )
 
 # 展示顺序即优先级：先新增、再修复，其余按重要性递减。
@@ -128,7 +128,7 @@ def human_size(n: int) -> str:
 
 
 def build_assets_section(dist: Path, repo: str, tag: str) -> str:
-    # 只列 Web 版发布族 artex-rea-<版本>-<os>-<arch>.zip，不扫 *.zip：
+    # 只列 Web 版发布族 artex-hydra-<版本>-<os>-<arch>.zip，不扫 *.zip：
     # 打包目录里若混入别的产物族，发布说明会把它们当成正式发行物展示出去。
     zips = sorted(
         z for z in dist.glob("*.zip") if ASSET_RE.fullmatch(z.name)
@@ -137,7 +137,7 @@ def build_assets_section(dist: Path, repo: str, tag: str) -> str:
         return ""
     lines = ["## 发行产物", "", "| 平台 | 文件 | 大小 |", "|---|---|---|"]
     for z in zips:
-        # artex-rea-2.2.0-linux-amd64.zip
+        # artex-hydra-2.2.0-linux-amd64.zip
         m = ASSET_RE.fullmatch(z.name)
         if m and m.group("os") in {"linux", "darwin", "windows"}:
             os_name = {"linux": "Linux", "darwin": "macOS", "windows": "Windows"}[m.group("os")]
@@ -215,8 +215,8 @@ def main() -> int:
         "sha256sum -c SHA256SUMS",
         "```",
         "",
-        "解压后覆盖可执行文件，用 `start.sh`（Linux / macOS）或 `start.bat`（Windows）启动；"
-        "退出码 75 表示需要重启，启动脚本会自动拉起新版本。",
+        "解压后直接运行 `artex-hydra`（Windows 为 `artex-hydra.exe`）即可启动 Web 控制台；"
+        "Linux / macOS 也可以用 `start.sh` 在后台运行。退出码 75 表示需要重启，入口程序会自动拉起新版本。",
         "",
         f"完整提交历史：{repo_url(args.repo)}/commits/{args.tag}",
         "",

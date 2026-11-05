@@ -3,7 +3,7 @@
 # ARTEX-HYDRA 管理员密码重置脚本。
 #
 # 登录用户名固定为 ARTEX-HYDRA（后端同时接受旧名 ARTEX-REA / ARTEX）；新密码以 bcrypt 哈希写入 SQLite 库的 settings 表。
-# 本脚本是 artex-rea 可执行程序 `-reset-password` 的薄封装：定位程序（或回退
+# 本脚本是 artex-hydra 可执行程序 `-reset-password` 的薄封装：定位程序（或回退
 # `go run ./cmd/artex`），交互输入新密码，经环境变量 ARTEX_RESET_NEWPASS
 # 传给程序——密码不出现在进程 argv，也不写入任何文件。
 #
@@ -14,7 +14,7 @@
 # 示例：
 # ./reset-password.sh                              # 交互输入新密码
 # ./reset-password.sh -p 'NewPass!'                # 直接指定（会留在 shell 历史，慎用）
-# ./reset-password.sh --bin /opt/artex/artex-rea   # 指定 artex-rea 可执行文件
+# ./reset-password.sh --bin /opt/artex/artex-hydra   # 指定 artex-hydra 可执行文件
 # ./reset-password.sh --db /data/artex.db          # 指定 SQLite 数据库文件
 # ./reset-password.sh -y                           # 跳过确认
 # ./reset-password.sh --go                         # 强制 go run（源码目录内）
@@ -50,7 +50,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# 定位 artex-rea 可执行文件：--bin > 当前目录与脚本目录的 artex-rea/artex-rea.exe > go run 回退。
+# 定位 artex-hydra 可执行文件：--bin > 当前目录与脚本目录的 artex-hydra/artex-hydra.exe > go run 回退。
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" >/dev/null 2>&1 && pwd)
 
 try_bin() {
@@ -79,13 +79,13 @@ elif [[ -n "$BIN" ]]; then
   else
     die "--bin 指定的可执行文件不存在：$BIN"
   fi
-elif FOUND=$(try_bin "./artex-rea" "./artex-rea.exe" "$SCRIPT_DIR/artex-rea" "$SCRIPT_DIR/artex-rea.exe" "./artex" "./artex.exe" "$SCRIPT_DIR/artex" "$SCRIPT_DIR/artex.exe"); then
+elif FOUND=$(try_bin "./artex-hydra" "./artex-hydra.exe" "$SCRIPT_DIR/artex-hydra" "$SCRIPT_DIR/artex-hydra.exe" "./artex-rea" "./artex-rea.exe" "$SCRIPT_DIR/artex-rea" "$SCRIPT_DIR/artex-rea.exe"); then
   CMD=("$FOUND")
 elif [[ -f go.mod ]] && command -v go >/dev/null 2>&1; then
-  info "未找到 artex-rea 二进制，回退 go run ./cmd/artex"
+  info "未找到 artex-hydra 二进制，回退 go run ./cmd/artex"
   CMD=(go run ./cmd/artex)
 else
-  die "未找到 artex-rea/artex-rea.exe（当前目录与脚本目录均无），且无法回退 go run；请先用 build.sh 构建，或用 --bin 指定可执行文件。"
+  die "未找到 artex-hydra/artex-hydra.exe（当前目录与脚本目录均无），且无法回退 go run；请先用 build.sh 构建，或用 --bin 指定可执行文件。"
 fi
 info "使用：${CMD[*]} -reset-password"
 

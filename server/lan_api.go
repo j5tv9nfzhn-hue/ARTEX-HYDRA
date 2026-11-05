@@ -7,7 +7,7 @@ package server
 //
 // 另一半是「怎么把它变成能连」：POST /api/lan/enable 把 listen 落进 config.json，
 // 然后让进程自己重启一次（复用「更新完成后重启」那条既有路径）。
-// 用户不需要敲命令、也不需要知道 start.bat 在哪；start-lan.bat 只是给
+// 用户不需要敲命令、也不需要知道可执行文件在哪；start-lan.sh 只是给
 // 「窗口都没开、想直接用局域网模式启动」的场景留的入口。
 //
 // 防火墙同理：先自己尝试放行（Windows 上 netsh），只有在没有管理员权限、
@@ -174,10 +174,13 @@ func lanEnsureFirewall(port string) string {
 	return "ok"
 }
 
-// lanRestartCommand 返回「下次按局域网监听启动」的入口脚本。
+// lanRestartCommand 返回「下次按局域网监听启动」的命令。
+//
+// Windows 不再随包发 start-lan.bat，直接给出带 -lan 的启动命令；
+// Linux / macOS 仍用 start-lan.sh。
 func lanRestartCommand() string {
 	if runtime.GOOS == "windows" {
-		return "start-lan.bat"
+		return "artex-hydra.exe -lan"
 	}
 	return "./start-lan.sh"
 }

@@ -78,7 +78,26 @@ func chatWorkDirSpec(workDir string) string {
 // chatSystem renders the DB-managed prompt body for agentKey. Custom agents have
 // no per-key in-code default, so DefaultAssistantPrompt is the render fallback.
 func chatSystem(agentKey, dataDir, workDir string) string {
-	return renderSystem(agentKey, DefaultAssistantPrompt, chatVars{DataDir: dataDir, Now: nowStr()}) + chatWorkDirSpec(workDir) + toolBatchSpec() + langDirective(resolveOutputLang())
+	return chatBody(agentKey, dataDir) + chatWorkDirSpec(workDir) + toolBatchSpec() + langDirective(resolveOutputLang())
+}
+
+// chatBody 决定这一轮用哪段正文。
+//
+// 根 Agent（coord_root）在对话页**不能**走 DB 覆盖：库里存的是任务态 rootTmpl，
+// 它引用了 {{.Goal}} / {{.Scope}} / {{.ChildSlots}} 等只有任务运行期才存在的
+// 变量，而对话页只注入 {DataDir, Now}。Go 模板对缺失字段直接报错，
+// renderSystem 于是静默回退到 DefaultAssistantPrompt —— 通用助手提示词里既没有
+// AUTHORIZATION 也没有 REFUSAL AVOIDANCE，模型面对渗透类问题就会开始讲安全
+// 政策。这是「对话页出现拒绝行为」的实际成因，不是模型换了。
+//
+// 同理，旧版会话里还留着 agent_key = auto / pentest 的行，它们的库行已随旧角色
+// 一起下线，同样回落到这段正文，而不是回落到通用助手。
+func chatBody(agentKey, dataDir string) string {
+	switch agentKey {
+	case PromptKeyCoordRoot, "auto", "pentest":
+		return chatRootTmpl
+	}
+	return renderSystem(agentKey, DefaultAssistantPrompt, chatVars{DataDir: dataDir, Now: nowStr()})
 }
 
 // chatVars carries the runtime variables a custom agent's prompt may reference.

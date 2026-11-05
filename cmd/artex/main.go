@@ -74,7 +74,7 @@ func run() int {
 	// "flag provided but not defined"。
 	//
 	// 终端 TUI（原 `artex tui`）已归档到 _archive/tui-harness/，不再参与构建；
-	// 人机交互统一走 Web 控制台（start.sh / start.bat）。
+	// 人机交互统一走 Web 控制台（直接运行入口程序，或 Linux/macOS 下的 start.sh）。
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
 		return runMCPCommand(os.Args[2:])
 	}
@@ -146,8 +146,8 @@ func run() int {
 		log.Printf("[boot] 安装目录未知（%v），跳过单实例锁", rootErr)
 	} else {
 		// 显式带上 -lan / -addr，意味着用户要的就是「用这个监听地址起来」，
-		// 那就不能因为旧实例还在就静默退出。这也是 start-lan.bat 能「双击就生效」
-		// 的前提：否则它只会打印一句「已在运行」就退出，看起来像什么都没发生。
+		// 那就不能因为旧实例还在就静默退出。否则双击 -lan 快捷方式只会打印一句
+		// 「已在运行」就退出，看起来像什么都没发生。
 		takeoverWanted := *takeover || *lan || strings.TrimSpace(*addr) != ""
 		lockWait := instanceLockWait
 		if selfupdate.RelaunchedChild() {

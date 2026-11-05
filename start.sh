@@ -1,13 +1,13 @@
 #!/bin/sh
 # ARTEX-HYDRA 启动脚本（Unix / Docker ENTRYPOINT，现在是可选兜底）
 #
-# 不装这个脚本也能用：artex-rea 自己会做单实例仲裁，更新装好后也会自己拉起
+# 不装这个脚本也能用：artex-hydra 自己会做单实例仲裁，更新装好后也会自己拉起
 # 新进程重启。只有想让它崩溃后也自动重开时才需要这个脚本。
 #
 # 用法：
 # ./start.sh                    前台运行，Ctrl-C 停止
-# nohup ./start.sh >artex-rea.log 2>&1 &   后台运行
-# ./start.sh -addr :9000        命令行原样传给 artex-rea
+# nohup ./start.sh >artex-hydra.log 2>&1 &   后台运行
+# ./start.sh -addr :9000        命令行原样传给 artex-hydra
 #
 # 退出码约定：
 # 0     正常停止，脚本退出（不再循环）
@@ -21,17 +21,18 @@ set -u
 
 cd "$(dirname "$0")" || exit 1
 
-# 告诉 artex-rea「外面有个循环会在我以 75 退出后把我重新拉起来」。
+# 告诉 artex-hydra「外面有个循环会在我以 75 退出后把我重新拉起来」。
 # 只有这个变量为真时，页面才允许自动更新：换装后进程要退出，没人拉起就变成
 # 「更新完打不开」。直接跑二进制（没有本脚本）时它为假，界面会禁用自动更新。
 ARTEX_SUPERVISED=1
 export ARTEX_SUPERVISED
 
-BIN=./artex-rea
-if [ ! -x "$BIN" ] && [ -x ./artex ]; then
-	BIN=./artex
+# 入口名以 artex-hydra 为准；artex-rea 是旧名，保留一段时间的兼容回退。
+BIN=./artex-hydra
+if [ ! -x "$BIN" ] && [ -x ./artex-rea ]; then
+	BIN=./artex-rea
 fi
-[ -x "$BIN" ] || { echo "[artex-rea] 找不到可执行文件：$BIN" >&2; exit 1; }
+[ -x "$BIN" ] || { echo "[artex-hydra] 找不到可执行文件：$BIN" >&2; exit 1; }
 
 RESTART_CODE=75
 MAX_DELAY=60
@@ -39,7 +40,7 @@ MAX_DELAY=60
 child=0
 stopping=0
 
-# 将停止信号转发给 artex-rea。
+# 将停止信号转发给 artex-hydra。
 #
 # Docker 必须转发，因为 docker stop 只向 PID 1，即本脚本发送 SIGTERM。
 # 子进程不会自动收到信号，不转发会阻止优雅退出。
@@ -68,27 +69,27 @@ while :; do
 	child=0
 
 	if [ "$stopping" -eq 1 ]; then
-		echo "[artex-rea] 已停止"
+		echo "[artex-hydra] 已停止"
 		exit 0
 	fi
 
 	case "$code" in
 		0)
-			echo "[artex-rea] 正常退出"
+			echo "[artex-hydra] 正常退出"
 			exit 0
 			;;
 		"$RESTART_CODE")
 			# 更新或回滚已准备，重新运行时完成版本替换，参见 selfupdate.Bootstrap。
-			echo "[artex-rea] 收到重启请求，正在应用新版本…"
+			echo "[artex-hydra] 收到重启请求，正在应用新版本…"
 			delay=1
 			;;
 		2)
 			# 端口被占用（程序已打印占用端口与处置办法）：重试只会立刻再撞一次。
-			echo "[artex-rea] 端口被占用，退出。处理完再启动本脚本。" >&2
+			echo "[artex-hydra] 端口被占用，退出。处理完再启动本脚本。" >&2
 			exit 2
 			;;
 		*)
-			echo "[artex-rea] 异常退出 (code=$code)，${delay} 秒后重启" >&2
+			echo "[artex-hydra] 异常退出 (code=$code)，${delay} 秒后重启" >&2
 			sleep "$delay"
 			delay=$((delay * 2))
 			[ "$delay" -gt "$MAX_DELAY" ] && delay=$MAX_DELAY

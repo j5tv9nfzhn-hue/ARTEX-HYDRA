@@ -113,7 +113,7 @@ ARTEX 由国内开发者 **Autumn-27** 创建并开源（[Autumn-27/ARTEX](https
 
 | 入口 | 命令 | 适用场景 |
 | --- | --- | --- |
-| Web 控制台 | `artex`、`artex web` 或双击 `start.bat` | 浏览器操作：对话、任务、漏洞、LLM、Agent、Skill、MCP、预算、完整转录 |
+| Web 控制台 | 运行 `artex-hydra`（Windows 为 `artex-hydra.exe`） | 浏览器操作：对话、任务、漏洞、LLM、Agent、Skill、MCP、预算、完整转录 |
 
 **所有配置都在 Web 控制台完成**（LLM / Agent / Skill / 预算），写入 `artex.db`。
 
@@ -122,12 +122,12 @@ ARTEX 由国内开发者 **Autumn-27** 创建并开源（[Autumn-27/ARTEX](https
 
 **方式一：下载发行包**
 
-下载 `artex-rea-<版本>-<平台>-<架构>.zip`，解压后得到程序本体（前端已内嵌）、启动脚本、`skills/`、`config.example.json`。
+下载 `artex-hydra-<版本>-<平台>-<架构>.zip`，解压后得到程序本体（前端已内嵌）、`skills/`、`config.example.json`；Linux / macOS 另带 `start.sh` 方便后台运行。
 
 ```bat
 copy config.example.json config.json   & rem 可选：指定数据库文件位置，留空自动创建 artex.db
-start.bat                              & rem → Web 控制台 http://localhost:8787
-artex                                  & rem → 同上（默认行为）
+artex-hydra.exe                        & rem → Web 控制台 http://localhost:8787
+artex-hydra.exe -lan                   & rem → 局域网模式：同网段设备可访问
 ```
 
 Linux / macOS 用 `./start.sh` 启动。
@@ -140,7 +140,7 @@ Linux / macOS 用 `./start.sh` 启动。
 cd web && npm ci && npm run build:static && cd ..
 rm -rf server/webui/dist && mkdir -p server/webui/dist
 cp -a web/out/. server/webui/dist/
-CGO_ENABLED=0 go build -tags embedui -o artex-rea ./cmd/artex
+CGO_ENABLED=0 go build -tags embedui -o artex-hydra ./cmd/artex
 ./start.sh
 ```
 

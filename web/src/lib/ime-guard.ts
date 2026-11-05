@@ -8,10 +8,15 @@
  * 已经复位为 false，仅靠 isComposing / keyCode===229 双检拦不住——用户只是想
  * 选词，消息却被直接发送出去。
  *
- * 守卫：记录最近一次 compositionend 的时间戳；500ms 内到达的 Enter 判定为伴生
- * 幽灵键，拦截，并【立即清零时间戳】——否则紧随其后的正常连续击键会被误吞。
+ * 守卫：记录最近一次 compositionend 的时间戳；紧跟其后的 Enter 判定为伴生幽灵键，
+ * 拦截，并【立即清零时间戳】——否则紧随其后的正常连续击键会被误吞。
+ *
+ * 窗口必须足够**短**。浏览器派发的伴生 keydown 与 compositionend 在同一个任务里
+ * 或相隔几毫秒到达；而「确认候选词」之后用户紧接着按 Enter 发送，中间通常有
+ * 80ms 以上。此前写成 500ms，等于把用户真正想发送的那一次 Enter 也吞掉——
+ * 表现就是「按回车没反应，要再按一次/点一下才发出去」。
  */
-const GHOST_WINDOW_MS = 500;
+const GHOST_WINDOW_MS = 60;
 
 let lastCompositionEndTime = 0;
 

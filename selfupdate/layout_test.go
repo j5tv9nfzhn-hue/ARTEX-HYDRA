@@ -27,21 +27,30 @@ func newTestLayout(t *testing.T) Layout {
 	return l
 }
 
+// writeCore 在 versions/<ver>/ 下摆一个假核心。
+//
+// EnsurePointer 只在核心真实存在时才建立指针（新版发行包不再附带 core，
+// 写一个指向空气的指针只会让每次启动都打印"版本不存在"）。
+func writeCore(t *testing.T, l Layout, version string) {
+	t.Helper()
+	p := CorePath(l, version)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte("core"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestPointerSwitchAndRollback(t *testing.T) {
 	l := newTestLayout(t)
 
+	// 回滚目标必须真的装在磁盘上，否则 RollbackTarget 会把记录清掉。
+	writeCore(t, l, "2.3.0")
 	EnsurePointer(l, "2.3.0")
 	ptr, ok := ReadPointer(l)
 	if !ok || ptr.Current != "2.3.0" {
 		t.Fatalf("初始指针 = %+v（ok=%v），期望 current=2.3.0", ptr, ok)
-	}
-
-	// 回滚目标必须真的装在磁盘上，否则 RollbackTarget 会把记录清掉。
-	if err := os.MkdirAll(filepath.Dir(CorePath(l, "2.3.0")), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(CorePath(l, "2.3.0"), []byte("old"), 0o755); err != nil {
-		t.Fatal(err)
 	}
 
 	if err := SwitchPointer(l, "2.4.0"); err != nil {
@@ -64,9 +73,30 @@ func TestPointerSwitchAndRollback(t *testing.T) {
 	}
 }
 
+// TestEnsurePointerSkipsWhenCoreMissing 钉死"没有核心就不建指针"。
+//
+// 新版发行包只带一个可执行文件，首次启动时 versions/<ver>/ 还是空的。此时若照旧
+// 写一个 current=<ver> 的指针，每次启动 Handoff 都会打印"指针指向的版本不存在"，
+// 用户会以为安装坏了。
+func TestEnsurePointerSkipsWhenCoreMissing(t *testing.T) {
+	l := newTestLayout(t)
+	EnsurePointer(l, "2.3.0")
+	if ptr, ok := ReadPointer(l); ok {
+		t.Fatalf("没有核心时不应建立指针，实际写入了 %+v", ptr)
+	}
+
+	// 核心就位之后，指针才应该被建立。
+	writeCore(t, l, "2.3.0")
+	EnsurePointer(l, "2.3.0")
+	if ptr, ok := ReadPointer(l); !ok || ptr.Current != "2.3.0" {
+		t.Fatalf("核心就位后应建立指针，实际 %+v（ok=%v）", ptr, ok)
+	}
+}
+
 func TestApplyNowInstallsVersionedCore(t *testing.T) {
 	requireUnix(t)
 	l := newTestLayout(t)
+	writeCore(t, l, "2.3.0")
 	EnsurePointer(l, "2.3.0")
 
 	// 布置"已下载已校验"的暂存件。
@@ -115,6 +145,7 @@ func TestApplyNowInstallsVersionedCore(t *testing.T) {
 func TestApplyNowRejectsTamperedStaging(t *testing.T) {
 	requireUnix(t)
 	l := newTestLayout(t)
+	writeCore(t, l, "2.3.0")
 	EnsurePointer(l, "2.3.0")
 
 	staged := StagedPath(l, "2.4.0")
@@ -147,14 +178,9 @@ func TestApplyNowRejectsTamperedStaging(t *testing.T) {
 
 func TestBootstrapRollsBackAfterRepeatedVersionMismatch(t *testing.T) {
 	l := newTestLayout(t)
-	EnsurePointer(l, "2.3.0")
 	// 回滚目标必须真实存在，否则 RollbackTarget 会拒绝回滚。
-	if err := os.MkdirAll(filepath.Dir(CorePath(l, "2.3.0")), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(CorePath(l, "2.3.0"), []byte("old"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	writeCore(t, l, "2.3.0")
+	EnsurePointer(l, "2.3.0")
 	if err := SwitchPointer(l, "2.4.0"); err != nil {
 		t.Fatalf("切指针: %v", err)
 	}

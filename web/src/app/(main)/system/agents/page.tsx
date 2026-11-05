@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { Bot, PlusIcon, Trash2Icon } from "lucide-react";
+import { Bot, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -22,19 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import type { Agent } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -136,88 +124,6 @@ function AgentGridCard({
   );
 }
 
-function CreateAgentDialog({ onCreated }: { onCreated: (key: string) => void }) {
-  const t = useTranslations("agentsPage");
-  const [open, setOpen] = React.useState(false);
-  const [key, setKey] = React.useState("");
-  const [name, setName] = React.useState("");
-  const [description, setDescription] = React.useState("");
-  const [busy, setBusy] = React.useState(false);
-
-  async function create() {
-    setBusy(true);
-    try {
-      const a = await api.createAgent(key.trim(), name.trim(), description.trim());
-      toast.success(t("created", { name: a.name }));
-      setOpen(false);
-      setKey("");
-      setName("");
-      setDescription("");
-      onCreated(a.key);
-    } catch (e) {
-      toast.error(t("createFailed", { msg: (e as Error).message }));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const keyOk = /^[a-z][a-z0-9_]*$/.test(key.trim());
-  const canCreate = keyOk && name.trim().length > 0 && !busy;
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <PlusIcon /> {t("new")}
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("createTitle")}</DialogTitle>
-          <DialogDescription>{t("createDesc")}</DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-2">
-          <div className="grid gap-1.5">
-            <Label htmlFor="agent-key">{t("keyLabel")}</Label>
-            <Input
-              id="agent-key"
-              placeholder={t("keyPlaceholder")}
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              className="font-mono"
-            />
-            {key.length > 0 && !keyOk && <span className="text-destructive text-xs">{t("keyError")}</span>}
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="agent-name">{t("nameLabel")}</Label>
-            <Input
-              id="agent-name"
-              placeholder={t("namePlaceholder")}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="agent-desc">{t("descLabel")}</Label>
-            <Textarea
-              id="agent-desc"
-              placeholder={t("descPlaceholder")}
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={create} disabled={!canCreate}>
-            {t("create")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 export default function AgentsPage() {
   const t = useTranslations("agentsPage");
   // 两份数据源：
@@ -251,18 +157,15 @@ export default function AgentsPage() {
     <div className="flex flex-1 flex-col gap-4 md:gap-6">
       <div className="flex items-start justify-between gap-3">
         <Masthead title={t("title")} subtitle={t("subtitle")} titleClassName="text-xl" subtitleClassName="text-sm" />
-        <CreateAgentDialog
-          onCreated={(key) => {
-            reload();
-            setEditKey(key);
-          }}
-        />
+        {/* 单 Agent 形态：不再提供「新建自定义 Agent」。
+            对话页只有一个根 Agent，自建角色选不到，留着这个按钮只会造出无人使用的行。
+            这里保留的只是运行时模板的提示词/运行配置编辑。 */}
       </div>
 
-      {/* 一张清单：运行时模板在前，自定义助手在后。
+      {/* 一张清单：运行时模板在前，自定义助手在后（历史数据可能仍有自定义行）。
           旧版把两者拆成「任务运行时 / 会话 Agent」两块，同一批内置角色会在两处
           重复出现；合并后只按来源打徽章，不再有第二份清单。 */}
-      <PaperSheet api={["agents", "orchestration", "createAgent", "deleteAgent"]}>
+      <PaperSheet api={["agents", "orchestration", "deleteAgent"]}>
         <SheetHead index="01" title={t("groupAll")} count={orchestration.length + agents.length} />
         <div className="flex flex-col gap-3 px-4 py-3">
           <p className="text-muted-foreground text-sm">{t("groupAllDesc")}</p>

@@ -915,11 +915,11 @@
       "backToAgent": "切回主 Agent",
       "hint": {
         "send": "Enter 发送",
-        "queue": "Enter 排队（跨重启保留）· Ctrl+Enter 立刻发送",
+        "queue": "运行中 · 本轮结束后再发送",
         "steer": "Enter = 立刻 steer 给这个 Worker"
       },
       "runtimeBadge": {
-        "queued": "运行中 · 新消息排队"
+        "queued": "运行中 · 本轮结束后可发送"
       },
       "send": "发送",
       "steerNow": "立刻 steer",

@@ -74,6 +74,13 @@ func EnsurePointer(l Layout, version string) {
 	if _, ok := ReadPointer(l); ok {
 		return
 	}
+	// 只有核心程序真的落在 versions/<ver>/ 里，指针才有意义。
+	// 新版发行包不再附带 core（入口自己就是完整程序），这种安装的 versions/
+	// 要等到第一次升级才会有内容；此时写一个指向空气的指针，只会让每次启动都
+	// 打印一句「指针指向的版本不存在」。
+	if _, ok := corePathFor(l, v); !ok {
+		return
+	}
 	if err := EnsureLayoutDirs(l); err != nil {
 		return
 	}

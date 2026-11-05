@@ -34,7 +34,7 @@ TAG_RE = re.compile(r"^v\d+\.\d+\.\d+(\.\d+)?$")
 
 # ---------------------------------------------------------------- 产物单一性
 #
-# 本仓库只发布 **Web 版**（artex-rea-<版本>-<os>-<arch>.zip），因此清单里
+# 本仓库只发布 **Web 版**（artex-hydra-<版本>-<os>-<arch>.zip），因此清单里
 # **只允许**出现这六种平台包加 SHA256SUMS。任何别的 zip（历史的桌面端
 # artex-hydra-desktop-*、构建残留、手工塞进来的文件）都会被拒绝，而不是
 # 悄悄写进 assets[]。
@@ -43,7 +43,7 @@ TAG_RE = re.compile(r"^v\d+\.\d+\.\d+(\.\d+)?$")
 # 由 selfupdate.AssetName 按 entryStem 拼出，再到这里 FindAsset 精确匹配。
 # 只要 assets[] 里混进别的产物族，就等于承认它「也是本仓库的正式发行物」，
 # 下游任何按前缀/模糊匹配的消费方都会被带偏。
-WEB_STEM = "artex-rea"
+WEB_STEM = "artex-hydra"
 PLATFORMS = (
     ("linux", "amd64"),
     ("linux", "arm64"),

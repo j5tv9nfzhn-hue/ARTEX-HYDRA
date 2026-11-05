@@ -269,7 +269,7 @@ jobs:
         run: |
           set -euo pipefail
           version="${V#v}"
-          name="artex-rea-${version}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
+          name="artex-hydra-${version}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
           test -f "dist/$name" || { echo "::error::打包未产出 dist/$name"; exit 1; }
           echo "name=$name" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v7
@@ -313,7 +313,7 @@ jobs:
           missing=0
           expected=""
           for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
-            f="artex-rea-${version}-${t%%/*}-${t##*/}.zip"
+            f="artex-hydra-${version}-${t%%/*}-${t##*/}.zip"
             expected="$expected $f"
             if [ -f "$f" ]; then echo "✓ $f"; else echo "::error::缺少 $f"; missing=1; fi
           done
@@ -331,7 +331,7 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
           for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
-            echo "artex-rea-${version}-${t%%/*}-${t##*/}.zip"
+            echo "artex-hydra-${version}-${t%%/*}-${t##*/}.zip"
           done > .scope.txt
           sha256sum -- $(cat .scope.txt) > SHA256SUMS
           rm -f .scope.txt
@@ -368,7 +368,7 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           files=""
           for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
-            files="$files dist/artex-rea-${version}-${t%%/*}-${t##*/}.zip"
+            files="$files dist/artex-hydra-${version}-${t%%/*}-${t##*/}.zip"
           done
           gh release upload "$GITHUB_REF_NAME" $files dist/SHA256SUMS --clobber
       - name: 生成并上传 latest.json
@@ -395,7 +395,7 @@ jobs:
           gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort > dist/uploaded.txt
           {
             for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
-              echo "artex-rea-${version}-${t%%/*}-${t##*/}.zip"
+              echo "artex-hydra-${version}-${t%%/*}-${t##*/}.zip"
             done
             echo SHA256SUMS
             echo latest.json

@@ -9,7 +9,7 @@
 #   ARTEX_TARGET_ARCH=amd64           One target arch in single-target mode.
 #   ARTEX_TARGETS=linux/amd64,...     Comma-separated targets for multi-target mode.
 #   ARTEX_BUILD_VERSION=v0.3.3        Version embedded in the binary and archive name.
-#   ARTEX_OUTPUT=/path/to/artex-rea   Explicit binary path in single-target mode.
+#   ARTEX_OUTPUT=/path/to/artex-hydra   Explicit binary path in single-target mode.
 #   ARTEX_OUTPUT_DIR=dist             Directory for default binary paths.
 #   ARTEX_PACKAGE=1                   Create a zip archive for each target.
 #   ARTEX_PACKAGE_DIR=dist            Directory for release archives.
@@ -204,39 +204,32 @@ package_binary() {
   binary="$1"
   goos="$2"
   goarch="$3"
-  package_name="artex-rea-${ARTEX_BUILD_VERSION}-${goos}-${goarch}"
+  package_name="artex-hydra-${ARTEX_BUILD_VERSION}-${goos}-${goarch}"
   package_root="${ARTEX_PACKAGE_DIR}/${package_name}"
   archive="${ARTEX_PACKAGE_DIR}/${package_name}.zip"
 
   rm -rf "$package_root" "$archive"
   mkdir -p "$package_root"
+  # 只发一个可执行文件。
+  #
+  # 早先的发行包是"入口 + core"两件套（两份字节完全相同的二进制）：入口留在
+  # 根目录，core 首次启动时被收进 versions/<ver>/，之后升级只改指针。代价是
+  # 压缩包里恒定多一份完整 Go 运行时（解压后约 31MB，包体翻倍）。
+  #
+  # 现在不再附带 core。selfupdate 本来就支持"没有 core"的安装：
+  #   - Bootstrap 找不到 core 会静默跳过收养（见 adoptBundledCore）；
+  #   - EnsurePointer 只在 versions/<ver>/ 里确实有核心时才写指针；
+  #   - 首次升级时更新流程直接把新版本装进 versions/<new>/ 并切指针，
+  #     从那一刻起才进入版本化布局。
+  # 换句话说，core 只是"让版本化布局提前生效"的一次性引导件，不是运行必需品。
   cp "$binary" "$package_root/"
-  # 版本化安装的"入口 + 核心"两件套（字节相同，只是名字不同）：
-  #   artex-rea[.exe]       入口，永远待在根目录，只按 pointer.json 转发；
-  #   artex-rea-core[.exe]  真正干活的核心，首次启动被收进 versions/<ver>/。
-  # 升级因此只新增 versions/<新版本>/ 并原子改指针，不再替换任何正在运行的程序
-  # ——Windows 上"删除/覆盖运行中的 exe"必然失败，旧方案就是死在这里。
-  case "$goos" in
-    windows) core_ext=".exe" ;;
-    *) core_ext="" ;;
-  esac
-  cp "$binary" "$package_root/artex-rea-core${core_ext}"
-  # 用户入口 artex[.exe]：极简转发壳。artex → Web 控制台，artex mcp → 外部
-  # MCP 接入。壳必须与内核同目录分发，内核负责安装目录守卫等真正的启动逻辑。
-  # 终端 TUI 已归档到 _archive/tui-harness/，不参与打包。
-  if ! GOSUMDB="$ARTEX_GOSUMDB" CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
-      go build -trimpath -ldflags "-s -w -buildid=" \
-      -o "$package_root/artex${core_ext}" ./cmd/artex-launcher; then
-    die "编译用户入口 artex 失败"
-  fi
-  # 启动监护脚本是正式入口；页面一键更新需要进程退出后由脚本重启。
-  # 直接运行 artex-rea 不会自动重启，发布包仅包含对应系统的启动脚本。
-  # 启动脚本必须真的能执行：start-lan.* 曾被 base64 文本覆盖，双击只会报
-  # “不是内部或外部命令”，而且一路进了发布包。坏脚本不允许打包。
+  # Windows 不再随包发启动脚本：入口程序就是 artex-hydra.exe，双击即起 Web
+  # 控制台；自动重启也已内置在入口的监护循环里（selfupdate.Handoff），外层 bat
+  # 只会多一层「找不到可执行文件 / 版本漂移」的故障面。
+  # Linux / macOS 仍带 .sh：nohup 后台运行与 systemd 场景需要一个可执行壳。
+  # 启动脚本必须真的能执行：start-lan.sh 曾被 base64 文本覆盖，一路进了发布包。
   "$PYTHON_BIN" -I scripts/check-start-scripts.py || exit 1
-  if [ "$goos" = "windows" ]; then
-    cp start.bat start-lan.bat "$package_root/"
-  else
+  if [ "$goos" != "windows" ]; then
     cp start.sh start-lan.sh "$package_root/"
     chmod +x "$package_root/start.sh" "$package_root/start-lan.sh"
   fi
@@ -265,12 +258,12 @@ build_target() {
     *) die "不支持的系统：$goos，支持 linux、darwin、windows" ;;
   esac
 
-  binary_name="artex-rea"
-  [ "$goos" = "windows" ] && binary_name="artex-rea.exe"
+  binary_name="artex-hydra"
+  [ "$goos" = "windows" ] && binary_name="artex-hydra.exe"
   if [ -n "${ARTEX_OUTPUT:-}" ] && [ "$ARTEX_RELEASE" != "1" ]; then
     output="$ARTEX_OUTPUT"
   else
-    output="${ARTEX_OUTPUT_DIR}/artex-rea-${goos}-${goarch}/${binary_name}"
+    output="${ARTEX_OUTPUT_DIR}/artex-hydra-${goos}-${goarch}/${binary_name}"
   fi
   mkdir -p "$(dirname "$output")"
 

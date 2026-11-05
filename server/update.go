@@ -17,7 +17,7 @@ import (
 
 // 一键更新 HTTP 层仅负责认证、互斥、进度广播和通知 main 退出。
 // 下载、校验、换装由 selfupdate 完成；暂存后以 ExitRestart 退出，
-// 由 start.sh、start.bat 或 Docker ENTRYPOINT 重启，进程不自行重启。
+// 由 start.sh、入口监护循环或 Docker ENTRYPOINT 重启，进程不自行重启。
 // update-card 直接渲染 SSE progress.message、reason 与 writeErr 正文，故使用中文。
 const (
 	updateMsgPreparing          = "准备中…"
@@ -255,7 +255,7 @@ func (s *Server) updateCheck(w http.ResponseWriter, r *http.Request) {
 		"repo":        selfupdate.Repo,
 		"boot_notice": boot.Detail,
 		"rolled_back": boot.RolledBack,
-		// supervised 的历史语义是"由 start.sh / start.bat 监护"。现在进程自己会
+		// supervised 的历史语义是"由 start.sh 监护"。现在进程自己会
 		// 拉新进程重开，脚本只是可选兜底，所以这里回答的是"当前环境能否自动重启"。
 		"supervised": selfupdate.CanRestartSelf(),
 		// 已下载待重启的版本；非空时前端应提示"重启后生效"，而不是再让用户点更新。
@@ -330,7 +330,7 @@ func (s *Server) updateApply(w http.ResponseWriter, r *http.Request) {
 	// 流程闸门：容器内不能一键换装（换完没人拉起，只会在原地打转），直接拒绝，
 	// 把选择权交给用户看到的"更新成功但没换掉"提示。
 	//
-	// 这里不再要求"有脚本监护"：进程自己会拉新进程重开，start.sh / start.bat 只是可选兜底。
+	// 这里不再要求"有脚本监护"：进程自己会拉新进程重开，start.sh 只是可选兜底。
 	if selfupdate.InDocker() {
 		writeErr(w, 400, updateErrDockerOneClick)
 		return

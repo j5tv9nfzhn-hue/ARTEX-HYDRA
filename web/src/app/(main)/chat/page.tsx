@@ -31,7 +31,7 @@ import { AgentPhaseBadge } from "@/components/agent-phase-badge";
 import { ApprovalExecutionFocus, useApprovalFocus, useApprovalHistory } from "@/components/approval-execution-focus";
 import { CheckpointTimelineButton } from "@/components/checkpoint-timeline";
 import { EmptyState } from "@/components/empty-state";
-import { HarnessComposer, type HarnessRecipient, useWorkerRecipients } from "@/components/harness/harness-composer";
+import { HarnessComposer } from "@/components/harness/harness-composer";
 import { DockSwitcher, HarnessDock, type HarnessDockPanel, readDockPanel } from "@/components/harness/harness-dock";
 import { MessageRollbackDialog } from "@/components/message-rollback-dialog";
 import { SideQuestionButton, SideQuestionWorkspace } from "@/components/side-question-workspace";
@@ -61,7 +61,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { useSideQuestions } from "@/hooks/use-side-questions";
 import { mergeActivities } from "@/lib/activity-merge";
@@ -266,20 +265,16 @@ function DraftChat({
   onStarted: (c: Conversation, pending?: { input?: string; attachments?: ChatAttachment[] }) => void;
 }) {
   const t = useTranslations("chat");
-  const [agentKey, setAgentKey] = React.useState("");
+  // 单 Agent HARNESS：新线程永远落在根 Agent 上，没有可选项。
+  // 子代理由根在任务里用工具临时派发，不是用户要选的角色。
+  // key 兜底为 coord_root：/api/orchestration 偶发失败时也不该把发送按钮锁死。
+  const agent = agents[0];
+  const agentKey = agent?.key ?? "coord_root";
   const [llmProfileId, setLlmProfileId] = React.useState<number | null>(null);
   const [input, setInput] = React.useState("");
   const [sending, setSending] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  // 默认选中清单里的第一项。调用方已把「根 Agent」排在首位，所以新线程默认落在
-  // 根 Agent 上——新架构只有一个根 Agent，由它自己派发子代理，没有内置子代理可挑。
-  React.useEffect(() => {
-    if (!agentKey && agents.length > 0) setAgentKey(agents[0].key);
-  }, [agentKey, agents]);
-
-  const agent = agents.find((a) => a.key === agentKey);
 
   // Attachments need a conversation to own the uploads dir (sessions/conv-<id>/),
   // and a draft has none yet — so picking a file CREATES the conversation, uploads
@@ -329,11 +324,6 @@ function DraftChat({
         running={false}
         disabled={sending || uploading || !agentKey}
         stopping={false}
-        recipient={{ kind: "agent" }}
-        workers={[]}
-        onRecipientChange={() => {
-          /* 草稿态还没有会话，收件人只能是主 Agent。 */
-        }}
         onSend={async (text) => {
           if (!agentKey) return false;
           setSending(true);
@@ -428,7 +418,6 @@ function ChatViewImpl({
   agents,
   profiles,
   initial,
-  workerRecipients,
   onTitleMaybeChanged,
   onConvUpdated,
   onOpenTask,
@@ -439,8 +428,6 @@ function ChatViewImpl({
   // pending text + already-uploaded attachments handed off from a draft that
   // created this conversation via the paperclip (consumed once, on mount).
   initial?: { input?: string; attachments?: ChatAttachment[] };
-  /** 运行中的 Worker：composer 可以切过去直接 steer（harness 的唯一写入口）。 */
-  workerRecipients: HarnessRecipient[];
   onTitleMaybeChanged: () => void;
   onConvUpdated: () => void;
   /** 任务带里点「打开任务」：整窗舞台下没有别的入口，由页面层接管跳转。 */
@@ -486,9 +473,10 @@ function ChatViewImpl({
   // 消息级回滚（气泡箭头）：待确认的用户消息 + 提交中标记；确认后消息原文回填输入框。
   const [rollbackTarget, setRollbackTarget] = React.useState<Activity | null>(null);
   const [rollbackBusy, setRollbackBusy] = React.useState(false);
-  // 收件人：主 Agent（默认）/ 某个运行中的 Worker（steer）。
-  const [recipient, setRecipient] = React.useState<HarnessRecipient>({ kind: "agent" });
   const agent = agents.find((a) => a.key === conv.agent_key);
+  // 单 Agent 形态下，历史线程的 agent_key 可能指向已下线的旧角色（auto/pentest），
+  // 在清单里查不到。统一显示根 Agent 的名字，不把内部 key 漏到界面上。
+  const agentLabel = agent?.name ?? agents[0]?.name ?? "主 Agent";
   const currentProfileId = conv.llm_profile_id ?? null;
   const side = useSideQuestions(`/api/conversations/${conv.id}`);
 
@@ -877,7 +865,7 @@ function ChatViewImpl({
   }
 
   return (
-    <SideQuestionWorkspace side={side} label={agent?.name ?? conv.agent_key} composerLayout="inline">
+    <SideQuestionWorkspace side={side} label={agentLabel} composerLayout="inline">
       {/* 两列：主列（头部 + 转写 + composer）+ 右坞（任务/子代理/审批…）。
           右坞是工作区里的一个并排面板（Zed right dock 形态），不是新窗口、也不是全屏。 */}
       <div className="flex min-h-0 min-w-0 flex-1">
@@ -887,7 +875,7 @@ function ChatViewImpl({
             <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/12 text-primary">
               <Bot className="size-3.5" />
             </div>
-            <span className="min-w-0 max-w-48 truncate font-semibold text-sm">{agent?.name ?? conv.agent_key}</span>
+            <span className="min-w-0 max-w-48 truncate font-semibold text-sm">{agentLabel}</span>
             {/* 线程状态：整屏之后左栏列表可能被滚走，当前线程在跑还是在等必须在这里也能看到。 */}
             <span
               className={cn(
@@ -994,7 +982,7 @@ function ChatViewImpl({
           <ScrollArea type="auto" className="[&_[data-slot=scroll-area-viewport]>div]:block! min-h-0 min-w-0 flex-1">
             <div className="mx-auto min-w-0 max-w-4xl px-4 py-4 md:px-6" ref={contentRef}>
               {messages.length === 0 && !running ? (
-                <EmptyState illustration="chat" title={t("emptyStart", { agent: agent?.name ?? conv.agent_key })} />
+                <EmptyState illustration="chat" title={t("emptyStart", { agent: agentLabel })} />
               ) : (
                 <>
                   {hasMore && (
@@ -1037,9 +1025,6 @@ function ChatViewImpl({
             initialText={initialText}
             disabled={sending}
             stopping={stopping}
-            recipient={recipient}
-            workers={workerRecipients}
-            onRecipientChange={setRecipient}
             onSend={send}
             onStop={() => void stop()}
             placeholder={running ? t("composer.placeholderRunning") : t("composer.placeholder")}
@@ -1352,11 +1337,8 @@ export default function ChatPage() {
   const [rootAgent, setRootAgent] = React.useState<Agent | null>(null);
   const [profiles, setProfiles] = React.useState<LLMProfile[]>([]);
   const [convs, setConvs] = React.useState<Conversation[]>([]);
-  const [agentFilter, setAgentFilter] = React.useState<string | null>(null);
   // 线程筛选（harness 左栏）：全部 / 运行中 / 已固定。
   const [threadFilter, setThreadFilter] = React.useState<"all" | "running" | "pinned">("all");
-  // 运行中的 Worker 作为 composer 的可选收件人（数据来自 intents 列表，无需后端改动）。
-  const { workers: workerRecipients } = useWorkerRecipients();
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
   // 新建线程要绑定的任务（来自 ?task=，或用户在草稿页手选）。空串 = 通用对话。
   const [taskBind, setTaskBind] = React.useState("");
@@ -1512,11 +1494,10 @@ export default function ChatPage() {
   const agentByKey = React.useMemo(() => new Map(agents.map((agent) => [agent.key, agent])), [agents]);
   const filteredConversations = React.useMemo(() => {
     let rows = convs;
-    if (agentFilter !== null) rows = rows.filter((conversation) => conversation.agent_key === agentFilter);
     if (threadFilter === "running") rows = rows.filter((conversation) => conversation.running);
     if (threadFilter === "pinned") rows = rows.filter(conversationIsPinned);
     return rows;
-  }, [convs, agentFilter, threadFilter]);
+  }, [convs, threadFilter]);
   const visibleConversations = React.useMemo(
     () => filteredConversations.slice(0, visibleConversationCount),
     [filteredConversations, visibleConversationCount],
@@ -1535,39 +1516,11 @@ export default function ChatPage() {
       ),
     [visibleConversations, agentByKey, threadFilter],
   );
-  // 聊天 Agent 清单 = 根 Agent + 自定义 Agent。
-  //
-  // 旧版还能选 Auto / 渗透测试 / Reviewer 这些内置角色；新调度层只有一个根 Agent，
-  // 子代理由根在任务里临时派发，所以清单里不再有任何内置子代理。
-  // 根 Agent 的模板走 /api/orchestration（不在 /api/agents 清单里），这里补进来。
-  const chatAgents = React.useMemo(() => {
-    const custom = agents.filter((a) => !a.builtin || a.role === "assistant");
-    return rootAgent ? [rootAgent, ...custom.filter((a) => a.key !== rootAgent.key)] : custom;
-  }, [agents, rootAgent]);
-  const agentFilterOptions = React.useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const conversation of convs) {
-      counts.set(conversation.agent_key, (counts.get(conversation.agent_key) ?? 0) + 1);
-    }
-    // Include historical sources even if their Agent has since been disabled or deleted.
-    const keys = new Set([...chatAgents.map((agent) => agent.key), ...counts.keys()]);
-    if (agentFilter !== null) keys.add(agentFilter);
-    return [...keys]
-      .map((key) => ({ key, name: agentByKey.get(key)?.name || key, count: counts.get(key) ?? 0 }))
-      .sort((a, b) => a.name.localeCompare(b.name, locale));
-  }, [convs, chatAgents, agentByKey, agentFilter, locale]);
-  const conversationCountLabel =
-    agentFilter === null
-      ? t("totalCount", { count: convs.length })
-      : t("filteredCount", { shown: filteredConversations.length, total: convs.length });
-
-  function changeAgentFilter(key: string | null) {
-    setAgentFilter(key);
-    setVisibleConversationCount(CONVERSATION_LIST_PAGE);
-    setSelectedConversationIds(new Set());
-    setBulkDeleteOpen(false);
-    setRenamingId(null);
-  }
+  // 单 Agent HARNESS：对话页只有根 Agent 一个身份。
+  // 子代理不是「可选角色」，而是根在任务里用工具临时派发的实例，因此这里
+  // 既不提供清单，也不提供切换入口。
+  const chatAgents = React.useMemo(() => (rootAgent ? [rootAgent] : []), [rootAgent]);
+  const conversationCountLabel = t("totalCount", { count: convs.length });
 
   const selectedConversationCount = selectedConversationIds.size;
   const allConversationsSelected =
@@ -1742,26 +1695,8 @@ export default function ChatPage() {
                 </Button>
               ))}
             </div>
-            <Select
-              value={agentFilter === null ? "all" : `agent:${agentFilter}`}
-              onValueChange={(value) => changeAgentFilter(value === "all" ? null : value.slice(6))}
-              disabled={bulkDeleting}
-            >
-              <SelectTrigger size="sm" className="w-full min-w-0" aria-label={t("filterByAgentAria")}>
-                <Bot />
-                <SelectValue placeholder={t("allAgents")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all">{t("allAgents")}</SelectItem>
-                  {agentFilterOptions.map((agent) => (
-                    <SelectItem key={agent.key} value={`agent:${agent.key}`}>
-                      {t("agentOption", { name: agent.name, count: agent.count })}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            {/* 单 Agent 形态：新架构只有一个根 Agent，子代理由根在任务里临时派发，
+                没有可选的第二身份，所以这里不再放 Agent 选择框。 */}
             {convs.length > 0 &&
               (selectionMode ? (
                 <div className="flex items-center gap-2 px-1">
@@ -1809,19 +1744,10 @@ export default function ChatPage() {
                 </div>
               ))}
           </div>
-          <ScrollArea
-            key={agentFilter === null ? "all" : `agent:${agentFilter}`}
-            type="auto"
-            className="[&_[data-slot=scroll-area-viewport]>div]:block! min-h-0 min-w-0 flex-1"
-          >
+          <ScrollArea type="auto" className="[&_[data-slot=scroll-area-viewport]>div]:block! min-h-0 min-w-0 flex-1">
             <div className="flex min-w-0 flex-col gap-0.5 p-2">
               {filteredConversations.length === 0 && (
-                <EmptyState
-                  compact
-                  illustration="chat"
-                  className="py-6"
-                  title={agentFilter === null ? t("emptyAll") : t("emptyForAgent")}
-                />
+                <EmptyState compact illustration="chat" className="py-6" title={t("emptyAll")} />
               )}
               {pinnedConversations.map((c) => (
                 <ConversationItem
@@ -1913,7 +1839,6 @@ export default function ChatPage() {
               agents={agents}
               profiles={profiles}
               initial={pendingByConv[selected.id]}
-              workerRecipients={workerRecipients}
               onTitleMaybeChanged={reloadConvs}
               onConvUpdated={reloadConvs}
               onOpenTask={openTask}
@@ -1928,7 +1853,6 @@ export default function ChatPage() {
               profiles={profiles}
               taskId={taskBind}
               onStarted={(c, pending) => {
-                if (agentFilter !== null && agentFilter !== c.agent_key) changeAgentFilter(null);
                 // Insert the new conversation immediately so `selected` resolves to
                 // it on this render (switching to ChatView right away, before the
                 // async reloadConvs lands); reloadConvs then reconciles titles etc.

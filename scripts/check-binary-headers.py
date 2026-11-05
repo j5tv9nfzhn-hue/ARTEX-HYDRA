@@ -4,9 +4,9 @@
 用法：
     python3 -I scripts/check-binary-headers.py            # 校验全部六目标（默认 dist 布局）
     python3 -I scripts/check-binary-headers.py linux/amd64 darwin/arm64 ...
-    python3 -I scripts/check-binary-headers.py --binary dist/x/artex-rea linux/amd64
+    python3 -I scripts/check-binary-headers.py --binary dist/x/artex-hydra linux/amd64
 
-目标文件默认取 dist/artex-rea-<os>-<arch>/artex-rea（Windows 为 artex-rea.exe）；
+目标文件默认取 dist/artex-hydra-<os>-<arch>/artex-hydra（Windows 为 artex-hydra.exe）；
 产物路径被 ARTEX_OUTPUT / ARTEX_OUTPUT_DIR 改写过时用 --binary 传真实路径。runner
 不能执行非宿主平台的二进制，这些检查代替冒烟测试；任何一项不符即非零退出。
 """
@@ -45,7 +45,7 @@ def check(spec: str, binary: Path | None = None) -> None:
     if arch not in TARGETS.get(goos, {}):
         sys.exit(f"不支持的目标：{spec}（支持 {known}）")
     if binary is None:
-        binary = ROOT / "dist" / f"artex-rea-{goos}-{arch}" / ("artex-rea.exe" if goos == "windows" else "artex-rea")
+        binary = ROOT / "dist" / f"artex-hydra-{goos}-{arch}" / ("artex-hydra.exe" if goos == "windows" else "artex-hydra")
         if not binary.is_file():
             legacy = ROOT / "dist" / f"artex-{goos}-{arch}" / ("artex.exe" if goos == "windows" else "artex")
             if legacy.is_file():

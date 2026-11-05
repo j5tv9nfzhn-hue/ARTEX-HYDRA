@@ -1,7 +1,7 @@
 // Package boot 承载 ARTEX 服务进程的共享启动骨架：凭据主密钥、进程树收口、
 // 双图库打开、server 装配与监听器启动，以及优雅停机。
 //
-// cmd/artex（服务器版 artex-rea）从这里启动后端。启动顺序与停机顺序是三条不变量，
+// cmd/artex（服务器版 artex-hydra）从这里启动后端。启动顺序与停机顺序是三条不变量，
 // 任何调整都必须同步 cmd/artex 一侧，不允许私自重排。
 package boot
 
@@ -227,6 +227,6 @@ func writePortInUse(w io.Writer, addr string, err error) {
 	fmt.Fprintln(w, "  处理办法：")
 	fmt.Fprintf(w, "    1) 看是谁占着：netstat -ano | findstr :%s\n", port)
 	fmt.Fprintln(w, "    2) 结束它：    taskkill /PID <PID> /F")
-	fmt.Fprintln(w, "    3) 或者接管：  start.bat -takeover    （start-lan.bat 的 -lan 也会接管）")
+	fmt.Fprintln(w, "    3) 或者接管：  artex-hydra.exe -takeover    （-lan / -addr 也会接管）")
 	fmt.Fprintln(w, "\n  本次启动已退出，不会自动重试。")
 }

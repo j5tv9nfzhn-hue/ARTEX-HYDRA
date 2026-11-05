@@ -2,141 +2,24 @@
 
 import * as React from "react";
 
-import { BotIcon, CornerDownLeftIcon, Loader2Icon, ShieldAlertIcon, SlashIcon } from "lucide-react";
+import { ArrowUpIcon, Loader2Icon, SlashIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { MentionTextarea } from "@/components/mention-textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { api } from "@/lib/api";
 import { shouldSubmitOnKey, useChatSendMode } from "@/lib/chat-send-mode";
-import type { Task, TaskNode } from "@/lib/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 收件人（recipient）：composer 只保留一个写入口，但「这句话说给谁」可以是
-//   ① 主 Agent —— 走 /api/conversations/{id}/messages，回车排队；
-//   ② 某个运行中的 Worker —— 走 /api/tasks/{task}/intents/{intent}/steer，
-//      文本进引擎 steer 队列，下一步工具调用前注入，不暂停、不重跑。
-// 两者语义由 ready 上的 hint 讲清楚，不做隐式切换。
+// 单 Agent HARNESS。
+//
+// 旧版 composer 有一个「收件人」概念：主 Agent / 某个运行中的 Worker，后者走
+// /api/tasks/{task}/intents/{intent}/steer 直接给子代理插话。新架构里子代理是
+// 根 Agent 在任务里用工具临时派发的实例，不是用户可以直接对话的对象——所有输入
+// 统一交给根 Agent，由它决定自己处理还是转给某个子代理。
+//
+// 因此这里不再有 recipient / worker 列表 / 收件人选择器，也不再有 steer 分支。
 // ─────────────────────────────────────────────────────────────────────────────
-export type HarnessRecipient = { kind: "agent" } | { kind: "worker"; taskId: string; intentId: string; title: string };
-
-export function recipientKey(r: HarnessRecipient): string {
-  return r.kind === "agent" ? "agent" : `worker:${r.taskId}:${r.intentId}`;
-}
-
-// useWorkerRecipients 拉一次运行中的 Worker（意图 state=running）作为可选收件人。
-// 数据来自 /exploration/intents?page=1，不需要后端改动；页面每 8s 刷新一次。
-export function useWorkerRecipients(): { workers: HarnessRecipient[]; loading: boolean } {
-  const [workers, setWorkers] = React.useState<HarnessRecipient[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    let alive = true;
-    const pull = async () => {
-      try {
-        const [tasksResp, intentsResp] = await Promise.all([api.tasks(), api.intentsPage("", 0, 300)]);
-        if (!alive) return;
-        const byId = new Map<string, Task>(tasksResp.tasks.map((t) => [t.id, t]));
-        const rows: HarnessRecipient[] = [];
-        for (const node of intentsResp.items as TaskNode[]) {
-          if (node.state !== "running" || !node.source_task_id) continue;
-          const task = byId.get(node.source_task_id);
-          if (!task) continue;
-          rows.push({
-            kind: "worker",
-            taskId: task.id,
-            intentId: node.id,
-            title: `#${task.id} ${task.name || task.description}`,
-          });
-        }
-        setWorkers(rows.slice(0, 40));
-      } catch {
-        // 运行中 Worker 只是增强项：读不到就只剩主 Agent，不影响发送。
-      } finally {
-        if (alive) setLoading(false);
-      }
-    };
-    void pull();
-    const timer = window.setInterval(() => void pull(), 8000);
-    return () => {
-      alive = false;
-      window.clearInterval(timer);
-    };
-  }, []);
-
-  return { workers, loading };
-}
-
-// RecipientPicker 是 composer 左侧的那颗胶囊：默认「主 Agent ▾」，点开列出运行中的 Worker。
-export function RecipientPicker({
-  value,
-  workers,
-  onChange,
-  disabled,
-}: {
-  value: HarnessRecipient;
-  workers: HarnessRecipient[];
-  onChange: (next: HarnessRecipient) => void;
-  disabled?: boolean;
-}) {
-  const t = useTranslations("chat.harness");
-  const current = value.kind === "agent" ? t("recipient.agent") : `#${value.intentId}`;
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={disabled}
-          className="h-7 gap-1.5 rounded-lg border border-border/70 bg-muted/50 px-2.5 text-xs"
-        >
-          <BotIcon className="size-3.5" />
-          <span className="max-w-40 truncate">{current}</span>
-          <span className="text-muted-foreground">▾</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-72">
-        <DropdownMenuLabel>{t("recipient.title")}</DropdownMenuLabel>
-        <DropdownMenuGroup>
-          <DropdownMenuItem onSelect={() => onChange({ kind: "agent" })}>
-            <BotIcon />
-            {t("recipient.agent")}
-            {value.kind === "agent" && <span className="ml-auto text-primary">✓</span>}
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-muted-foreground text-xs">
-          {workers.length > 0 ? t("recipient.workers", { count: workers.length }) : t("recipient.noWorkers")}
-        </DropdownMenuLabel>
-        <DropdownMenuGroup>
-          {workers.map((w) => {
-            if (w.kind !== "worker") return null;
-            const active = value.kind === "worker" && value.intentId === w.intentId && value.taskId === w.taskId;
-            return (
-              <DropdownMenuItem key={recipientKey(w)} onSelect={() => onChange(w)}>
-                <span className="truncate">
-                  #{w.intentId} · {w.title}
-                </span>
-                {active && <span className="ml-auto text-primary">✓</span>}
-              </DropdownMenuItem>
-            );
-          })}
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Slash 命令：harness 的第二个写入口（composer 内的 /）。
@@ -152,17 +35,17 @@ type SlashCommand = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HarnessComposer：整页唯一的写入口。
-//   Enter        = 交给收件人（主 Agent 排队 / Worker 立刻 steer）
-//   Ctrl/Cmd + ↵ = 立刻发送（运行时表示「插队 / 立即 steer」）
-//   /            = 命令菜单（/compact 只在主 Agent 收件人下可用，见下）
+//   Enter        = 交给主 Agent（运行中则排队）
+//   Ctrl/Cmd + ↵ = 立刻发送（运行时表示插队）
+//   /            = 命令菜单
 // 语义差异写在底部右侧的 hint 里，不靠用户猜。
+//
+// 只有一个收件人：根 Agent。旧版的 Worker steer 入口已移除——子代理由根在
+// 任务里派发，不是一个可以直接对话的对象。
 // ─────────────────────────────────────────────────────────────────────────────
 export function HarnessComposer({
   running,
   disabled,
-  recipient,
-  workers,
-  onRecipientChange,
   onSend,
   onStop,
   stopping,
@@ -174,9 +57,6 @@ export function HarnessComposer({
 }: {
   running: boolean;
   disabled: boolean;
-  recipient: HarnessRecipient;
-  workers: HarnessRecipient[];
-  onRecipientChange: (next: HarnessRecipient) => void;
   /** 主 Agent：把文本交给会话；返回 false 表示失败（调用方负责回填）。 */
   onSend: (text: string) => Promise<boolean>;
   onStop: () => void;
@@ -186,7 +66,7 @@ export function HarnessComposer({
   initialText?: string;
   /** 输入框上方的附件 chip 之类。 */
   topSlot?: React.ReactNode;
-  /** 操作行里、收件人选择器之前的那一格（TODO 气泡就走这里）。 */
+  /** 操作行左侧的第一格（TODO 气泡就走这里）。 */
   todoSlot?: React.ReactNode;
   /** 操作行左侧的附加控件（模型选择等）。 */
   children?: React.ReactNode;
@@ -195,7 +75,6 @@ export function HarnessComposer({
   const sendMode = useChatSendMode();
   const [value, setValue] = React.useState(initialText ?? "");
   const [sending, setSending] = React.useState(false);
-  const [steering, setSteering] = React.useState(false);
 
   const commands: SlashCommand[] = React.useMemo(
     () => [
@@ -238,24 +117,11 @@ export function HarnessComposer({
     cmd.run?.();
   }
 
-  const toWorker = recipient.kind === "worker";
-
   async function submit() {
     const text = value.trim();
-    if (!text || sending || steering) return;
-    if (toWorker) {
-      setSteering(true);
-      try {
-        await api.steerIntent(recipient.taskId, recipient.intentId, text);
-        setValue("");
-      } catch (e) {
-        // 失败保留原文，避免用户丢掉输入。
-        void e;
-      } finally {
-        setSteering(false);
-      }
-      return;
-    }
+    // running 时后端会直接 409（一次只跑一轮），此前这里没有拦、按钮也还是可点的，
+    // 于是「按回车没反应」被误读成按键失效。现在统一在入口挡住，并用 hint 说明原因。
+    if (!text || sending || running) return;
     setSending(true);
     const ok = await onSend(text);
     if (ok) setValue("");
@@ -281,24 +147,11 @@ export function HarnessComposer({
     void submit();
   }
 
-  const busy = sending || steering;
-  let hintLabel = t("hint.send");
-  if (toWorker) hintLabel = t("hint.steer");
-  else if (running) hintLabel = t("hint.queue");
+  const busy = sending;
+  const hintLabel = running ? t("hint.queue") : t("hint.send");
   return (
     <div className="px-3 pt-1.5 pb-3 md:px-6">
       <div className="mx-auto flex w-full max-w-[800px] flex-col rounded-2xl border border-border/85 bg-background/75 p-2.5 shadow-xs transition-all focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20">
-        {toWorker && (
-          <div className="mb-2 flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-amber-700 text-xs dark:text-amber-300">
-            <ShieldAlertIcon className="size-3.5 shrink-0" />
-            <span className="min-w-0">
-              {t("steerNotice", { id: recipient.intentId })}
-              <button type="button" className="ml-2 underline" onClick={() => onRecipientChange({ kind: "agent" })}>
-                {t("backToAgent")}
-              </button>
-            </span>
-          </div>
-        )}
         {showSlash && (
           <div className="mb-1.5 overflow-hidden rounded-lg border bg-popover shadow-xs">
             {slashMatches.map((cmd) => (
@@ -336,13 +189,7 @@ export function HarnessComposer({
         </div>
         <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 border-border/50 border-t pt-2">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-            <RecipientPicker
-              value={recipient}
-              workers={workers}
-              onChange={onRecipientChange}
-              disabled={disabled || busy}
-            />
-            {running && !toWorker && (
+            {running && (
               <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-xs">
                 {t("runtimeBadge.queued")}
               </Badge>
@@ -355,11 +202,13 @@ export function HarnessComposer({
               size="icon-sm"
               className="rounded-xl"
               onClick={() => void submit()}
-              disabled={disabled || busy || !value.trim()}
-              title={toWorker ? t("steerNow") : t("send")}
-              aria-label={toWorker ? t("steerNow") : t("send")}
+              disabled={disabled || busy || running || !value.trim()}
+              title={t("send")}
+              aria-label={t("send")}
             >
-              {busy ? <Loader2Icon className="size-4 animate-spin" /> : <CornerDownLeftIcon className="size-4" />}
+              {/* 图标用 ↑ 而不是 ⏎：后者看起来就是「回车键」，和键盘上的 Enter 重复，
+                  容易被当成第二个发送入口。 */}
+              {busy ? <Loader2Icon className="size-4 animate-spin" /> : <ArrowUpIcon className="size-4" />}
             </Button>
             {running && (
               <Button
