@@ -19,6 +19,7 @@ import {
 import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
 import { cn } from "@/lib/utils";
 
+import { AgentDock } from "./_components/agent-dock";
 import { MainContent } from "./_components/main-content";
 
 // Reads a layout-critical preference from the browser cookie (falls back to the
@@ -102,6 +103,9 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
       {/* 升级后的一次性残留提示：等界面挂载完再检查，避免和首屏请求抢带宽。
           数据全部来自真实接口；没有残留就不弹。 */}
       <LegacyRemnantDialog />
+      {/* 子代理停靠栏：全局挂载，任何页面都能看到后台并行任务的实时状态。
+          它用独立的 /api/agents/stream，与当前页面的对话流互不影响。 */}
+      <AgentDock />
     </SidebarProvider>
   );
 }

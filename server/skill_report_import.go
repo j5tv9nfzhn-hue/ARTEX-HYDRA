@@ -19,9 +19,9 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/norma/agentcore"
-	acperm "github.com/Autumn-27/norma/permission"
 	actool "github.com/Autumn-27/norma/tool"
 	"github.com/Autumn-27/norma/transcript"
 )
@@ -1055,7 +1055,7 @@ func (s *Server) tryDistillReportWithLLM(
 	reply, err := agentcore.Run(runCtx, agentcore.Options{
 		Provider:       prov,
 		SystemPrompt:   []string{sysPrompt},
-		PermissionMode: acperm.ModeBypass,
+		PermissionMode: agent.EffectivePermissionMode(),
 		MaxTurns:       1,
 		MaxTokens:      8192,
 		NonStreaming:   !cfg.Stream,

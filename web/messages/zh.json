@@ -745,7 +745,7 @@
       "newPassword": "新密码",
       "newPasswordPlaceholder": "至少 8 位",
       "setupToken": "设置令牌",
-      "setupTokenHelp": "为防止远程抢占管理员账户，需要输入仅在服务器启动终端（Docker 为 docker compose logs artex-rea）中打印的设置令牌。",
+      "setupTokenHelp": "为防止远程抢占管理员账户，需要输入仅在服务器启动终端（Docker 为 docker compose logs artex-hydra）中打印的设置令牌。",
       "setupTokenPlaceholder": "服务器控制台日志 [auth] 行中打印的 32 位令牌",
       "submit": "设置密码并登录",
       "submitting": "保存中...",
@@ -1631,7 +1631,7 @@
     "firewallAuto": "防火墙已自动放行端口。",
     "firewallManual": "系统没让我们自动放行防火墙（通常是没给管理员权限）。别的设备仍连不上时，用管理员身份执行下面这条命令一次。",
     "firewallHint": "手动放行端口（只需一次）",
-    "enableNote": "开放后这个设置会一直保留：以后双击 start.bat 或直接运行程序，都是局域网可连状态。",
+    "enableNote": "开放后这个设置会一直保留：以后启动程序（Linux / macOS 用 start.sh，Windows 直接运行 artex-hydra.exe）都是局域网可连状态。",
     "scriptHint": "也可以双击程序目录里的这个脚本启动（适合窗口还没开的时候）",
     "securityTitle": "安全提醒",
     "securityBody": "这个地址是明文 HTTP，只适合可信的内网使用；要跨公网访问，请套一层带证书的反向代理，不要把端口直接暴露出去。",
@@ -3406,7 +3406,61 @@
       "hint": "本页为只读记录。要发消息、纠偏或回滚，请到「对话」页选择对应线程。"
     }
   },
+  "agentDock": {
+    "title": "子代理",
+    "toggle": "展开子代理面板",
+    "collapse": "收起子代理面板",
+    "empty": "当前没有在跑的子代理",
+    "slotLabel": "槽位",
+    "slots": "并行 {used}/{limit}",
+    "queuedCount": "{count} 个排队",
+    "queueTitle": "排队等待槽位",
+    "children": "派发 {count}",
+    "noSelection": "未选中",
+    "logCount": "{count} 条",
+    "status": {
+      "idle": "未连接",
+      "connecting": "重连中",
+      "live": "实时",
+      "resync": "已重放"
+    },
+    "state": {
+      "running": "运行中",
+      "waiting": "等交卷",
+      "completed": "已完成",
+      "stopped": "已停止",
+      "crashed": "异常退出",
+      "failed": "失败",
+      "budget_paused": "预算暂停",
+      "stalled": "疑似卡死"
+    }
+  },
   "settingsPage": {
+    "permissionTier": {
+      "title": "工具权限档位",
+      "desc": "控制 Agent 能对这台机器做什么。判定在后端每次工具调用前执行，切换后对下一轮对话与任务立即生效，无需重启。",
+      "loading": "读取中…",
+      "saving": "正在保存…",
+      "loadFailed": "读取权限档位失败：{error}",
+      "defaultHint": "默认",
+      "readOnlyWarning": "只读模式下，写文件、执行命令、登记资产/漏洞等写操作会被直接拒绝；界面其他功能看起来仍正常，容易误判成工具故障。",
+      "bypass": {
+        "label": "完全访问",
+        "desc": "除显式 deny 规则外一律放行。无人值守的默认档，Bash / 写文件 / 各类工具都可直接执行。"
+      },
+      "default": {
+        "label": "标准",
+        "desc": "非只读工具需要命中 allow 规则；本机没有交互确认通道，未命中时会被拒绝，可能表现为「只会读」。"
+      },
+      "plan": {
+        "label": "只读",
+        "desc": "只允许只读工具，适合纯侦察、审计与演示。任何写操作与命令执行都会被拒。"
+      },
+      "toast": {
+        "saved": "权限档位已切换为「{tier}」",
+        "failed": "切换失败：{error}"
+      }
+    },
     "migrate": {
       "title": "数据迁移",
       "desc": "把另一份 ARTEX 安装目录（旧版 WEB 端，或另一个桌面端目录）的数据库与工作空间搬进当前安装。桌面端窗口与 WEB 版浏览器里是同一张卡片，两边都能用；路径指程序所在那台机器的本地磁盘。动手前后端会先自动备份当前数据库。",
@@ -3471,7 +3525,7 @@
       "changed": "密码已修改，正在重新登录…",
       "resetted": "密码已重置，正在重新登录…",
       "reloginNote": "改完所有会话都会失效：网页和其它设备都要重新登录一次。",
-      "cliHint": "连这个页面都进不去（密码和会话都没有）时，在程序目录执行 artex-rea.exe -reset-password。"
+      "cliHint": "连这个页面都进不去（密码和会话都没有）时，在程序目录执行 artex-hydra.exe -reset-password。"
     },
     "agentBinding": {
       "desc": "默认关闭。开启后，漏洞入库时触发的报告 Agent 会核对已有 HTTP 请求/响应，关联对应流量后再编写报告。<b>查阅数据包及额外的工具调用会增加 Token 消耗。</b><br></br>TCP、未抓包或没有匹配流量时仍可正常上报。此开关不影响流量捕获、人工绑定及已保存证据的查看。 对下一轮 Agent 生效；关闭后会立即拒绝新的自动绑定。",
@@ -3630,7 +3684,7 @@
       "journalSeeLog": "详见程序目录下的 <code>logs/update.log</code> 与 <code>updates/journal.json</code>。",
       "journalRollbackHint": " 可先回滚到上一版本恢复服务。",
       "stagedTitle": "v{version} 已下载并校验完成",
-      "stagedDescAuto": "装好后进程会自己重启并切到新版本，不需要手动重启，也不需要 start.bat。",
+      "stagedDescAuto": "装好后进程会自己重启并切到新版本，不需要手动重启，也不需要额外的启动脚本。",
       "stagedDescManual": "当前环境不能自动重启（例如容器内），更新无法在这里一键生效。",
       "phase": {
         "idle": "准备中",
@@ -3664,8 +3718,8 @@
       "connectError": "无法连接 GitHub：{error}　可在上方配置全局代理后重试。",
       "currentVersion": "当前版本",
       "desc": "从 GitHub 检查并安装新版本。更新会重启程序，正在运行的任务会被中断。",
-      "dockerNote": "Docker 下的更新只替换程序本身，不更新镜像里的 playwright / nmap 等工具链，且<code>docker compose up -d</code>重建容器后会退回镜像自带的版本。需要连镜像一起升级请执行<code>docker compose pull artex-rea && docker compose up -d artex-rea</code>。",
-      "footer": "一键更新依赖守护脚本重启程序。请通过 <code>start.sh</code>（Windows 为 <code>start.bat</code>）启动 ARTEX-HYDRA；直接运行 artex-rea 本体时，程序退出后不会被自动拉起。",
+      "dockerNote": "Docker 下的更新只替换程序本身，不更新镜像里的 playwright / nmap 等工具链，且<code>docker compose up -d</code>重建容器后会退回镜像自带的版本。需要连镜像一起升级请执行<code>docker compose pull artex-hydra && docker compose up -d artex-hydra</code>。",
+      "footer": "一键更新依赖守护脚本重启程序。请通过 <code>start.sh</code>（Linux / macOS）或直接运行 <code>artex-hydra.exe</code>（Windows）启动；自动重启与更新握手已内建在程序里。",
       "latestVersion": "最新版本",
       "modeDocker": "Docker",
       "modeStandalone": "独立程序",
@@ -3680,7 +3734,7 @@
         "saveFailed": "保存失败：{error}",
         "found": "发现新版本 {latest}",
         "preparing": "准备中…",
-        "restartTimeout": "等待服务重启超时。请检查后端日志，或确认 artex-rea 是通过 start.sh / start.bat 启动的。",
+        "restartTimeout": "等待服务重启超时。请检查后端日志，或确认 artex-hydra 进程仍在运行。",
         "rollbackFailed": "回滚失败：{error}",
         "rollbackSwitched": "已切换到上一版本，正在重启…",
         "startFailed": "启动更新失败：{error}",

@@ -49,6 +49,13 @@ const (
 	VerdictSwitch
 	// VerdictQuality 响应质量类：交给 llmrepair 判定。
 	VerdictQuality
+	// VerdictOverflow 上下文溢出：请求超出本端点窗口。
+	//
+	// 它**不是**端点故障——端点本身是健康的，换一个窗口更大的端点就能成功。
+	// 因此它既不该触发熔断（那是 VerdictSwitch 的语义），也不该像 VerdictFail
+	// 那样把整条链判死。调用方应把它当成"换更大的窗口重试"的信号：按窗口从大到小
+	// 重排剩余候选，并把真实窗口记下来供下一次装配使用。
+	VerdictOverflow
 )
 
 // String 返回人类可读的标签（给日志与设置页回显用）。
@@ -64,6 +71,8 @@ func (v Verdict) String() string {
 		return "switch"
 	case VerdictQuality:
 		return "quality"
+	case VerdictOverflow:
+		return "overflow"
 	}
 	return "unknown"
 }
@@ -306,7 +315,9 @@ func ClassifyWith(err error, rules Rules) Verdict {
 		return VerdictQuality
 	}
 	if IsContextOverflow(err) {
-		return VerdictFail
+		// 溢出单独成一档：上游健康，只是这条请求对当前窗口太长。
+		// 判成 VerdictFail 会把"换个大窗口重试"这条唯一正确的出路一起堵死。
+		return VerdictOverflow
 	}
 
 	retryKW, switchKW, failKW := rules.effective()

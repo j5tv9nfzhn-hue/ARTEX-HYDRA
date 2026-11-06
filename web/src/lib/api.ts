@@ -81,6 +81,8 @@ import type {
   NotificationDelivery,
   NotificationFilter,
   NotificationMeta,
+  PermissionTier,
+  PermissionTierState,
   PromptVar,
   PromptVersion,
   RECapabilityReport,
@@ -500,7 +502,10 @@ export const api = {
   // 资产覆盖图：范围内全部资产 + 连接用的根域名/公司节点，含 tested/in_scope。
   taskCoverageGraph: (id: string) => get<CoverageGraphData>(`/tasks/${id}/coverage-graph`),
   // 全局 llm_usage 聚合（仪表盘新版 token 视图）：按 profile 总量 + 按天分桶。
-  usageStats: (days = 365) => get<UsageStats>(`/tokens/usage?days=${days}`),
+  // tz_offset_minutes：服务端按这个偏移把 UTC 时间戳折算成本地日期再分桶。
+  // getTimezoneOffset() 返回的是「UTC − 本地」（东八区 = −480），取反才是我们要的 +480。
+  usageStats: (days = 365) =>
+    get<UsageStats>(`/tokens/usage?days=${days}&tz_offset_minutes=${-new Date().getTimezoneOffset()}`),
   // ---- 目标管理（总览）----
   // 本任务全部目标（text/vulnclass/state）。
   taskGoals: (id: string) =>
@@ -1697,4 +1702,17 @@ export const api = {
   migrateInspect: (path: string) => post<MigrateCandidate>(`/migrate/inspect`, { path }),
   migrateImport: (path: string, mode: "merge" | "replace", confirm?: string) =>
     post<MigrateResult>(`/migrate/import`, { path, mode, confirm }),
+
+  // ---- 工具权限档位（完全访问 / 标准 / 只读）----
+  // 评估在后端装配 agent 时发生，改完对下一轮对话/任务立即生效，无需重启。
+  // default_tier 用于"从未配置过"时也能显示出厂默认（完全访问），而不是空白。
+  permissionTier: () => get<PermissionTierState>(`/permission-tier`),
+  setPermissionTier: (tier: PermissionTier) =>
+    put<{ tier: PermissionTier; read_only: boolean }>(`/permission-tier`, { tier }),
+
+  // 子代理实时事件流（独立于对话流）。浏览器重连时 EventSource 会自动带
+  // Last-Event-ID，服务端据此补发；since 只用于首次连接。
+  // task_id 非空时只推该任务的 agent 与槽位——停靠栏只显示当前会话所属任务。
+  agentStreamUrl: (since = 0, taskId = "") =>
+    sseUrl(`/api/agents/stream?since=${since}${taskId ? `&task_id=${encodeURIComponent(taskId)}` : ""}`),
 };

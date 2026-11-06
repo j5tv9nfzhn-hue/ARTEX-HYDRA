@@ -118,12 +118,14 @@ func signJWT(key []byte) (string, error) {
 
 // verifyJWT returns true when tokenStr is a valid, non-expired HS256 token.
 func verifyJWT(tokenStr string, key []byte) bool {
+	// 60 秒时钟容差：浏览器/容器/NTP 漂移会让刚签发的 iat/exp 落在"未来几秒"，
+	// 没有容差时表现为"刚登录就被 401"，且刷新页面才好——这是最典型的鉴权误伤。
 	t, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
 		return key, nil
-	})
+	}, jwt.WithLeeway(60*time.Second))
 	return err == nil && t.Valid
 }
 
@@ -400,14 +402,23 @@ func (s *Server) WarnIfExposed(addr string) {
 
 // extractToken reads the JWT from Authorization: Bearer header,
 // artex_token cookie, or ?token= query param (for SSE connections).
+//
+// 大小写与前导空白都做归一：Authorization 方案名按 RFC 7235 是大小写不敏感的，
+// 而不少 HTTP 客户端/网关会把 "bearer" 小写或写成 "Bearer  xxx"（双空格）。
+// 早先这里用严格前缀匹配，这类合法请求会拿到 401，表现为"客户端明明带对了
+// 令牌却被拦"，且服务端日志只有一行 unauthorized，完全看不出是格式问题。
 func extractToken(r *http.Request) string {
-	if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
-		return strings.TrimPrefix(h, "Bearer ")
+	if h := strings.TrimSpace(r.Header.Get("Authorization")); h != "" {
+		if f := strings.Fields(h); len(f) == 2 && strings.EqualFold(f[0], "bearer") {
+			if tok := strings.TrimSpace(f[1]); tok != "" {
+				return tok
+			}
+		}
 	}
 	if c, err := r.Cookie("artex_token"); err == nil && c.Value != "" {
-		return c.Value
+		return strings.TrimSpace(c.Value)
 	}
-	return r.URL.Query().Get("token")
+	return strings.TrimSpace(r.URL.Query().Get("token"))
 }
 
 // requireAuth wraps h with JWT validation.

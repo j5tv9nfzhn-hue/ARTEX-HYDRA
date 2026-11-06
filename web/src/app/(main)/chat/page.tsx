@@ -66,6 +66,7 @@ import { useSideQuestions } from "@/hooks/use-side-questions";
 import { mergeActivities } from "@/lib/activity-merge";
 import { deriveAgentPhase } from "@/lib/agent-phase";
 import { api } from "@/lib/api";
+import { currentTask } from "@/lib/current-task-store";
 import { useLiveKind } from "@/lib/live-stream";
 import { createLiveStream, type LiveStream, liveSettledBy } from "@/lib/live-stream-store";
 import { getLocalStorageValue, setLocalStorageValue } from "@/lib/local-storage.client";
@@ -479,6 +480,14 @@ function ChatViewImpl({
   const agentLabel = agent?.name ?? agents[0]?.name ?? "主 Agent";
   const currentProfileId = conv.llm_profile_id ?? null;
   const side = useSideQuestions(`/api/conversations/${conv.id}`);
+
+  // 把当前线程绑定的任务告诉右侧停靠栏：它据此只显示该任务的子代理。
+  // 切换线程或解绑都会重跑；空串 = 通用对话 → 停靠栏隐藏（不退化成"显示全部"）。
+  React.useEffect(() => {
+    currentTask.set(conv.task_id);
+  }, [conv.task_id]);
+  // 离开对话页时清空：否则停靠栏会带着上一个线程的任务在别的页面继续连。
+  React.useEffect(() => () => currentTask.set(""), []);
 
   async function changeProfile(id: number | null) {
     try {
@@ -1322,7 +1331,7 @@ function AgentGroupHeader({
 const ChatView = React.memo(ChatViewImpl);
 
 export default function ChatPage() {
-  const locale = useLocale();
+  const _locale = useLocale();
   const t = useTranslations("chat");
   const router = useRouter();
   // 任务详情页是独立全幅页面（?id=<task>）；从任务带跳过去时不带 SPA 状态，

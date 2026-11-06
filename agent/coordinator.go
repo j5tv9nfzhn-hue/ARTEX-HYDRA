@@ -237,6 +237,10 @@ type Coordinator struct {
 	TaskID  string
 	started time.Time
 
+	// slots 是子代理并发闸门。nil 表示不限（单 agent / 旁路场景）。
+	// 它只在 Register 的准入路径与 closeDone 的归还路径上被读写，不参与状态机。
+	slots *SlotManager
+
 	// onChange 是可选的观察钩子（活动流 / SSE）。刻意做成"通知事实"而不是
 	// "回调决策"：订阅者只能看，不能改变调度结果，避免重新长出第二套控制面。
 	onChange func(Event)
@@ -260,15 +264,83 @@ var ErrUnreachable = errors.New("agent unreachable")
 // ErrNoCoordinator 表示当前上下文里没有挂协调器（例如单轮旁路工具调用）。
 var ErrNoCoordinator = errors.New("no coordinator in context")
 
+// CoordinatorObserver 是可选的生命周期钩子：协调器建好之后立刻回调一次，
+// 供上层接入只读观察（事件流 / 前端多代理面板）。
+//
+// 用包级钩子而不是构造参数，是因为 Coordinator 的创建点在 StartTask 内部，
+// 而装配方在 server 包 —— 直接依赖会让 agent 反过来依赖 server。与
+// ToolAugment / ToolResolve 是同一套解耦手法。
+//
+// 约束：回调只许订阅（OnChange/All/SlotsStatus），**不得**改调度状态。
+var CoordinatorObserver func(*Coordinator)
+
+// ErrSlotsFull 表示子代理并发槽位已满且排队策略未放行。
+// 调用方拿到它应当把这次派发当作"排队中"处理，稍后重试，而不是判定工具损坏。
+var ErrSlotsFull = errors.New("child agent slots full")
+
+// IsSlotsFull 判断错误是不是"并发槽位已满"（错误会被 fmt.Errorf 包装，必须用 errors.Is）。
+func IsSlotsFull(err error) bool { return errors.Is(err, ErrSlotsFull) }
+
 // ---------- 构造与生命周期 ----------
 
 // NewCoordinator 建一个空的中枢。taskID 只用于日志与快照命名。
 func NewCoordinator(taskID string) *Coordinator {
+	// slots 默认为 nil（不限并发）：闸门由上层在装配 RunnerConfig.MaxConcurrency
+	// 时显式打开，避免单测与旁路场景被一个硬编码的 4 悄悄限流。
 	return &Coordinator{
 		agents:  make(map[string]*Runtime),
 		TaskID:  taskID,
 		started: time.Now(),
 	}
+}
+
+// SetSlots 替换并发槽位管理器。传 nil 关闭闸门（不限并发）。
+func (c *Coordinator) SetSlots(s *SlotManager) {
+	c.mu.Lock()
+	c.slots = s
+	c.mu.Unlock()
+}
+
+// SlotsStatus 返回槽位快照；未装配时给出 unlimited。
+func (c *Coordinator) SlotsStatus() SlotStatus {
+	c.mu.Lock()
+	s := c.slots
+	c.mu.Unlock()
+	return s.Status()
+}
+
+// TouchSlot 刷新某 agent 的槽位活动时间，避免活跃 turn 被僵死回收误伤。
+func (c *Coordinator) TouchSlot(id string) {
+	c.mu.Lock()
+	s := c.slots
+	c.mu.Unlock()
+	s.Touch(id)
+}
+
+// ReclaimStalledAgents 回收僵死槽位，并把对应 agent 落 stopped。
+// 它由上层巡检调用（见 server 的槽位巡检），不在热路径上。
+func (c *Coordinator) ReclaimStalledAgents(now time.Time) []string {
+	c.mu.Lock()
+	s := c.slots
+	c.mu.Unlock()
+	stalled := s.ReclaimStalled(now)
+	for _, id := range stalled {
+		if cancel := c.cancelOf(id); cancel != nil {
+			cancel()
+		}
+		_ = c.Stop(id, "超过 10 分钟无活动，槽位已回收")
+		log.Printf("[coordinator] 回收僵死子代理 %s（超过 %s 无活动）", id, StallAfter)
+	}
+	return stalled
+}
+
+func (c *Coordinator) cancelOf(id string) context.CancelFunc {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if rt, ok := c.agents[id]; ok {
+		return rt.cancel
+	}
+	return nil
 }
 
 // OnChange 安装只读观察钩子。多次调用覆盖前一个。
@@ -340,6 +412,15 @@ func (c *Coordinator) Register(id, parentID, role string, root bool, skills []st
 		if p.State.IsTerminal() {
 			c.mu.Unlock()
 			return nil, fmt.Errorf("%w: parent %q is %s", ErrUnreachable, parentID, p.State)
+		}
+		// 并发闸门：只有子代理占槽位，根不占（根是调度者，不是并行工位）。
+		// 满载时把 id 放进排队名单并返回 ErrSlotsFull，让上层重试而不是静默扩容。
+		if c.slots != nil {
+			if st, ok := c.slots.Acquire(id); !ok {
+				c.mu.Unlock()
+				return nil, fmt.Errorf("%w: 上限 %d，当前 %d 个在跑，排队 %d 个（槽位曲线 %s）",
+					ErrSlotsFull, st.Limit, st.Used, len(st.Queue), st.Chain)
+			}
 		}
 	}
 	rt := &Runtime{
@@ -528,8 +609,12 @@ func (c *Coordinator) closeDone(id string) {
 	if shouldClose {
 		ch = rt.done
 	}
+	s := c.slots
 	c.mu.Unlock()
 	if shouldClose {
+		// 终态即归还槽位：这是唯一的归还点，避免 Finish/Crash/Stop 各写一遍
+		// 导致漏还（漏还的后果是槽位永久泄漏，最终派发全部失败）。
+		s.Release(id)
 		close(ch)
 	}
 }
@@ -810,13 +895,18 @@ func (c *Coordinator) liveTargetsLocked(targets []string) []*Runtime {
 // 轮次是所有"每轮一次"语义（wait、预算检查、压缩触发）的锚点。
 func (c *Coordinator) MarkTurn(id string) int {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	rt, ok := c.agents[id]
 	if !ok {
+		c.mu.Unlock()
 		return 0
 	}
 	rt.Turn++
 	rt.lastAct = time.Now()
+	s := c.slots
+	c.mu.Unlock()
+	// turn 推进是"这个 agent 还活着"的最强信号，顺手刷新槽位活动时间，
+	// 否则长回合会被僵死回收误杀。
+	s.Touch(id)
 	return rt.Turn
 }
 

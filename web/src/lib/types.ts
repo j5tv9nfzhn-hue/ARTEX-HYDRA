@@ -2350,7 +2350,7 @@ export type MigrateTableCount = { name: string; rows: number };
 /** 一个候选旧安装目录的体检结论。字段全是事实，不含"建议迁移"的判断。 */
 export type MigrateCandidate = {
   path: string;
-  /** web = artex-rea 两件套；unknown = 只有库。后端可能仍回 desktop，前端按未知处理。 */
+  /** web = artex-hydra 单程序；unknown = 只有库。后端可能仍回 desktop，前端按未知处理。 */
   kind: "web" | "desktop" | "unknown";
   /** 取自 pointer.json；缺少该文件时为空串。 */
   version: string;
@@ -2395,4 +2395,75 @@ export type MigrateResult = {
   warnings: string[];
   /** 恒为 true：主密钥与设置缓存在内存里，导入后必须重启才干净。 */
   restart_required: boolean;
+};
+
+// ---- 工具权限档位（系统设置 → 完全访问 / 标准 / 只读）----
+//
+// 三档与后端 agent.PermissionTier 一一对应，评估点在后端装配 agent 时读取，
+// 所以改完立即对流新生效，前端只需要重新拉一次状态确认落库成功。
+export type PermissionTier = "plan" | "default" | "bypass";
+
+export type PermissionTierOption = {
+  tier: PermissionTier;
+  /** 后端下发的中文标签（只读 / 标准 / 完全访问）。 */
+  label: string;
+  desc: string;
+};
+
+export type PermissionTierState = {
+  tier: PermissionTier;
+  read_only: boolean;
+  /** 出厂默认档位（当前为 bypass）；未配置过时用它渲染选中项。 */
+  default_tier: PermissionTier;
+  options: PermissionTierOption[];
+};
+
+// ---- 子代理实时视图（GET /api/agents/stream）----
+//
+// 与后端 agent.AgentView 同形。这里是**只读**快照：调度决策全在后端，
+// 前端只负责把它画成树和日志，不参与状态迁移。
+export type AgentLiveNode = {
+  id: string;
+  parent_id?: string;
+  task_id?: string;
+  root: boolean;
+  state: string;
+  role?: string;
+  skills?: string[];
+  turn: number;
+  pending_messages?: number;
+  mailbox_total?: number;
+  started_at: string;
+  last_active: string;
+  last_error?: string;
+};
+
+/** 槽位快照：回答"还能开几条并行、谁在排队"。 */
+export type AgentLiveSlots = {
+  limit: number;
+  used: number;
+  free: number;
+  queue?: string[];
+  /** 耗尽曲线，如 `3->2->1->0`。 */
+  chain: string;
+  /** 超过 10 分钟无活动、即将被回收的 agent。 */
+  stalled?: string[];
+};
+
+export type AgentLiveEvent = {
+  seq: number;
+  at: string;
+  kind: string;
+  task_id?: string;
+  agent_id?: string;
+  parent_id?: string;
+  state?: string;
+  summary?: string;
+};
+
+export type AgentLiveSnapshot = {
+  seq: number;
+  at: string;
+  agents: AgentLiveNode[];
+  slots: Record<string, AgentLiveSlots>;
 };

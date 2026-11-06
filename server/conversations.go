@@ -521,6 +521,15 @@ func (s *Server) pgStopConversation(w http.ResponseWriter, r *http.Request) {
 	// 中断检查点（批次 6 / #27）：在取消之前落盘，快照即「停止前的时间线」。
 	s.captureConversationCheckpointNow(c, db.CheckpointReasonInterrupt, "用户停止本轮（中断）")
 	cancel(agent.AbortChatStoppedByUser)
+	// 转录里留一行可见的停止分隔线：取消是异步的，模型侧不会再产出任何可见文本，
+	// 没有这一行时界面上就是"输出戛然而止"，看不出是用户停的还是进程崩了。
+	if _, err := s.m.pg.AppendConvActivity(c.ID, db.Activity{
+		Worker:  "system",
+		Kind:    "text",
+		Summary: "─── 用户停止了本轮对话 ───",
+	}); err != nil {
+		log.Printf("[conv %d] append stop marker failed: %v", c.ID, err)
+	}
 	writeJSON(w, 200, map[string]any{"status": "stopping"})
 }
 

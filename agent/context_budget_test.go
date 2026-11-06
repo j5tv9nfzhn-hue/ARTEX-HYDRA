@@ -14,13 +14,13 @@ func TestResolveContextWindowTokens(t *testing.T) {
 		want        int
 		wantClamped bool
 	}{
-		{0, 200000, false},   // 未填 → 默认 200K
-		{128, 128000, false}, // 正常声明
-		{200, 200000, false}, // 正好在上限
-		{256, 200000, true},  // 超上限 → 夹到 200K
-		{1000, 200000, true}, // 线上真实的坑：声明 100 万
-		{8, 32000, false},    // 低于下限 → 抬到 32K（不 clamp，属于纠偏）
-		{-5, 200000, false},  // 负数按未填处理
+		{0, 200000, false},     // 未填 → 默认 200K
+		{128, 128000, false},   // 正常声明
+		{200, 200000, false},   // 正好在上限
+		{256, 256000, false},   // 显式声明不再被 200K 默认值静默降低
+		{1000, 1000000, false}, // 显式 1M 原样发出（只受 maxWindowK 约束）
+		{8, 32000, false},      // 低于下限 → 抬到 32K（不 clamp，属于纠偏）
+		{-5, 200000, false},    // 负数按未填处理
 	}
 	for _, c := range cases {
 		got, clamped := ResolveContextWindowTokens(c.declared)
@@ -30,31 +30,37 @@ func TestResolveContextWindowTokens(t *testing.T) {
 	}
 }
 
-// 上限可以被显式抬高（真·1M 窗口的模型）。
-func TestContextWindowCapOverride(t *testing.T) {
-	t.Setenv("ARTEX_CONTEXT_WINDOW_CAP_K", "1000")
-	got, clamped := ResolveContextWindowTokens(1000)
-	if got != 1000000 || clamped {
-		t.Errorf("ARTEX_CONTEXT_WINDOW_CAP_K=1000 时 got (%d, %v)，want (1000000, false)", got, clamped)
+// 信任上限只约束「用户没填」的假设值，不约束显式声明。
+func TestContextWindowCapOnlyAffectsAssumedWindow(t *testing.T) {
+	t.Setenv("ARTEX_CONTEXT_WINDOW_CAP_K", "256")
+	// 显式 392K 必须原样发出——被 200K/256K 默认值静默降低是比"多压几次"更糟的
+	// 故障：没有报错、没有日志，只表现为上下文莫名变短。
+	if got, clamped := ResolveContextWindowTokens(392); got != 392000 || clamped {
+		t.Errorf("显式 392K 应原样发出，got (%d, %v)", got, clamped)
 	}
-	// 非法值回落默认上限
+	// 没填时走默认窗口（200K）；上限只负责把它压低，不会把它抬高到 256K
+	if got, _ := ResolveContextWindowTokens(0); got != 200000 {
+		t.Errorf("未填时应按默认 200K，got %d", got)
+	}
+	// 非法上限值回落默认 200K
 	t.Setenv("ARTEX_CONTEXT_WINDOW_CAP_K", "abc")
-	if got, _ := ResolveContextWindowTokens(1000); got != 200000 {
-		t.Errorf("非法上限时 got %d，want 200000", got)
+	if got, _ := ResolveContextWindowTokens(0); got != 200000 {
+		t.Errorf("非法上限时未填应按 200K，got %d", got)
 	}
 }
 
 // 触发点 = min(80%, 窗口 − 预留)，且不低于窗口的 1/4。
-// 期望值与 ZCode 实测一致：128K → 75%、200K → 80%、1M → 80%。
+// 绝对上限（120K）只对假设窗口生效：显式声明的大窗口按真实 80% 触发。
 func TestCompactionTriggerTokens(t *testing.T) {
 	cases := []struct{ window, want int }{
 		{32000, 24000},
 		{128000, 96000},
-		// 第三阶段：绝对上限 120K（Hermes 的 threshold_tokens）。窗口声明得再大，
-		// 也不允许会话一路涨到 80 万 token 才压——那正是 1000K 虚窗口的病根。
+		// 假设窗口（≤ ContextWindowCapK）仍受 120K 绝对线约束：宁可多压几次，
+		// 也不能让一个虚高的声明把阈值抬到 80 万。
 		{200000, 120000},
-		{400000, 120000},
-		{1000000, 120000},
+		// 显式大窗口（> 200K 信任上限）按真实 80% 触发，120K 的线不再作废用户配置。
+		{400000, 320000},
+		{1000000, 800000},
 	}
 	for _, c := range cases {
 		if got := CompactionTriggerTokens(c.window); got != c.want {

@@ -100,6 +100,10 @@ var ErrTooDeep = errors.New("agent depth exceeded")
 // 再深通常意味着任务本身没有被拆清楚。
 const defaultMaxDepth = 3
 
+// defaultMaxTurns 是没有任何配置来源时的回合上限（0=无限 会让跑飞的 agent
+// 一直烧 token，只剩人工停）。
+const defaultMaxTurns = 500
+
 // defaultMaxConcurrent 与 agent.maxChildSlots 同值。分两处定义是因为它们属于
 // 不同包（server 与 agent），但数值必须一致——"提示词说要等、实际却卡住"是最难查的一类问题。
 const defaultMaxConcurrent = 4
@@ -238,7 +242,14 @@ func (spec AgentSpec) EffectiveMaxTurns(def int) int {
 	if spec.MaxTurns > 0 {
 		return spec.MaxTurns
 	}
-	return def
+	if def > 0 {
+		return def
+	}
+	// 两个来源都没给时用 500 而不是 0(无限)：单轮工具调用已经有
+	// maxToolCallsPerTurn=32 兜底，但那是"一轮之内"的闸门，管不住
+	// 「回合数无限 × 每回合都跑满」这种慢速失控。500 足够覆盖一条
+	// 走到底的路线，又能在跑飞时自己收尾。
+	return defaultMaxTurns
 }
 
 func (s *Spawner) maxDepth() int {
@@ -367,6 +378,9 @@ type TaskRun struct {
 // 下一步动作，因此这里不需要任何目标判定逻辑——目标判定是它自己的第一个 turn。
 func StartTask(ctx context.Context, taskID string, runner AgentRunner, spec AgentSpec, maxConcurrent int) (*TaskRun, error) {
 	coord := NewCoordinator(taskID)
+	if CoordinatorObserver != nil {
+		CoordinatorObserver(coord)
+	}
 	sp := NewSpawner(coord, runner)
 	sp.MaxConcurrent = maxConcurrent
 	// 显式写进 Spawner 而不是留 0：0 会被解读为"不限"，

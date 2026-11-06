@@ -163,12 +163,15 @@ func (s *Server) pgUsageStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	days := atoiDefault(r.URL.Query().Get("days"), 365)
+	// 时区偏移由前端传上来（东八区 = 480）：服务端不猜浏览器时区，
+	// 否则 UTC+8 凌晨的用量会被算进前一天的桶，总览页整体少一天。
+	tzOff := atoiDefault(r.URL.Query().Get("tz_offset_minutes"), 0)
 	byProfile, err := pg.UsageByProfile()
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
 	}
-	daily, err := pg.UsageDaily(days)
+	daily, err := pg.UsageDailyTZ(days, tzOff)
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -191,7 +194,7 @@ func (s *Server) pgUsageStats(w http.ResponseWriter, r *http.Request) {
 				byProfile[i].CostUSD = costByProfile[byProfile[i].ProfileName]
 			}
 		}
-		if rows, err := pg.UsageDailyModel(days); err == nil {
+		if rows, err := pg.UsageDailyModelTZ(days, tzOff); err == nil {
 			costByDay := map[string]float64{}
 			for _, row := range rows {
 				if cost, ok := pricing.CostOf(row.Model, row.InputTokens, row.OutputTokens, row.CacheRead, row.CacheWrite); ok {

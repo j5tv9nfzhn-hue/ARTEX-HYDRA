@@ -67,8 +67,28 @@ func (s *Server) hostTools() ([]actool.CoreTool, map[string][]string) {
 
 // orchestrationTools returns the cross-task tool set. Bound per-agent via the
 // tools table (default: no binding — opt-in for orchestration agents).
+//
+// 这里曾经是 `return nil`：函数体、schema、handler 全都还在，但没有任何一条路径
+// 能把它们交出去。后果是模型在提示词里读到 spawn_task / list_tasks 这些名字，
+// 调用时却得到一个"工具不存在"——正是幽灵工具的来源。工具定义与提供者必须成对
+// 存在，否则宁可连定义一起删掉，也不要留下"看得见、调不到"的名字。
 func (s *Server) orchestrationTools() []actool.CoreTool {
-	return nil
+	return []actool.CoreTool{
+		s.toolListTasks(),
+		s.toolListLLMProfiles(),
+		s.toolSpawnTask(),
+		s.toolPauseTask(),
+		s.toolGetTaskGraph(),
+		s.toolListTaskFindings(),
+		s.toolAddHint(),
+		s.toolGetWorkerTrace(),
+		s.toolListWorkerTraces(),
+		s.toolSearchWorkerTraces(),
+		s.toolKillWorker(),
+		s.toolRestartWorker(),
+		s.toolGetTaskNodeDetail(),
+		s.toolUpdateFindingReport(),
+	}
 }
 
 // --- schema helpers ---
@@ -523,6 +543,82 @@ func (s *Server) deriveTaskStatus(t *Task) string {
 // orchestrationToolSeeds seeds the cross-task tools into the tools table so they
 // are bindable per-agent (default: bound to nobody — opt-in for orchestration
 // agents). First-insert only, like the traffic seeds.
+// seedHostTools 把编排与平台工具播种进 tools 表，并返回它们的 key 供保留名单使用。
+//
+// SeedTool 是「首次插入」语义：已存在的行不会被覆盖，所以运营者在 UI 上改过的
+// 描述/schema/绑定都会保留。但我们自己上一版把非白名单工具**停用**过，那些行
+// 现在 enabled=false，会让工具"看得见名字、调不到"。因此这里用一次性标记
+// 把本轮恢复的 key 重新启用；只做一次，之后运营者再停用就不会被我们改回去。
+func (s *Server) seedHostTools(keep []string) []string {
+	if s.m == nil || s.m.pg == nil {
+		return keep
+	}
+	const flag = "host_tools_wired_v1"
+	curFlag, _, _ := s.m.pg.GetSetting(flag)
+
+	orch := s.orchestrationTools()
+	plat := s.platformTools()
+
+	seed := func(t actool.CoreTool, agents []string) {
+		schema, err := json.Marshal(t.InputSchema())
+		if err != nil {
+			log.Printf("[tools] %s 的 schema 无法序列化，跳过播种: %v", t.Name(), err)
+			return
+		}
+		ag, _ := json.Marshal(agents)
+		if err := s.m.pg.SeedTool(t.Name(), t.Description(), schema, ag); err != nil {
+			log.Printf("[tools] 播种 %s 失败: %v", t.Name(), err)
+		}
+		keep = append(keep, t.Name())
+	}
+
+	// 编排工具的绑定必须覆盖全部内置 agent：它们此前是"无库行 → 放行给所有人"，
+	// 一旦播种成只绑 auto/pentest，任务内的根 agent（key=worker）就会丢掉
+	// get_task_node_detail —— 而 reporter 链路正是靠它做 ID 映射。
+	// 这里把隐性放行写成显式绑定，行为不变，但从此可在 UI 上按 agent 收窄。
+	orchAgents := []string{"mainagent", "planner", "worker", "goals", "auto", "pentest"}
+	for _, t := range orch {
+		seed(t, orchAgents)
+	}
+	for _, t := range plat {
+		seed(t, []string{"auto"})
+	}
+
+	if curFlag != "true" {
+		keys := make([]string, 0, len(orch)+len(plat))
+		for _, t := range orch {
+			keys = append(keys, t.Name())
+		}
+		for _, t := range plat {
+			keys = append(keys, t.Name())
+		}
+		if err := s.m.pg.EnableTools(keys); err != nil {
+			log.Printf("[tools] 重新启用 host 工具失败: %v", err)
+		}
+		_ = s.m.pg.SetSetting(flag, "true")
+	}
+	s.seedChatQueryBindings()
+	return keep
+}
+
+// seedChatQueryBindings 补齐对话页的「平台查询」层。
+//
+// auto 的默认绑定里没有 list_findings（它原本按"上报方"设计，不查自己的产出），
+// 于是对话页问"现在有哪些漏洞"只能靠模型编。pentest 已有 list_findings，
+// 这里只补 auto。AddAgentToToolBinding 自带 NOT EXISTS 守卫，重复调用无副作用。
+func (s *Server) seedChatQueryBindings() {
+	const flag = "chat_query_bindings_v1"
+	if v, _, _ := s.m.pg.GetSetting(flag); v == "true" {
+		return
+	}
+	if err := s.m.pg.AddAgentToToolBinding("auto", []string{
+		"list_findings", "list_assets", "list_companies", "list_facts",
+	}); err != nil {
+		log.Printf("[tools] 对话页查询能力绑定失败: %v", err)
+	}
+	_ = s.m.pg.SetSetting(flag, "true")
+}
+
 func (s *Server) seedOrchestrationTools() {
 	// 第六阶段：工具面精简为官方 25 个。
 	// 1. 不再 seed 任务编排 / 平台 / 软件分析类工具；
@@ -539,7 +635,7 @@ func (s *Server) seedOrchestrationTools() {
 	//     每次启动 seed，是流量证据子系统唯一进 tools 表的入口，被删后
 	//     finding_workflow.go 里绑定 worker/reporter 的 SQL 全部落空。
 	// 改成以代码为准之后，白名单再漏也不会把正在用的工具删掉。
-	keep := make([]string, 0, 32)
+	keep := make([]string, 0, 64)
 	keep = append(keep, agent.OfficialToolKeys()...)
 	for _, seed := range agent.BuiltinToolSeeds() {
 		keep = append(keep, seed.Key)
@@ -547,13 +643,22 @@ func (s *Server) seedOrchestrationTools() {
 	for _, meta := range traffic.SeedToolMetas() {
 		keep = append(keep, meta.Name())
 	}
-	n, err := s.m.pg.PurgeNonOfficialTools(keep)
+	// host 工具（编排 / 平台）必须**先入库再进保留名单**。原因有两层：
+	//   - ToolResolve 对"没有 tools 行"的工具一律放行给所有 agent，不播种就等于
+	//     把 spawn_task / create_skill 发给每一个 worker，这是提权级的行为回归；
+	//   - 反过来，没进保留名单就会被下面的收敛逻辑停用，行存在但 enabled=false，
+	//     ToolResolve 又会把它丢掉 —— 两种错法都会让对话框里"有这个工具名但调不到"。
+	// 绑定只给对话页的两个 agent：任务内的 agent 用调度层自己的 delegate_task，
+	// 不需要也不应该拿到跨任务编排入口。
+	keep = s.seedHostTools(keep)
+
+	n, err := s.m.pg.DisableNonOfficialTools(keep)
 	if err != nil {
 		log.Printf("[tools] 工具面净化失败: %v", err)
 		return
 	}
 	if n > 0 {
-		log.Printf("[tools] 工具面已精简：删除 %d 个非官方工具", n)
+		log.Printf("[tools] 工具面已收敛：停用 %d 个非现役工具（不删行，名单修正后自动恢复）", n)
 	}
 }
 

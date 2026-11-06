@@ -117,10 +117,30 @@ ON CONFLICT (key) DO UPDATE
 // migrations to propagate a code schema change (SeedTool is first-insert-only, so a new
 // parameter added in code otherwise never reaches an already-seeded row). No-op for
 // custom tools or unknown keys.
-// PurgeNonOfficialTools 删除所有不在白名单内的系统内置工具行（第六阶段工具面精简）。
-// 只处理 system=true 的内置工具，用户自定义工具（system=false）不受影响。
-// 返回被删除的行数。
-func (d *DB) PurgeNonOfficialTools(keep []string) (int64, error) {
+// EnableTools 把给定 key 的系统工具重新启用（enabled=true）。
+// 用于一次性迁移：上一版把非白名单工具停用后，恢复后的 host 工具需要重新可见。
+func (d *DB) EnableTools(keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+	ph := make([]string, 0, len(keys))
+	args := make([]any, 0, len(keys))
+	for i, k := range keys {
+		ph = append(ph, fmt.Sprintf("$%d", i+1))
+		args = append(args, k)
+	}
+	_, err := d.Exec(fmt.Sprintf(`UPDATE tools SET enabled=true, updated_at=now() WHERE system AND NOT enabled AND key IN (%s)`, strings.Join(ph, ",")), args...)
+	return err
+}
+
+// DisableNonOfficialTools 把不在现役名单内的系统内置工具**停用**（enabled=false），
+// 而不是删除行。用户自定义工具（system=false）不受影响。返回被停用的行数。
+//
+// 为什么不再物理删除：删掉的后果不可逆，而名单与代码一旦漂移（历史上就漏过
+// human_verification_* 与 traffic_* 共 6 个），表现是"刚 seed 进来就被删"且只有
+// 一行日志，没有任何报错。改成停用后，同一次漂移只表现为"这些工具不可见"，
+// 把名单补上就自动恢复——工具面由 BuiltinToolSeeds 的按角色绑定动态装配决定。
+func (d *DB) DisableNonOfficialTools(keep []string) (int64, error) {
 	if len(keep) == 0 {
 		return 0, nil
 	}
@@ -130,7 +150,7 @@ func (d *DB) PurgeNonOfficialTools(keep []string) (int64, error) {
 		ph = append(ph, fmt.Sprintf("$%d", i+1))
 		args = append(args, k)
 	}
-	q := fmt.Sprintf(`DELETE FROM tools WHERE system AND key NOT IN (%s)`, strings.Join(ph, ","))
+	q := fmt.Sprintf(`UPDATE tools SET enabled=false, updated_at=now() WHERE system AND enabled AND key NOT IN (%s)`, strings.Join(ph, ","))
 	res, err := d.Exec(q, args...)
 	if err != nil {
 		return 0, err

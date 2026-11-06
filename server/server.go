@@ -121,6 +121,10 @@ type Server struct {
 	activityPrune activityPruneState
 	retentionAuto retentionAutoState
 
+	// agentHub 是子代理实时事件中心（只读投影，见 server/agent_hub.go）。
+	// nil 安全：未初始化时事件流退化为"只有空快照"，不影响任何调度路径。
+	agentHub *agentHub
+
 	skillDir string // root directory for skill subdirectories
 	jwtKey   []byte // HS256 signing key loaded from / generated into dataDir/jwt.key
 
@@ -267,6 +271,9 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 		profChatAgents: map[int64]*agent.ChatAgent{},
 		provByProfile:  map[int64]*provEntry{}, llmHealth: newLLMHealthRegistry(m.pg),
 		taskAgents: map[string]*taskAgentBundle{}, archiveWake: make(chan struct{}, 1)}
+	// 子代理事件中心：先建 hub 再装钩子，顺序反了首批任务会没有观察者。
+	s.agentHub = newAgentHub()
+	agent.CoordinatorObserver = s.agentHub.attach
 	// P0 会话语义旁路转录：append-only JSONL 账本，写失败静默丢弃，绝不影响控制流。
 	s.engine.SetTraceLog(tracelog.NewStore(filepath.Join(m.dir, "traces")))
 	// P2 后台维护：启动先补一次崩溃现场（reaper），之后每 10s 处理到点的回炉队列。
@@ -870,6 +877,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.reRoutes(mux)
 	s.retentionRoutes(mux)
+	s.permissionTierRoutes(mux)
 	s.storageRoutes(mux)
 	s.registerSideRoutes(mux)
 	s.lanRoutes(mux)
@@ -1106,6 +1114,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/conversations/{id}/checkpoints/{cid}/revert", s.pgRevertConversationCheckpoint) // 检查点:回滚会话时间线
 	mux.HandleFunc("POST /api/conversations/{id}/messages/{seq}/rollback", s.pgRollbackConversationMessage)   // 时间线:回滚到某条消息之前(气泡箭头)
 	mux.HandleFunc("GET /api/conversations/{id}/events", s.streamConversation)                                // 实时:会话活动 SSE(harness 时间线)
+	mux.HandleFunc("GET /api/agents/stream", s.streamAgents)                                                  // 实时:子代理树/日志/槽位 SSE(独立于对话流)
 	mux.HandleFunc("GET /api/conversations/{id}/budget", s.convBudgetInfo)                                    // 成本:会话 token 预算与已用量
 
 	mux.HandleFunc("GET /api/agents", s.pgListAgents)               // 只列会话 Agent(运行时模板见下)

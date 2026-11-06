@@ -41,7 +41,7 @@ func TestClassifyByStatus(t *testing.T) {
 		{"模型不存在 404", statusErr(404, "model not found"), VerdictSwitch},
 		{"请求不合法 400", statusErr(400, "bad request"), VerdictFail},
 		{"参数不合法 422", statusErr(422, "unprocessable entity"), VerdictFail},
-		{"上下文超长 413", statusErr(413, "context length exceeded"), VerdictFail},
+		{"上下文超长 413", statusErr(413, "context length exceeded"), VerdictOverflow},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -87,15 +87,17 @@ func TestClassifyQuotaVersusRateLimit(t *testing.T) {
 	}
 }
 
-func TestClassifyContextOverflowIsFatal(t *testing.T) {
-	// 上下文超长重试同一份请求必然还失败，必须靠压缩。
+func TestClassifyContextOverflowIsRecoverable(t *testing.T) {
+	// 上下文超长不是端点故障：换一个窗口更大的端点就能成功。
+	// 所以它必须落在 VerdictOverflow 上——既不能像 fail 那样把整条链判死，
+	// 也不能像 switch 那样熔断一个健康的配置。
 	for _, msg := range []string{
 		"openai: maximum context length is 200000 tokens",
 		"openai: prompt is too long",
 		"openai: 上下文超长",
 	} {
-		if got := Classify(errors.New(msg)); got != VerdictFail {
-			t.Fatalf("%q：应判为 fail，实得 %s", msg, got)
+		if got := Classify(errors.New(msg)); got != VerdictOverflow {
+			t.Fatalf("%q：应判为 overflow，实得 %s", msg, got)
 		}
 	}
 }

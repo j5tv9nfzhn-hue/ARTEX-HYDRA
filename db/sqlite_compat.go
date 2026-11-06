@@ -103,6 +103,66 @@ func init() {
 			}
 			return s[:10], nil
 		})
+
+	// sqlLocalDate(ts, offsetMinutes) 取「本地当日日期」。时间列存的是 UTC 文本，
+	// 直接切前 10 字节得到的是 UTC 日期；在 UTC+8 的 00:00–08:00 之间，UTC 日期
+	// 还停在前一天，于是总览页的"今日/近 N 天"会整体少一天、日柱错位。
+	//
+	// offsetMinutes 由前端按 new Date().getTimezoneOffset() 取反后传上来（东八区 = 480），
+	// 服务端不猜时区：同一个库可能被不同时区的浏览器访问，唯一可信的时区在客户端。
+	sqlite.MustRegisterDeterministicScalarFunction("sqlLocalDate", 2,
+		func(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+			s := argString(args[0])
+			if len(s) < 10 {
+				return s, nil
+			}
+			off := intArg(args[1])
+			if off == 0 {
+				return s[:10], nil
+			}
+			t, err := parseStoredTime(s)
+			if err != nil {
+				return s[:10], nil // 解析不了就退回 UTC 日期，宁可差一天也不要整页报错
+			}
+			return t.Add(time.Duration(off) * time.Minute).Format("2006-01-02"), nil
+		})
+}
+
+// argInt 取一个整型参数（SQLite 侧可能给 int64 或 float64）。
+func intArg(v driver.Value) int {
+	switch t := v.(type) {
+	case int64:
+		return int(t)
+	case float64:
+		return int(t)
+	case string:
+		n, _ := strconv.Atoi(strings.TrimSpace(t))
+		return n
+	}
+	return 0
+}
+
+// parseStoredTime 解析 _time_format 落盘的几种时间文本。
+func parseStoredTime(s string) (time.Time, error) {
+	s = strings.TrimSpace(s)
+	layouts := []string{
+		"2006-01-02 15:04:05.999999999-07:00",
+		"2006-01-02 15:04:05-07:00",
+		"2006-01-02 15:04:05.999999999Z07:00",
+		"2006-01-02 15:04:05Z07:00",
+		time.RFC3339Nano,
+		"2006-01-02 15:04:05",
+		"2006-01-02",
+	}
+	var lastErr error
+	for _, l := range layouts {
+		if t, err := time.Parse(l, s); err == nil {
+			return t, nil
+		} else {
+			lastErr = err
+		}
+	}
+	return time.Time{}, lastErr
 }
 
 // extremaFunc 实现 GREATEST/LEAST：按数值比较，返回原参数值。

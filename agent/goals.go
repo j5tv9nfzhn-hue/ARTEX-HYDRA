@@ -9,7 +9,6 @@ import (
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/norma/agentcore"
 	"github.com/Autumn-27/norma/llm"
-	acperm "github.com/Autumn-27/norma/permission"
 	actool "github.com/Autumn-27/norma/tool"
 	"github.com/Autumn-27/norma/transcript"
 )
@@ -173,7 +172,7 @@ func DecomposeGoalsWithProvider(ctx context.Context, prov llm.Provider, dataDir,
 		Provider:               prov,
 		SystemPrompt:           []string{sys},
 		Tools:                  tools,
-		PermissionMode:         acperm.ModeBypass,
+		PermissionMode:         EffectivePermissionMode(),
 		DisableBackgroundTasks: true,
 		// 3 步(抽约束 → 登记范围 → 拆目标)各需一次工具调用,给足回合避免收尾前漏调 set_goals。
 		MaxTurns:     8,

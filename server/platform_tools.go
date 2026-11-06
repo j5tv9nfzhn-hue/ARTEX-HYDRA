@@ -17,14 +17,35 @@ import (
 // 平台操作工具(给内置 Auto agent 用):建/改 skill、自定义工具、MCP。都是 host 工具,
 // seed 进 tools 表、默认绑定 auto,经 hostTools 注入。复用现有 db/文件系统逻辑。
 
+// platformTools 是平台管理面：建/改 skill、自定义工具、MCP，以及技能演化闭环
+// （缺口发现 → 提案 → 审阅 → 沉淀）。定义散在本文件与 skill_review_tools.go 两处，
+// 但**必须在这里一并交出去**——它们都是 host 工具，没有 provider 就没有绑定对象。
+//
+// 反例见上一条 orchestrationTools 的注释：定义在、提供者返回 nil，模型就只能望着
+// 提示词里的名字干瞪眼。
 func (s *Server) platformTools() []actool.CoreTool {
-	return nil
+	return []actool.CoreTool{
+		s.toolDeleteAssetsByHost(),
+		s.toolCreateSkill(),
+		s.toolUpdateSkillFile(),
+		s.toolCreateCustomTool(),
+		s.toolUpdateCustomTool(),
+		s.toolCreateMCP(),
+		s.toolUpdateMCP(),
+		// 技能演化闭环（定义见 skill_review_tools.go）。
+		s.toolListSkillGaps(),
+		s.toolProposeSkill(),
+		s.toolListSkillProposals(),
+		s.toolReviewSkillProposal(),
+		s.toolDistillTaskSkill(),
+	}
 }
 
 // platformToolKeys are the tool keys the Auto agent gets bound by default.
+// 每一项都必须有对应的构造函数并被 platformTools() 返回，否则就是"绑定到空气"。
 var platformToolKeys = []string{
 	"create_skill", "update_skill_file",
-	"list_skill_gaps", "propose_skill", "list_skill_proposals", "review_skill_proposal", "distill_task_skill", "distill_report_skill",
+	"list_skill_gaps", "propose_skill", "list_skill_proposals", "review_skill_proposal", "distill_task_skill",
 	"create_custom_tool", "update_custom_tool",
 	"create_mcp", "update_mcp",
 	"delete_assets_by_host",

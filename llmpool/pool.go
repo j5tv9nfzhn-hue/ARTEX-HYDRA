@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"iter"
 	"log"
+	"sort"
 	"strings"
 	"sync/atomic"
 
@@ -119,12 +120,21 @@ func (p *Pool) Stream(ctx context.Context, req llm.CompletionRequest) iter.Seq2[
 				return
 			}
 			lastErr = failed
-			hard := isHardFailure(failed)
-			if p.health.Trip(m.ID, trimErr(failed), hard) {
-				log.Printf("[llmpool] 配置 %q(%s) 已熔断：%s", m.Name, m.Model, trimErr(failed))
-			}
-			if p.failHook != nil {
-				p.failHook(ctx, m.ID, failed)
+			if llmclass.Classify(failed) == llmclass.VerdictOverflow {
+				// 溢出不是端点故障：不熔断、不计软失败，只把剩余候选按窗口从大到小
+				// 重排。原来这里和 400/402 走同一条路，结果是"窗口不够"被记成
+				// "端点坏了"，冷却这个健康的配置的同时把大窗口候选排在后面。
+				reorderByWindow(order, i)
+				log.Printf("[llmpool] 配置 %q(%s) 上下文溢出（窗口 %d），剩余候选按窗口重排：%s",
+					m.Name, m.Model, m.WindowTokens, windowChain(order[i+1:]))
+			} else {
+				hard := isHardFailure(failed)
+				if p.health.Trip(m.ID, trimErr(failed), hard) {
+					log.Printf("[llmpool] 配置 %q(%s) 已熔断：%s", m.Name, m.Model, trimErr(failed))
+				}
+				if p.failHook != nil {
+					p.failHook(ctx, m.ID, failed)
+				}
 			}
 			if i+1 < len(order) {
 				n := order[i+1]
@@ -167,12 +177,18 @@ func (p *Pool) Complete(ctx context.Context, req llm.CompletionRequest) (llm.Mes
 			return llm.Message{}, "", llm.Usage{}, err
 		}
 		lastErr = err
-		hard := isHardFailure(err)
-		if p.health.Trip(m.ID, trimErr(err), hard) {
-			log.Printf("[llmpool] 配置 %q(%s) 已熔断：%s", m.Name, m.Model, trimErr(err))
-		}
-		if p.failHook != nil {
-			p.failHook(ctx, m.ID, err)
+		if llmclass.Classify(err) == llmclass.VerdictOverflow {
+			reorderByWindow(order, i)
+			log.Printf("[llmpool] 配置 %q(%s) 上下文溢出（窗口 %d），剩余候选按窗口重排：%s",
+				m.Name, m.Model, m.WindowTokens, windowChain(order[i+1:]))
+		} else {
+			hard := isHardFailure(err)
+			if p.health.Trip(m.ID, trimErr(err), hard) {
+				log.Printf("[llmpool] 配置 %q(%s) 已熔断：%s", m.Name, m.Model, trimErr(err))
+			}
+			if p.failHook != nil {
+				p.failHook(ctx, m.ID, err)
+			}
 		}
 		if i+1 < len(order) {
 			n := order[i+1]
@@ -269,10 +285,40 @@ func shouldFailover(ctx context.Context, err error) bool {
 		return llmrepair.FailoverEligible(err)
 	}
 	switch llmclass.Classify(err) {
-	case llmclass.VerdictRetry, llmclass.VerdictSwitch:
+	case llmclass.VerdictRetry, llmclass.VerdictSwitch, llmclass.VerdictOverflow:
 		return true
 	}
 	return false
+}
+
+// reorderByWindow 把 order[from+1:] 按窗口从大到小就地重排。
+//
+// 只在上下文溢出之后调用：那一刻"谁排前面"的正确依据从优先级变成了窗口容量，
+// 继续按原来的优先级链走只会把剩下的候选挨个撞一遍同样的 413。
+func reorderByWindow(order []*Member, from int) {
+	if from+1 >= len(order) {
+		return
+	}
+	rest := order[from+1:]
+	sort.SliceStable(rest, func(a, b int) bool {
+		return rest[a].WindowTokens > rest[b].WindowTokens
+	})
+}
+
+// windowChain 把候选的窗口拼成日志串（如 1000K → 392K → 200K）。
+func windowChain(ms []*Member) string {
+	if len(ms) == 0 {
+		return "（无剩余候选）"
+	}
+	parts := make([]string, 0, len(ms))
+	for _, m := range ms {
+		if m.WindowTokens > 0 {
+			parts = append(parts, fmt.Sprintf("%dK", m.WindowTokens/1000))
+		} else {
+			parts = append(parts, "未声明")
+		}
+	}
+	return strings.Join(parts, " → ")
 }
 
 // IsHardFailure reports whether the failure is deterministic (the profile will

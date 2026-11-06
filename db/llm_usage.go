@@ -281,17 +281,23 @@ type ProfileDayUsage struct {
 // UsageDaily returns per-(profile, day) token buckets for the past `days` days
 // (default 365 when days<=0), so the dashboard can slice by profile + range.
 func (d *DB) UsageDaily(days int) ([]ProfileDayUsage, error) {
+	return d.UsageDailyTZ(days, 0)
+}
+
+// UsageDailyTZ 按**本地日期**分桶。tzOffsetMinutes 是客户端时区相对 UTC 的偏移
+// （东八区 = +480）。传 0 等价于按 UTC 分桶，即旧行为。
+func (d *DB) UsageDailyTZ(days, tzOffsetMinutes int) ([]ProfileDayUsage, error) {
 	if days <= 0 {
 		days = 365
 	}
 	rows, err := d.Query(`
 SELECT COALESCE(profile_name,'') AS profile_name,
-       sqlUTCDate("ts") AS day,
+       sqlLocalDate("ts", $2) AS day,
        COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(cache_read),0)
 FROM llm_usage
 WHERE `+sqlNotBeforeExpr("ts", sqlNowMinusDays("$1"))+`
 GROUP BY profile_name, day
-ORDER BY day`, days)
+ORDER BY day`, days, tzOffsetMinutes)
 	if err != nil {
 		return nil, err
 	}
@@ -408,19 +414,25 @@ type ProfileDayModelUsage struct {
 // UsageDailyModel is UsageDaily 的模型细分版：同一时间窗口(days<=0 →365 天)，
 // 多分一维 model。仅供 API 层计价；未配置价格表时不查询。
 func (d *DB) UsageDailyModel(days int) ([]ProfileDayModelUsage, error) {
+	return d.UsageDailyModelTZ(days, 0)
+}
+
+// UsageDailyModelTZ 与 UsageDailyTZ 同源：分桶键必须和费用折回时的 key 对齐，
+// 否则 daily 用本地日期、cost 用 UTC 日期，两边的 map key 对不上，费用会整排丢。
+func (d *DB) UsageDailyModelTZ(days, tzOffsetMinutes int) ([]ProfileDayModelUsage, error) {
 	if days <= 0 {
 		days = 365
 	}
 	rows, err := d.Query(`
 SELECT COALESCE(profile_name,'') AS profile_name,
-       sqlUTCDate("ts") AS day,
+       sqlLocalDate("ts", $2) AS day,
        COALESCE(NULLIF(model,''),'(unknown)') AS model,
        COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0),
        COALESCE(SUM(cache_read),0), COALESCE(SUM(cache_write),0)
 FROM llm_usage
 WHERE `+sqlNotBeforeExpr("ts", sqlNowMinusDays("$1"))+`
 GROUP BY profile_name, day, model
-ORDER BY day`, days)
+ORDER BY day`, days, tzOffsetMinutes)
 	if err != nil {
 		return nil, err
 	}

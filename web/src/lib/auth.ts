@@ -52,7 +52,8 @@ export const auth = {
       // sub 是**登录凭据名**（历史值是 "ARTEX"，后端同时接受 ARTEX-HYDRA / ARTEX-REA / ARTEX），
       // 拿它当昵称会让左下角和左上角标题对不上。展示名统一取 APP_CONFIG.name
       // 这个唯一来源，凭据名单独留在 username 里——两者语义不同，不该混用。
-      const username: string = payload.sub ?? "artex-rea";
+      // 解析不出时用当前产品名兜底：这里只影响界面显示，不参与鉴权。
+      const username: string = payload.sub ?? "artex-hydra";
       return { id: "1", name: APP_CONFIG.name, username, email: "", avatar: "", role: "operator" };
     } catch {
       return null;

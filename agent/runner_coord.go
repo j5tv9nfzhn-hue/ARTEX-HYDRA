@@ -210,6 +210,9 @@ func (r *SessionRunner) Run(ctx context.Context, spec AgentSpec, agentID string,
 		if r.MaxConcurrency > 0 {
 			s.MaxConcurrent = r.MaxConcurrency
 		}
+		// 并发闸门与提示词同源：上面那个数字以前只是写给模型看的，协调器并不拦。
+		// 现在把它落成真正的槽位上限，超额派发退回排队而不是静默扩容。
+		coord.SetSlots(NewSlotManager(s.MaxConcurrent))
 		ctx = WithSpawner(ctx, s)
 	}
 
@@ -588,8 +591,10 @@ func NewSessionRunner(c RunnerConfig) *SessionRunner {
 // 绑定 + OfficialToolKeys 白名单 + DisallowedTools），而不是由交互确认决定——
 // 这是一台无人值守的机器，没有人可以点"允许"。
 func permissionModeOrDefault(m permission.Mode) permission.Mode {
-	if strings.TrimSpace(string(m)) == "" {
-		return permission.ModeBypass
+	if strings.TrimSpace(string(m)) != "" {
+		return m
 	}
-	return m
+	// 未显式指定时跟随全局档位（系统设置里的 plan / default / bypass）。
+	// 默认档位是 bypass，与改造前的硬编码行为一致，不会让存量安装变哑。
+	return CurrentPermissionTier().Mode()
 }

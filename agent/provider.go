@@ -24,7 +24,6 @@ import (
 	"github.com/Autumn-27/norma/agentcore"
 	"github.com/Autumn-27/norma/compaction"
 	"github.com/Autumn-27/norma/llm"
-	acperm "github.com/Autumn-27/norma/permission"
 	"github.com/Autumn-27/norma/transcript"
 )
 
@@ -681,7 +680,7 @@ func TestConnection(ctx context.Context, c Config) (time.Duration, string, error
 	reply, err := agentcore.Run(ctx, agentcore.Options{
 		Provider:       prov,
 		SystemPrompt:   []string{"你是连接测试。直接输出两个字符 OK 即可，不要思考、不要解释、不要别的。"},
-		PermissionMode: acperm.ModeBypass,
+		PermissionMode: EffectivePermissionMode(),
 		MaxTurns:       1,
 		MaxTokens:      8192,
 		NonStreaming:   !c.Stream, // 用该 profile 的真实收发模式做连接测试

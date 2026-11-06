@@ -9,7 +9,7 @@ import { auth, type CurrentUser } from "@/lib/auth";
 const FALLBACK: CurrentUser = {
   id: "1",
   name: APP_CONFIG.name,
-  username: "artex-rea",
+  username: "artex-hydra",
   email: "",
   avatar: "",
   role: "operator",

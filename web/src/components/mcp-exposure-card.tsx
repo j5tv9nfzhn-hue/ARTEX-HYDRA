@@ -20,7 +20,7 @@ import { GroupHead, Sheet, SheetFoot, SheetHead } from "@/ui/container";
 
 type ClientKey = "codex" | "opencode" | "cursor" | "claudeCode" | "vscode" | "gemini" | "dsh";
 
-const EXE_FALLBACK = "C:\\ARTEX程序\\artex-rea.exe";
+const EXE_FALLBACK = "C:\\ARTEX程序\\artex-hydra.exe";
 
 function buildSnippets(exe: string, endpoint: string): Record<ClientKey, string> {
   return {

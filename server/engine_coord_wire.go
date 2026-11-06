@@ -26,7 +26,6 @@ import (
 
 	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/norma/permission"
 	actool "github.com/Autumn-27/norma/tool"
 )
 
@@ -175,7 +174,7 @@ func (e *Engine) coordOptionsFor(t *Task) CoordTaskOptions {
 		// 错误信息是 "no approval handler configured"。表现是子 agent
 		// 只会读不会做。这是一台无人值守的机器，没有人在屏幕前点"允许"——
 		// 能跑什么由工具面（tools.agents 绑定 + 官方白名单）决定，不由交互决定。
-		PermissionMode: permission.ModeBypass,
+		PermissionMode: agent.EffectivePermissionMode(),
 		// RunInfo 是工具调用的归属。ExpID 是任务创建时就落库的探索 id，
 		// 直接用它让 tool_usage 按任务/探索归因（旧 worker 取 explorationID(ts)，
 		// 与这里是同一个值）。TaskID 用 **数值主键**：RunInfo.TaskID 是 int64，

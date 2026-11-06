@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/Autumn-27/artex/llmclass"
 )
@@ -38,34 +39,75 @@ const (
 	reserveSafetyTokens = 13000
 )
 
-// ContextWindowCapK 返回声明窗口的信任上限。ARTEX_CONTEXT_WINDOW_CAP_K 可覆盖
-// （真·1M 窗口的模型请显式设大，否则会被按 200K 压缩——宁可多压几次，不能漏压）。
+// ContextWindowCapK 返回声明窗口的信任上限。优先级：
+//
+//  1. ARTEX_CONTEXT_WINDOW_CAP_K 环境变量（最快，单机调试用）；
+//  2. SetContextWindowCapK 写入的进程级配置（Web 控制台「系统设置 → 模型」）；
+//  3. 兜底 200K。
+//
+// 注意这条上限只约束**用户没填**时的假设值，不约束用户显式声明的大窗口——
+// 后者走 ResolveContextWindowTokens 的 explicit 分支，只受 maxWindowK（1M）约束。
+// 这正是「显式设置的 392K 不该被 200K 默认值静默降低」的落点。
 func ContextWindowCapK() int {
 	if raw := strings.TrimSpace(os.Getenv("ARTEX_CONTEXT_WINDOW_CAP_K")); raw != "" {
 		if v, err := strconv.Atoi(raw); err == nil && v >= minWindowK {
 			return v
 		}
 	}
+	if v := int(contextWindowCapK.Load()); v >= minWindowK {
+		return v
+	}
 	return defaultContextWindowCapK
+}
+
+var contextWindowCapK atomic.Int64
+
+// SetContextWindowCapK 由上层在装配 LLM 配置时写入（0 或越界值忽略）。
+// 运行时改设置立即生效：下一次装配 agent 就读到新值，不需要重启进程。
+func SetContextWindowCapK(k int) {
+	if k < minWindowK {
+		return
+	}
+	if k > maxWindowK {
+		k = maxWindowK
+	}
+	contextWindowCapK.Store(int64(k))
+}
+
+// WindowAssumed 判断这个声明值是不是「用户没真填」的占位值。
+//
+// 只有 0 / 负数算假设值。填了 8K 这类低于下限的值仍然算"显式"——它表达的是
+// "我知道窗口很小"，正确处置是抬到 32K 下限，而不是当成没填、直接跳到 200K。
+func WindowAssumed(declaredK int) bool {
+	return declaredK <= 0
 }
 
 var windowClampWarned sync.Map
 
 // ResolveContextWindowTokens 把用户声明的窗口（K）解析成实际用于压缩阈值的 token 数。
-// clamped=true 表示声明值超过了可信上限，已按上限计算（调用方负责告警一次）。
+// clamped=true 表示声明值超过了硬上限，已按上限计算（调用方负责告警一次）。
+//
+// 两条分支的差别是本函数的核心语义：
+//
+//   - 假设值（用户没填）：按 200K 起算，并受 ContextWindowCapK() 约束。假设值本来就
+//     没有事实依据，宁可多压几次也不能漏压。
+//   - 显式值（用户填了）：**原样发出**，只受 maxWindowK（1M）这一条绝对上限约束。
+//     用户填 392K 就是 392K，不会被 200K 的默认值静默降低——静默降级比压缩过于频繁
+//     更难排查，因为它既没有报错也没有日志，只表现为"上下文莫名其妙变短"。
 func ResolveContextWindowTokens(declaredK int) (tokens int, clamped bool) {
 	k := declaredK
-	if k <= 0 {
+	if WindowAssumed(k) {
 		k = defaultWindowK
-	}
-	if k < minWindowK {
-		k = minWindowK
-	}
-	if limit := ContextWindowCapK(); k > limit {
-		k, clamped = limit, true
-	}
-	if k > maxWindowK {
-		k, clamped = maxWindowK, true
+		if limit := ContextWindowCapK(); k > limit {
+			k, clamped = limit, true
+		}
+	} else {
+		if k < minWindowK {
+			k = minWindowK
+		}
+		if k > maxWindowK {
+			k, clamped = maxWindowK, true
+		}
 	}
 	return k * 1000, clamped
 }
@@ -123,8 +165,14 @@ func CompactionTriggerTokens(window int) int {
 	if floor := window / 4; target < floor {
 		target = floor
 	}
-	if cap := CompactionTriggerCapTokens(); cap > 0 && target > cap {
-		target = cap
+	// 绝对上限只约束「假设窗口」：默认/未配置时窗口不会超过 ContextWindowCapK，
+	// 因此这里能用窗口与信任上限的大小关系区分两种来源。用户显式声明的大窗口
+	// （392K、512K、1M）意味着他确认过真实容量，此时按 80% 触发才是对的——
+	// 再用 120K 的绝对线把它压下去，等于把用户的显式配置静默作废。
+	if window <= ContextWindowCapK()*1000 {
+		if cap := CompactionTriggerCapTokens(); cap > 0 && target > cap {
+			target = cap
+		}
 	}
 	return target
 }

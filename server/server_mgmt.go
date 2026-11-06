@@ -2285,6 +2285,17 @@ func (s *Server) pgSaveProfile(w http.ResponseWriter, r *http.Request) {
 		RatePerSecond    *float64 `json:"rate_per_second"`
 		RatePerMinute    *float64 `json:"rate_per_minute"`
 		SessionHeaderKey *string  `json:"session_header_key"`
+		// 模型侧标量同样用指针接收：nil = 本次请求没提这个字段 → 保留库里现值。
+		// 早先这些字段直接用嵌入结构体的零值落库，于是"只改模型名"的保存会把
+		// context_window_k / priority / max_tokens 一起清零——窗口被静默降回 200K
+		// 默认值，症状是配置界面看着没变、压缩却突然变频繁，排查成本极高。
+		ContextWindowK  *int    `json:"context_window_k"`
+		ReasoningEffort *string `json:"reasoning_effort"`
+		Priority        *int    `json:"priority"`
+		PoolExclude     *bool   `json:"pool_exclude"`
+		ThinkingType    *string `json:"thinking_type"`
+		MaxTokens       *int    `json:"max_tokens"`
+		MaxTokensField  *string `json:"max_tokens_field"`
 	}
 	if err := decode(r, &body); err != nil {
 		writeErr(w, 400, err.Error())
@@ -2300,6 +2311,69 @@ func (s *Server) pgSaveProfile(w http.ResponseWriter, r *http.Request) {
 		p.APIKey = ""
 	}
 	p.Streaming = body.Streaming == nil || *body.Streaming
+	// 分段覆盖：库里已有的值作为底，请求里显式给出的字段覆盖它。
+	// 这一步必须在 SaveProfile 之前完成——db 层是整行 UPDATE，缺字段就是清零。
+	if p.ID > 0 {
+		if cur, err := pg.ProfileByID(p.ID); err == nil && cur != nil {
+			if strings.TrimSpace(p.Name) == "" {
+				p.Name = cur.Name
+			}
+			if strings.TrimSpace(p.Model) == "" {
+				p.Model = cur.Model
+			}
+			p.ContextWindowK = cur.ContextWindowK
+			if body.ContextWindowK != nil {
+				p.ContextWindowK = *body.ContextWindowK
+			}
+			p.ReasoningEffort = cur.ReasoningEffort
+			if body.ReasoningEffort != nil {
+				p.ReasoningEffort = *body.ReasoningEffort
+			}
+			p.Priority = cur.Priority
+			if body.Priority != nil {
+				p.Priority = *body.Priority
+			}
+			p.PoolExclude = cur.PoolExclude
+			if body.PoolExclude != nil {
+				p.PoolExclude = *body.PoolExclude
+			}
+			p.ThinkingType = cur.ThinkingType
+			if body.ThinkingType != nil {
+				p.ThinkingType = *body.ThinkingType
+			}
+			p.MaxTokens = cur.MaxTokens
+			if body.MaxTokens != nil {
+				p.MaxTokens = *body.MaxTokens
+			}
+			if body.MaxTokensField != nil {
+				p.MaxTokensField = *body.MaxTokensField
+			} else {
+				p.MaxTokensField = cur.MaxTokensField
+			}
+		}
+	} else {
+		if body.ContextWindowK != nil {
+			p.ContextWindowK = *body.ContextWindowK
+		}
+		if body.ReasoningEffort != nil {
+			p.ReasoningEffort = *body.ReasoningEffort
+		}
+		if body.Priority != nil {
+			p.Priority = *body.Priority
+		}
+		if body.PoolExclude != nil {
+			p.PoolExclude = *body.PoolExclude
+		}
+		if body.ThinkingType != nil {
+			p.ThinkingType = *body.ThinkingType
+		}
+		if body.MaxTokens != nil {
+			p.MaxTokens = *body.MaxTokens
+		}
+		if body.MaxTokensField != nil {
+			p.MaxTokensField = *body.MaxTokensField
+		}
+	}
 	// 输出上限:负数无意义,归零(= 不发送该字段)。字段名开关只有 Chat Completions
 	// 用得上——anthropic 与 openai-responses 各自定死了字段名,存下来只会误导后续读者,
 	// 故非 openai 格式一律清空。未知取值同样清空,避免把 DB CHECK 的报错甩给用户。

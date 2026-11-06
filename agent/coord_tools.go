@@ -150,6 +150,16 @@ func (t *ToolSet) delegateTask() actool.CoreTool {
 				Depth: AgentDepthFrom(ctx),
 			})
 			if derr != nil {
+				// 槽位满载不是故障，是"排队"：回结构化状态让模型知道还能开几条，
+				// 而不是把一次满载读成"工具坏了"进而放弃派发。
+				if errors.Is(derr, ErrSlotsFull) {
+					return jsonResult(map[string]any{
+						"queued": true,
+						"reason": derr.Error(),
+						"slots":  sp.Coord.SlotsStatus(),
+						"note":   "并发槽位已满，本次未派出。先自己推进，或等现有子代理交卷腾出槽位后再派；不要原样重试。",
+					})
+				}
 				return actool.Errorf(derr.Error()), nil
 			}
 			if !a.WaitForReport {
@@ -266,6 +276,10 @@ func (t *ToolSet) waitForAgents() actool.CoreTool {
 				"wait_outcome": string(outcome),
 				"waited":       targets,
 				"reports":      renderMessages(msgs),
+				"slots":        sp.Coord.SlotsStatus(),
+			}
+			if stalled := sp.Coord.SlotsStatus().Stalled; len(stalled) > 0 {
+				payload["stalled"] = stalled
 			}
 			switch outcome {
 			case WaitAlreadyWaited:
@@ -276,6 +290,10 @@ func (t *ToolSet) waitForAgents() actool.CoreTool {
 				payload["note"] = "等待窗口用尽但目标还活着。不要立刻再等——先自己推进别的工作。"
 			case WaitCancelled:
 				payload["note"] = "任务被暂停或删除。"
+			}
+			if stalled, ok := payload["stalled"]; ok {
+				payload["stall_note"] = fmt.Sprintf(
+					"%v 已超过 10 分钟无活动，槽位会被回收。要么用 stop_agent 主动停掉重派，要么换一条路线。", stalled)
 			}
 			return jsonResult(payload)
 		})
