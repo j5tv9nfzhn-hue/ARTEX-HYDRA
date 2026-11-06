@@ -74,10 +74,6 @@ export default function SystemSettingsPage() {
   // 模型价目 JSON(USD/百万 token)；读取接口按它读时现算费用，空=不算钱。
   const [priceTable, setPriceTable] = React.useState("");
   const [savingPriceTable, setSavingPriceTable] = React.useState(false);
-  // 复核成本闸门：等级达到阈值自动复核，低于阈值按比例抽查（见 server/verify_policy.go）。
-  const [verifyThreshold, setVerifyThreshold] = React.useState("high");
-  const [verifySamplePercent, setVerifySamplePercent] = React.useState("25");
-  const [savingVerifyGate, setSavingVerifyGate] = React.useState(false);
   // 漏洞判重（移植自 Strix，见 server/dedupe.go）：默认开；专用配置 0 = 跟随当前启用的
   // 配置；单次超时默认 60s。
   const [dedupeEnabled, setDedupeEnabled] = React.useState(true);
@@ -108,8 +104,6 @@ export default function SystemSettingsPage() {
     setSkillReviewGate(s.skill_review_gate !== false);
     setSkillAutoDistill(s.skill_auto_distill !== false);
     setSkillAutoDistillApply(!!s.skill_auto_distill_apply);
-    setVerifyThreshold(s.verify_auto_threshold || "high");
-    setVerifySamplePercent(String(s.verify_sample_percent ?? 25));
     setDedupeEnabled(s.dedupe_enabled !== false);
     setDedupeProfileId(String(s.dedupe_profile_id ?? 0));
     setDedupeTimeoutSecs(String(s.dedupe_timeout_seconds ?? 60));
@@ -131,25 +125,6 @@ export default function SystemSettingsPage() {
       })
       .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
       .finally(() => setSavingTokenBudget(false));
-  };
-
-  // 复核闸门：阈值走下拉框、采样比例是整数百分比。校验只做本地能确定的
-  // （整数、0–100）；阈值枚举的合法性由后端再校验一次，非法值返回中文 400。
-  const saveVerifyGate = () => {
-    const percent = Number(verifySamplePercent);
-    if (!Number.isInteger(percent) || percent < 0 || percent > 100) {
-      toast.error(t("toast.verifyGateInvalid"));
-      return;
-    }
-    setSavingVerifyGate(true);
-    api
-      .setSettings({ verify_auto_threshold: verifyThreshold, verify_sample_percent: percent })
-      .then((s) => {
-        apply(s);
-        toast.success(t("toast.verifyGateSaved"));
-      })
-      .catch((e) => toast.error(t("toast.saveFailed", { error: (e as Error).message })))
-      .finally(() => setSavingVerifyGate(false));
   };
 
   // 漏洞判重（移植自 Strix，见 server/dedupe.go）：入库前问一次模型「这条是不是已经报过了」。
@@ -451,55 +426,6 @@ export default function SystemSettingsPage() {
               disabled={!loaded || saving}
               onCheckedChange={toggleAgentTrafficBinding}
             />
-          </div>
-        </Sheet>
-
-        <Sheet api={["settings", "setSettings"]} className="mb-4 break-inside-avoid md:mb-6">
-          <SheetHead index="03" icon={ShieldCheckIcon} title={t("verifyGate.title")} />
-          <div className="flex flex-col gap-3 px-4 py-3">
-            <p className="text-muted-foreground text-sm" id="verify-gate-description">
-              {t.rich("verifyGate.desc", richTags)}
-            </p>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="verify-gate-threshold" className="font-normal text-muted-foreground text-sm">
-                {t("verifyGate.thresholdLabel")}
-              </Label>
-              <Select value={verifyThreshold} disabled={!loaded || savingVerifyGate} onValueChange={setVerifyThreshold}>
-                <SelectTrigger id="verify-gate-threshold" aria-describedby="verify-gate-description" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="off">{t("verifyGate.threshold.off")}</SelectItem>
-                  <SelectItem value="critical">{t("verifyGate.threshold.critical")}</SelectItem>
-                  <SelectItem value="high">{t("verifyGate.threshold.high")}</SelectItem>
-                  <SelectItem value="medium">{t("verifyGate.threshold.medium")}</SelectItem>
-                  <SelectItem value="low">{t("verifyGate.threshold.low")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Label htmlFor="verify-gate-sample" className="font-normal text-muted-foreground text-sm">
-                {t("verifyGate.sampleLabel")}
-              </Label>
-              <Input
-                id="verify-gate-sample"
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                className="w-24 font-mono text-sm"
-                value={verifySamplePercent}
-                disabled={!loaded || savingVerifyGate || verifyThreshold === "off"}
-                onChange={(e) => setVerifySamplePercent(e.target.value)}
-              />
-              <span className="text-muted-foreground text-sm">%</span>
-            </div>
-            <p className="text-muted-foreground text-xs">{t("verifyGate.sampleHint")}</p>
-            <div className="flex items-center justify-end">
-              <Button onClick={saveVerifyGate} disabled={!loaded || savingVerifyGate}>
-                {t("save")}
-              </Button>
-            </div>
           </div>
         </Sheet>
 

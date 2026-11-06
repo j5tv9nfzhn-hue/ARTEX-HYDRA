@@ -11,7 +11,6 @@ import {
   FlaskConicalIcon,
   RotateCcwIcon,
   ShieldAlertIcon,
-  ShieldCheckIcon,
   Trash2Icon,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -40,7 +39,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SEVERITIES } from "@/lib/severity";
-import type { ActiveFindingRetest, ActiveFindingVerification, Finding, FindingStatus, Severity } from "@/lib/types";
+import type { ActiveFindingRetest, Finding, FindingStatus, Severity } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const FINDING_STATUSES: FindingStatus[] = [
@@ -105,9 +104,6 @@ interface FindingsTableProps {
   onStatusChange: (finding: Finding, next: FindingStatus) => void;
   onRetest: (finding: Finding) => void;
   activeRetests: Record<string, ActiveFindingRetest>;
-  /** 发起一次独立复核（P2 verifier）。 */
-  onVerify: (finding: Finding) => void;
-  activeVerifications: Record<string, ActiveFindingVerification>;
   onDeepen: (finding: Finding) => void;
   onDelete: (finding: Finding) => void;
   /** 全选框的无障碍标签,平铺视图与分组视图措辞不同。 */
@@ -137,8 +133,6 @@ export function FindingsTable({
   onStatusChange,
   onRetest,
   activeRetests,
-  onVerify,
-  activeVerifications,
   onDeepen,
   onDelete,
   selectAllLabel,
@@ -183,7 +177,6 @@ export function FindingsTable({
           const rowKey = findingRowKey(f);
           const open = expandedKey === rowKey;
           const retest = f.finding_id ? activeRetests[f.finding_id] : undefined;
-          const verifying = f.finding_id ? activeVerifications[f.finding_id] : undefined;
           const introDelay = stagger && index < 10 ? Math.min(index * 50, 450) : null;
           return (
             <React.Fragment key={rowKey}>
@@ -313,20 +306,6 @@ export function FindingsTable({
                       <Button size="sm" variant="ghost" onClick={() => onRetest(f)} title={t("table.retestTitle")}>
                         <RotateCcwIcon data-icon="inline-start" />
                         {t("table.retest")}
-                      </Button>
-                    ) : null}
-                    {verifying ? (
-                      <Button asChild size="sm" variant="ghost">
-                        <Link href={`/chat?c=${verifying.conversation_id}`} title={t("table.verifyingTitle")}>
-                          <Spinner data-icon="inline-start" />
-                          {t("table.verifying")}
-                        </Link>
-                      </Button>
-                    ) : null}
-                    {!verifying && f.finding_id && !f.inherited ? (
-                      <Button size="sm" variant="ghost" onClick={() => onVerify(f)} title={t("table.verifyTitle")}>
-                        <ShieldCheckIcon data-icon="inline-start" />
-                        {t("table.verify")}
                       </Button>
                     ) : null}
                     {f.finding_id && f.task_id && (

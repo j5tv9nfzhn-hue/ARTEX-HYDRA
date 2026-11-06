@@ -843,32 +843,6 @@ export interface FindingRetest {
   started_at: string | null;
   finished_at: string | null;
 }
-
-export interface ActiveFindingVerification {
-  id: number;
-  finding_id: string;
-  conversation_id: number;
-  status: "pending" | "running";
-}
-
-// FindingVerification 是一次独立复核的记录（POST/GET .../verifications）。
-export interface FindingVerification {
-  id: number;
-  finding_id: number;
-  conversation_id: number | null;
-  status: "pending" | "running" | "completed" | "failed" | "stopped";
-  verdict: "" | "verified" | "refuted" | "inconclusive";
-  notes: string;
-  // reason 记录为什么复核：auto:severity=high / auto:sample / manual。
-  reason: string;
-  summary: string;
-  evidence: string;
-  error: string;
-  created_at: string;
-  started_at: string | null;
-  finished_at: string | null;
-}
-
 export interface Conversation {
   id: number;
   running?: boolean; // live server state, returned with the conversation list

@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { CopyButton } from "@/components/copy-button";
 import { FindingRetestPanel } from "@/components/finding-retest-panel";
 import { FindingTrafficPanel } from "@/components/finding-traffic-panel";
-import { FindingVerifyPanel } from "@/components/finding-verify-panel";
 import { Markdown } from "@/components/markdown";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -253,13 +252,6 @@ function FindingDetailInner() {
                   </p>
                 </div>
               </Sheet>
-              <FindingVerifyPanel
-                key={id}
-                findingId={id}
-                findingName={finding.name || finding.vulnclass || finding.summary}
-                readOnly={finding.inherited}
-                onCompleted={load}
-              />
               <FindingRetestPanel key={id} findingId={id} readOnly={finding.inherited} onCompleted={load} />
               <Sheet>
                 <SheetHead

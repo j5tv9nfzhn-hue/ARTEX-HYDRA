@@ -358,7 +358,6 @@ func (s *Server) installUINotifyHooks() {
 			title = s.m.taskTitleFor(taskID)
 		}
 		emitFindingMilestone(id, taskID, name, vulnclass, severity, summary, title)
-		s.enqueueAutoVerification(id, severity)
 	}
 	// 审批挂起发生在 intercept 包（那里才拿得到 pending id），用回调接进浮层。
 	intercept.OnApprovalPending = func(convID int64, taskID, toolName string, pendingID int64) {

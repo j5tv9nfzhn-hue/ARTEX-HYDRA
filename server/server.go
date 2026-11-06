@@ -189,12 +189,6 @@ type Server struct {
 	triggerActive map[string]int
 	triggerCfg    map[string]triggerBehavior
 
-	// verifyQueue buffers「发现落库后待复核」的发现 id（P2 verifier）。串行消费、
-	// 有界、满即丢弃：复核是旁路，不能反压正在跑的探测任务。进程内队列，
-	// 重启丢失是刻意的——重启后没有任何会话在跑，遗留记录由
-	// db.RecoverFindingVerifications 统一封存为 failed，不会永远转圈。
-	verifyQueue chan verifyRequest
-
 	// profChatAgents caches a per-profile ChatAgent (chat page), keyed by profile id.
 	// Built lazily on first use; invalidated when any profile is saved/activated/deleted
 	// so edits take effect.
@@ -266,8 +260,7 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 		log.Fatalf("[auth] JWT key: %v", err)
 	}
 	s := &Server{m: m, engine: NewEngine(m), ctx: ctx, skillDir: skillDir, jwtKey: key, chatBusy: map[string]bool{},
-		chatCancel: map[string]context.CancelCauseFunc{}, triggerQ: map[string][]triggeredRun{}, verifyQueue: make(chan verifyRequest, verifyQueueCap),
-		triggerActive: map[string]int{}, triggerCfg: map[string]triggerBehavior{},
+		chatCancel: map[string]context.CancelCauseFunc{}, triggerQ: map[string][]triggeredRun{}, triggerActive: map[string]int{}, triggerCfg: map[string]triggerBehavior{},
 		profChatAgents: map[int64]*agent.ChatAgent{},
 		provByProfile:  map[int64]*provEntry{}, llmHealth: newLLMHealthRegistry(m.pg),
 		taskAgents: map[string]*taskAgentBundle{}, archiveWake: make(chan struct{}, 1)}
@@ -403,10 +396,7 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 		if err := s.seedFindingRetester(); err != nil {
 			log.Printf("[retester] seed: %v", err)
 		}
-		if err := s.seedFindingVerifier(); err != nil {
-			log.Printf("[verifier] seed: %v", err)
-		}
-		go s.runVerificationQueue(s.ctx) // P2 复核队列：串行消费，见 finding_verify.go
+		s.retireVerifierRemnants() // 复核功能已下线：清掉历史播种的空壳 agent
 		go s.evidenceStore().RunGC(s.ctx)
 		s.seedPythonInterpreter()     // 自定义脚本工具:开机检测 python 解释器入库(仅空时)
 		go newScheduler(s).Run(s.ctx) // P3 自定义 Agent 事件调度与通知投递引擎独立运行。
@@ -1036,9 +1026,6 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/exploration/findings/{id}/retests", s.listFindingRetests)
 	mux.HandleFunc("GET /api/exploration/findings/retests/active", s.listActiveFindingRetests)
 	mux.HandleFunc("POST /api/exploration/findings/{id}/retests", s.startFindingRetest)
-	mux.HandleFunc("GET /api/exploration/findings/{id}/verifications", s.listFindingVerifications)
-	mux.HandleFunc("GET /api/exploration/findings/verifications/active", s.listActiveFindingVerifications)
-	mux.HandleFunc("POST /api/exploration/findings/{id}/verifications", s.startFindingVerification)
 	mux.HandleFunc("PATCH /api/exploration/findings/{id}", s.patchFinding)
 	mux.HandleFunc("DELETE /api/exploration/findings/{id}", s.deleteFinding)
 	mux.HandleFunc("GET /api/exploration/intents", s.intents)
@@ -3761,11 +3748,6 @@ func (s *Server) settingsPayload() map[string]any {
 		"update_auto_check": s.updateAutoCheck(),
 		"update_auto_apply": s.updateAutoApply(),
 	}
-	// 复核成本闸门：回显「当前真正生效」的阈值与采样比例（含默认值与环境变量覆盖），
-	// 否则选择框会显示 high、实际却在按环境变量跑。见 server/verify_policy.go。
-	verifyThreshold, verifySamplePercent := verifyAutoSettings(s.m.pg)
-	payload["verify_auto_threshold"] = verifyThreshold
-	payload["verify_sample_percent"] = verifySamplePercent
 	// 判重（移植自 Strix，见 server/dedupe.go）：回显「当前真正生效」的值（含默认值），
 	// 否则开关会显示关、实际却在按默认值判重。读取口径与判重本身同一处。
 	payload["dedupe_enabled"] = dedupeEnabled(s.m.pg)
@@ -3858,11 +3840,6 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		//   update_auto_apply  检测到后自动下载并校验，下次启动生效（默认关）
 		UpdateAutoCheck *bool `json:"update_auto_check"`
 		UpdateAutoApply *bool `json:"update_auto_apply"`
-		// 自动复核成本闸门（见 server/verify_policy.go）：阈值
-		// off|critical|high|medium|low，以及低于阈值时的抽查比例（0–100）。
-		// 两项都在发现入库时读取，改完即对之后入库的发现生效，不需要重建 agent。
-		VerifyAutoThreshold *string `json:"verify_auto_threshold"`
-		VerifySamplePercent *int    `json:"verify_sample_percent"`
 		// 判重（移植自 Strix，见 server/dedupe.go）：开关、专用模型配置 id
 		//（0 = 用当前启用的配置）、单次判重超时秒数。与复核闸门一样在入库时读取。
 		DedupeEnabled    *bool  `json:"dedupe_enabled"`
@@ -4026,30 +4003,6 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	if req.LLMRecord != nil {
 		// 录制器每次调用读取该标志，切换即时生效，无需 applyLLM 重建。
 		if err := s.m.SetLLMRecordEnabled(*req.LLMRecord); err != nil {
-			writeErr(w, 500, err.Error())
-			return
-		}
-	}
-	if req.VerifyAutoThreshold != nil {
-		threshold := strings.ToLower(strings.TrimSpace(*req.VerifyAutoThreshold))
-		if threshold != verifyThresholdOff {
-			if _, ok := verifyThresholdRank(threshold); !ok {
-				writeErr(w, 400, "自动复核阈值无效：可选 off / critical / high / medium / low")
-				return
-			}
-		}
-		if err := s.m.pg.SetSetting(settingVerifyAutoThreshold, threshold); err != nil {
-			writeErr(w, 500, err.Error())
-			return
-		}
-	}
-	if req.VerifySamplePercent != nil {
-		percent := *req.VerifySamplePercent
-		if percent < 0 || percent > 100 {
-			writeErr(w, 400, "自动复核采样比例必须在 0–100 之间（0 = 不抽查）")
-			return
-		}
-		if err := s.m.pg.SetSetting(settingVerifySamplePercent, strconv.Itoa(percent)); err != nil {
 			writeErr(w, 500, err.Error())
 			return
 		}

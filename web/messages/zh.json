@@ -1383,10 +1383,6 @@
       "typeInline": "，类型：",
       "unclassified": "未分类",
       "viewDetail": "查看发现详情",
-      "verify": "复核",
-      "verifyTitle": "由独立复核员判断这条发现是否成立",
-      "verifying": "复核中",
-      "verifyingTitle": "查看正在进行的复核会话",
       "validation": "复核"
     },
     "task": {
@@ -3122,54 +3118,6 @@
     "light": "浅色",
     "system": "跟随系统"
   },
-  "verify": {
-    "dialog": {
-      "alreadyRunning": "该漏洞已有进行中的复核，可查看已有会话",
-      "cancel": "取消",
-      "desc": "复核 Agent 是独立角色：只读工具、独立会话、不采信原上报结论。它决定这条发现算「已复核」还是「已推翻」。",
-      "notesDesc": "可补充复现所需的前置条件、账号或范围限制。",
-      "notesLabel": "补充说明（可选）",
-      "notesPlaceholder": "例如：使用同一测试账号复现原接口；目标在本机内网。",
-      "startFailed": "发起复核失败：{message}",
-      "startedNew": "复核已启动，可点击「复核中」查看会话",
-      "submit": "开始复核",
-      "submitting": "正在创建…",
-      "title": "复核漏洞 #{id}"
-    },
-    "panel": {
-      "desc": "由独立的只读会话判断这条发现是否成立；只有「已复核」才计入资产真值与报告正文。",
-      "emptyDesc": "等级达到系统设置「自动复核闸门」阈值的发现会自动复核，也可以在这里手动发起一次独立复核。",
-      "emptyTitle": "暂无复核记录",
-      "evidence": "复核证据",
-      "loadError": "加载复核记录失败：{error}",
-      "notes": "补充说明：{notes}",
-      "reason": {
-        "manual": "人工发起",
-        "sample": "抽样复核",
-        "severity": "达到阈值强制复核"
-      },
-      "retry": "重试",
-      "sessionDeleted": "会话已删除",
-      "start": "发起复核",
-      "status": {
-        "completed": "已完成",
-        "failed": "复核失败",
-        "pending": "等待启动",
-        "running": "复核中",
-        "stopped": "已停止"
-      },
-      "title": "独立复核",
-      "verdict": {
-        "inconclusive": "无法确认（仍按未复核计）",
-        "refuted": "已推翻",
-        "verified": "已复核"
-      },
-      "viewRunning": "查看正在进行的复核会话",
-      "viewSession": "查看会话",
-      "foot": "共 {total} 次复核",
-      "footHint": "每次复核都是一次独立会话"
-    }
-  },
   "scopeEditor": {
     "defaultDescription": "每行一条，自动识别域名、IP、CIDR、ICP 备案和企业关键词。",
     "defaultLabel": "资产范围",
@@ -3561,21 +3509,7 @@
       "stateNotInstalled": "未安装（仅用原生协议栈）",
       "title": "人机验证工具链就绪状态"
     },
-    "verifyGate": {
-      "desc": "漏洞入库时，<b>等级达到所设阈值</b>的发现会自动派给「独立复核」Agent（只读工具、独立会话、不采信原上报结论）；低于阈值的按下方比例抽查。<br></br>每一次复核都是一次独立的模型会话，<b>阈值越低、抽查比例越高，Token 消耗越大</b>。选「关闭」后只保留在漏洞详情里手动发起复核。改完对之后入库的发现立即生效，已进队列的按原口径跑完。",
-      "sampleHint": "低于阈值时的抽查比例；0 = 不抽查（只做达到阈值的强制复核）。",
-      "sampleLabel": "抽查比例",
-      "threshold": {
-        "critical": "仅严重（critical）",
-        "high": "严重 + 高危（critical / high）",
-        "low": "全部等级（含低危）",
-        "medium": "严重 + 高危 + 中危",
-        "off": "关闭，只手动发起"
-      },
-      "thresholdLabel": "强制复核的最低等级",
-      "title": "自动复核闸门"
-    },
-    "dedupe": {
+      "dedupe": {
       "desc": "每条发现<b>入库前</b>先问一次模型「这是不是已经报过的同一个漏洞」：判为重复就<b>不重复入库</b>，并把已有那条回给 Agent，让它把证据并进去。<br></br>判重是一次额外的模型调用（用下面指定的配置，未指定就用当前启用的配置）；<b>判重失败一律放行</b>——挡住一条真发现的代价，远大于多留一条重复条目。改完对之后入库的发现立即生效。",
       "off": "关闭，不判重",
       "on": "启用",
@@ -3639,8 +3573,6 @@
       "testFailed": "搜索测试失败：{error}",
       "testSuccess": "搜索测试成功，{backend} 返回 {count} 条结果",
       "testUnknownError": "未知错误",
-      "verifyGateInvalid": "抽查比例必须是 0–100 的整数",
-      "verifyGateSaved": "已保存自动复核闸门（对之后入库的发现生效）",
       "webSearchSaved": "已保存网络搜索配置"
     },
     "trafficCapture": {
@@ -3689,7 +3621,6 @@
       "phase": {
         "idle": "准备中",
         "downloading": "下载中",
-        "verifying": "校验 SHA256",
         "extracting": "解包中",
         "staged": "已就绪",
         "failed": "失败"
@@ -4126,8 +4057,8 @@
     },
     "validation": {
       "refuted": "已推翻",
-      "unverified": "未复核",
-      "verified": "已复核"
+      "unverified": "未确认",
+      "verified": "已确认"
     }
   },
   "taskDetail": {
