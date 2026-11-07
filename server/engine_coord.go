@@ -37,6 +37,12 @@ type coordTask struct {
 	taskID string
 	run    *agent.TaskRun
 
+	// convID 是绑定到该任务的 HARNESS 会话 id（0 = 没有绑定）。
+	//
+	// 任务页是只读详情，根与操作员的对话发生在会话页；引擎把根的活动镜像回
+	// conversation_activities 时按这个 id 写，而不是每次活动都查一遍库。
+	convID int64
+
 	mu      sync.Mutex
 	closed  bool
 	started time.Time
@@ -255,6 +261,13 @@ func (e *Engine) RunCoordTask(ctx context.Context, t *Task, opts CoordTaskOption
 		return fmt.Errorf("coord: start root agent: %w", err)
 	}
 	ct := &coordTask{taskID: taskID, run: run, started: time.Now()}
+	// 绑定到该任务的 HARNESS 会话：一次查询缓存进 coordTask，后续每条根活动
+	// 直接写会话表，不再逐条查库。
+	if e.m != nil && e.m.pg != nil {
+		if conv, cerr := e.m.pg.ConversationByTask(taskID); cerr == nil && conv != nil {
+			ct.convID = conv.ID
+		}
+	}
 	coordPut(e, ct)
 	defer func() {
 		ct.close("task goroutine exited")
@@ -328,11 +341,34 @@ func (e *Engine) emitCoordActivity(t *Task, a db.Activity) {
 		return
 	}
 	e.emitActivity(t, a)
+	e.mirrorToConversation(t.ID, a)
 	if a.Kind == "result" {
 		// 每次 run 收尾检查一次任务级 token 预算：新链路里"run"的粒度是
 		// 单个 agent 的一次执行，这是最接近旧 checkTokenBudget 调用点的位置。
 		// 放在这里而不是等整张图跑完，是为了让预算超限能**中途**停图。
 		e.checkCoordTokenBudget(t)
+	}
+}
+
+// mirrorToConversation 把根/系统活动镜像回绑定的 HARNESS 会话。
+//
+// 任务页是只读详情，操作员的对话发生在会话页；两边的活动流必须同源，否则
+// 会出现「根在任务页跑、会话页看不到」的割裂。只镜像根与 system：子代理日志
+// 留在右侧停靠栏，不在主对话里混排。
+func (e *Engine) mirrorToConversation(taskID string, a db.Activity) {
+	ct, ok := coordGet(e, taskID)
+	if !ok || ct == nil || ct.convID == 0 || e.m == nil || e.m.pg == nil {
+		return
+	}
+	if ct.run == nil {
+		return
+	}
+	if a.Worker != ct.run.RootID && a.Worker != "system" {
+		return
+	}
+	a.Worker = "chat" // 会话页只有一条主泳道；agent id 属于任务页/停靠栏
+	if _, err := e.m.pg.AppendConvActivity(ct.convID, a); err != nil {
+		log.Printf("[coord] task %s 镜像活动到会话 %d 失败: %v", taskID, ct.convID, err)
 	}
 }
 

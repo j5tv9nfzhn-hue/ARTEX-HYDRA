@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
  *  2. 数据来自独立的 /api/agents/stream，且走外部 store 合帧 —— 子代理刷日志
  *     只重渲染这个组件，主聊天树不动；
  *  3. 状态全部显式：排队 / 运行 / 等待交卷 / 完成 / 失败 / 疑似卡死，没有一个是
- *     "无限转圈"。`stalled` 来自后端 10 分钟无活动的判定。
+ *     "无限转圈"。`stalled` 来自后端 StallAfter（默认 20 分钟）无活动的判定。
  */
 
 const ACTIVE_STATES = new Set(["running", "waiting"]);

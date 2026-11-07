@@ -150,14 +150,16 @@ func (t *ToolSet) delegateTask() actool.CoreTool {
 				Depth: AgentDepthFrom(ctx),
 			})
 			if derr != nil {
-				// 槽位满载不是故障，是"排队"：回结构化状态让模型知道还能开几条，
-				// 而不是把一次满载读成"工具坏了"进而放弃派发。
+				// 槽位满载不是故障，也不是“已排队”：Spawner 当前直接拒绝，
+				// 所以这里必须如实说“未派出”，否则模型会以为子代理已经在跑，
+				// 转去做别的事，最后等一个根本不存在的 agent。
 				if errors.Is(derr, ErrSlotsFull) {
 					return jsonResult(map[string]any{
-						"queued": true,
-						"reason": derr.Error(),
-						"slots":  sp.Coord.SlotsStatus(),
-						"note":   "并发槽位已满，本次未派出。先自己推进，或等现有子代理交卷腾出槽位后再派；不要原样重试。",
+						"slots_full": true,
+						"dispatched": false,
+						"reason":     derr.Error(),
+						"slots":      sp.Coord.SlotsStatus(),
+						"note":       "并发槽位已满，本次未派出。先自己推进别的工作，或等现有子代理交卷腾出槽位后再派；不要原样重试。",
 					})
 				}
 				return actool.Errorf(derr.Error()), nil
@@ -293,7 +295,7 @@ func (t *ToolSet) waitForAgents() actool.CoreTool {
 			}
 			if stalled, ok := payload["stalled"]; ok {
 				payload["stall_note"] = fmt.Sprintf(
-					"%v 已超过 10 分钟无活动，槽位会被回收。要么用 stop_agent 主动停掉重派，要么换一条路线。", stalled)
+					"%v 已超过 %s 无活动，槽位会被回收。要么用 stop_agent 主动停掉重派，要么换一条路线。", stalled, StallAfter)
 			}
 			return jsonResult(payload)
 		})

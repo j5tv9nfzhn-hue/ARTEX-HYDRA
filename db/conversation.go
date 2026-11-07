@@ -184,6 +184,26 @@ func (d *DB) GetConversation(id int64) (*Conversation, error) {
 	return &c, nil
 }
 
+// ConversationByTask returns the newest thread bound to taskID (nil, nil if none).
+//
+// HARNESS 会话与任务是同一条线的两个视图：会话是根的对话，任务页是只读详情。
+// 引擎把根的活动镜像回会话时需要按 task_id 找到这条线程，所以查询必须走索引列
+// conversations.task_id，而不是全表扫。
+func (d *DB) ConversationByTask(taskID string) (*Conversation, error) {
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return nil, nil
+	}
+	c, err := scanConv(d.QueryRow(`SELECT `+convCols+` FROM conversations WHERE task_id=$1 ORDER BY id DESC LIMIT 1`, taskID))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
 // UpdateConversation applies a partial title/pin mutation and returns the updated
 // row. Pinning an already-pinned conversation preserves its original pin order.
 func (d *DB) UpdateConversation(id int64, patch ConversationPatch) (*Conversation, error) {

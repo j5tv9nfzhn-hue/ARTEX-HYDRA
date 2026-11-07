@@ -82,9 +82,9 @@ func TestSlotManagerReclaimStalled(t *testing.T) {
 	s.Acquire("alive")
 	s.Acquire("stuck")
 
-	// 让 stuck 的活动时间停在 11 分钟前，alive 保持新鲜。
+	// 让 stuck 的活动时间停在阈值之外，alive 保持新鲜。
 	s.mu.Lock()
-	s.inUse["stuck"] = base.Add(-11 * time.Minute)
+	s.inUse["stuck"] = base.Add(-(StallAfter + time.Minute))
 	s.inUse["alive"] = base
 	s.mu.Unlock()
 
@@ -130,6 +130,23 @@ func TestCoordinatorSlotsFullReturnsQueued(t *testing.T) {
 		t.Fatalf("第二个子代理应因槽位已满被拒")
 	} else if !IsSlotsFull(err) {
 		t.Fatalf("错误应可被 IsSlotsFull 识别，实得 %v", err)
+	}
+}
+
+func TestEnsureSlotsDoesNotResetOccupancy(t *testing.T) {
+	c := NewCoordinator("t")
+	c.EnsureSlots(1)
+	if _, err := c.Register("root", "", "root", true, nil); err != nil {
+		t.Fatalf("根注册失败: %v", err)
+	}
+	if _, err := c.Register("child1", "root", "worker", false, nil); err != nil {
+		t.Fatalf("第一个子代理应注册成功: %v", err)
+	}
+	// 每个 agent 的 SessionRunner.Run 都会走到这里。如果它重建槽位表，
+	// child1 的占用会被清空，child2 就能偷偷进来——上限被放大成 N×Max。
+	c.EnsureSlots(4)
+	if _, err := c.Register("child2", "root", "worker", false, nil); !IsSlotsFull(err) {
+		t.Fatalf("EnsureSlots 不应重置已占用槽位，child2 仍应被拒，实得 %v", err)
 	}
 }
 

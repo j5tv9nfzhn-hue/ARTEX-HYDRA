@@ -1073,6 +1073,7 @@ CREATE TABLE IF NOT EXISTS conversations (
 );
 CREATE INDEX IF NOT EXISTS idx_conversations_llm_profile ON conversations(llm_profile_id) WHERE llm_profile_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_conversations_pinned ON conversations(pinned_at DESC) WHERE pinned_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_conversations_task ON conversations(task_id) WHERE task_id <> '';
 DROP TRIGGER IF EXISTS trg_conversations_upd;
 
 CREATE TRIGGER IF NOT EXISTS trg_conversations_upd_updated_at

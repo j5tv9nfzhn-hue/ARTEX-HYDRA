@@ -30,6 +30,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -139,6 +141,17 @@ func (r *SessionRunner) Run(ctx context.Context, spec AgentSpec, agentID string,
 	tools := surf.Tools
 	sysPrompt := surf.System
 
+	// 子代理各自的执行域：旧 worker 每个 intent 一个 runDir，coord 里如果所有
+	// agent 共用 <data>/work，Bash 的执行域锁（keyShellOf）会把整棵树串行化——
+	// 4 个子代理和 1 个子代理一样慢。这里给每个子代理一个独立子目录，根仍用
+	// 任务工作区（它没有 Bash，只读文件时需要看到 agents/ 下各子代理的产物）。
+	agentDir := r.agentDir(agentID, coord)
+	if agentDir != "" {
+		if err := os.MkdirAll(agentDir, 0o755); err != nil {
+			log.Printf("[coord] agent=%s 创建工作目录失败: %v", agentID, err)
+		}
+	}
+
 	opts := agentcore.Options{
 		Provider:               r.Provider,
 		SystemPrompt:           sysPrompt,
@@ -146,8 +159,8 @@ func (r *SessionRunner) Run(ctx context.Context, spec AgentSpec, agentID string,
 		DeferredTools:          surf.Deferred,
 		UnlockSet:              surf.Unlock,
 		Tools:                  tools,
-		WorkingDir:             r.WorkDir,
-		ToolOutputDir:          r.ToolOutputDir,
+		WorkingDir:             agentDir,
+		ToolOutputDir:          r.agentToolOutputDir(agentID),
 		MaxToolOutputChars:     surf.MaxToolOutputChars,
 		MaxTurns:               spec.EffectiveMaxTurns(r.MaxTurns),
 		MaxDuration:            r.MaxDuration,
@@ -212,7 +225,9 @@ func (r *SessionRunner) Run(ctx context.Context, spec AgentSpec, agentID string,
 		}
 		// 并发闸门与提示词同源：上面那个数字以前只是写给模型看的，协调器并不拦。
 		// 现在把它落成真正的槽位上限，超额派发退回排队而不是静默扩容。
-		coord.SetSlots(NewSlotManager(s.MaxConcurrent))
+		// 用 EnsureSlots 而不是 SetSlots：每个 agent 都会走到这里，重建槽位表
+		// 会把已在跑的占用清空，上限被放大成 N×Max。
+		coord.EnsureSlots(s.MaxConcurrent)
 		ctx = WithSpawner(ctx, s)
 	}
 
@@ -359,6 +374,10 @@ func (r *SessionRunner) assemble(ctx context.Context, spec AgentSpec, coord *Coo
 	// 否则一个编排者可以用"子任务交卷"的口气结束整个任务。
 	ts := r.toolset
 	base = append(base, ts.CoordTools(isRoot)...)
+	// Bash 的“隐式工作目录”（后台命令、内建原语之外的外部进程）必须与
+	// opts.WorkingDir 同源：只改 opts 不改工具，后台命令仍会落回共享目录，
+	// 执行域锁又变回全局串行。
+	base = WrapCrossPlatformBash(base, r.agentDir(agentID, coord), nil)
 
 	// ---- 2. 一次成面 ----
 	sysBody := r.sysBodyFor(spec, coord, agentID, isRoot)
@@ -405,7 +424,7 @@ func (r *SessionRunner) sysBodyFor(spec AgentSpec, coord *Coordinator, agentID s
 	vars := CoordVars{
 		Goal:     spec.Task,
 		Scope:    r.scopeBlockFor(spec),
-		DataDir:  r.WorkDir, // 与 cwd 同源：提示词里说的目录必须是它真正落地的目录
+		DataDir:  r.agentDir(agentID, coord), // 与 cwd 同源：提示词里说的目录必须是它真正落地的目录
 		MaxTurns: spec.EffectiveMaxTurns(r.MaxTurns),
 		// 对齐 strix 的 create_agent(name, task, skills)：技能是派活时就指定的，
 		// 子代理一睁眼就知道该先加载哪几个包，而不是自己去猜。
@@ -441,6 +460,35 @@ func (r *SessionRunner) sessionIDFor(agentID string) string {
 		return ""
 	}
 	return r.SessionIDPrefix + "-" + agentID
+}
+
+// agentDir 返回某个 agent 的执行目录。
+//
+// 根用任务工作区（<data>/work）：它的只读工具要能看到 agents/ 下各子代理的产物；
+// 子代理用 <data>/work/agents/<id>：这是旧 worker 的 runDir 语义在 coord 里的
+// 等价物，也是 Shell 执行域锁（keyShellOf）的隔离单元。所有 agent 共用一个目录
+// 时，Bash 的写锁会把整棵树串行化——并发数写得再高也只有一个子代理在跑。
+func (r *SessionRunner) agentDir(agentID string, coord *Coordinator) string {
+	base := strings.TrimSpace(r.WorkDir)
+	if base == "" {
+		return ""
+	}
+	if coord != nil {
+		if v, ok := coord.View(agentID); ok && v.Root {
+			return base
+		}
+	}
+	return filepath.Join(base, "agents", sanitizeID(agentID))
+}
+
+// agentToolOutputDir 让每个 agent 的超长工具输出落在自己的目录里，避免一个
+// 子代理的 JS/日志转储覆盖另一个的 output-*.txt。
+func (r *SessionRunner) agentToolOutputDir(agentID string) string {
+	base := strings.TrimSpace(r.ToolOutputDir)
+	if base == "" {
+		return ""
+	}
+	return filepath.Join(base, sanitizeID(agentID))
 }
 
 // scopeOf 把一份任务的约束折成一行提示。任务里写了就原样用，没写就留空——

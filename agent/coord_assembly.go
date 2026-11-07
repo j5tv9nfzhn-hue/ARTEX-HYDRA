@@ -274,6 +274,42 @@ func CoordBaseTools(workDir, proxyAddr, proxyCACert string) []actool.CoreTool {
 	return WrapCrossPlatformBash(SDKDefaultTools(), workDir, proxyEnv(proxyAddr, proxyCACert))
 }
 
+// CoordRootTools 返回根 agent 的执行工具面：**只读 + 记账**，没有 Shell。
+//
+// 为什么必须在工具面上做，而不能只写在提示词里：
+// 根提示词早就写着“你不亲自扫描、不亲自发请求、不亲自跑 exploit”，但工具面把
+// Bash、Write、Edit、report_finding 全给了它。模型选路的成本不是对称的——跑一条
+// 命令立刻有反馈，派一个子代理要等交卷；只要 Bash 在面上，它迟早会“先跑一下
+// 看看”，然后顺着输出把整条渗透做完。这不是提示词写得不严，是选项本身在诱导。
+//
+// 所以根的面收敛为：
+//   - Read / LS / Glob / Grep：读范围、读配置、读自己工作目录里的产物；
+//   - list_findings / list_assets / node_detail / get_worker_trace /
+//     search_all_worker_traces：读子代理的结论与图状态；
+//   - record_fact：根自己的轻量记账（根提示词明确要求沉淀路线与判据）。
+//
+// 不给：Bash、Write、Edit、MultiEdit、apply_patch、insert_assets、add_finding、
+// report_finding、human_verification_solve。根要这些能力就派子代理。
+func CoordRootTools(ts *ToolSet) []actool.CoreTool {
+	out := []actool.CoreTool{
+		actool.NewRead(),
+		actool.NewLS(),
+		actool.NewGlob(),
+		actool.NewGrep(),
+	}
+	if ts == nil {
+		return out
+	}
+	return append(out,
+		ts.listFindings(),
+		ts.listAssets(),
+		ts.nodeDetail(),
+		ts.searchAllWorkerTraces(),
+		ts.getWorkerTrace(),
+		ts.recordFact(),
+	)
+}
+
 // ProxyEnv 导出 proxyEnv，供 server 层填 Options.BashEnv（Bash 子命令的 HTTP
 // 与工具链信任 CA 都靠它）。与 worker 用的是同一个函数，不另写一份。
 func ProxyEnv(proxyAddr, proxyCACert string) []string {

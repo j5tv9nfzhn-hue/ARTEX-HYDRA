@@ -38,6 +38,10 @@ const (
 )
 
 func (s *Server) launchTask(t *Task, seedText string, seedFirstIntent bool) {
+	if s.engine == nil {
+		// 引擎未就绪（单测、只读模式）时不能启动编排；调用方会按"任务未启动"处理。
+		return
+	}
 	if !s.engine.beginTaskOperation(t.ID) {
 		return
 	}

@@ -2420,7 +2420,7 @@ export type AgentLiveSlots = {
   queue?: string[];
   /** 耗尽曲线，如 `3->2->1->0`。 */
   chain: string;
-  /** 超过 10 分钟无活动、即将被回收的 agent。 */
+  /** 超过 StallAfter（默认 20 分钟）无活动、即将被回收的 agent。 */
   stalled?: string[];
 };
 

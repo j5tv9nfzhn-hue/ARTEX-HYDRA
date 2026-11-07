@@ -126,11 +126,9 @@ func (s *Server) pgListConversations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items := make([]conversationListItem, 0, len(cs))
-	s.chatMu.Lock()
 	for _, c := range cs {
-		items = append(items, conversationListItem{Conversation: c, Running: s.chatBusy[s.convBusyKey(c.ID)]})
+		items = append(items, conversationListItem{Conversation: c, Running: s.conversationRunning(c)})
 	}
-	s.chatMu.Unlock()
 	writeJSON(w, 200, map[string]any{"conversations": items})
 }
 
@@ -447,9 +445,7 @@ func (s *Server) pgConversationMessages(w http.ResponseWriter, r *http.Request) 
 	}
 	q := r.URL.Query()
 	limit := atoiDefault(q.Get("limit"), 200)
-	s.chatMu.Lock()
-	running := s.chatBusy[s.convBusyKey(c.ID)]
-	s.chatMu.Unlock()
+	running := s.conversationRunning(c)
 
 	// Incremental tail: ?since=N returns steps after id N (ASC) — used by the live
 	// poll and the post-send fetch. A generous cap so a burst is never dropped.
@@ -687,6 +683,145 @@ func (s *Server) runConversationSync(c *db.Conversation, msg, busyKey string, at
 	s.runConversationTurn(ctx, cancel, c, msg, busyKey)
 }
 
+// isHarnessRootConversation reports whether this thread is the HARNESS root chat.
+//
+// 对话页升级为 HARNESS 后只有一种对话：与任务根直接对话。前端建会话时用的就是
+// coord_root，所以这里只认 coord_root。
+//
+// 刻意**不**把 auto / pentest 也算进来：这两个 key 仍被引用解析（@[漏洞#id]）
+// 与复测链路使用，它们需要 ChatAgent 那一轮的完整语义（模型必须收到展开后的
+// 证据快照、回合必须落一条 result）。把历史线程一并改道到任务根会让这些能力
+// 静默失效——旧线程因此退回无派发工具的 ChatAgent，是同一个坑的另一面。
+func isHarnessRootConversation(c *db.Conversation) bool {
+	if c == nil {
+		return false
+	}
+	return c.AgentKey == agent.PromptKeyCoordRoot
+}
+
+// harnessTaskForConversation 返回该会话绑定的任务；没有就创建一个并绑定。
+//
+// 为什么 HARNESS 会话必须落到任务：根需要 Task/Exploration store 才能挂
+// record_fact / list_findings / report_finding 等图谱工具；子代理也需要同一份
+// 任务上下文。创建一个任务不是“多一个实体”，而是给这次对话一个可被只读详情页
+// 展示、可被 AgentDock 观察的实体。
+//
+// 返回 created=true 表示任务刚创建，首条用户消息已经是任务目标，不需要再投一次
+// instruction（否则根会收到重复的同一句话）。
+func (s *Server) harnessTaskForConversation(c *db.Conversation, goal string) (*Task, bool, error) {
+	if c == nil {
+		return nil, false, errors.New("conversation is nil")
+	}
+	if strings.TrimSpace(c.TaskID) != "" {
+		if t := s.m.ResolveTask(c.TaskID); t != nil {
+			return t, false, nil
+		}
+	}
+	title := firstLine(goal, 60)
+	if title == "" {
+		title = "HARNESS"
+	}
+	var profileID *int64
+	if c.LLMProfileID != nil {
+		profileID = c.LLMProfileID
+	}
+	t, err := s.m.CreateTask(title, goal, profileID, 0, 0)
+	if err != nil {
+		return nil, false, err
+	}
+	tid := t.ID
+	if _, err := s.m.pg.UpdateConversation(c.ID, db.ConversationPatch{TaskID: &tid}); err != nil {
+		return nil, false, fmt.Errorf("绑定会话到任务失败: %w", err)
+	}
+	c.TaskID = tid
+	s.launchTask(t, goal, false)
+	_, _ = s.m.pg.AppendConvActivity(c.ID, db.Activity{
+		Worker: "system", Kind: "text",
+		Summary: fmt.Sprintf("已创建任务 #%s，根 Agent 正在启动", t.ID),
+	})
+	return t, true, nil
+}
+
+// sendToTaskRoot 把一条人类消息作为 instruction 投给任务根。
+func (s *Server) sendToTaskRoot(t *Task, msg string) bool {
+	if t == nil || s.engine == nil {
+		return false
+	}
+	ct, ok := coordGet(s.engine, t.ID)
+	if !ok || ct == nil || ct.run == nil || ct.run.Coord == nil {
+		return false
+	}
+	if _, err := ct.run.Coord.Send("human", ct.run.RootID, agent.MsgInstruction, msg); err != nil {
+		log.Printf("[conv] task %s 投递根 agent 失败: %v", t.ID, err)
+		return false
+	}
+	return true
+}
+
+// runHarnessTaskTurn 是 HARNESS 会话的一轮：确保任务存在，把消息送到根。
+//
+// 首条消息创建任务时，goal 就是这句话，根会自己开跑；后续消息作为 instruction
+// 投递。任务未运行（暂停/终态/图已关）时先 Resume，再最多等 5 秒让根注册。
+func (s *Server) runHarnessTaskTurn(ctx context.Context, c *db.Conversation, msg string) {
+	t, created, err := s.harnessTaskForConversation(c, msg)
+	if err != nil {
+		_, _ = s.m.pg.AppendConvActivity(c.ID, db.Activity{
+			Worker: "system", Kind: "text", IsError: true,
+			Summary: "创建/绑定任务失败：" + err.Error(),
+		})
+		return
+	}
+	if created {
+		return
+	}
+	if s.sendToTaskRoot(t, msg) {
+		return
+	}
+	s.engine.Resume(t)
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if s.sendToTaskRoot(t, msg) {
+			return
+		}
+		if time.Now().After(deadline) {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+	_, _ = s.m.pg.AppendConvActivity(c.ID, db.Activity{
+		Worker: "system", Kind: "text", IsError: true,
+		Summary: "任务根尚未就绪，消息未送达；请稍后重试或查看任务状态。",
+	})
+}
+
+// harnessTaskRunning 报告该会话绑定的任务图是否还有活跃 agent。
+func (s *Server) harnessTaskRunning(c *db.Conversation) bool {
+	if c == nil || strings.TrimSpace(c.TaskID) == "" || s.engine == nil {
+		return false
+	}
+	ct, ok := coordGet(s.engine, c.TaskID)
+	if !ok || ct == nil || ct.run == nil || ct.run.Coord == nil {
+		return false
+	}
+	return !ct.run.Coord.Idle()
+}
+
+// conversationRunning 是会话“还在跑”的统一口径：普通 ChatAgent 回合看 chatBusy，
+// HARNESS 根会话看任务图是否活跃。
+func (s *Server) conversationRunning(c *db.Conversation) bool {
+	if c == nil {
+		return false
+	}
+	s.chatMu.Lock()
+	busy := s.chatBusy[s.convBusyKey(c.ID)]
+	s.chatMu.Unlock()
+	return busy || s.harnessTaskRunning(c)
+}
+
 // Register cancellation before returning 202, so an immediate stop/delete cannot
 // miss a background goroutine which has not started yet.
 func (s *Server) conversationRunContext(id int64, busyKey string) (context.Context, context.CancelCauseFunc) {
@@ -728,12 +863,15 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 	// Only the first turn executes a historical retest. Follow-up conversation
 	// turns may explain the sealed result; the result tool refuses to overwrite it.
 	finishStatus, finishReason := "failed", convRetestFailedToStart
+	// HARNESS 根会话的“回合”只是把消息投给任务根；真正的回复由根异步产出。
+	// 这种情况下不能再发「AI 回复回合结束」的通知，否则用户会收到一条空的完成提醒。
+	harnessTask := false
 	// 应用内通知：AI 回复回合结束。runConversationTurn 是聊天、复测、触发器
 	// 三类会话共用的唯一收敛点，挂在这里既不会漏（所有入口都经过）也不会重
 	// （一个回合只 defer 一次）。finishStatus 在返回前已定型，defer 读到的就是
 	// 最终结果。
 	defer func() {
-		if c != nil {
+		if c != nil && !harnessTask {
 			emitChatMilestone(c.ID, c.Title, finishStatus, finishReason)
 		}
 	}()
@@ -779,6 +917,15 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 		}
 	}
 	if ctx.Err() != nil {
+		return
+	}
+	// HARNESS 会话 = 任务根的对话入口。任务页只读展示，这里才是操作员与根
+	// 交互的地方：消息不再交给 ChatAgent（它没有 delegate_task/agents_graph），
+	// 而是投给任务的 Coordinator 根；根的活动由 Engine 镜像回本会话。
+	if isHarnessRootConversation(c) {
+		harnessTask = true
+		s.runHarnessTaskTurn(ctx, c, msg)
+		finishStatus, finishReason = "completed", ""
 		return
 	}
 	// precedence: the conversation agent's own binding → this conversation's pin → global.

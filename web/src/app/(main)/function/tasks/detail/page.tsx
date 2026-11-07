@@ -52,6 +52,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePolling } from "@/hooks/use-polling";
 import { api } from "@/lib/api";
+import { currentTask } from "@/lib/current-task-store";
 import type { LLMProfile, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ApiBar, KpiRow } from "@/ui/container";
@@ -229,6 +230,14 @@ function TaskDetailInner() {
   const [paused, setPaused] = React.useState(false);
   const [loaded, setLoaded] = React.useState(false);
   const [tab, setTab] = React.useState("sessions");
+  // 子代理停靠栏挂在 (main) 布局上，只认 current-task-store。任务详情页此前
+  // 从不写入这个 store，于是即使任务正在并行跑子代理，右侧也永远看不到面板。
+  // 这里把当前任务 id 交给它；离开页面再清空，避免把上一个任务带到别的页面。
+  React.useEffect(() => {
+    if (!id) return;
+    currentTask.set(id);
+    return () => currentTask.set("");
+  }, [id]);
   // 未收口分支数（完成闸门）：坏终态且没被续派/收口的分支。进页面拉一次 + 15s 轮询，
   // 数字掉了说明分支已回炉跑完或被人工收口。
   const [openBranches, setOpenBranches] = React.useState(0);

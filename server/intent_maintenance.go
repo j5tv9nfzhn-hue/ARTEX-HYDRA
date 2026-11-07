@@ -35,6 +35,10 @@ func (e *Engine) StartMaintenance(ctx context.Context) {
 				return
 			case <-tick.C:
 				e.ProcessDueRetries()
+				// 槽位僵死回收：ReclaimStalledAgents 早就存在，但一直没有调用方，
+				// 于是 UI 上「疑似卡死」的标记永远只是标记，槽位也永远不回收。
+				// 这里每 10s 扫一次，把超过 StallAfter（默认 20 分钟）无活动的子代理落 stopped。
+				e.reclaimCoordStalls()
 			}
 		}
 	}()

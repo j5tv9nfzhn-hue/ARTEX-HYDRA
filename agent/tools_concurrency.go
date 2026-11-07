@@ -296,6 +296,13 @@ func toolAccessKeys(t actool.CoreTool, in json.RawMessage, tc *actool.ToolContex
 	name := t.Name()
 	readOnly := t.IsReadOnly(in)
 	switch {
+	case IsCoordinatorTool(name):
+		// 调度工具只碰 Coordinator 自己的状态（它自带锁），不碰探索图、文件或
+		// 外部进程。它们**必须**不进资源键表：wait_for_agents 会阻塞到子代理
+		// 交卷（默认 5 分钟），一旦它拿全局写锁，所有 agent 的 Bash、Read、
+		// record_fact 都会被挡在 global.RLock 上——子代理跑不完，父级等到超时，
+		// 整张图退化成串行空转。这是「命令卡住 + 子代理不动」的确定性成因。
+		return nil, nil
 	case name == "apply_patch":
 		// 多文件补丁：它的两阶段写入由这里统一加锁，工具内部不再重复加锁。
 		var p struct {

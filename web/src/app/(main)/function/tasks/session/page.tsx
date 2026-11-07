@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
+import { currentTask } from "@/lib/current-task-store";
 import type { Task } from "@/lib/types";
 import { ApiBar, Masthead } from "@/ui/container";
 
@@ -35,6 +36,13 @@ function TaskSessionInner() {
   const id = searchParams.get("id") ?? "";
   const [task, setTask] = React.useState<Task | null>(null);
   const [loaded, setLoaded] = React.useState(false);
+
+  // 与任务详情页同一口径：把当前任务交给全局停靠栏，右侧才会出现子代理面板。
+  React.useEffect(() => {
+    if (!id) return;
+    currentTask.set(id);
+    return () => currentTask.set("");
+  }, [id]);
 
   React.useEffect(() => {
     if (!id) {

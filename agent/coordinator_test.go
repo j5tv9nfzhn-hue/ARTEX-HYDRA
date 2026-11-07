@@ -60,6 +60,33 @@ func TestCoordinatorUnreachableAfterTerminal(t *testing.T) {
 	}
 }
 
+// 不变量 1b：instruction 是“改方向”，不是“杀 agent”。
+//
+// Send 曾对 instruction 调用接收方的 run cancel。那个 cancel 绑定的是整条 run
+// ctx，于是一次 steering 会让子代理直接以 context.Canceled 收场、父级收到崩溃
+// 报告。这里钉住：投递 instruction 只入邮箱，不触发取消；真正读取它发生在下一次
+// turn 边界（runner 的 mailbox 注入）。
+func TestSendInstructionDoesNotCancelRun(t *testing.T) {
+	c := NewCoordinator("task-1b")
+	if _, err := c.Register("root", "", "root", true, nil); err != nil {
+		t.Fatalf("register root: %v", err)
+	}
+	if _, err := c.Register("child", "root", "child", false, nil); err != nil {
+		t.Fatalf("register child: %v", err)
+	}
+	canceled := false
+	c.SetCancel("child", func() { canceled = true })
+	if _, err := c.Send("root", "child", MsgInstruction, "改去测上传链"); err != nil {
+		t.Fatalf("发送 instruction 失败: %v", err)
+	}
+	if canceled {
+		t.Fatal("投递 instruction 不应取消子代理的 run（那会把改方向变成杀 agent）")
+	}
+	if got := c.Peek("child"); got != 1 {
+		t.Fatalf("instruction 应留在邮箱里等下一次 turn 注入，实得 %d 条", got)
+	}
+}
+
 // 不变量 2：一轮只能等一次。
 //
 // 这条是拦「把 wait 写成 while 循环」的唯一可靠手段：提示词里的劝导不可靠，

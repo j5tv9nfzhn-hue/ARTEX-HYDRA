@@ -124,10 +124,16 @@ func (s *Spawner) Delegate(parentCtx context.Context, spec AgentSpec) (*AgentVie
 		return nil, fmt.Errorf("%w: 深度 %d 已达上限 %d。把它做成同层的一个子任务，而不是继续往下派", ErrTooDeep, spec.Depth, s.maxDepth())
 	}
 	s.mu.Lock()
-	if s.MaxConcurrent > 0 && s.running >= s.MaxConcurrent {
+	// 槽位表已装配时以 Coordinator 为准：它能在僵死回收后释放名额，而
+	// s.running 只有 goroutine 真正退出才会减——一个不认 ctx 的工具会把
+	// 名额永久钉死。s.running 只作为「没有槽位表」时的兜底闸门。
+	if s.MaxConcurrent > 0 && s.Coord.SlotsLimit() == 0 && s.running >= s.MaxConcurrent {
 		n := s.running
 		s.mu.Unlock()
-		return nil, fmt.Errorf("%w: 已有 %d 个 agent 在跑（上限 %d）。等现有 agent 交卷后再派，或先合并任务", ErrBusy, n, s.MaxConcurrent)
+		// 用 ErrSlotsFull 而不是 ErrBusy：这是**槽位满载**，不是工具故障。
+		// delegate_task 据此回结构化状态（slots_full + 当前水位），模型才会
+		// 先推进别的工作，而不是把一次满载读成“派发器坏了”并放弃派活。
+		return nil, fmt.Errorf("%w: 已有 %d 个 agent 在跑（上限 %d）。等现有 agent 交卷后再派，或先合并任务", ErrSlotsFull, n, s.MaxConcurrent)
 	}
 	s.mu.Unlock()
 
@@ -389,6 +395,11 @@ func StartTask(ctx context.Context, taskID string, runner AgentRunner, spec Agen
 	if sp.MaxConcurrent <= 0 {
 		sp.MaxConcurrent = defaultMaxConcurrent
 	}
+	// 槽位表在起根之前建好：Register 的准入检查与 SlotsStatus 都依赖它。
+	// 以前这一步只在 SessionRunner.Run 的“没有 Spawner”分支里做，而 StartTask
+	// 早已把 Spawner 放进 ctx，于是生产路径上槽位表永远是 nil——提示词写 4，
+	// 实际不限，UI 水位显示 0。这里补上唯一的初始化点。
+	coord.EnsureSlots(sp.MaxConcurrent)
 	id := firstNonEmpty(spec.Name, "root")
 	id = sanitizeID(id)
 	if _, err := coord.Register(id, "", firstNonEmpty(spec.Role, "root"), true, spec.Skills); err != nil {

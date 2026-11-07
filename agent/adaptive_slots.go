@@ -29,7 +29,11 @@ const (
 	// DefaultChildSlots 与 runner_coord.go 的 maxChildSlots 兜底值一致。
 	DefaultChildSlots = 4
 	// StallAfter 是「多久没活动算僵住」的默认阈值。
-	StallAfter = 10 * time.Minute
+	//
+	// 取 20 分钟而不是 10：Bash 单条命令的上限就是 10 分钟，一个正常的
+	// nmap/sqlmap 长命令会让 turn 在 10 分钟内没有任何 MarkTurn；阈值贴着
+	// 工具上限会把合法长任务误杀。20 分钟仍能在真正卡死时回收槽位。
+	StallAfter = 20 * time.Minute
 )
 
 // ClampChildSlots 把任意输入夹到 [MinChildSlots, MaxChildSlots]；<=0 取默认值。

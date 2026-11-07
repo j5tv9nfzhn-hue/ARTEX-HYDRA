@@ -103,8 +103,9 @@ func (k MsgKind) valid() bool {
 	return k == MsgQuery || k == MsgInstruction || k == MsgInformation
 }
 
-// Interrupt 报告该消息是否应当打断接收方正在进行的 LLM 流。
-// 只有 instruction 有这个待遇：通报打断一次正在生成的回答是纯浪费。
+// Interrupt 报告该消息是否应当优先于接收方当前计划处理。
+// 它是**语义提示**，不是取消信号：投递不取消接收方的 run（见 Send 的说明），
+// instruction 会在下一次 turn 边界作为 mailbox 输入送达。
 func (k MsgKind) Interrupt() bool { return k == MsgInstruction }
 
 // WaitOutcome 是 wait_for_agents 的结果码。非空即代表"这一轮不要再来等了"。
@@ -301,12 +302,34 @@ func (c *Coordinator) SetSlots(s *SlotManager) {
 	c.mu.Unlock()
 }
 
+// EnsureSlots 只在槽位管理器尚未装配时初始化一次。
+//
+// 为什么需要它：根 agent 与子 agent 各跑一次 SessionRunner.Run，而 Run 里的
+// 装配块以前会无条件 SetSlots——每多一个 agent 就重建一次槽位表，已占用的槽
+// 全部丢失，上限形同虚设。改用 EnsureSlots 后，第一个进场的 agent 建表，
+// 后续 agent 只读不复位。
+func (c *Coordinator) EnsureSlots(limit int) {
+	c.mu.Lock()
+	if c.slots == nil {
+		c.slots = NewSlotManager(limit)
+	}
+	c.mu.Unlock()
+}
+
 // SlotsStatus 返回槽位快照；未装配时给出 unlimited。
 func (c *Coordinator) SlotsStatus() SlotStatus {
 	c.mu.Lock()
 	s := c.slots
 	c.mu.Unlock()
 	return s.Status()
+}
+
+// SlotsLimit 返回当前槽位上限；未装配时返回 0（调用方据此退回自己的兜底闸门）。
+func (c *Coordinator) SlotsLimit() int {
+	c.mu.Lock()
+	s := c.slots
+	c.mu.Unlock()
+	return s.Limit()
 }
 
 // TouchSlot 刷新某 agent 的槽位活动时间，避免活跃 turn 被僵死回收误伤。
@@ -328,7 +351,7 @@ func (c *Coordinator) ReclaimStalledAgents(now time.Time) []string {
 		if cancel := c.cancelOf(id); cancel != nil {
 			cancel()
 		}
-		_ = c.Stop(id, "超过 10 分钟无活动，槽位已回收")
+		_ = c.Stop(id, "超过 "+StallAfter.String()+" 无活动，槽位已回收")
 		log.Printf("[coordinator] 回收僵死子代理 %s（超过 %s 无活动）", id, StallAfter)
 	}
 	return stalled
@@ -417,9 +440,13 @@ func (c *Coordinator) Register(id, parentID, role string, root bool, skills []st
 		// 满载时把 id 放进排队名单并返回 ErrSlotsFull，让上层重试而不是静默扩容。
 		if c.slots != nil {
 			if st, ok := c.slots.Acquire(id); !ok {
+				// 当前策略是“满载直接拒绝”，不是真排队：把 id 从 queue 里摘掉，
+				// 否则 UI 会永远显示一个不会有人领取的排队项。
+				c.slots.Release(id)
+				cur := c.slots.Status()
 				c.mu.Unlock()
-				return nil, fmt.Errorf("%w: 上限 %d，当前 %d 个在跑，排队 %d 个（槽位曲线 %s）",
-					ErrSlotsFull, st.Limit, st.Used, len(st.Queue), st.Chain)
+				return nil, fmt.Errorf("%w: 上限 %d，当前 %d 个在跑（槽位曲线 %s）",
+					ErrSlotsFull, st.Limit, cur.Used, cur.Chain)
 			}
 		}
 	}
@@ -495,15 +522,18 @@ func (c *Coordinator) Send(from, to string, kind MsgKind, body string) (Message,
 	case rt.wake <- struct{}{}:
 	default: // 已有一枚唤醒信号在途，无需重复
 	}
-	if kind.Interrupt() && rt.cancel != nil {
-		// 只在下一次 turn 边界前有效；真正语义化的打断由 runner 决定是否接受。
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("[coordinator] interrupt panic: %v", r)
-			}
-		}()
-		rt.cancel()
-	}
+	// 刻意**不**在这里调用 rt.cancel()。
+	//
+	// rt.cancel 绑定的是这个 agent 的整条 run ctx，不是「当前这一次 prompt」：
+	// 一 cancel，captureRunSession 直接返回 context.Canceled，runner 把它判成
+	// StateStopped，Spawner 再按 Crash 通知父级。于是 send_to_agent 的
+	// instruction 名义上是「改它的方向」，实际效果是「把子代理杀掉」——父级等
+	// 回来的是崩溃报告，不是新方向下的交卷。
+	//
+	// 正确时机是下一次 turn 边界：runner 在每轮开始前用 NewMailboxInjector
+	// 取走 mailbox，instruction 会作为一条用户输入追加进会话（见 mailbox_session.go
+	// 的处置规则）。打断一次正在生成的回答收益很小，杀掉一条已经跑了一半的
+	// 路线代价很大。
 	c.emit(Event{Kind: "agent.message", AgentID: to, ParentID: from, State: rt.State,
 		Summary: string(kind), Detail: preview(msg.Body, 160)})
 	return msg, nil

@@ -247,9 +247,20 @@ func (e *Engine) coordOptionsFor(t *Task) CoordTaskOptions {
 		// 这里用任务数据目录下的工作区，保证 Bash 的 cwd 与工具输出目录同树。
 		base = append(base, agent.CoordBaseTools(e.coordWorkDir(), proxyAddr, proxyCACert)...)
 	}
-	if ts := e.coordToolset(t); ts != nil {
+	ts := e.coordToolset(t)
+	if ts != nil {
 		// 图谱工具放前面：它们没有副作用，且是模型最先需要的上下文。
 		opts.Tools = append(ts.WorkerTools(), base...)
+		// ToolsFor 是**角色工具面**的唯一入口：根只拿只读 + 记账，子拿完整执行面。
+		// 这不是提示词纪律，是结构性约束——根没有 Bash/Write/扫描器，就不可能
+		// “先自己跑一下看看”。没有这一层，根提示词里的“你不亲自执行”只是一句
+		// 建议，而模型会一直选成本更低的那条路（自己跑命令而不是派子代理）。
+		opts.ToolsFor = func(_ string, isRoot bool) []actool.CoreTool {
+			if isRoot {
+				return agent.CoordRootTools(ts)
+			}
+			return append(ts.WorkerTools(), base...)
+		}
 	} else {
 		opts.Tools = base
 	}
@@ -415,6 +426,28 @@ func (e *Engine) nudgeCoordRoot(t *Task, msg string) {
 	root := ct.run.RootID
 	if _, err := ct.run.Coord.Send("system", root, agent.MsgInstruction, msg); err != nil {
 		log.Printf("[coord] task %s nudge 根 agent 失败: %v", t.ID, err)
+	}
+}
+
+// reclaimCoordStalls 把「占着槽位但超过 StallAfter 没有活动」的子代理回收掉。
+//
+// 调用方是 Engine.StartMaintenance 的 10s 巡检。它只做两件事：释放槽位、把
+// agent 落 stopped（并通知父级），不碰根，也不碰仍在正常推进的 agent。
+func (e *Engine) reclaimCoordStalls() {
+	if e == nil {
+		return
+	}
+	now := time.Now()
+	coordRegMu.Lock()
+	runs := make([]*agent.TaskRun, 0, len(coordReg))
+	for _, ct := range coordReg {
+		if ct != nil && ct.run != nil {
+			runs = append(runs, ct.run)
+		}
+	}
+	coordRegMu.Unlock()
+	for _, run := range runs {
+		run.Coord.ReclaimStalledAgents(now)
 	}
 }
 
