@@ -65,11 +65,59 @@ func ParseShellMode(s string) (ShellMode, bool) {
 // 为什么 Windows 是 powershell 而不是 cmd：命令链（&& / 管道）与目标环境更接近
 // 模型习惯的表达，且 Codex 与启用 PowerShell 工具的 Claude Code 都以此为默认。
 // 为什么不是 bash：Windows 上 bash 依赖 Git for Windows，属于可选依赖，不能当默认。
+//
+// 注意：这仍然是「用户没设置过时写进 settings 的值」。真正的**优先顺序**见
+// PreferredShellOrder —— 设置页首次打开时会按它给出建议（见 DetectShellOptions
+// 的 recommended 字段）。改这里的默认值等于改所有新装机的落库值，属于产品决策，
+// 本次修复不动它。
 func DefaultShellMode(goos string) ShellMode {
 	if goos == "windows" {
 		return ShellModePowerShell
 	}
 	return ShellModeBash
+}
+
+// 跨平台执行器的**优先顺序**（作者 Issue #6 §4-C 的选型结论）：
+//
+//	Windows:  Git Bash  →  PowerShell 7 (pwsh)  →  Windows PowerShell 5.1
+//	其它平台: bash
+//
+// 为什么 Git Bash 排第一：模型生成的命令绝大多数是 POSIX 写法（`grep -rn`、
+// `2>/dev/null`、`&&`、`$(...)`）。在 PowerShell 下这些要么直接报错，要么静默
+// 变成别的东西（`2>/dev/null` 会被当成重定向到文件 `null`）。而 Git Bash 是
+// 真正的 bash，命令不需改写。
+//
+// 为什么不是"自动静默回退"：这三档之间**不是等价替换**——一条在 Git Bash 里
+// 正确的命令在 PowerShell 里可能完全不同（路径分隔符、引号、重定向）。所以
+// 顺序只在**设置页给出建议**时生效；运行期只按用户选定的模式解析，解析不到
+// 就报错（见 ResolveShell 的 ErrShellNotAvailable）。这也是文件头「解析失败 →
+// 报错，绝不回落到别的执行器」那条约束的落点。
+//
+// 5.1 排最后且不建议：不支持 `&&`、默认非 UTF-8、ScriptBlock 日志在某些策略下
+// 直接拒绝执行；Issue 里明确写了「PS 5.1 与 CMD 不建议」。
+func PreferredShellOrder(goos string) []ShellMode {
+	if goos == "windows" {
+		return []ShellMode{ShellModeBash, ShellModePowerShell}
+	}
+	return []ShellMode{ShellModeBash}
+}
+
+// ShellPreferenceNote 返回该模式在优先顺序里的定位说明，供设置页把
+// 「建议 / 可用 / 不建议」三种态度写清楚，而不是让用户凭喜好选。
+func ShellPreferenceNote(mode ShellMode, goos string) string {
+	switch {
+	case goos != "windows":
+		if mode == ShellModeBash {
+			return "推荐：本机默认执行器"
+		}
+		return "不建议：该模式只在 Windows 上可用"
+	case mode == ShellModeBash:
+		return "推荐：Git for Windows 的 bash，模型生成的 POSIX 命令可直接执行（需已安装 Git for Windows）"
+	case mode == ShellModePowerShell:
+		return "次选：没有 Git Bash 时的最佳选择；优先 PowerShell 7（pwsh），5.1 对 && 与 UTF-8 支持较差"
+	default:
+		return "不建议：cmd 的语法与模型产出的命令差异最大，仅作兜底"
+	}
 }
 
 // ShellSpec 是一次解析的结果。落库的是 Mode / Bin / Version 三项。
@@ -202,6 +250,18 @@ func ResolveShell(mode ShellMode, deps ResolveDeps) (ShellSpec, error) {
 		return !isStoreAlias(candidates[i]) && isStoreAlias(candidates[j])
 	})
 
+	// 探测全部候选后再决定，而不是"第一个能跑的就要"。
+	//
+	// 为什么必须探测完：candidates 的顺序只能表达"路径优先级"，表达不了**版本**。
+	// 现场很常见的一种机器是：PATH 里 `powershell` 命中 5.1（Windows 自带、永远在），
+	// 而 pwsh 7 装在 C:\Program Files\PowerShell\7 却没进 PATH。按"先到先得"就直接
+	// 选了 5.1，于是 `&&`、`2>$null` 之外的一切 POSIX 写法全废——而 7 明明可用。
+	//
+	// 现在的规则（与作者 Issue #6 §4-C 一致）：
+	//   - 先按"非 Store 别名优先"排；
+	//   - 同档内 PowerShell 按**主版本号从高到低**，7.x 一律优先于 5.1；
+	//   - 版本探测失败不影响可用性判断（能跑命令就够），按 0 参与排序。
+	var resolved []ShellSpec
 	var firstErr error
 	for _, cand := range candidates {
 		if cand == "" {
@@ -223,7 +283,17 @@ func ResolveShell(mode ShellMode, deps ResolveDeps) (ShellSpec, error) {
 		if isStoreAlias(cand) {
 			spec.Note = "命中的是 Store/MSIX 别名，若命令无法启动请改用 MSI 安装版的 PowerShell"
 		}
-		return spec, nil
+		resolved = append(resolved, spec)
+	}
+	if len(resolved) > 0 {
+		// 稳定排序：只对 PowerShell 按版本降序，其它模式保持路径优先级不动
+		// （cmd / bash 没有"新版本更好"这回事，路径顺序才是正确判据）。
+		if mode == ShellModePowerShell {
+			sort.SliceStable(resolved, func(i, j int) bool {
+				return resolved[i].Major() > resolved[j].Major()
+			})
+		}
+		return resolved[0], nil
 	}
 	if firstErr == nil {
 		firstErr = errors.New("没有找到候选可执行文件")

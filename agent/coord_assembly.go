@@ -155,6 +155,25 @@ func AssembleCoordSurface(ctx context.Context, in CoordAssembleInput) *CoordSurf
 
 	tools, def, cleanup := AugmentTools(ctx, key, base)
 
+	// 【角色闸门】AugmentTools 之后必须再收一次口。
+	//
+	// base 进来时已经按角色分过（调用方用 opts.ToolsFor + CoordRootTools 给根只读面），
+	// 但 AugmentTools 会把**技能 / MCP / 宿主工具 / 平台工具**按 agent_visibility 与
+	// tools 表重新 append 回来。只要有一条绑定把 create_skill、create_mcp 或任意带
+	// Bash 的自定义工具指给根，"根不亲自执行"就重新变成一句建议。
+	//
+	// 放在这里而不是调用方，是因为这是**所有** coord agent 的唯一装配入口：
+	// 会话页的 chat agent、任务态的根、每个子 agent 都走这一行。放在调用方就会
+	// 出现"任务态收了口、会话页没收敛"的第二条路径——那正是这类问题反复的原因。
+	//
+	// DeferredInfo 也要同步收敛：被摘掉的 MCP/自定义工具不能继续出现在
+	// <available-deferred-tools> 里，否则模型会照着名字去调一个调不到的工具
+	// （幽灵工具的另一种形态）。
+	tools = EnforceRoleToolFace(tools, in.IsRoot, "coord-"+key)
+	if in.IsRoot {
+		def = pruneDeferredInfo(tools, def)
+	}
+
 	// 4：系统提示分段。deferredSystem 会追加 def.FindingGuidance，并把
 	// <available-deferred-tools> + MCP 速查表放在**最后一段**，DynamicBoundary
 	// 指向段数，使整段 system（含该块）进同一个缓存前缀。

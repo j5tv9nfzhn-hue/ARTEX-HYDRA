@@ -95,6 +95,10 @@ export function AgentDock() {
   const nodes = snap.nodes;
   const all = React.useMemo(() => Object.values(nodes), [nodes]);
   const active = all.filter((n) => ACTIVE_STATES.has(n.state));
+  // 排队名单在当前调度语义下**恒为空**：满载 = 直接拒绝，不排队
+  // （见 agent/adaptive_slots.go 文件头「满载语义」）。这段代码保留是为了
+  // 兼容旧版本服务端（它可能仍推 queue 字段填充的帧），但 UI 不再用它表达
+  // "有几个在等" —— 那个数字永远会是 0，而真正的信号是 full。
   const queued = React.useMemo(() => {
     const ids = new Set<string>();
     for (const s of Object.values(snap.slots)) for (const id of s.queue ?? []) ids.add(id);
@@ -111,6 +115,9 @@ export function AgentDock() {
   // 只服务"当前会话绑定了任务、且该任务有子代理"的场景：
   // 无绑定任务 → 不显示；有任务但没在跑的 agent → 也不占屏。
   const hasWork = all.length > 0 || queued.length > 0;
+  // 满载：新的派发请求会被**拒绝**（不是排队）。UI 必须说清楚，否则用户看到
+  // "并行 4/4"却以为根 agent 还在派活。
+  const slotsFull = Object.values(snap.slots).some((s) => s.full) || (slot?.limit ?? 0) > 0 && (slot?.used ?? 0) >= (slot?.limit ?? 0);
   if (!taskId || !hasWork) return null;
 
   const shown = selected && nodes[selected] ? selected : (active[0]?.id ?? all[0]?.id ?? null);
@@ -174,6 +181,11 @@ export function AgentDock() {
           {queued.length > 0 ? (
             <span className="text-amber-600 dark:text-amber-500">{t("queuedCount", { count: queued.length })}</span>
           ) : null}
+          {slotsFull ? (
+            <span className="text-amber-600 dark:text-amber-500" title={t("slotsFullTitle")}>
+              {t("slotsFull")}
+            </span>
+          ) : null}
         </div>
 
         {/* 上半：层级树。谁派的、派了几个，一眼可见 */}
@@ -205,6 +217,13 @@ export function AgentDock() {
                   {id}
                 </div>
               ))}
+            </div>
+          ) : slotsFull ? (
+            /* 满载时不再画"排队等待槽位"（那会暗示还有人在排队，实际是被拒绝）。
+               这里给出的是可执行的解释：名额被谁占着、接下来会发生什么。 */
+            <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/5 px-2 py-1.5 text-[11px] text-amber-700 dark:text-amber-300">
+              <p className="mb-0.5 font-medium">{t("slotsFull")}</p>
+              <p className="text-muted-foreground">{t("slotsFullHint")}</p>
             </div>
           ) : null}
         </div>

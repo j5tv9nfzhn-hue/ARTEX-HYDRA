@@ -2412,16 +2412,25 @@ export type AgentLiveNode = {
   last_error?: string;
 };
 
-/** 槽位快照：回答"还能开几条并行、谁在排队"。 */
+/**
+ * 槽位快照：回答"还能开几条并行"。
+ *
+ * 注意语义（2026-11-07 修正）：满载是**拒绝**，不是排队。`queue` 恒为空，
+ * 保留字段只为兼容旧服务端；判断满载请看 `full`。详见
+ * agent/adaptive_slots.go 的「满载语义」与 agent/coordinator.go 的 Register。
+ */
 export type AgentLiveSlots = {
   limit: number;
   used: number;
   free: number;
+  /** 恒为空（见类型注释）。不要用它判断"是否有人在等空位"。 */
   queue?: string[];
   /** 耗尽曲线，如 `3->2->1->0`。 */
   chain: string;
   /** 超过 StallAfter（默认 20 分钟）无活动、即将被回收的 agent。 */
   stalled?: string[];
+  /** 满载：新的派发会被拒绝。UI 唯一的满载信号。 */
+  full?: boolean;
 };
 
 export type AgentLiveEvent = {

@@ -903,7 +903,9 @@
       },
       "threadStatus": {
         "running": "这条线程正在跑",
-        "idle": "空闲"
+        "idle": "空闲",
+        "legacy": "这条线程由已下线的旧角色运行（历史数据），归属不再改写",
+        "legacyTag": "历史线程"
       },
       "recipient": {
         "title": "这条消息发给谁",
@@ -3363,6 +3365,9 @@
     "slots": "并行 {used}/{limit}",
     "queuedCount": "{count} 个排队",
     "queueTitle": "排队等待槽位",
+    "slotsFull": "并行名额已满",
+    "slotsFullHint": "根 Agent 新派发的子代理会被直接拒绝（不排队）。等现有子代理交卷腾出名额后，让根重试派发。",
+    "slotsFullTitle": "并行槽位已被占满：新派发会被拒绝，不会进入等待队列",
     "children": "派发 {count}",
     "noSelection": "未选中",
     "logCount": "{count} 条",
@@ -4324,7 +4329,8 @@
       "backToList": "返回任务列表",
       "loading": "加载中…",
       "notFound": "任务 {id} 已被删除、归档或不存在",
-      "pendingApprovals": "等待审批 ×{n}",
+      "rootConversation": "根 Agent 会话（只读）",
+    "pendingApprovals": "等待审批 ×{n}",
       "pendingApprovalsTitle": "有 {n} 条拦截审批在等待人工决定，点击查看审批记录"
     },
     "llm": {

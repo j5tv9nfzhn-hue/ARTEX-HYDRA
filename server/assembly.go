@@ -589,12 +589,17 @@ func idSet(ids []int64) map[int64]bool {
 //
 // 与 server/finding_verify.go 的 verifier 建行方式同构：INSERT ... ON CONFLICT
 // DO NOTHING + 写第一版提示词 + 回填 current_prompt_id。幂等，可重复执行。
+// coordAgentRow 是 coord_root / coord_child 两个角色行的定义。
+//
+// 提到包级是因为变量目录的播种（seedCoordPromptVars）与建行/写首版提示词
+// 是同一批数据的两半，分开两个匿名结构体会让"哪一行该有变量"失去单一来源。
+type coordAgentRow struct {
+	key, name, desc, tmpl string
+}
+
 func seedCoordAgentRows(pg *db.DB) {
-	type row struct {
-		key, name, desc, tmpl string
-	}
 	seedTemplates := agent.BuiltinPromptSeeds()
-	rows := []row{
+	rows := []coordAgentRow{
 		{
 			key:  agent.PromptKeyCoordRoot,
 			name: "编排者",
@@ -648,9 +653,45 @@ VALUES ($1,1,$2,'内置默认','system') RETURNING id`, id, r.tmpl).Scan(&pid); 
 			log.Printf("[prompts] 回填 %s current_prompt_id 失败: %v", r.key, err)
 		}
 	}
+	// 变量目录也必须补：agents 建了行但 agent_prompt_vars 是空的，设置页打开
+	// 这两个角色时白名单为空，pgSavePrompt 会把模板里的 {{.Goal}} 判成未定义
+	// 变量并回 400 —— 用户根本改不了根 agent 的提示词，而"可编辑"正是把提示词
+	// 放进库里的唯一理由。
+	//
+	// 与 db.go 的 builtinAgents 播种保持同一写法（ON CONFLICT DO UPDATE），
+	// 这样改了描述/示例后升级会自动跟随，用户也不需要手工清理旧行。
+	if err := seedCoordPromptVars(tx, rows); err != nil {
+		log.Printf("[prompts] coord 角色变量目录播种失败: %v", err)
+	}
 	if err := tx.Commit(); err != nil {
 		log.Printf("[prompts] coord 角色建行提交失败: %v", err)
 	}
+}
+
+// seedCoordPromptVars 给 coord_root / coord_child 写变量目录。
+//
+// 按 key 反查 agent id（行可能是本次刚建的，也可能早就在库里），幂等 upsert。
+func seedCoordPromptVars(tx *sql.Tx, rows []coordAgentRow) error {
+	for _, r := range rows {
+		vars := agent.CoordPromptVars(r.key)
+		if len(vars) == 0 {
+			continue
+		}
+		var agentID int64
+		if err := tx.QueryRow(`SELECT id FROM agents WHERE key=$1`, r.key).Scan(&agentID); err != nil {
+			return fmt.Errorf("lookup %s: %w", r.key, err)
+		}
+		for _, v := range vars {
+			if _, err := tx.Exec(`INSERT INTO agent_prompt_vars(agent_id, var_name, description, example, source)
+VALUES ($1,$2,$3,$4,$5)
+ON CONFLICT (agent_id, var_name) DO UPDATE
+  SET description=EXCLUDED.description, example=EXCLUDED.example, source=EXCLUDED.source`,
+				agentID, v.Name, v.Desc, v.Example, v.Source); err != nil {
+				return fmt.Errorf("var %s.%s: %w", r.key, v.Name, err)
+			}
+		}
+	}
+	return nil
 }
 
 // seedPrompts writes each built-in agent's code-default prompt body into

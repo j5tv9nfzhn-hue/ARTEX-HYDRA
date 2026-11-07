@@ -432,13 +432,16 @@ function TaskDetailInner() {
           </Button>
           <div className="min-w-0 flex-1" />
           <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
+          {/* 任务详情页是**只读**的（Issue #6 §4-B）：
+              - 这里不再提供"发起对话"的入口 —— 那个按钮跳 `/chat?task=` 会创建
+                新线程，等于在只读页面上留了一条写路径；
+              - 要看根 Agent 在这个任务里的对话记录，去**会话页**（只读回放）；
+              - 要主动指挥根 Agent，去对话页（那里才是唯一可写入口）。
+              两件事分开，页面职责才不含糊。 */}
           <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 rounded-lg px-2.5 text-xs">
-            {/* 主 Agent 对话 = 对话 Harness（整屏舞台），带上任务 id 让线程与任务绑定：
-                对话页的任务带据此只显示这一个任务，不再让用户自己去找。
-                ?c= 缺省 → 落在新建线程的草稿页，首次发送时后端就写入 conversations.task_id。 */}
-            <Link href={`/chat?task=${encodeURIComponent(id)}`}>
+            <Link href={`/function/tasks/session?id=${encodeURIComponent(id)}`}>
               <MessagesSquareIcon className="size-3.5" data-icon="inline-start" />
-              <span className="hidden sm:inline">主 Agent 对话</span>
+              <span className="hidden sm:inline">{t("header.rootConversation")}</span>
             </Link>
           </Button>
           <TaskLLMControl task={task} profiles={profiles} onUpdated={loadTask} />

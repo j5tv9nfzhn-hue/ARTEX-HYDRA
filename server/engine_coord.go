@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -289,34 +290,71 @@ func (e *Engine) RunCoordTask(ctx context.Context, t *Task, opts CoordTaskOption
 	brief, werr := run.AwaitRoot(awaitCtx)
 	if werr != nil {
 		log.Printf("[coord] task %s 等待根 agent 结束失败: %v", taskID, werr)
-		if errors.Is(werr, context.DeadlineExceeded) {
+		// 【终局兜底】以前只有 DeadlineExceeded 有条 Brief，其它错误（根在装配阶段
+		// 就崩了、Coordinator 里查不到根、ctx 被上层取消）会让 brief 保持零值：
+		// 于是 settleCoordTask 收到 Outcome="" → 落 done。那不是"有结论就收"，
+		// 是把一个**没有任何结论**的失败包装成成功。现在按错误类型显式区分：
+		//   - 上层取消（暂停/停止）  → paused，可恢复，不算失败；
+		//   - 墙钟耗尽 / 其它错误    → failed，并把原因写进摘要与活动流。
+		switch {
+		case errors.Is(werr, context.Canceled) && ctx.Err() != nil:
 			brief = agent.Brief{
-				State:     agent.StateCompleted,
-				Outcome:   "open_proof_gap",
-				Summary:   "任务墙钟预算耗尽，根 agent 未能在限内交卷。已关闭整张图，未闭环项见各子 agent 报告。",
+				State:     agent.StateStopped,
+				Outcome:   outcomeCanceled,
+				Summary:   "任务被上层暂停或停止，根 agent 未交卷；已保留现有产出，恢复后可继续。",
+				OpenItems: []string{"根 agent 未给出最终结论"},
+			}
+		default:
+			reason := werr.Error()
+			if errors.Is(werr, context.DeadlineExceeded) {
+				reason = "任务墙钟预算耗尽，根 agent 未能在限内交卷"
+			}
+			brief = agent.Brief{
+				State:     agent.StateFailed,
+				Outcome:   outcomeFailed,
+				Summary:   reason + "。已关闭整张图，未闭环项见各子 agent 报告。",
 				OpenItems: []string{"根 agent 未给出最终结论"},
 			}
 		}
 	}
 
-	// 收尾：把根的交卷落成任务状态。verdict met → done；blocked → failed；
-	// partial / 其它 → done（有结论就收，未闭环项进报告）。
+	// 收尾：把根的交卷落成任务状态。met → done；blocked → failed；
+	// partial → done 且未闭环项进报告；无结论（崩溃/取消）→ failed / paused。
 	e.settleCoordTask(t, brief)
 	return nil
 }
 
+// 终局 outcome 里这几项是本层新增的"没有结论"分支（见 settleCoordTask）。
+// 它们刻意不复用 confirmed / ruled_out / open_proof_gap：那三个都是**有结论**的
+// 交卷，统计上不能被算成一次成功的任务。
+const (
+	outcomeFailed   = "settle_failed"   // 根崩溃 / 装配失败 / 等待超时且无 Brief
+	outcomeCanceled = "settle_canceled" // 上层暂停或停止
+	outcomeNoBrief  = "settle_no_brief" // 根进了终态但没交卷（例如直接崩在 Prompt 里）
+)
+
 // settleCoordTask 把根 agent 的 Brief 折成任务终态与一条可读摘要。
+//
+// 【为什么必须显式判空】这个函数是任务状态机的唯一收尾点。它此前把 Outcome=""
+// 与 "met" 一起判成 done，于是"根根本没交卷"与"任务达成"在库里长得一模一样：
+// UI 显示完成、统计算一次成功、报告里却一条结论都没有。现在：
+//
+//	met                      → done
+//	partial / open_proof_gap → done（有结论，未闭环项进摘要）
+//	blocked / settle_failed  → failed
+//	settle_canceled          → paused（可恢复）
 func (e *Engine) settleCoordTask(t *Task, b agent.Brief) {
 	if t == nil {
 		return
 	}
-	status := "done"
-	switch b.Outcome {
-	case "blocked":
-		status = "failed"
-	case "partial", "met", "":
-		status = "done"
+	if strings.TrimSpace(b.Outcome) == "" {
+		// 零值 Brief：没有任何一方给过结论。这不是成功，按失败收，并留下可检索的摘要。
+		b.Outcome = outcomeNoBrief
+		if strings.TrimSpace(b.Summary) == "" {
+			b.Summary = "根 agent 进入终态但没有交卷（未调用 finish_task），任务无结论。"
+		}
 	}
+	status := taskStatusForOutcome(b.Outcome)
 	if err := e.m.SetTaskStatus(t.ID, status); err != nil {
 		log.Printf("[coord] task %s 落终态 %s 失败: %v", t.ID, status, err)
 	}
@@ -324,8 +362,38 @@ func (e *Engine) settleCoordTask(t *Task, b agent.Brief) {
 	if len(b.OpenItems) > 0 {
 		summary += fmt.Sprintf("（未闭环 %d 项）", len(b.OpenItems))
 	}
-	e.emitActivity(t, db.Activity{Worker: "system", Kind: "text",
+	kind := "text"
+	if status == "failed" {
+		kind = "error"
+	}
+	e.emitActivity(t, db.Activity{Worker: "system", Kind: kind,
 		Summary: fmt.Sprintf("任务收尾：%s / %s", b.Outcome, summary)})
+}
+
+// taskStatusForOutcome 是 outcome → 任务状态的**唯一**映射。
+//
+// 抽成纯函数是为了能被单测直接覆盖：这段映射决定了"一次任务在库里算什么"，
+// 而它以前藏在 settleCoordTask 里，只有跑完整条 agent 链路才能测到，于是
+// Outcome="" 被算成 done 这件事一直没人发现。tests: engine_coord_settle_test.go
+func taskStatusForOutcome(outcome string) string {
+	switch outcome {
+	case "blocked", outcomeFailed:
+		return "failed"
+	case outcomeCanceled:
+		return "paused"
+	case "partial", "met", "open_proof_gap":
+		return "done"
+	// 下面四项来自 AwaitRoot 的兜底 Brief：根进了终态却没有合规交卷，那里把
+	// AgentState 直接写进了 Outcome。必须在这里显式接住，否则会掉进 default。
+	case string(agent.StateCompleted):
+		return "done"
+	case string(agent.StateStopped):
+		return "paused"
+	case string(agent.StateCrashed), string(agent.StateFailed):
+		return "failed"
+	}
+	// 未知 outcome 一律按未闭环处理：宁可标 failed 让人复核，也不静默算成功。
+	return "failed"
 }
 
 // emitCoordActivity 把 capture 产出的 Activity 落到活动流。

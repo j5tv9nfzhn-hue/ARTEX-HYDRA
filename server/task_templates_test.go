@@ -91,7 +91,14 @@ func TestConversationPatchReturnsPinState(t *testing.T) {
 	}
 	defer m.Close()
 	s := New(context.Background(), m, t.TempDir(), t.TempDir(), t.TempDir())
-	conversation, err := m.pg.CreateConversation("mainagent", "pin through http", nil)
+	// agent_key 用 coord_root，不再用 mainagent —— 后者已在 db/legacyAgentKeys 里
+	// 下线，启动时被 pruneLegacyAgents 删行，CreateConversation 因外键找不到
+	// 该 agent 而返回「找不到 Agent」(404)，测试于是在第一行就崩。
+	//
+	// 这是三处"过期断言"里最容易误判的一处：报错是 HTTP 404，看起来像接口坏了，
+	// 实际是测试引用了不存在的角色。coord_root 是对话页/会话页当前真正使用的键
+	// （见 server/conversations.go 的 HARNESS 会话绑定）。
+	conversation, err := m.pg.CreateConversation("coord_root", "pin through http", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +147,7 @@ func TestConversationPatchReturnsPinState(t *testing.T) {
 	}
 
 	body, _ = json.Marshal(map[string]any{
-		"agent_key": "mainagent", "title": strings.Repeat("会", maxConversationTitleRunes+1),
+		"agent_key": "coord_root", "title": strings.Repeat("会", maxConversationTitleRunes+1),
 	})
 	req = httptest.NewRequest(http.MethodPost, "/api/conversations", bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -151,7 +158,7 @@ func TestConversationPatchReturnsPinState(t *testing.T) {
 	}
 
 	body, _ = json.Marshal(map[string]any{
-		"agent_key": "mainagent", "title": strings.Repeat("x", maxConversationRequestBytes+1),
+		"agent_key": "coord_root", "title": strings.Repeat("x", maxConversationRequestBytes+1),
 	})
 	req = httptest.NewRequest(http.MethodPost, "/api/conversations", bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+token)

@@ -437,16 +437,18 @@ func (c *Coordinator) Register(id, parentID, role string, root bool, skills []st
 			return nil, fmt.Errorf("%w: parent %q is %s", ErrUnreachable, parentID, p.State)
 		}
 		// 并发闸门：只有子代理占槽位，根不占（根是调度者，不是并行工位）。
-		// 满载时把 id 放进排队名单并返回 ErrSlotsFull，让上层重试而不是静默扩容。
+		//
+		// 满载语义 = **拒绝**，不是排队（见 adaptive_slots.go 文件头）。这里不再
+		// Acquire 完再 Release —— 那种写法让"排队"变成一个只存在于两行代码之间的
+		// 中间态，UI 与提示词却一直在说"已排队"。Acquire 现在满载时不入队，
+		// 直接返回 Full=true 的快照。
 		if c.slots != nil {
 			if st, ok := c.slots.Acquire(id); !ok {
-				// 当前策略是“满载直接拒绝”，不是真排队：把 id 从 queue 里摘掉，
-				// 否则 UI 会永远显示一个不会有人领取的排队项。
-				c.slots.Release(id)
-				cur := c.slots.Status()
 				c.mu.Unlock()
-				return nil, fmt.Errorf("%w: 上限 %d，当前 %d 个在跑（槽位曲线 %s）",
-					ErrSlotsFull, st.Limit, cur.Used, cur.Chain)
+				// 错误文案直接说"拒绝"与"下一步怎么做"：模型读到"排队中"会转身
+				// 去等一个不会启动的 agent，这是之前那段注释自己点出的坑。
+				return nil, fmt.Errorf("%w: 上限 %d，当前 %d 个在跑（水位 %s）。本次**未派出**，等现有子代理交卷后再派，或先合并任务；不要原样重试",
+					ErrSlotsFull, st.Limit, st.Used, st.Chain)
 			}
 		}
 	}

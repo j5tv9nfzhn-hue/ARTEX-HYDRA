@@ -22,12 +22,23 @@ func TestClampChildSlots(t *testing.T) {
 	}
 }
 
-func TestSlotManagerAcquireQueueRelease(t *testing.T) {
+// TestSlotManagerAcquireReleasesWithoutQueueing 锁定槽位管理器的满载语义。
+//
+// 原名 ...AcquireQueueRelease，测的是"满载进队列、归还后仍在队列里、重试时才消费"。
+// 那套行为在 2026-11-07 被判定为**假承诺**：Coordinator.Register 拿到 false 后
+// 立刻 Release，队列从来没有消费者，UI 却一直显示"排队中"。现在的语义是：
+//
+//	满载 → Acquire 返回 false + Full=true，**不**入队；
+//	归还 → 空出的名额由下一次全新的 Acquire 占用，不存在"提拔旧排队者"。
+func TestSlotManagerAcquireReleasesWithoutQueueing(t *testing.T) {
 	s := NewSlotManager(2)
 
 	st, ok := s.Acquire("a")
 	if !ok || st.Used != 1 || st.Free != 1 {
 		t.Fatalf("第一个应占位成功：ok=%v status=%+v", ok, st)
+	}
+	if st.Full {
+		t.Fatalf("还有空位时 Full 不应为 true：%+v", st)
 	}
 
 	// 同一个 id 重复申请是幂等的，不该吃掉第二个槽位。
@@ -46,24 +57,26 @@ func TestSlotManagerAcquireQueueRelease(t *testing.T) {
 	if ok {
 		t.Fatalf("满载时不应占位成功")
 	}
-	if len(st.Queue) != 1 || st.Queue[0] != "c" {
-		t.Fatalf("满载时 c 应进队列，实得 %+v", st)
+	if !st.Full {
+		t.Fatalf("满载时 Full 必须为 true：%+v", st)
+	}
+	if len(st.Queue) != 0 || s.QueueDepth() != 0 {
+		t.Fatalf("满载不应入队（队列无消费者），实得 %+v depth=%d", st.Queue, s.QueueDepth())
 	}
 	if st.Chain != "0" {
 		t.Fatalf("满载时槽位曲线应为 0，实得 %q", st.Chain)
 	}
 
+	// 归还腾出容量：名额由新的 Acquire 占用，而不是"提拔"一个不存在的排队者。
 	s.Release("a")
-	// 归还只腾出容量，不自动"提拔"排队者：那次派发已经被上层拒了，
-	// 自动占位等于给一个没人接手的 agent 发槽位（泄漏）。队列等到重试时才消费。
-	if got := s.QueueDepth(); got != 1 {
-		t.Fatalf("归还后队列应保留 c，实得 %d", got)
+	if got := s.QueueDepth(); got != 0 {
+		t.Fatalf("队列应恒为 0，实得 %d", got)
 	}
 	if _, ok := s.Acquire("c"); !ok {
-		t.Fatalf("腾出槽位后 c 应能占位")
+		t.Fatalf("腾出槽位后 c 应能占位（重试是一次全新的派发）")
 	}
-	if got := s.QueueDepth(); got != 0 {
-		t.Fatalf("c 占位成功后队列应清空，实得 %d", got)
+	if got := s.Status().Used; got != 2 {
+		t.Fatalf("c 占位后 used=%d，期望 2", got)
 	}
 }
 
@@ -117,7 +130,17 @@ func TestSlotManagerNilIsUnlimited(t *testing.T) {
 	}
 }
 
-func TestCoordinatorSlotsFullReturnsQueued(t *testing.T) {
+// TestCoordinatorSlotsFullRejectsNotQueue 锁定"满载 = 拒绝，不排队"。
+//
+// 原名 TestCoordinatorSlotsFullReturnsQueued 与实现相反：Register 在收回
+// Acquire 的 false 之后会立刻 Release，把 id 从队列里摘掉，运行期 Queue 恒空。
+// 名字留着会继续误导后来的人（以及任何按名字找行为的搜索），所以一并改掉。
+//
+// 断言三件事：
+//  1. 满载时返回 ErrSlotsFull（可被 IsSlotsFull 识别）；
+//  2. 队列里**没有**残留——否则 UI 会显示一个永远不会启动的"排队中"；
+//  3. SlotStatus.Full = true（这是 UI 唯一该看的满载信号）。
+func TestCoordinatorSlotsFullRejectsNotQueue(t *testing.T) {
 	c := NewCoordinator("t")
 	c.SetSlots(NewSlotManager(1))
 	if _, err := c.Register("root", "", "root", true, nil); err != nil {
@@ -130,6 +153,23 @@ func TestCoordinatorSlotsFullReturnsQueued(t *testing.T) {
 		t.Fatalf("第二个子代理应因槽位已满被拒")
 	} else if !IsSlotsFull(err) {
 		t.Fatalf("错误应可被 IsSlotsFull 识别，实得 %v", err)
+	}
+	// 关键断言：被拒的 id 不能留在队列里（也绝不能出现在快照的 Queue 字段）。
+	if n := c.slots.QueueDepth(); n != 0 {
+		t.Fatalf("满载应直接拒绝，队列里不应残留 %d 个 id", n)
+	}
+	st := c.slots.Status()
+	if len(st.Queue) != 0 {
+		t.Fatalf("SlotStatus.Queue 应恒为空，实得 %v", st.Queue)
+	}
+	if !st.Full {
+		t.Fatalf("满载时 SlotStatus.Full 必须为 true：UI 靠它显示水位，实得 %+v", st)
+	}
+	if st.Used != 1 || st.Limit != 1 || st.Free != 0 {
+		t.Fatalf("水位快照不对：%+v", st)
+	}
+	if c.slots.QueueDepth() != 0 {
+		t.Fatalf("QueueDepth 应恒为 0")
 	}
 }
 

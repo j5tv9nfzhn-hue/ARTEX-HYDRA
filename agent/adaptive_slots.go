@@ -8,8 +8,14 @@ package agent
 // 数，于是模型派发多少就起多少——槽位信号是"说了但不生效"的。这个文件把上限
 // 落到 Register 的准入路径上，并补齐另外三件模型看不见的事：
 //
-//  1. 排队：超额派发退化成"进队列"，而不是直接报错失败，避免模型把一次满载
-//     误解成工具坏了、进而放弃派发；
+//  1. 满载语义 = **拒绝**，不是排队（2026-11-07 修正）：
+//     本文件最初把超额派发设计成"进队列等空位"，但 Coordinator.Register 里
+//     根本没有"出队再放行"的消费者——它拿到 Acquire 的 false 后立刻 Release，
+//     把 id 从队列里摘掉，然后返回 ErrSlotsFull。也就是说运行期 Queue 恒空，
+//     而 UI / 提示词 / 测试却都还在说"已排队"。
+//     既然没有出队通道，"排队"就是假承诺：模型会以为子代理正在等，转身去做
+//     别的事，最后等一个永远不会启动的 agent。现在统一为"满载即拒绝并如实
+//     告知水位"，SlotStatus.Full 是唯一口径，Queue 字段保留但恒空。
 //  2. 回收：超过 ttl 没有任何活动的槽位（lastAct 不前进）被视为僵死，
 //     可被 reclaim 掉并把 agent 落 stopped，防止跑飞的子代理永久占位；
 //  3. 可观测：Status 给出 used/limit/free、排队名单与槽位耗尽曲线（3->2->1->0），
@@ -51,13 +57,24 @@ func ClampChildSlots(n int) int {
 }
 
 // SlotStatus 是一次槽位快照。字段全部可序列化，直接进工具返回值。
+//
+// 【Queue 恒为空，保留字段是为了兼容旧客户端】见文件头「满载语义」那段：
+// 当前策略是满载直接拒绝，`Register` 会把 id 从排队名单里摘掉再返回
+// ErrSlotsFull，所以运行期不可能有"正在排队"的 agent。字段留着不删是因为
+// web 端的 AgentLiveSlots 仍按它解析（多一个空数组不会破坏渲染），删掉反而
+// 会让旧前端因为 undefined 而崩。
 type SlotStatus struct {
-	Limit   int      `json:"limit"`
-	Used    int      `json:"used"`
-	Free    int      `json:"free"`
+	Limit int `json:"limit"`
+	Used  int `json:"used"`
+	Free  int `json:"free"`
+	// Queue 永远为空，见类型注释。不要用它判断"是否有人排队"。
 	Queue   []string `json:"queue,omitempty"`
 	Chain   string   `json:"chain"`
 	Stalled []string `json:"stalled,omitempty"`
+	// Full 是 UI 该看的那个布尔：true = 满载、新的派发会被**拒绝**。
+	// 上一版本 UI 用 Queue 非空来表达"满载"，于是永远显示"空闲"——
+	// 因为 Queue 永远为空。这是"说法与代码不符"里最隐蔽的一处。
+	Full bool `json:"full"`
 }
 
 // SlotManager 是并发槽位的唯一持有者。零值不可用，必须经 NewSlotManager 构造。
@@ -98,7 +115,12 @@ func (s *SlotManager) Limit() int {
 	return s.limit
 }
 
-// Acquire 尝试为 id 占一个槽位。ok=false 表示已满载，id 被放进排队名单。
+// Acquire 尝试为 id 占一个槽位。
+//
+// ok=false 表示已满载。**满载不排队**：返回的 SlotStatus 里 Queue 恒空、
+// Full=true。调用方（Coordinator.Register）会把这次派发当作"拒绝"处理，
+// 让模型如实知道"没有派出去"，而不是以为在排队等空位。
+//
 // 同一个 id 重复申请是幂等的（只刷新活动时间），不会吃掉两个槽位。
 func (s *SlotManager) Acquire(id string) (SlotStatus, bool) {
 	if s == nil {
@@ -116,9 +138,13 @@ func (s *SlotManager) Acquire(id string) (SlotStatus, bool) {
 		s.dequeueLocked(id)
 		return s.statusLocked(now), true
 	}
-	if !s.queuedLocked(id) {
-		s.queue = append(s.queue, id)
-	}
+	// 满载：不把 id 留在队列里。
+	//
+	// 这里以前会 append 到 s.queue，但没有任何出队放行的消费者
+	// （Coordinator.Register 拿到 false 后会立刻 Release，把它摘掉）。
+	// 也就是说"排队"从未真的发生，只是在这一个函数里短暂存在过——
+	// 而 Status.Queue 因此永远是空的。既然如此，就不要制造这个中间态：
+	// 直接返回满载快照，让上层如实回一句"未派出"。
 	return s.statusLocked(now), false
 }
 
@@ -181,6 +207,9 @@ func (s *SlotManager) ReclaimStalled(now time.Time) []string {
 }
 
 // QueueDepth 返回排队数量。
+//
+// 【恒为 0】满载即拒绝，没有等待队列。这个函数保留是因为 wait_for_agents 与
+// 几个测试在读它；不要把它当成"有 N 个 agent 在等空位"——那种语义不存在。
 func (s *SlotManager) QueueDepth() int {
 	if s == nil {
 		return 0
@@ -188,15 +217,6 @@ func (s *SlotManager) QueueDepth() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return len(s.queue)
-}
-
-func (s *SlotManager) queuedLocked(id string) bool {
-	for _, q := range s.queue {
-		if q == id {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *SlotManager) dequeueLocked(id string) {
@@ -239,6 +259,7 @@ func (s *SlotManager) statusLocked(now time.Time) SlotStatus {
 		Free:    free,
 		Chain:   slotChain(free),
 		Stalled: s.stalledLocked(now),
+		Full:    free == 0,
 	}
 	if len(s.queue) > 0 {
 		st.Queue = append([]string(nil), s.queue...)

@@ -169,3 +169,47 @@ func BuiltinPromptSeeds() map[string]string {
 		"goals": goalsDefaultTmpl,
 	}
 }
+
+// CoordPromptVars 返回 coord_root / coord_child 两个角色的**变量目录**。
+//
+// 为什么需要它：变量目录原本写在 db/db.go 的 builtinAgents 里，而 coord_root /
+// coord_child 是这次重构新增的角色（由 server/assembly.go 的 seedCoordAgentRows
+// 直接建行），没人给它们写 agent_prompt_vars。后果是设置页打开这两个角色时
+// 变量白名单是空的 —— pgSavePrompt 调 validateTemplate 时把 {{.Goal}} 判成
+// 未定义变量并回 400，**用户根本无法编辑根 agent 的提示词**。
+// 这正是"说法与代码不符"里最难被发现的一类：模板本身工作正常（渲染走的是
+// renderTmplSafe，不查库），只有"可编辑"这个承诺是空的。
+//
+// 返回的每一项都必须真的出现在对应模板里，否则就是"目录里有、模板里没有"
+// 的另一种幽灵（用户照着目录写，渲染时静默变空）。这一致性由
+// TestCoordPromptVarsMatchTemplates 锁定。
+func CoordPromptVars(key string) []PromptVar {
+	switch key {
+	case PromptKeyCoordRoot:
+		return []PromptVar{
+			{Name: "Goal", Desc: "任务目标（操作员原话，不做改写）", Example: "对 example.com 做授权渗透测试，产出可复现的漏洞报告", Source: "exploration"},
+			{Name: "Scope", Desc: "授权范围 / 操作约束（可空）", Example: "仅测试 *.example.com，禁止 DoS 与社工", Source: "exploration"},
+			{Name: "DataDir", Desc: "任务工作区绝对路径（根与子代理的 cwd 都在这棵树下）", Example: "/data/tasks/42/work", Source: "runtime"},
+			{Name: "Now", Desc: "本轮运行时间", Example: "2026-11-07 09:30", Source: "runtime"},
+			{Name: "MaxTurns", Desc: "根的轮次上限（到顶强制收尾）", Example: "120", Source: "runtime"},
+			{Name: "ChildSlots", Desc: "并行子 agent 上限（与真实槽位同源）", Example: "4", Source: "runtime"},
+		}
+	case PromptKeyCoordChild:
+		return []PromptVar{
+			{Name: "Goal", Desc: "任务目标（父级给的原文）", Example: "确认 example.com 登录接口是否存在 SQL 注入", Source: "exploration"},
+			{Name: "Skills", Desc: "本次派给该子代理的技能名（逗号分隔，可空）", Example: "sql-injection, api_spec_testing", Source: "runtime"},
+			{Name: "DataDir", Desc: "子代理工作目录绝对路径", Example: "/data/tasks/42/work/agents/sqli-1", Source: "runtime"},
+			{Name: "Scope", Desc: "授权范围 / 操作约束（可空）", Example: "仅测试 *.example.com，禁止 DoS", Source: "exploration"},
+			{Name: "MaxTurns", Desc: "子代理的轮次上限", Example: "60", Source: "runtime"},
+		}
+	}
+	return nil
+}
+
+// PromptVar 是变量目录的一项（与 db.PromptVar 同形，避免 agent 包反向依赖 db）。
+type PromptVar struct {
+	Name    string
+	Desc    string
+	Example string
+	Source  string
+}

@@ -66,6 +66,14 @@ import { useSideQuestions } from "@/hooks/use-side-questions";
 import { mergeActivities } from "@/lib/activity-merge";
 import { deriveAgentPhase } from "@/lib/agent-phase";
 import { api } from "@/lib/api";
+import {
+  conversationAgentLabel,
+  draftAgentKey,
+  isLegacyAgentKey,
+  ROOT_AGENT_LABEL,
+  singleAgentSelection,
+  singleThreadGroup,
+} from "@/lib/chat-agent-identity";
 import { currentTask } from "@/lib/current-task-store";
 import { useLiveKind } from "@/lib/live-stream";
 import { createLiveStream, type LiveStream, liveSettledBy } from "@/lib/live-stream-store";
@@ -123,27 +131,12 @@ interface AgentGroup {
   runningCount: number;
 }
 
-// groupByAgent buckets conversations by agent, preserving the incoming order
-// both inside a group and across groups. The server already sorts by updated_at
-// DESC, so first-appearance order == most-recently-active group first.
-function groupByAgent(conversations: Conversation[], agentByKey: Map<string, Agent>): AgentGroup[] {
-  const groups = new Map<string, AgentGroup>();
-  for (const conversation of conversations) {
-    let group = groups.get(conversation.agent_key);
-    if (!group) {
-      group = {
-        key: conversation.agent_key,
-        name: agentByKey.get(conversation.agent_key)?.name || conversation.agent_key,
-        conversations: [],
-        runningCount: 0,
-      };
-      groups.set(conversation.agent_key, group);
-    }
-    group.conversations.push(conversation);
-    if (conversation.running) group.runningCount++;
-  }
-  return [...groups.values()];
-}
+// 2026-11-07：分组维度从「agent」收敛为「单组」。
+//
+// groupByAgent 已删除。单 Agent HARNESS 下每组恒为一项，分组头是噪音；更关键
+// 的是它把 conversation.agent_key 直接当组名显示，旧线程（mainagent / auto /
+// pentest）的内部 key 就这样漏到了界面上。现在组名固定为 ROOT_AGENT_LABEL，
+// 规则集中在 @/lib/chat-agent-identity 的 singleThreadGroup()，可被 node 单测。
 
 // pastedImageFile 把剪贴板里的图片重新命名成一个稳定、可辨识的文件。
 // 浏览器给的名字通常是 image.png：同一轮连贴两张会依赖后端 -1/-2 去重，
@@ -268,9 +261,10 @@ function DraftChat({
   const t = useTranslations("chat");
   // 单 Agent HARNESS：新线程永远落在根 Agent 上，没有可选项。
   // 子代理由根在任务里用工具临时派发，不是用户要选的角色。
-  // key 兜底为 coord_root：/api/orchestration 偶发失败时也不该把发送按钮锁死。
-  const agent = agents[0];
-  const agentKey = agent?.key ?? "coord_root";
+  // key 的解析集中在 chat-agent-identity.draftAgentKey：优先 coord_root，
+  // 清单为空时退回 "coord_root" 字面量，绝不把发送按钮锁死。
+  const agent = singleAgentSelection(agents)[0];
+  const agentKey = draftAgentKey(agents) || "coord_root";
   const [llmProfileId, setLlmProfileId] = React.useState<number | null>(null);
   const [input, setInput] = React.useState("");
   const [sending, setSending] = React.useState(false);
@@ -474,10 +468,20 @@ function ChatViewImpl({
   // 消息级回滚（气泡箭头）：待确认的用户消息 + 提交中标记；确认后消息原文回填输入框。
   const [rollbackTarget, setRollbackTarget] = React.useState<Activity | null>(null);
   const [rollbackBusy, setRollbackBusy] = React.useState(false);
-  const agent = agents.find((a) => a.key === conv.agent_key);
-  // 单 Agent 形态下，历史线程的 agent_key 可能指向已下线的旧角色（auto/pentest），
-  // 在清单里查不到。统一显示根 Agent 的名字，不把内部 key 漏到界面上。
-  const agentLabel = agent?.name ?? agents[0]?.name ?? "主 Agent";
+  // 单 Agent HARNESS：对话页只有一个身份，标签恒为"根 Agent"。
+  //
+  // 这里原来写的是 `agents.find(a => a.key === conv.agent_key)?.name ?? agents[0]?.name ?? "主 Agent"`：
+  // 三层兜底里没有一层是产品要的 —— 历史线程的 agent_key 指向已下线角色
+  // （auto/pentest/mainagent）时查不到，退到 agents[0] 又取到别的名字，最后兜底
+  // "主 Agent" 与新术语（根 Agent）不一致。三处都错，所以改成常量。
+  //
+  // 旧线程的真实归属不改写：DB 里的 agent_key 仍是原值，会话详情里可查；
+  // 这里只是**显示层**统一。`isLegacyAgentKey` 用于给历史线程打一个说明标记。
+  const agentLabel = conversationAgentLabel();
+  const legacyThread = isLegacyAgentKey(conv.agent_key) && !agents.some((a) => a.key === conv.agent_key);
+  // agent 只用于一处细粒度判断：header 上是否显示"自定义 agent"徽标（见下方
+  // `agent && !agent.builtin`）。它**不再**参与身份名解析——名字恒为根部产品名。
+  const agent = agents.find((a) => a.key === conv.agent_key) ?? null;
   const currentProfileId = conv.llm_profile_id ?? null;
   const side = useSideQuestions(`/api/conversations/${conv.id}`);
 
@@ -885,6 +889,17 @@ function ChatViewImpl({
               <Bot className="size-3.5" />
             </div>
             <span className="min-w-0 max-w-48 truncate font-semibold text-sm">{agentLabel}</span>
+            {/* 历史线程标记：这条会话是旧角色（mainagent / auto / pentest…）跑的。
+                显示层不暴露内部 key，但也不能假装它是根 Agent 的产出——留一个
+                可解释的标记，点开详情仍能看到真实的 agent_key。 */}
+            {legacyThread ? (
+              <span
+                className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0 font-mono text-xs text-amber-700 dark:text-amber-300"
+                title={t("harness.threadStatus.legacy")}
+              >
+                {t("harness.threadStatus.legacyTag")}
+              </span>
+            ) : null}
             {/* 线程状态：整屏之后左栏列表可能被滚走，当前线程在跑还是在等必须在这里也能看到。 */}
             <span
               className={cn(
@@ -1517,18 +1532,23 @@ export default function ChatPage() {
     () => (threadFilter === "pinned" ? [] : visibleConversations.filter(conversationIsPinned)),
     [visibleConversations, threadFilter],
   );
-  const agentGroups = React.useMemo(
-    () =>
-      groupByAgent(
-        threadFilter === "pinned" ? visibleConversations : visibleConversations.filter((c) => !conversationIsPinned(c)),
-        agentByKey,
-      ),
-    [visibleConversations, agentByKey, threadFilter],
+  // 左栏不再按 agent 分组：单 Agent 形态下每组恒为一项，分组头纯属噪音，
+  // 而且它把 conversation.agent_key 当组名显示，界面上会出现 "mainagent"。
+  // 现在恒为单组，组名走 ROOT_AGENT_LABEL。
+  const threadGroup = React.useMemo(() => singleThreadGroup(), []);
+  const unpinnedConversations = React.useMemo(
+    () => (threadFilter === "pinned" ? visibleConversations : visibleConversations.filter((c) => !conversationIsPinned(c))),
+    [visibleConversations, threadFilter],
   );
   // 单 Agent HARNESS：对话页只有根 Agent 一个身份。
   // 子代理不是「可选角色」，而是根在任务里用工具临时派发的实例，因此这里
   // 既不提供清单，也不提供切换入口。
-  const chatAgents = React.useMemo(() => (rootAgent ? [rootAgent] : []), [rootAgent]);
+  //
+  // 用 singleAgentSelection 而不是 `rootAgent ? [rootAgent] : []`：后者的空数组
+  // 会让 DraftChat 拿不到 agent，落成 `agentKey = "coord_root"` 的字面量兜底——
+  // 行为上碰巧对，但"为什么是这个 key"只存在于两处写死的字符串里。现在选择
+  // 规则在 chat-agent-identity 里，可被单测。
+  const chatAgents = React.useMemo(() => singleAgentSelection(rootAgent ? [rootAgent] : []), [rootAgent]);
   const conversationCountLabel = t("totalCount", { count: convs.length });
 
   const selectedConversationCount = selectedConversationIds.size;
@@ -1778,18 +1798,20 @@ export default function ChatPage() {
                   onSelectedForDeleteChange={toggleConversationSelected}
                 />
               ))}
-              {agentGroups.map((group) => {
-                const collapsed = collapsedAgents.has(group.key);
+              {/* 单组渲染：不再按 agent 分组（见 threadGroup 的说明）。
+                  保留 AgentGroupHeader 是为了维持可折叠的视觉节奏，组名恒为"根 Agent"。 */}
+              {(() => {
+                const collapsed = collapsedAgents.has(threadGroup.key);
                 return (
-                  <React.Fragment key={group.key}>
+                  <React.Fragment key={threadGroup.key}>
                     <AgentGroupHeader
-                      group={group}
+                      group={{ key: threadGroup.key, name: threadGroup.label, conversations: unpinnedConversations, runningCount: unpinnedConversations.filter((c) => c.running).length }}
                       collapsed={collapsed}
-                      hasActive={group.conversations.some((c) => c.id === selectedId)}
+                      hasActive={unpinnedConversations.some((c) => c.id === selectedId)}
                       onToggle={toggleAgentCollapsed}
                     />
                     {!collapsed &&
-                      group.conversations.map((c) => (
+                      unpinnedConversations.map((c) => (
                         <ConversationItem
                           key={c.id}
                           conv={c}
@@ -1812,7 +1834,7 @@ export default function ChatPage() {
                       ))}
                   </React.Fragment>
                 );
-              })}
+              })()}
               {visibleConversationCount < filteredConversations.length && (
                 <Button
                   type="button"

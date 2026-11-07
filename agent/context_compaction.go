@@ -35,10 +35,16 @@ type observedCompactor struct {
 	// recall 是同一任务的技能记忆：压缩真的发生时打点，供技能再加载在下一次工具
 	// 结果里提醒「正文已被移出，需要重新 Skill」。
 	recall *skillRecallState
+
+	// noticeArmed 是「本次会话还没提示过」的闸门。压缩前提示只发一次：
+	// 反复提醒会让模型把注意力花在"上下文要没了"上，而它该做的是把结论落地。
+	noticeArmed bool
+	// noticeSkipped 记录「窗口本来就小、提示线被压成 0」这种情况，只记一次日志。
+	noticeSkipped bool
 }
 
 func newObservedCompactor(label string, cfg *compaction.Config, summary compaction.Summarizer, recall *skillRecallState) *observedCompactor {
-	return &observedCompactor{label: label, cfg: *cfg, inner: compaction.New(*cfg, summary), recall: recall}
+	return &observedCompactor{label: label, cfg: *cfg, inner: compaction.New(*cfg, summary), recall: recall, noticeArmed: true}
 }
 
 func (c *observedCompactor) Pre(ctx context.Context, msgs []llm.Message, lastInputTokens int) []llm.Message {
@@ -48,9 +54,110 @@ func (c *observedCompactor) Pre(ctx context.Context, msgs []llm.Message, lastInp
 		log.Printf("[compaction] %s: 预剪 %d 条旧工具输出（无 LLM，可逆：重跑命令即可）", c.label, n)
 		msgs = pruned
 	}
+	// 预压缩提示：必须在 inner.Pre **之前**注入 —— 注入的消息要和被折叠的
+	// 区间一起进摘要，模型才有机会在压缩发生的那一刻就知道"把结论写进台账"。
+	// 若放在 inner.Pre 之后，那条消息会落在压缩边界之外，等于什么都没提醒。
+	//
+	// 判据用「本轮输入 token 是否已过提示线」而不是 c.inner 的返回值：
+	// compaction.Compactor 在未压缩时返回**同一个切片**，拿它判断"是否真的压了"
+	// 需要比较底层数组，脆弱且依赖 SDK 内部实现。
+	if notice, ok := c.beforeNotice(msgs, lastInputTokens); ok {
+		msgs = append(msgs, notice)
+	}
 	out := c.inner.Pre(ctx, msgs, lastInputTokens)
 	c.report(msgs, out, lastInputTokens, "自动")
 	return out
+}
+
+// compactionNoticeRatio 是"提前提示线"相对压缩触发点的比例。
+//
+// 0.75 的含义：触发点 120K 时，模型在约 90K 就会收到提示。留出 25% 的余量是因为
+// 一次工具调用的结果可能就吃掉几万 token —— 提示发出去时还有空间把关键结论
+// 落进台账，而不是等到"下一轮必压"时才说。
+const compactionNoticeRatio = 0.75
+
+// compactionNoticeThreshold 返回提示线（token）。窗口/触发点过小时返回 0 = 不提示。
+func compactionNoticeThreshold(cfg *compaction.Config) int {
+	trigger := compactionTrigger(cfg)
+	if trigger <= 0 {
+		return 0
+	}
+	t := int(float64(trigger) * compactionNoticeRatio)
+	// 低于 8K 的提示线没有意义：一条工具的返回就可能超过它，提示函会成为噪音。
+	if t < 8000 {
+		return 0
+	}
+	return t
+}
+
+// beforeNotice 决定本轮是否要插入压缩前提示，并返回那条消息。
+func (c *observedCompactor) beforeNotice(msgs []llm.Message, lastInputTokens int) (llm.Message, bool) {
+	if c == nil || !c.noticeArmed {
+		return llm.Message{}, false
+	}
+	line := compactionNoticeThreshold(&c.cfg)
+	if line <= 0 {
+		if !c.noticeSkipped {
+			c.noticeSkipped = true
+			log.Printf("[compaction] %s: 触发点 %d tok 过小，跳过压缩前提示（提示线 < 8K）",
+				c.label, compactionTrigger(&c.cfg))
+		}
+		return llm.Message{}, false
+	}
+	if lastInputTokens < line {
+		return llm.Message{}, false
+	}
+	c.noticeArmed = false
+	log.Printf("[compaction] %s: 注入压缩前提示（本轮输入 %d tok ≥ 提示线 %d，触发点 %d）",
+		c.label, lastInputTokens, line, compactionTrigger(&c.cfg))
+	return compactionNoticeMessage(line), true
+}
+
+// compactionNoticeMessage 是注入正文。
+//
+// 形状对齐 SDK 的 todo reminder（llm.UserText + <system-reminder> 包裹）：它作为
+// 一条 user 消息追加在历史末尾，模型在下一轮看到，随后一起进入压缩区间。
+// 三条要求都是"压缩后仍然可执行"的动作，而不是"珍惜上下文"这类无法执行的话：
+//   - 把结论写进台账/待办（压缩后还在）；
+//   - 不要在上下文里写大段草稿（那是即将被折叠的部分）；
+//   - 需要细节时重跑命令或读文件取回（可逆）。
+func compactionNoticeMessage(line int) llm.Message {
+	body := strings.Join([]string{
+		"<system-reminder>",
+		"【上下文即将压缩】本轮输入已接近本会话的压缩触发点（提示线约 " + itoaThousand(line) + " tokens）。",
+		"下一轮起，较早的对话与工具输出会被折叠成摘要——被折叠的内容你看不到了。",
+		"在压缩发生前，请立刻做三件事：",
+		"1. 把手上的结论落进台账（record_fact / report_finding / insert_assets）或待办，不要只留在上下文里；",
+		"2. 不要继续在回复里写大段草稿或中间笔记——它们大概率会被折叠掉；",
+		"3. 之后需要某条细节时，用 Read / Grep 重新读取文件，或重跑命令取回（工具输出可复现）。",
+		"压缩本身不需要你处理，继续当前工作即可。",
+		"</system-reminder>",
+	}, "\n")
+	return llm.UserText(body)
+}
+
+// itoaThousand 把 token 数缩写成 "90K" 这种形式，避免提示里出现精确到个位的数字
+// 让模型误以为那是硬阈值。纯本地实现，不引入 fmt 依赖到热路径。
+func itoaThousand(n int) string {
+	k := n / 1000
+	if k < 1 {
+		return "不足 1K"
+	}
+	return itoaSmall(k) + "K"
+}
+
+func itoaSmall(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	var buf [8]byte
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	return string(buf[i:])
 }
 
 func (c *observedCompactor) Reactive(ctx context.Context, msgs []llm.Message) ([]llm.Message, bool) {
@@ -70,7 +177,10 @@ func (c *observedCompactor) report(before, after []llm.Message, lastInputTokens 
 		return
 	}
 	// 只在这里打点：report 只有「真的多出一条压缩边界」才会走到这行。
+	// 同一处重新武装压缩前提示：一次压缩完成后，下一次接近触发点时模型应当
+	// 再次收到提醒（否则第二次压缩又是无预警的）。
 	c.recall.markCompaction()
+	c.ObservePostCompact()
 	log.Printf("[compaction] %s: 已压缩（%s）输入=%d tok → API 视图估算 %d tok（等效窗口 %d，触发点 %d）",
 		c.label, trigger, lastInputTokens,
 		compaction.EstimateTokens(llm.MessagesForAPI(after)),
@@ -174,6 +284,22 @@ func fallbackSummary(msgs []llm.Message) string {
 	}
 	b.WriteString("（需要细节时用证据台账或工具重跑取回，不要凭这段占位摘要下结论。）")
 	return b.String()
+}
+
+// ObservePostCompact 在压缩真正发生后被调用，用于让「压缩前提示」重新武装。
+//
+// 为什么需要重新武装：提示的目的是"让模型来得及把结论落地"。一次压缩发生后，
+// 上下文已经瘦下来，模型很可能再干很久才接近下一次触发点 —— 那时如果不再提醒，
+// 第二次压缩又会是无预警的。所以规则是：**跨越一次真实压缩 = 重新获得一次提示**。
+//
+// 为什么不让 observedCompactor 自己调：压缩可能由 Pre / Reactive / 溢出兜底三条
+// 路径触发，只有 runner 知道"这一轮确实发生过压缩"（它比对 CompactionEpoch）。
+// 这里只暴露一个幂等的小开关，避免压缩器反过来依赖 runner 的状态机。
+func (c *observedCompactor) ObservePostCompact() {
+	if c == nil {
+		return
+	}
+	c.noticeArmed = true
 }
 
 // clipSummaryLine 取首行并截断，保证兜底摘要不会自己长成一个新的大上下文。
